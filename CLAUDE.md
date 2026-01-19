@@ -31,7 +31,7 @@ soupfinance/
 ├── .claude/
 │   └── rules/
 │       └── soupfinance-design-system.md   # Complete design system docs
-├── soupfinance-designs/                    # 42 screen designs
+├── soupfinance-designs/                    # 43 screen designs
 │   ├── {screen-name}/
 │   │   ├── code.html                       # TailwindCSS HTML mockup
 │   │   └── screen.png                      # Screenshot of the design
