@@ -8,20 +8,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Status**: Design phase (no application code yet)
 
-## Repository Structure
-
-```
-soupfinance/
-└── soupfinance-designs/     # 42+ screen designs
-    ├── {screen-name}/
-    │   ├── code.html        # TailwindCSS HTML mockup
-    │   └── screen.png       # Screenshot of the design
-    └── ...
-```
-
 ## Design System
 
-All mockups use a consistent design system:
+**See [.claude/rules/soupfinance-design-system.md](.claude/rules/soupfinance-design-system.md) for the complete design system documentation.**
+
+Quick reference:
 
 | Property | Value |
 |----------|-------|
@@ -33,10 +24,124 @@ All mockups use a consistent design system:
 | **Icons** | Material Symbols Outlined |
 | **Dark Mode** | Supported via `class` strategy |
 
-### Tailwind Config (embedded in each HTML)
+## Repository Structure
+
+```
+soupfinance/
+├── .claude/
+│   └── rules/
+│       └── soupfinance-design-system.md   # Complete design system docs
+├── soupfinance-designs/                    # 42 screen designs
+│   ├── {screen-name}/
+│   │   ├── code.html                       # TailwindCSS HTML mockup
+│   │   └── screen.png                      # Screenshot of the design
+│   └── ...
+└── CLAUDE.md
+```
+
+## Screen Catalog
+
+### Authentication
+- `login-authentication/` - Split-screen login with branding
+
+### Dashboard & Analytics
+- `financial-overview-dashboard/` - Main dashboard with KPIs, charts, recent invoices
+- `reporting-and-analytics/` - Analytics overview
+
+### Invoices (10 screens)
+- `invoice-management/` - Invoice list with pagination
+- `new-invoice-form/` - Create invoice with line items
+- `invoice-draft-preview/` - Preview before sending
+- `invoice-line-items-table/` - Editable line items
+- `advanced-invoice-metadata/` - Extended invoice details
+- `invoice-status-summary/` - Status dashboard
+- `invoice-status-update-log/` - Status change history
+- `invoice-validation-checker/` - Validation rules
+- `invoice-approval-workflow/` - Multi-step approval timeline
+- `closed-invoice-archive/` - Completed invoices
+
+### Payments (3 screens)
+- `payment-entry-form/` - Record payment
+- `payment-allocation-screen/` - Allocate payments
+- `payment-history-report/` - Transaction history
+
+### Vendors/Clients (2 screens)
+- `vendor-client-management/` - Client CRUD
+- `vendor-payment-analysis/` - Payment trends
+
+### Items/Services (3 screens)
+- `item-services-catalog-browser/` - Browse catalog
+- `item-creation-modal/` - Add item modal
+- `services-selection-grid/` - Services grid
+
+### Financial Reports (7 screens)
+- `balance-sheet-report/` - Assets/Liabilities/Equity
+- `income-statement-report/` - Revenue/Expenses
+- `cash-flow-statement-report/` - Cash flows
+- `trial-balance-report/` - Debits/Credits
+- `profit-and-loss-summary-report/` - P&L summary
+- `budget-vs-actual-variance-report/` - Variance analysis
+- `expense-category-breakdown/` - Expenses by category
+
+### Equity Reports (2 screens)
+- `statement-of-changes-in-equity/` - Equity changes
+- `retained-earnings-statement/` - Retained earnings
+
+### Aging Reports (2 screens)
+- `ar-aging-report/` - Accounts receivable
+- `ap-aging-report/` - Accounts payable
+
+### General Ledger (3 screens)
+- `general-ledger-entries/` - GL transactions
+- `gl-integration-mapping/` - Account mapping
+- `gl-reconciliation-report/` - Reconciliation
+
+### Other Reports (4 screens)
+- `tax-liability-report/` - Tax obligations
+- `inventory-valuation-report/` - Inventory value
+- `customer-credit-limit-report/` - Credit limits
+- `audit-trail-log/` - System audit log
+
+### Utilities (4 screens)
+- `amount-due-tracker/` - Outstanding amounts
+- `amount-due-summary/` - Due amounts overview
+- `overdue-reminder-generator/` - Generate notices
+- `tax-and-discount-calculator/` - Calculator tool
+
+## Working with Designs
+
+### Preview a Design
+
+```bash
+# Open in browser
+xdg-open soupfinance-designs/financial-overview-dashboard/code.html
+
+# Or use HTTP server for proper font loading
+cd soupfinance-designs && python3 -m http.server 8000
+# Visit http://localhost:8000/financial-overview-dashboard/code.html
+```
+
+### Toggle Dark Mode
+
+Add/remove `dark` class on the `<html>` element:
+```html
+<html class="dark" lang="en">  <!-- Dark mode -->
+<html class="light" lang="en"> <!-- Light mode -->
+```
+
+## When Implementing
+
+1. **Read the design system** - `.claude/rules/soupfinance-design-system.md`
+2. **Extract Tailwind config** - Use the embedded config as base
+3. **Follow component patterns** - Each HTML demonstrates reusable patterns
+4. **Use semantic colors** - `primary`, `background-light`, etc.
+5. **Include dark mode** - All components support light/dark
+6. **Use Material Symbols** - Consistent icon settings
+
+## Tailwind Config (Quick Start)
 
 ```javascript
-tailwind.config = {
+module.exports = {
   darkMode: "class",
   theme: {
     extend: {
@@ -56,69 +161,13 @@ tailwind.config = {
       },
     },
   },
+  plugins: [
+    require('@tailwindcss/forms'),
+    require('@tailwindcss/container-queries'),
+  ],
 }
 ```
 
-## Available Screens
-
-### Core Features
-- **Dashboard**: `financial_overview_dashboard/` - KPIs, cash flow chart, invoice status donut
-- **Invoices**: `invoice_management/`, `new_invoice_form/`, `invoice_line_items_table/`, `invoice_draft_preview/`, `invoice_approval_workflow/`, `invoice_validation_checker/`, `invoice_status_summary/`, `invoice_status_update_log/`, `closed_invoice_archive/`, `advanced_invoice_metadata/`
-- **Payments**: `payment_entry_form/`, `payment_allocation_screen/`, `payment_history_report/`
-- **Vendors/Clients**: `vendor/client_management/`, `vendor_payment_analysis/`
-- **Items/Services**: `item/services_catalog_browser/`, `item_creation_modal/`, `services_selection_grid/`
-
-### Financial Reports
-- **Core Statements**: `balance_sheet_report/`, `income_statement_report/`, `cash_flow_statement_report/`, `trial_balance_report/`
-- **Equity**: `statement_of_changes_in_equity/`, `retained_earnings_statement/`
-- **Aging**: `ar_aging_report/`, `ap_aging_report/`
-- **Analysis**: `profit_&_loss_summary_report/`, `budget_vs._actual_variance_report/`, `expense_category_breakdown/`
-- **GL**: `general_ledger_entries/`, `gl_integration_mapping/`, `gl_reconciliation_report/`
-- **Other**: `tax_liability_report/`, `inventory_valuation_report/`, `customer_credit_limit_report/`, `audit_trail_log/`
-
-### Utilities
-- **Auth**: `login/authentication/`
-- **Tracking**: `amount_due_tracker/`, `amount_due_summary/`, `overdue_reminder_generator/`
-- **Analytics**: `reporting_&_analytics/`
-- **Calculations**: `tax_&_discount_calculator/`
-
-## Working with Designs
-
-### Preview a Design
-
-```bash
-# Open in browser
-xdg-open soupfinance-designs/financial_overview_dashboard/code.html
-
-# Or use a simple HTTP server for proper font loading
-cd soupfinance-designs && python3 -m http.server 8000
-# Then visit http://localhost:8000/financial_overview_dashboard/code.html
-```
-
-### View Screenshot
-
-```bash
-xdg-open soupfinance-designs/financial_overview_dashboard/screen.png
-```
-
-### Toggle Dark Mode
-
-Add/remove `dark` class on the `<html>` element in any `code.html` file:
-```html
-<html class="dark" lang="en">  <!-- Dark mode -->
-<html class="light" lang="en"> <!-- Light mode -->
-```
-
-## When Implementing
-
-When building the actual application from these designs:
-
-1. **Extract Tailwind Config** - Use the embedded config as the base for your `tailwind.config.js`
-2. **Component Patterns** - Each HTML file demonstrates reusable patterns (sidebar nav, top nav, data tables, stat cards, form inputs)
-3. **Color Tokens** - Use semantic color names (`primary`, `background-light`, `background-dark`) consistently
-4. **Icon Usage** - Material Symbols Outlined with consistent settings: `'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24`
-5. **Responsive** - Designs include responsive breakpoints (`lg:`, `sm:`, etc.)
-
 ## Parent Project
 
-This repository is part of the **Soupmarkets** ecosystem. See `../CLAUDE.md` for workspace-level documentation.
+Part of the **Soupmarkets** ecosystem. See `../CLAUDE.md` for workspace docs.
