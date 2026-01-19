@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>New Invoice Form</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#F97316", // Orange-500 from Tailwind palette, close to user's request
+              "background-light": "#F8FAFC", // Slate-50
+              "background-dark": "#020617", // Slate-950, darker than requested for better contrast
+              "surface-light": "#FFFFFF",
+              "surface-dark": "#1E293B", // Slate-800
+              "text-light": "#1E293B", // Slate-800
+              "text-dark": "#E2E8F0", // Slate-200
+              "subtle-text-light": "#64748B", // Slate-500
+              "subtle-text-dark": "#94A3B8", // Slate-400
+              "border-light": "#E2E8F0", // Slate-200
+              "border-dark": "#334155", // Slate-700
+              "danger": "#EF4444", // Red-500
+            },
+            fontFamily: {
+              "display": ["Manrope", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            font-size: 20px;
+        }
+    </style>
+</head>
+<body class="font-display bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark">
+<div class="relative flex h-auto min-h-screen w-full flex-col group/design-root overflow-x-hidden">
+<div class="layout-container flex h-full grow flex-col">
+<!-- TopNavBar Component -->
+<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-border-light dark:border-border-dark px-6 lg:px-10 py-3 bg-surface-light dark:bg-surface-dark">
+<div class="flex items-center gap-4">
+<div class="text-primary size-7">
+<svg fill="none" viewbox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<path clip-rule="evenodd" d="M24 4H42V17.3333V30.6667H24V44H6V30.6667V17.3333H24V4Z" fill="currentColor" fill-rule="evenodd"></path>
+</svg>
+</div>
+<h2 class="text-lg font-bold tracking-[-0.015em] text-text-light dark:text-text-dark">Corporate Accounting</h2>
+</div>
+<div class="flex items-center gap-4">
+<nav class="hidden md:flex items-center gap-6">
+<a class="text-sm font-medium text-subtle-text-light dark:text-subtle-text-dark hover:text-primary dark:hover:text-primary" href="#">Dashboard</a>
+<a class="text-sm font-bold text-primary" href="#">Invoices</a>
+<a class="text-sm font-medium text-subtle-text-light dark:text-subtle-text-dark hover:text-primary dark:hover:text-primary" href="#">Clients</a>
+<a class="text-sm font-medium text-subtle-text-light dark:text-subtle-text-dark hover:text-primary dark:hover:text-primary" href="#">Reports</a>
+<a class="text-sm font-medium text-subtle-text-light dark:text-subtle-text-dark hover:text-primary dark:hover:text-primary" href="#">Settings</a>
+</nav>
+<div class="w-px h-6 bg-border-light dark:bg-border-dark hidden md:block"></div>
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10" data-alt="User avatar" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCn-mTwIq2QPVcXnT_HD4QCQEnZCrv3qAhVZVWPFb3AoO5HPUDg00ijqf3_h4tTLT8oTfnq7RicyYtuui0ef-OiSs2ApD3XkTrmNDEn4inGqTIfLyWJwtITTUUAj1ip8Cw6-ltaDtSNUNjXzEKfFVX9vxqV-FlgInqiciBkzr8VXMEBUylAxnS3zmLwb4-EoyzypFx8_AI2GDb7_Bhnoi7y55FQj-50Hvyw0v8Xd_Os2BZYwBRFPA99MVbxyxKZkP7fstWTDSqtmGGk");'></div>
+</div>
+</header>
+<main class="flex-1 w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+<!-- PageHeading Component -->
+<div class="flex flex-wrap items-center justify-between gap-4 mb-8">
+<div class="flex flex-col gap-1">
+<p class="text-3xl font-black tracking-[-0.033em]">New Invoice</p>
+<p class="text-base font-normal text-subtle-text-light dark:text-subtle-text-dark">Fill in the details below to create and send a new invoice.</p>
+</div>
+<div class="flex flex-wrap gap-3">
+<button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 text-sm font-bold leading-normal tracking-[0.015em] hover:bg-slate-300 dark:hover:bg-slate-600">
+<span class="truncate">Cancel</span>
+</button>
+<button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-primary/20 text-primary text-sm font-bold leading-normal tracking-[0.015em] hover:bg-primary/30">
+<span class="truncate">Save Draft</span>
+</button>
+<button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-primary text-white text-sm font-bold leading-normal tracking-[0.015em] hover:bg-primary/90">
+<span class="truncate">Save &amp; Send</span>
+</button>
+</div>
+</div>
+<div class="flex flex-col gap-8">
+<!-- Invoice Details Section -->
+<div class="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+<!-- SectionHeader Component -->
+<div class="px-6 py-4 border-b border-border-light dark:border-border-dark">
+<h2 class="text-[22px] font-bold leading-tight tracking-[-0.015em]">Invoice Details</h2>
+</div>
+<div class="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+<!-- TextField Component: Client -->
+<div class="flex flex-col lg:col-span-3">
+<p class="text-sm font-medium leading-normal pb-2">Client</p>
+<select class="form-select flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-text-light dark:text-text-dark focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark focus:border-primary dark:focus:border-primary h-12 placeholder:text-subtle-text-light dark:placeholder:text-subtle-text-dark px-3 text-base font-normal leading-normal">
+<option value="one">Select or search for a client</option>
+<option value="two">Innovate Corp</option>
+<option value="three">Quantum Solutions</option>
+</select>
+</div>
+<!-- TextField Component: Invoice Number (Read-only) -->
+<div class="flex flex-col">
+<p class="text-sm font-medium leading-normal pb-2">Invoice Number</p>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-subtle-text-light dark:text-subtle-text-dark focus:outline-0 ring-0 border border-border-light dark:border-border-dark bg-background-light/50 dark:bg-background-dark/50 h-12 placeholder:text-subtle-text-light dark:placeholder:text-subtle-text-dark px-3 text-base font-normal leading-normal cursor-not-allowed" readonly="" value="INV-2024-00123"/>
+</div>
+<!-- TextField Component: Invoice Date -->
+<div class="flex flex-col">
+<p class="text-sm font-medium leading-normal pb-2">Invoice Date</p>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-text-light dark:text-text-dark focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark focus:border-primary dark:focus:border-primary h-12 placeholder:text-subtle-text-light dark:placeholder:text-subtle-text-dark px-3 text-base font-normal leading-normal" type="date" value="2024-10-26"/>
+</div>
+<!-- TextField Component: Due Date -->
+<div class="flex flex-col">
+<p class="text-sm font-medium leading-normal pb-2">Due Date</p>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-text-light dark:text-text-dark focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark focus:border-primary dark:focus:border-primary h-12 placeholder:text-subtle-text-light dark:placeholder:text-subtle-text-dark px-3 text-base font-normal leading-normal" type="date" value="2024-11-25"/>
+</div>
+<!-- TextField Component: Purchase Order # -->
+<div class="flex flex-col lg:col-span-3">
+<p class="text-sm font-medium leading-normal pb-2">Purchase Order # (Optional)</p>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-text-light dark:text-text-dark focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark focus:border-primary dark:focus:border-primary h-12 placeholder:text-subtle-text-light dark:placeholder:text-subtle-text-dark px-3 text-base font-normal leading-normal" placeholder="Enter PO number"/>
+</div>
+</div>
+</div>
+<!-- Line Items Section -->
+<div class="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-sm">
+<div class="px-6 py-4 border-b border-border-light dark:border-border-dark">
+<h2 class="text-[22px] font-bold leading-tight tracking-[-0.015em]">Line Items</h2>
+</div>
+<div class="p-6">
+<div class="overflow-x-auto">
+<table class="w-full text-left">
+<thead>
+<tr class="text-sm font-semibold text-subtle-text-light dark:text-subtle-text-dark border-b border-border-light dark:border-border-dark">
+<th class="py-3 pr-4 w-1/2">Item Description</th>
+<th class="py-3 px-4">Quantity</th>
+<th class="py-3 px-4">Rate</th>
+<th class="py-3 pl-4 text-right">Amount</th>
+<th class="py-3 pl-4"></th>
+</tr>
+</thead>
+<tbody>
+<!-- Line Item Row 1 -->
+<tr class="border-b border-border-light dark:border-border-dark">
+<td class="py-4 pr-4"><textarea class="form-textarea w-full h-12 resize-none rounded-lg border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark focus:border-primary dark:focus:border-primary focus:ring-primary/50" rows="1">Web Design Services</textarea></td>
+<td class="py-4 px-4"><input class="form-input w-20 h-12 rounded-lg border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark focus:border-primary dark:focus:border-primary focus:ring-primary/50" type="number" value="10"/></td>
+<td class="py-4 px-4"><input class="form-input w-28 h-12 rounded-lg border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark focus:border-primary dark:focus:border-primary focus:ring-primary/50" type="number" value="75.00"/></td>
+<td class="py-4 pl-4 text-right font-medium">$750.00</td>
+<td class="py-4 pl-4 text-center">
+<button class="text-subtle-text-light dark:text-subtle-text-dark hover:text-danger dark:hover:text-danger p-2 rounded-full hover:bg-danger/10"><span class="material-symbols-outlined">delete</span></button>
+</td>
+</tr>
+<!-- Line Item Row 2 -->
+<tr class="border-b border-border-light dark:border-border-dark">
+<td class="py-4 pr-4"><textarea class="form-textarea w-full h-12 resize-none rounded-lg border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark focus:border-primary dark:focus:border-primary focus:ring-primary/50" rows="1">Backend Development</textarea></td>
+<td class="py-4 px-4"><input class="form-input w-20 h-12 rounded-lg border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark focus:border-primary dark:focus:border-primary focus:ring-primary/50" type="number" value="25"/></td>
+<td class="py-4 px-4"><input class="form-input w-28 h-12 rounded-lg border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark focus:border-primary dark:focus:border-primary focus:ring-primary/50" type="number" value="100.00"/></td>
+<td class="py-4 pl-4 text-right font-medium">$2,500.00</td>
+<td class="py-4 pl-4 text-center">
+<button class="text-subtle-text-light dark:text-subtle-text-dark hover:text-danger dark:hover:text-danger p-2 rounded-full hover:bg-danger/10"><span class="material-symbols-outlined">delete</span></button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<button class="mt-4 flex items-center gap-2 text-primary font-bold text-sm py-2 px-3 rounded-lg hover:bg-primary/10">
+<span class="material-symbols-outlined">add</span>
+                                Add Line Item
+                            </button>
+</div>
+</div>
+<!-- Summary and Notes Section -->
+<div class="grid grid-cols-1 md:grid-cols-5 gap-8">
+<div class="md:col-span-3 flex flex-col gap-6">
+<!-- Notes Section -->
+<div>
+<p class="text-sm font-medium leading-normal pb-2">Notes</p>
+<textarea class="form-textarea w-full rounded-lg border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark focus:border-primary dark:focus:border-primary focus:ring-primary/50" placeholder="Add any internal or client-facing notes here..." rows="3"></textarea>
+</div>
+<!-- Terms & Conditions Section -->
+<div>
+<p class="text-sm font-medium leading-normal pb-2">Terms &amp; Conditions</p>
+<textarea class="form-textarea w-full rounded-lg border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark focus:border-primary dark:focus:border-primary focus:ring-primary/50" rows="3">Payment is due within 30 days. Late payments are subject to a 5% fee.</textarea>
+</div>
+</div>
+<!-- Summary -->
+<div class="md:col-span-2 bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-6 h-fit shadow-sm">
+<div class="flex flex-col gap-4">
+<div class="flex justify-between items-center text-subtle-text-light dark:text-subtle-text-dark">
+<span>Subtotal</span>
+<span class="font-medium text-text-light dark:text-text-dark">$3,250.00</span>
+</div>
+<div class="flex justify-between items-center text-subtle-text-light dark:text-subtle-text-dark">
+<span>Tax (10%)</span>
+<span class="font-medium text-text-light dark:text-text-dark">$325.00</span>
+</div>
+<div class="border-t border-dashed border-border-light dark:border-border-dark my-2"></div>
+<div class="flex justify-between items-center text-xl font-bold">
+<span>Total</span>
+<span>$3,575.00</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</div>
+</body></html>

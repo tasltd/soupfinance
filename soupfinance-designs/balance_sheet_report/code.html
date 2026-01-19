@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Balance Sheet Report</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#f24a0d",
+                        "background-light": "#f8f6f5",
+                        "background-dark": "#221510",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-[#181311] dark:text-gray-200">
+<div class="relative flex min-h-screen w-full">
+<!-- SideNavBar -->
+<aside class="flex h-screen w-64 flex-col border-r border-[#e6dedb] dark:border-gray-700 bg-white dark:bg-[#1a0f0a] sticky top-0">
+<div class="flex flex-col grow justify-between p-4">
+<div class="flex flex-col gap-4">
+<div class="flex items-center gap-3 px-3">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10" data-alt="Company logo for CorpAcct" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDx17SPPjfqUolzQb7g4YAKwlUGhaPfixTifTNXks2I0vvPsLNrRAtIKqwD58D-0gXoKyzfJS_FJEN0Ax82iS8zMhifcwjE4v2hESGvG4h6csIJR_5kkoPNCvtxvmf-tptkGQXJFZ_0HcD-ZDn5g3VmdNigiGBkc0qAMpvvcX7tJM4ZEELSUW7jM4TeRkn_aBwTdzYxcdlJbq6Aa4QL_Vm9MQvLM451rdBnHRkxNjA3QP4julT-OxbXgpobbRBQYOUEqB-PEzmvys0F");'></div>
+<div class="flex flex-col">
+<h1 class="text-[#181311] dark:text-white text-base font-medium leading-normal">CorpAcct</h1>
+<p class="text-[#8a6b60] dark:text-gray-400 text-sm font-normal leading-normal">Accounting</p>
+</div>
+</div>
+<nav class="flex flex-col gap-2 mt-4">
+<a class="flex items-center gap-3 px-3 py-2 text-[#8a6b60] dark:text-gray-400 hover:bg-[#f5f1f0] dark:hover:bg-background-dark rounded-lg" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<p class="text-sm font-medium leading-normal">Dashboard</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#8a6b60] dark:text-gray-400 hover:bg-[#f5f1f0] dark:hover:bg-background-dark rounded-lg" href="#">
+<span class="material-symbols-outlined">receipt_long</span>
+<p class="text-sm font-medium leading-normal">Invoices</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg bg-primary/10 dark:bg-primary/20 text-primary dark:text-orange-300" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">monitoring</span>
+<p class="text-sm font-bold leading-normal">Reporting</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#8a6b60] dark:text-gray-400 hover:bg-[#f5f1f0] dark:hover:bg-background-dark rounded-lg" href="#">
+<span class="material-symbols-outlined">book</span>
+<p class="text-sm font-medium leading-normal">Ledger</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#8a6b60] dark:text-gray-400 hover:bg-[#f5f1f0] dark:hover:bg-background-dark rounded-lg" href="#">
+<span class="material-symbols-outlined">settings</span>
+<p class="text-sm font-medium leading-normal">Settings</p>
+</a>
+</nav>
+</div>
+<div class="flex flex-col gap-1">
+<a class="flex items-center gap-3 px-3 py-2 text-[#8a6b60] dark:text-gray-400 hover:bg-[#f5f1f0] dark:hover:bg-background-dark rounded-lg" href="#">
+<span class="material-symbols-outlined">help</span>
+<p class="text-sm font-medium leading-normal">Help</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#8a6b60] dark:text-gray-400 hover:bg-[#f5f1f0] dark:hover:bg-background-dark rounded-lg" href="#">
+<span class="material-symbols-outlined">logout</span>
+<p class="text-sm font-medium leading-normal">Logout</p>
+</a>
+</div>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="flex-1 p-8 overflow-y-auto">
+<div class="max-w-7xl mx-auto">
+<!-- PageHeading -->
+<div class="flex flex-wrap justify-between items-center gap-4">
+<div class="flex flex-col gap-1">
+<p class="text-[#181311] dark:text-white text-4xl font-black leading-tight tracking-[-0.033em]">Balance Sheet</p>
+<p class="text-[#8a6b60] dark:text-gray-400 text-base font-normal leading-normal">A comprehensive view of your company's financial position.</p>
+</div>
+</div>
+<!-- ToolBar -->
+<div class="flex flex-wrap items-center justify-between gap-4 py-6 border-b border-[#e6dedb] dark:border-gray-700">
+<div class="flex items-center gap-2">
+<div class="relative w-64">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">calendar_today</span>
+<select class="w-full pl-10 pr-4 py-2 border border-[#e6dedb] dark:border-gray-600 rounded-lg bg-white dark:bg-background-dark focus:ring-primary focus:border-primary">
+<option>Last Quarter</option>
+<option>This Year</option>
+<option>Last Year</option>
+<option>Custom Range</option>
+</select>
+</div>
+<div class="relative w-64">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">search</span>
+<input class="w-full pl-10 pr-4 py-2 border border-[#e6dedb] dark:border-gray-600 rounded-lg bg-white dark:bg-background-dark focus:ring-primary focus:border-primary" placeholder="Search accounts..." type="text"/>
+</div>
+<button class="flex items-center gap-2 px-4 py-2 border border-[#e6dedb] dark:border-gray-600 rounded-lg bg-white dark:bg-background-dark hover:bg-gray-50 dark:hover:bg-gray-800">
+<span class="material-symbols-outlined text-gray-600 dark:text-gray-400 text-base">filter_list</span>
+<span>Filter</span>
+</button>
+</div>
+<div class="flex gap-2">
+<button class="flex items-center justify-center gap-2 overflow-hidden rounded-lg h-10 min-w-[120px] px-4 border border-primary text-primary hover:bg-primary/10">
+<span class="material-symbols-outlined text-xl">picture_as_pdf</span>
+<span class="truncate text-sm font-bold">PDF</span>
+</button>
+<button class="flex items-center justify-center gap-2 overflow-hidden rounded-lg h-10 min-w-[120px] px-4 bg-primary text-white hover:bg-orange-700">
+<span class="material-symbols-outlined text-xl">grid_on</span>
+<span class="truncate text-sm font-bold">Excel</span>
+</button>
+</div>
+</div>
+<!-- Stats -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 py-6">
+<div class="flex flex-col gap-2 rounded-xl p-6 border border-[#e6dedb] dark:border-gray-700 bg-white dark:bg-[#1a0f0a]">
+<p class="text-[#181311] dark:text-gray-300 text-base font-medium leading-normal">Total Assets</p>
+<p class="text-[#181311] dark:text-white tracking-light text-2xl font-bold leading-tight">$1,450,830.00</p>
+<p class="text-green-600 dark:text-green-500 text-base font-medium leading-normal">+2.5%</p>
+</div>
+<div class="flex flex-col gap-2 rounded-xl p-6 border border-[#e6dedb] dark:border-gray-700 bg-white dark:bg-[#1a0f0a]">
+<p class="text-[#181311] dark:text-gray-300 text-base font-medium leading-normal">Total Liabilities</p>
+<p class="text-[#181311] dark:text-white tracking-light text-2xl font-bold leading-tight">$680,210.00</p>
+<p class="text-green-600 dark:text-green-500 text-base font-medium leading-normal">+1.8%</p>
+</div>
+<div class="flex flex-col gap-2 rounded-xl p-6 border border-[#e6dedb] dark:border-gray-700 bg-white dark:bg-[#1a0f0a]">
+<p class="text-[#181311] dark:text-gray-300 text-base font-medium leading-normal">Total Equity</p>
+<p class="text-[#181311] dark:text-white tracking-light text-2xl font-bold leading-tight">$770,620.00</p>
+<p class="text-green-600 dark:text-green-500 text-base font-medium leading-normal">+3.1%</p>
+</div>
+</div>
+<!-- Charts & Table -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<!-- Charts -->
+<div class="lg:col-span-1 flex flex-col gap-6">
+<div class="flex flex-col gap-4 rounded-xl border border-[#e6dedb] dark:border-gray-700 p-6 bg-white dark:bg-[#1a0f0a]">
+<p class="text-[#181311] dark:text-white text-base font-medium leading-normal">Asset Composition</p>
+<div class="relative flex items-center justify-center h-48">
+<svg class="w-full h-full" viewbox="0 0 36 36">
+<circle class="stroke-current text-orange-200 dark:text-orange-900" cx="18" cy="18" fill="transparent" r="15.9154943092" stroke-width="3"></circle>
+<circle class="stroke-current text-primary" cx="18" cy="18" fill="transparent" r="15.9154943092" stroke-dasharray="65, 35" stroke-dashoffset="25" stroke-width="3"></circle>
+</svg>
+<div class="absolute flex flex-col items-center">
+<span class="text-xs text-[#8a6b60] dark:text-gray-400">Total</span>
+<span class="text-xl font-bold text-[#181311] dark:text-white">$1.45M</span>
+</div>
+</div>
+<div class="flex flex-col gap-2 text-sm">
+<div class="flex justify-between items-center">
+<div class="flex items-center gap-2">
+<span class="w-3 h-3 rounded-full bg-primary"></span>
+<span class="text-[#181311] dark:text-gray-300">Current Assets</span>
+</div>
+<span class="font-semibold text-[#181311] dark:text-white">$943,039</span>
+</div>
+<div class="flex justify-between items-center">
+<div class="flex items-center gap-2">
+<span class="w-3 h-3 rounded-full bg-orange-200 dark:bg-orange-900"></span>
+<span class="text-[#181311] dark:text-gray-300">Non-Current Assets</span>
+</div>
+<span class="font-semibold text-[#181311] dark:text-white">$507,791</span>
+</div>
+</div>
+</div>
+<div class="flex flex-col gap-4 rounded-xl border border-[#e6dedb] dark:border-gray-700 p-6 bg-white dark:bg-[#1a0f0a]">
+<p class="text-[#181311] dark:text-white text-base font-medium leading-normal">Assets vs. Liabilities &amp; Equity</p>
+<div class="flex flex-col gap-4">
+<div class="flex flex-col gap-1">
+<div class="flex justify-between text-sm">
+<span class="text-[#8a6b60] dark:text-gray-400">Total Assets</span>
+<span class="font-bold text-[#181311] dark:text-white">$1.45M</span>
+</div>
+<div class="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full">
+<div class="h-2 bg-primary rounded-full" style="width: 100%;"></div>
+</div>
+</div>
+<div class="flex flex-col gap-1">
+<div class="flex justify-between text-sm">
+<span class="text-[#8a6b60] dark:text-gray-400">Total Liabilities &amp; Equity</span>
+<span class="font-bold text-[#181311] dark:text-white">$1.45M</span>
+</div>
+<div class="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full flex">
+<div class="h-2 bg-red-500 rounded-l-full" style="width: 46.9%;"></div>
+<div class="h-2 bg-gray-400 rounded-r-full" style="width: 53.1%;"></div>
+</div>
+<div class="flex justify-between text-xs mt-1">
+<div class="flex items-center gap-1.5">
+<span class="w-2.5 h-2.5 rounded-full bg-red-500"></span>
+<span class="text-[#8a6b60] dark:text-gray-400">Liabilities</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="w-2.5 h-2.5 rounded-full bg-gray-400"></span>
+<span class="text-[#8a6b60] dark:text-gray-400">Equity</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Data Table -->
+<div class="lg:col-span-2 rounded-xl border border-[#e6dedb] dark:border-gray-700 bg-white dark:bg-[#1a0f0a] overflow-hidden">
+<div class="p-6 border-b border-[#e6dedb] dark:border-gray-700">
+<p class="font-bold text-lg text-[#181311] dark:text-white">Balance Sheet Details for Last Quarter</p>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-sm">
+<thead class="bg-[#f5f1f0] dark:bg-background-dark">
+<tr>
+<th class="text-left font-semibold p-4 w-3/5 text-[#8a6b60] dark:text-gray-400">ACCOUNT</th>
+<th class="text-left font-semibold p-4 text-[#8a6b60] dark:text-gray-400">ACCOUNT CODE</th>
+<th class="text-right font-semibold p-4 text-[#8a6b60] dark:text-gray-400">AMOUNT</th>
+</tr>
+</thead>
+<tbody>
+<tr class="bg-gray-50 dark:bg-background-dark font-bold text-[#181311] dark:text-white">
+<td class="p-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-lg">expand_more</span> Assets
+                                        </td>
+<td></td>
+<td class="text-right p-4">$1,450,830.00</td>
+</tr>
+<tr class="hover:bg-primary/10 dark:hover:bg-primary/20">
+<td class="pl-12 p-2">Current Assets</td>
+<td></td>
+<td class="text-right p-2 font-medium">$943,039.00</td>
+</tr>
+<tr class="hover:bg-primary/10 dark:hover:bg-primary/20 text-[#8a6b60] dark:text-gray-400">
+<td class="pl-16 p-2">Cash and cash equivalents</td>
+<td class="p-2">1010</td>
+<td class="text-right p-2">$250,120.00</td>
+</tr>
+<tr class="hover:bg-primary/10 dark:hover:bg-primary/20 text-[#8a6b60] dark:text-gray-400">
+<td class="pl-16 p-2">Accounts Receivable</td>
+<td class="p-2">1200</td>
+<td class="text-right p-2">$450,899.00</td>
+</tr>
+<tr class="hover:bg-primary/10 dark:hover:bg-primary/20 text-[#8a6b60] dark:text-gray-400">
+<td class="pl-16 p-2">Inventory</td>
+<td class="p-2">1300</td>
+<td class="text-right p-2">$242,020.00</td>
+</tr>
+<tr class="hover:bg-primary/10 dark:hover:bg-primary/20">
+<td class="pl-12 p-2">Non-Current Assets</td>
+<td></td>
+<td class="text-right p-2 font-medium">$507,791.00</td>
+</tr>
+<tr class="hover:bg-primary/10 dark:hover:bg-primary/20 text-[#8a6b60] dark:text-gray-400">
+<td class="pl-16 p-2">Property, Plant &amp; Equipment</td>
+<td class="p-2">1500</td>
+<td class="text-right p-2">$457,791.00</td>
+</tr>
+<tr class="hover:bg-primary/10 dark:hover:bg-primary/20 text-[#8a6b60] dark:text-gray-400">
+<td class="pl-16 p-2">Intangible Assets</td>
+<td class="p-2">1700</td>
+<td class="text-right p-2">$50,000.00</td>
+</tr>
+<tr class="bg-gray-50 dark:bg-background-dark font-bold text-[#181311] dark:text-white">
+<td class="p-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-lg">chevron_right</span> Liabilities
+                                        </td>
+<td></td>
+<td class="text-right p-4">$680,210.00</td>
+</tr>
+<tr class="bg-gray-50 dark:bg-background-dark font-bold text-[#181311] dark:text-white">
+<td class="p-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-lg">chevron_right</span> Equity
+                                        </td>
+<td></td>
+<td class="text-right p-4">$770,620.00</td>
+</tr>
+</tbody>
+<tfoot>
+<tr class="border-t-2 border-[#181311] dark:border-gray-500 bg-gray-100 dark:bg-background-dark font-bold text-[#181311] dark:text-white">
+<td class="p-4">Total Liabilities &amp; Equity</td>
+<td></td>
+<td class="text-right p-4">$1,450,830.00</td>
+</tr>
+</tfoot>
+</table>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

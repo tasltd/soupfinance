@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Accounts Receivable Aging Report</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#f24a0d",
+                        "background-light": "#f8f6f5",
+                        "background-dark": "#221510",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-[#181311] dark:text-white/90">
+<div class="flex min-h-screen">
+<!-- SideNavBar -->
+<aside class="w-64 flex-shrink-0 bg-white dark:bg-background-dark/50 border-r border-[#e6dedb] dark:border-white/10">
+<div class="flex h-full flex-col justify-between p-4">
+<div class="flex flex-col gap-4">
+<div class="flex gap-3 items-center px-3 py-2">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10" data-alt="Company Logo for Apex Accounting" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuC1VGMtHztLlAbuJtITnPa8-4BH204s3Aw5ObNC6W9s3DrhP--mDllt12hzXVYDXdPyzjfFXJ2734QYE9p5r-Lh0qBQd06yala-ah3QpHF3URw3Aju3_6MHnl1CvfCQr4QdlMJJ5b-MDm1GBlz13GWqdNvYYh1jMZnD5dnBiX2p36af5CNCngN1xv0t7vR_1GRRvbH5784S8gwG28ebYa_6UxFcQAqJnrKEKzJx48VhhOE9ZxSB-O9f_MHNnOMWlCFeMcJG2KaFRg_Z");'></div>
+<div class="flex flex-col">
+<h1 class="text-[#181311] dark:text-white text-base font-medium leading-normal">Apex Accounting</h1>
+<p class="text-[#8a6b60] dark:text-white/60 text-sm font-normal leading-normal">Standard Plan</p>
+</div>
+</div>
+<nav class="flex flex-col gap-2">
+<a class="flex items-center gap-3 px-3 py-2 text-[#181311] dark:text-white/80 hover:bg-[#f5f1f0] dark:hover:bg-white/10 rounded-lg" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<p class="text-sm font-medium leading-normal">Dashboard</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#181311] dark:text-white/80 hover:bg-[#f5f1f0] dark:hover:bg-white/10 rounded-lg" href="#">
+<span class="material-symbols-outlined">receipt_long</span>
+<p class="text-sm font-medium leading-normal">Invoices</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#181311] dark:text-white/80 hover:bg-[#f5f1f0] dark:hover:bg-white/10 rounded-lg" href="#">
+<span class="material-symbols-outlined">group</span>
+<p class="text-sm font-medium leading-normal">Clients</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg bg-[#f5f1f0] dark:bg-primary/20 text-[#181311] dark:text-white" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1">bar_chart</span>
+<p class="text-sm font-medium leading-normal">Reports</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#181311] dark:text-white/80 hover:bg-[#f5f1f0] dark:hover:bg-white/10 rounded-lg" href="#">
+<span class="material-symbols-outlined">settings</span>
+<p class="text-sm font-medium leading-normal">Settings</p>
+</a>
+</nav>
+</div>
+<div class="flex flex-col gap-1">
+<a class="flex items-center gap-3 px-3 py-2 text-[#181311] dark:text-white/80 hover:bg-[#f5f1f0] dark:hover:bg-white/10 rounded-lg" href="#">
+<span class="material-symbols-outlined">help_center</span>
+<p class="text-sm font-medium leading-normal">Help Center</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#181311] dark:text-white/80 hover:bg-[#f5f1f0] dark:hover:bg-white/10 rounded-lg" href="#">
+<span class="material-symbols-outlined">logout</span>
+<p class="text-sm font-medium leading-normal">Log Out</p>
+</a>
+</div>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="flex-1 overflow-y-auto">
+<div class="p-4 sm:p-6 lg:p-8 space-y-6">
+<!-- Breadcrumbs -->
+<div class="flex flex-wrap gap-2">
+<a class="text-[#8a6b60] dark:text-white/60 text-sm font-medium leading-normal" href="#">Dashboard</a>
+<span class="text-[#8a6b60] dark:text-white/60 text-sm font-medium leading-normal">/</span>
+<a class="text-[#8a6b60] dark:text-white/60 text-sm font-medium leading-normal" href="#">Reports</a>
+<span class="text-[#8a6b60] dark:text-white/60 text-sm font-medium leading-normal">/</span>
+<span class="text-[#181311] dark:text-white text-sm font-medium leading-normal">A/R Aging</span>
+</div>
+<!-- PageHeading -->
+<div class="flex flex-wrap justify-between gap-3">
+<div class="flex flex-col gap-2">
+<p class="text-[#181311] dark:text-white text-4xl font-black leading-tight tracking-[-0.033em]">Accounts Receivable Aging Report</p>
+<p class="text-[#8a6b60] dark:text-white/60 text-base font-normal leading-normal">View outstanding invoices categorized by aging period.</p>
+</div>
+</div>
+<!-- Toolbar / Filters -->
+<div class="flex flex-wrap items-center justify-between gap-4 p-4 bg-white dark:bg-background-dark/50 border border-[#e6dedb] dark:border-white/10 rounded-lg">
+<div class="flex flex-wrap gap-4 items-center">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[#8a6b60] dark:text-white/60">calendar_month</span>
+<input class="w-48 bg-transparent border-0 border-b border-[#e6dedb] dark:border-white/20 p-2 focus:ring-0 focus:border-primary text-sm dark:text-white/80" placeholder="Select Date Range" type="text"/>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[#8a6b60] dark:text-white/60">person_search</span>
+<select class="w-48 bg-transparent border-0 border-b border-[#e6dedb] dark:border-white/20 p-2 focus:ring-0 focus:border-primary text-sm text-[#8a6b60] dark:text-white/80">
+<option>Filter by Client</option>
+<option>Client A</option>
+<option>Client B</option>
+</select>
+</div>
+<button class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 bg-primary text-white gap-2 text-sm font-bold leading-normal tracking-[0.015em] min-w-0 px-4">
+<span class="material-symbols-outlined text-base">check</span>
+<span class="truncate">Apply Filters</span>
+</button>
+</div>
+<div class="flex gap-2">
+<button class="flex items-center gap-2 p-2 h-10 px-4 text-[#181311] dark:text-white/80 bg-white dark:bg-background-dark/50 border border-[#e6dedb] dark:border-white/10 rounded-lg text-sm font-bold">
+<span class="material-symbols-outlined text-base">download</span>
+<span>Export</span>
+</button>
+</div>
+</div>
+<!-- Stats -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+<div class="flex flex-col gap-2 rounded-lg p-6 border border-[#e6dedb] dark:border-white/10 bg-white dark:bg-background-dark/50">
+<p class="text-[#181311] dark:text-white/90 text-base font-medium leading-normal">Total Outstanding A/R</p>
+<p class="text-[#181311] dark:text-white tracking-light text-3xl font-bold leading-tight">$450,789.50</p>
+</div>
+<div class="flex flex-col gap-2 rounded-lg p-6 border border-[#e6dedb] dark:border-white/10 bg-white dark:bg-background-dark/50">
+<p class="text-[#181311] dark:text-white/90 text-base font-medium leading-normal">Total Overdue Amount</p>
+<p class="text-[#181311] dark:text-white tracking-light text-3xl font-bold leading-tight">$125,432.10</p>
+</div>
+<div class="flex flex-col gap-2 rounded-lg p-6 border border-[#e6dedb] dark:border-white/10 bg-white dark:bg-background-dark/50">
+<p class="text-[#181311] dark:text-white/90 text-base font-medium leading-normal">Overdue Invoices</p>
+<p class="text-[#181311] dark:text-white tracking-light text-3xl font-bold leading-tight">88</p>
+</div>
+</div>
+<!-- Chart -->
+<div class="bg-white dark:bg-background-dark/50 p-6 rounded-lg border border-[#e6dedb] dark:border-white/10">
+<h3 class="text-lg font-bold text-[#181311] dark:text-white mb-4">A/R Aging Summary by Bucket</h3>
+<div class="h-80 w-full flex items-end gap-4 px-4">
+<div class="flex flex-col items-center flex-1 h-full">
+<div class="w-full h-full flex items-end">
+<div class="bg-primary/30 dark:bg-primary/50 w-full" data-alt="Bar showing amount for Current invoices" style="height: 80%"></div>
+</div>
+<p class="text-sm text-[#8a6b60] dark:text-white/60 mt-2">Current</p>
+</div>
+<div class="flex flex-col items-center flex-1 h-full">
+<div class="w-full h-full flex items-end">
+<div class="bg-primary/50 dark:bg-primary/70 w-full" data-alt="Bar showing amount for 31-60 days invoices" style="height: 45%"></div>
+</div>
+<p class="text-sm text-[#8a6b60] dark:text-white/60 mt-2">31-60 Days</p>
+</div>
+<div class="flex flex-col items-center flex-1 h-full">
+<div class="w-full h-full flex items-end">
+<div class="bg-primary/70 dark:bg-primary/90 w-full" data-alt="Bar showing amount for 61-90 days invoices" style="height: 25%"></div>
+</div>
+<p class="text-sm text-[#8a6b60] dark:text-white/60 mt-2">61-90 Days</p>
+</div>
+<div class="flex flex-col items-center flex-1 h-full">
+<div class="w-full h-full flex items-end">
+<div class="bg-primary w-full" data-alt="Bar showing amount for 90+ days invoices" style="height: 15%"></div>
+</div>
+<p class="text-sm text-[#8a6b60] dark:text-white/60 mt-2">90+ Days</p>
+</div>
+</div>
+</div>
+<!-- Data Table -->
+<div class="bg-white dark:bg-background-dark/50 rounded-lg border border-[#e6dedb] dark:border-white/10 overflow-hidden">
+<div class="p-6">
+<h3 class="text-lg font-bold text-[#181311] dark:text-white">Detailed Aging Report</h3>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-sm text-left">
+<thead class="text-xs text-[#8a6b60] dark:text-white/60 uppercase bg-[#f5f1f0] dark:bg-white/5">
+<tr>
+<th class="px-6 py-3" scope="col">Customer Name</th>
+<th class="px-6 py-3" scope="col">Invoice #</th>
+<th class="px-6 py-3" scope="col">Due Date</th>
+<th class="px-6 py-3 text-right" scope="col">Total Amount</th>
+<th class="px-6 py-3 text-right" scope="col">Current (0-30)</th>
+<th class="px-6 py-3 text-right" scope="col">31-60 Days</th>
+<th class="px-6 py-3 text-right" scope="col">61-90 Days</th>
+<th class="px-6 py-3 text-right" scope="col">90+ Days</th>
+</tr>
+</thead>
+<tbody>
+<tr class="border-b border-[#e6dedb] dark:border-white/10">
+<td class="px-6 py-4 font-medium whitespace-nowrap">Innovate Corp</td>
+<td class="px-6 py-4 text-[#8a6b60] dark:text-white/60">INV-00123</td>
+<td class="px-6 py-4 text-[#8a6b60] dark:text-white/60">2023-10-15</td>
+<td class="px-6 py-4 text-right">$5,400.00</td>
+<td class="px-6 py-4 text-right">$5,400.00</td>
+<td class="px-6 py-4 text-right text-[#8a6b60] dark:text-white/60">-</td>
+<td class="px-6 py-4 text-right text-[#8a6b60] dark:text-white/60">-</td>
+<td class="px-6 py-4 text-right text-[#8a6b60] dark:text-white/60">-</td>
+</tr>
+<tr class="border-b border-[#e6dedb] dark:border-white/10">
+<td class="px-6 py-4 font-medium whitespace-nowrap">Quantum Solutions</td>
+<td class="px-6 py-4 text-[#8a6b60] dark:text-white/60">INV-00121</td>
+<td class="px-6 py-4 text-[#8a6b60] dark:text-white/60">2023-09-05</td>
+<td class="px-6 py-4 text-right">$12,750.00</td>
+<td class="px-6 py-4 text-right text-[#8a6b60] dark:text-white/60">-</td>
+<td class="px-6 py-4 text-right">$12,750.00</td>
+<td class="px-6 py-4 text-right text-[#8a6b60] dark:text-white/60">-</td>
+<td class="px-6 py-4 text-right text-[#8a6b60] dark:text-white/60">-</td>
+</tr>
+<tr class="border-b border-[#e6dedb] dark:border-white/10">
+<td class="px-6 py-4 font-medium whitespace-nowrap">Nexus Enterprises</td>
+<td class="px-6 py-4 text-[#8a6b60] dark:text-white/60">INV-00115</td>
+<td class="px-6 py-4 text-[#8a6b60] dark:text-white/60">2023-07-20</td>
+<td class="px-6 py-4 text-right">$8,200.00</td>
+<td class="px-6 py-4 text-right text-[#8a6b60] dark:text-white/60">-</td>
+<td class="px-6 py-4 text-right text-[#8a6b60] dark:text-white/60">-</td>
+<td class="px-6 py-4 text-right text-[#8a6b60] dark:text-white/60">-</td>
+<td class="px-6 py-4 text-right text-primary font-bold">$8,200.00</td>
+</tr>
+<tr class="border-b border-[#e6dedb] dark:border-white/10">
+<td class="px-6 py-4 font-medium whitespace-nowrap">Apex Industries</td>
+<td class="px-6 py-4 text-[#8a6b60] dark:text-white/60">INV-00118</td>
+<td class="px-6 py-4 text-[#8a6b60] dark:text-white/60">2023-08-11</td>
+<td class="px-6 py-4 text-right">$3,500.00</td>
+<td class="px-6 py-4 text-right text-[#8a6b60] dark:text-white/60">-</td>
+<td class="px-6 py-4 text-right text-[#8a6b60] dark:text-white/60">-</td>
+<td class="px-6 py-4 text-right">$3,500.00</td>
+<td class="px-6 py-4 text-right text-[#8a6b60] dark:text-white/60">-</td>
+</tr>
+</tbody>
+<tfoot>
+<tr class="font-bold bg-[#f5f1f0] dark:bg-white/5">
+<td class="px-6 py-4 text-right" colspan="3">Grand Total</td>
+<td class="px-6 py-4 text-right">$450,789.50</td>
+<td class="px-6 py-4 text-right">$325,357.40</td>
+<td class="px-6 py-4 text-right">$78,901.20</td>
+<td class="px-6 py-4 text-right">$32,100.00</td>
+<td class="px-6 py-4 text-right text-primary">$14,430.90</td>
+</tr>
+</tfoot>
+</table>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

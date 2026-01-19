@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Audit Trail Log - Corp-Accounting</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<style type="text/tailwindcss">
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            line-height: 1;
+        }
+    </style>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#f24a0d",
+              "background-light": "#f8f6f5",
+              "background-dark": "#221510",
+            },
+            fontFamily: {
+              "display": ["Manrope", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display">
+<div class="relative flex min-h-screen w-full flex-col group/design-root overflow-x-hidden">
+<div class="flex flex-row h-full grow">
+<!-- SideNavBar -->
+<aside class="w-64 bg-white dark:bg-black/10 flex-shrink-0 border-r border-gray-200 dark:border-white/10">
+<div class="flex h-full min-h-[700px] flex-col justify-between p-4">
+<div class="flex flex-col gap-4">
+<div class="flex gap-3 items-center">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10" data-alt="Company logo for Corp-Accounting" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCLoiL4XJHzBCea3gfoccIuawSA1u_Vjbd0B2p54mXTB6K5QRFLx2AvgtkWJGUAJUg8fhXg_f-MthzRujQUOWacgWXpVLBAD_QysBhr2Jrg19Iho7katCymtsg5Fp_DlBBQt-jUs4x6VUEpJsOPNCd2TMl5MnwSab-MjiWyfK3yR2Qqyz6ncXF-tE9fiDmo0xAL1kalj0LQehT0kYDKFErhJYbHtsURYFdVltoWR3KQl0dQn9243IHhpnuxm9gM-Bvb5ZMWlKrZVYOm");'></div>
+<div class="flex flex-col">
+<h1 class="text-[#181311] dark:text-gray-200 text-base font-bold leading-normal">Corp-Accounting</h1>
+<p class="text-[#8a6b60] dark:text-gray-400 text-sm font-normal leading-normal">INVOICE &amp; GL</p>
+</div>
+</div>
+<nav class="flex flex-col gap-2 mt-4">
+<a class="flex items-center gap-3 px-3 py-2 text-[#181311] dark:text-gray-300 hover:bg-[#f5f1f0] dark:hover:bg-white/5 rounded-lg" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<p class="text-sm font-medium leading-normal">Dashboard</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#181311] dark:text-gray-300 hover:bg-[#f5f1f0] dark:hover:bg-white/5 rounded-lg" href="#">
+<span class="material-symbols-outlined">receipt_long</span>
+<p class="text-sm font-medium leading-normal">Invoices</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#181311] dark:text-gray-300 hover:bg-[#f5f1f0] dark:hover:bg-white/5 rounded-lg" href="#">
+<span class="material-symbols-outlined">person_remove</span>
+<p class="text-sm font-medium leading-normal">General Ledger</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg bg-[#f5f1f0] dark:bg-primary/20 text-primary dark:text-white" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">monitoring</span>
+<p class="text-sm font-bold leading-normal">Reporting &amp; Analytics</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#181311] dark:text-gray-300 hover:bg-[#f5f1f0] dark:hover:bg-white/5 rounded-lg" href="#">
+<span class="material-symbols-outlined">settings</span>
+<p class="text-sm font-medium leading-normal">Settings</p>
+</a>
+</nav>
+</div>
+<div class="flex flex-col gap-1">
+<a class="flex items-center gap-3 px-3 py-2 text-[#181311] dark:text-gray-300 hover:bg-[#f5f1f0] dark:hover:bg-white/5 rounded-lg" href="#">
+<span class="material-symbols-outlined">help_outline</span>
+<p class="text-sm font-medium leading-normal">Support</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#181311] dark:text-gray-300 hover:bg-[#f5f1f0] dark:hover:bg-white/5 rounded-lg" href="#">
+<span class="material-symbols-outlined">logout</span>
+<p class="text-sm font-medium leading-normal">Log Out</p>
+</a>
+</div>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="flex-1 p-6 lg:p-10">
+<div class="layout-content-container flex flex-col w-full">
+<!-- PageHeading -->
+<div class="flex flex-wrap justify-between gap-3 pb-6">
+<div class="flex flex-col gap-2">
+<p class="text-[#181311] dark:text-white text-4xl font-black leading-tight tracking-[-0.033em]">Audit Trail Log</p>
+<p class="text-[#8a6b60] dark:text-gray-400 text-base font-normal leading-normal max-w-2xl">Track and analyze all transaction history for compliance and auditing purposes. Use the filters below to refine your search and compare data across different time periods.</p>
+</div>
+</div>
+<!-- Filter Section -->
+<div class="bg-white dark:bg-black/10 rounded-xl shadow-sm border border-gray-200 dark:border-white/10 p-6">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+<!-- Date Range Pickers -->
+<div class="md:col-span-2">
+<h3 class="text-[#181311] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] mb-3">Date Period Comparison</h3>
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+<!-- Period A -->
+<div class="flex flex-col gap-2">
+<label class="text-sm font-medium text-[#181311] dark:text-gray-300" for="period-a">Period A</label>
+<div class="relative">
+<input class="w-full pl-10 pr-4 py-2 bg-[#f5f1f0] dark:bg-white/5 border border-transparent dark:text-white focus:ring-primary focus:border-primary rounded-lg" id="period-a" readonly="" type="text" value="07/05/2024 - 08/07/2024"/>
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#8a6b60] dark:text-gray-400">calendar_month</span>
+</div>
+</div>
+<!-- Period B -->
+<div class="flex flex-col gap-2">
+<label class="text-sm font-medium text-[#181311] dark:text-gray-300" for="period-b">Period B (Optional)</label>
+<div class="relative">
+<input class="w-full pl-10 pr-4 py-2 bg-[#f5f1f0] dark:bg-white/5 border border-transparent dark:text-gray-400 focus:ring-primary focus:border-primary rounded-lg" id="period-b" placeholder="Select date range" type="text"/>
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#8a6b60] dark:text-gray-400">calendar_month</span>
+</div>
+</div>
+</div>
+</div>
+<!-- CalendarPicker (hidden, for demonstration) -->
+<!-- <div class="flex flex-wrap items-start justify-center gap-6 p-4 md:col-span-2"> ... Calendar component would go here ... </div> -->
+<!-- Other Filters -->
+<div class="md:col-span-2">
+<h3 class="text-[#181311] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] mt-4 mb-3">Additional Filters</h3>
+<div class="flex flex-wrap items-center gap-3">
+<!-- Chips -->
+<button class="flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-lg bg-[#f5f1f0] dark:bg-white/5 pl-4 pr-2 text-[#181311] dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/10">
+<p class="text-sm font-medium leading-normal">User / Role</p>
+<span class="material-symbols-outlined text-base">arrow_drop_down</span>
+</button>
+<button class="flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-lg bg-[#f5f1f0] dark:bg-white/5 pl-4 pr-2 text-[#181311] dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/10">
+<p class="text-sm font-medium leading-normal">Event Type</p>
+<span class="material-symbols-outlined text-base">arrow_drop_down</span>
+</button>
+<button class="flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-lg bg-[#f5f1f0] dark:bg-white/5 pl-4 pr-2 text-[#181311] dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/10">
+<p class="text-sm font-medium leading-normal">Module</p>
+<span class="material-symbols-outlined text-base">arrow_drop_down</span>
+</button>
+<!-- Search -->
+<div class="relative flex-grow min-w-[200px]">
+<input class="w-full pl-10 pr-4 py-2 bg-[#f5f1f0] dark:bg-white/5 border border-transparent dark:text-white rounded-lg focus:ring-primary focus:border-primary" placeholder="Search by keyword, ID..." type="search"/>
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#8a6b60] dark:text-gray-400">search</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Action Buttons -->
+<div class="flex justify-end gap-3 mt-6 pt-6 border-t border-gray-200 dark:border-white/10">
+<button class="px-5 py-2.5 rounded-lg text-sm font-semibold text-[#181311] dark:text-gray-200 bg-transparent hover:bg-gray-100 dark:hover:bg-white/5">Reset</button>
+<button class="px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-primary hover:bg-primary/90">Apply Filters</button>
+</div>
+</div>
+<!-- Action Header & Data Table -->
+<div class="mt-8 bg-white dark:bg-black/10 rounded-xl shadow-sm border border-gray-200 dark:border-white/10">
+<!-- Action Header -->
+<div class="flex flex-wrap items-center justify-between gap-4 p-4 border-b border-gray-200 dark:border-white/10">
+<div class="flex items-center gap-4">
+<!-- Summary Metrics -->
+<div class="flex items-center gap-2">
+<span class="text-sm font-medium text-[#8a6b60] dark:text-gray-400">Total Events:</span>
+<span class="text-sm font-bold text-[#181311] dark:text-white">1,284</span>
+</div>
+<div class="w-px h-4 bg-gray-200 dark:bg-white/10"></div>
+<div class="flex items-center gap-2">
+<span class="text-sm font-medium text-[#8a6b60] dark:text-gray-400">Users Active:</span>
+<span class="text-sm font-bold text-[#181311] dark:text-white">12</span>
+</div>
+</div>
+<button class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white bg-primary hover:bg-primary/90">
+<span class="material-symbols-outlined text-base">download</span>
+                                Export
+                            </button>
+</div>
+<!-- Main Data Table -->
+<div class="overflow-x-auto">
+<table class="w-full text-sm text-left">
+<thead class="text-xs text-[#8a6b60] dark:text-gray-400 uppercase bg-[#f5f1f0] dark:bg-white/5">
+<tr>
+<th class="p-4 w-12" scope="col"></th>
+<th class="p-4" scope="col">Timestamp</th>
+<th class="p-4" scope="col">User</th>
+<th class="p-4" scope="col">Role</th>
+<th class="p-4" scope="col">Event Type</th>
+<th class="p-4" scope="col">Module</th>
+<th class="p-4" scope="col">Item ID</th>
+<th class="p-4" scope="col">Summary of Change</th>
+</tr>
+</thead>
+<tbody class="dark:text-gray-300">
+<tr class="border-b border-gray-200 dark:border-white/10 hover:bg-[#f5f1f0]/50 dark:hover:bg-white/5">
+<td class="p-4"><button class="text-[#8a6b60] dark:text-gray-400"><span class="material-symbols-outlined text-xl">add_circle_outline</span></button></td>
+<td class="p-4 font-medium whitespace-nowrap">Aug 7, 2024, 11:45 AM</td>
+<td class="p-4">Olivia Rhye</td>
+<td class="p-4">Accountant</td>
+<td class="p-4"><span class="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300">Update</span></td>
+<td class="p-4">Invoices</td>
+<td class="p-4">INV-2024-081</td>
+<td class="p-4">Changed status from 'Pending' to 'Approved'.</td>
+</tr>
+<tr class="border-b border-gray-200 dark:border-white/10 bg-primary/5 dark:bg-primary/10">
+<td class="p-4"><button class="text-primary dark:text-white"><span class="material-symbols-outlined text-xl">remove_circle_outline</span></button></td>
+<td class="p-4 font-medium whitespace-nowrap">Aug 7, 2024, 10:30 AM</td>
+<td class="p-4">John Doe</td>
+<td class="p-4">Admin</td>
+<td class="p-4"><span class="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300">Delete</span></td>
+<td class="p-4">General Ledger</td>
+<td class="p-4">GL-JRN-452</td>
+<td class="p-4">Deleted journal entry for 'Office Supplies'.</td>
+</tr>
+<!-- Expanded Row Detail -->
+<tr class="bg-primary/5 dark:bg-primary/10">
+<td class="p-0" colspan="8">
+<div class="p-6 bg-white dark:bg-background-dark/80">
+<h4 class="font-bold text-[#181311] dark:text-white mb-3">Detailed Changes for GL-JRN-452</h4>
+<div class="grid grid-cols-2 gap-6 text-xs">
+<div>
+<p class="font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">Before</p>
+<pre class="p-3 bg-[#f5f1f0] dark:bg-white/5 rounded-md"><code>{\n  "status": "posted",\n  "amount": "250.00",\n  "description": "Office Supplies"\n}</code></pre>
+</div>
+<div>
+<p class="font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">After</p>
+<pre class="p-3 bg-[#f5f1f0] dark:bg-white/5 rounded-md"><code>(Record Deleted)</code></pre>
+</div>
+</div>
+</div>
+</td>
+</tr>
+<tr class="border-b border-gray-200 dark:border-white/10 hover:bg-[#f5f1f0]/50 dark:hover:bg-white/5">
+<td class="p-4"><button class="text-[#8a6b60] dark:text-gray-400"><span class="material-symbols-outlined text-xl">add_circle_outline</span></button></td>
+<td class="p-4 font-medium whitespace-nowrap">Aug 6, 2024, 02:15 PM</td>
+<td class="p-4">Jane Smith</td>
+<td class="p-4">AP Clerk</td>
+<td class="p-4"><span class="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300">Create</span></td>
+<td class="p-4">Invoices</td>
+<td class="p-4">INV-2024-080</td>
+<td class="p-4">New invoice created for 'Tech Services Inc.'</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pagination -->
+<div class="flex items-center justify-between p-4">
+<span class="text-sm text-[#8a6b60] dark:text-gray-400">Showing 1-10 of 1,284 results</span>
+<div class="flex items-center gap-2">
+<button class="px-3 py-1.5 rounded-md text-sm font-semibold text-[#181311] dark:text-gray-200 bg-transparent hover:bg-gray-100 dark:hover:bg-white/5 disabled:opacity-50" disabled="">Previous</button>
+<button class="px-3 py-1.5 rounded-md text-sm font-semibold text-[#181311] dark:text-gray-200 bg-transparent hover:bg-gray-100 dark:hover:bg-white/5">Next</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</div>
+</body></html>

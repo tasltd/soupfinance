@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Tax Liability Report</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#f24a0d",
+                        "background-light": "#f8f6f5",
+                        "background-dark": "#221510",
+                        // Custom colors from the user request
+                        "orange-primary": "#F57C00",
+                        "red-secondary": "#D32F2F",
+                        "off-white-bg": "#F9FAFB",
+                        "charcoal-text": "#212121",
+                        "gray-secondary-text": "#9E9E9E",
+                        "gray-border": "#E0E0E0",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="font-display bg-off-white-bg text-charcoal-text">
+<div class="flex h-auto min-h-screen w-full flex-col group/design-root">
+<!-- TopNavBar -->
+<header class="bg-white border-b border-solid border-gray-border px-6 md:px-10 py-3 sticky top-0 z-50">
+<div class="max-w-7xl mx-auto flex items-center justify-between whitespace-nowrap">
+<div class="flex items-center gap-4 text-charcoal-text">
+<div class="text-primary size-6">
+<svg fill="none" viewbox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<path d="M4 4H17.3334V17.3334H30.6666V30.6666H44V44H4V4Z" fill="currentColor"></path>
+</svg>
+</div>
+<h2 class="text-charcoal-text text-lg font-bold leading-tight tracking-[-0.015em]">Accounting</h2>
+</div>
+<nav class="hidden md:flex flex-1 justify-center items-center gap-9">
+<a class="text-charcoal-text text-sm font-medium leading-normal" href="#">Dashboard</a>
+<a class="text-charcoal-text text-sm font-medium leading-normal" href="#">Invoices</a>
+<a class="text-orange-primary font-bold text-sm leading-normal border-b-2 border-orange-primary pb-1" href="#">Reporting &amp; Analytics</a>
+<a class="text-charcoal-text text-sm font-medium leading-normal" href="#">Settings</a>
+</nav>
+<div class="flex items-center gap-4">
+<div class="hidden sm:flex gap-2">
+<button class="flex cursor-pointer items-center justify-center rounded-lg h-10 w-10 bg-off-white-bg text-charcoal-text hover:bg-gray-border/50">
+<span class="material-symbols-outlined text-xl">notifications</span>
+</button>
+<button class="flex cursor-pointer items-center justify-center rounded-lg h-10 w-10 bg-off-white-bg text-charcoal-text hover:bg-gray-border/50">
+<span class="material-symbols-outlined text-xl">help</span>
+</button>
+</div>
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10" data-alt="User avatar image" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAig-8bAkVVaNFX_SE3ro6IHy3O_wCCpbUNb0U9sXxzvcFwpkCk4Kx0_ZOjcXZ9ockVGunzzjv_M8u7ubCzW5HvrVo_tkwIOSo0auIm1tGUhFMkt0DLjIYpwYWmRyP0o9rw0H5bR_39wNcPphJRudyAqRnh_zFFED0-sO1-6EX1LKYKsQGHeGQZ2mosqWPKCe8K6aXIrjwy4ZPwMaBfTWRb1ZRbgfkAgvPe2YfzkZEykR69sVGXj4XsdrzjyQfM-ErbsdtIzepGfCdC");'></div>
+</div>
+</div>
+</header>
+<!-- Main Content Area -->
+<main class="flex-grow p-4 sm:p-6 md:p-10">
+<div class="max-w-7xl mx-auto flex flex-col gap-8">
+<!-- PageHeading and Filters -->
+<div class="bg-white p-6 rounded-xl shadow-sm border border-gray-border">
+<div class="flex flex-wrap justify-between items-start gap-4 mb-6">
+<h1 class="text-charcoal-text text-3xl sm:text-4xl font-black leading-tight tracking-[-0.033em]">Tax Liability Report</h1>
+<div class="flex items-center gap-2 text-gray-secondary-text text-sm">
+<span class="material-symbols-outlined text-base">group</span>
+<span>Viewing data for Finance Department</span>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+<label class="flex flex-col w-full">
+<p class="text-charcoal-text text-sm font-medium leading-normal pb-2">Current Period</p>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-charcoal-text focus:outline-0 focus:ring-2 focus:ring-orange-primary/50 border border-gray-border bg-white h-12 placeholder:text-gray-secondary-text px-4 text-base font-normal leading-normal" placeholder="This Quarter" type="text"/>
+</label>
+<label class="flex flex-col w-full">
+<p class="text-charcoal-text text-sm font-medium leading-normal pb-2">Comparison Period</p>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-charcoal-text focus:outline-0 focus:ring-2 focus:ring-orange-primary/50 border border-gray-border bg-white h-12 placeholder:text-gray-secondary-text px-4 text-base font-normal leading-normal" placeholder="Last Quarter" type="text"/>
+</label>
+<label class="flex flex-col w-full">
+<p class="text-charcoal-text text-sm font-medium leading-normal pb-2">Legal Entity</p>
+<select class="form-select flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-charcoal-text focus:outline-0 focus:ring-2 focus:ring-orange-primary/50 border border-gray-border bg-white h-12 px-4 text-base font-normal leading-normal">
+<option>All Entities</option>
+<option>Entity A</option>
+</select>
+</label>
+<label class="flex flex-col w-full">
+<p class="text-charcoal-text text-sm font-medium leading-normal pb-2">Tax Type</p>
+<select class="form-select flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-charcoal-text focus:outline-0 focus:ring-2 focus:ring-orange-primary/50 border border-gray-border bg-white h-12 px-4 text-base font-normal leading-normal">
+<option>All Tax Types</option>
+<option>VAT</option>
+</select>
+</label>
+</div>
+<div class="mt-6">
+<button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-6 bg-orange-primary text-white text-base font-bold leading-normal tracking-[0.015em] hover:bg-orange-primary/90 focus:ring-4 focus:ring-orange-primary/30">
+<span class="truncate">Generate Report</span>
+</button>
+</div>
+</div>
+<!-- Summary KPI Cards -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+<div class="bg-white p-5 rounded-xl shadow-sm border border-gray-border">
+<p class="text-sm font-medium text-gray-secondary-text mb-1">Net Tax Liability</p>
+<p class="text-3xl font-bold text-charcoal-text">$45,231.89</p>
+<p class="text-sm font-medium text-green-600 flex items-center mt-1">
+<span class="material-symbols-outlined text-base mr-1">arrow_upward</span>
+                            5.2% vs. Prior Period
+                        </p>
+</div>
+<div class="bg-white p-5 rounded-xl shadow-sm border border-gray-border">
+<p class="text-sm font-medium text-gray-secondary-text mb-1">Total Taxable Sales</p>
+<p class="text-3xl font-bold text-charcoal-text">$753,864.80</p>
+<p class="text-sm font-medium text-green-600 flex items-center mt-1">
+<span class="material-symbols-outlined text-base mr-1">arrow_upward</span>
+                            8.1% vs. Prior Period
+                        </p>
+</div>
+<div class="bg-white p-5 rounded-xl shadow-sm border border-gray-border">
+<p class="text-sm font-medium text-gray-secondary-text mb-1">Tax Collected</p>
+<p class="text-3xl font-bold text-charcoal-text">$60,309.18</p>
+<p class="text-sm font-medium text-green-600 flex items-center mt-1">
+<span class="material-symbols-outlined text-base mr-1">arrow_upward</span>
+                            7.9% vs. Prior Period
+                        </p>
+</div>
+<div class="bg-white p-5 rounded-xl shadow-sm border border-gray-border">
+<p class="text-sm font-medium text-gray-secondary-text mb-1">Tax Paid</p>
+<p class="text-3xl font-bold text-charcoal-text">$15,077.29</p>
+<p class="text-sm font-medium text-red-secondary flex items-center mt-1">
+<span class="material-symbols-outlined text-base mr-1">arrow_downward</span>
+                            -2.4% vs. Prior Period
+                        </p>
+</div>
+</div>
+<!-- Main Data Visualization -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-border">
+<!-- Tabs & Actions -->
+<div class="px-6 py-4 border-b border-gray-border flex flex-wrap justify-between items-center gap-4">
+<div class="flex border-b-2 border-transparent">
+<button class="px-4 py-2 text-sm font-bold text-orange-primary border-b-2 border-orange-primary">Data Table</button>
+<button class="px-4 py-2 text-sm font-medium text-gray-secondary-text hover:text-charcoal-text">Chart View</button>
+</div>
+<div class="flex items-center gap-2">
+<button class="flex min-w-[84px] items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-white text-charcoal-text text-sm font-bold leading-normal border border-gray-border hover:bg-off-white-bg gap-2">
+<span class="material-symbols-outlined text-base">print</span>
+<span class="truncate">Print</span>
+</button>
+<button class="flex min-w-[84px] items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-white text-charcoal-text text-sm font-bold leading-normal border border-gray-border hover:bg-off-white-bg gap-2">
+<span class="material-symbols-outlined text-base">download</span>
+<span class="truncate">Export</span>
+</button>
+</div>
+</div>
+<!-- Data Table -->
+<div class="overflow-x-auto">
+<table class="w-full text-left text-sm">
+<thead class="bg-off-white-bg text-xs text-gray-secondary-text uppercase tracking-wider">
+<tr>
+<th class="px-6 py-3 font-medium" scope="col">Jurisdiction</th>
+<th class="px-6 py-3 font-medium" scope="col">Tax Type</th>
+<th class="px-6 py-3 font-medium text-right" scope="col">Taxable Amount</th>
+<th class="px-6 py-3 font-medium text-right" scope="col">Tax Collected</th>
+<th class="px-6 py-3 font-medium text-right" scope="col">Tax Paid</th>
+<th class="px-6 py-3 font-medium text-right" scope="col">Net Payable/(Refundable)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="bg-white border-b border-gray-border hover:bg-orange-primary/5">
+<td class="px-6 py-4 font-medium text-charcoal-text">California</td>
+<td class="px-6 py-4">Sales Tax</td>
+<td class="px-6 py-4 text-right">$250,123.50</td>
+<td class="px-6 py-4 text-right">$18,134.00</td>
+<td class="px-6 py-4 text-right">$5,012.45</td>
+<td class="px-6 py-4 text-right font-bold text-charcoal-text">$13,121.55</td>
+</tr>
+<tr class="bg-white border-b border-gray-border hover:bg-orange-primary/5">
+<td class="px-6 py-4 font-medium text-charcoal-text">New York</td>
+<td class="px-6 py-4">Sales Tax</td>
+<td class="px-6 py-4 text-right">$180,450.00</td>
+<td class="px-6 py-4 text-right">$15,789.38</td>
+<td class="px-6 py-4 text-right">$4,100.00</td>
+<td class="px-6 py-4 text-right font-bold text-charcoal-text">$11,689.38</td>
+</tr>
+<tr class="bg-white border-b border-gray-border hover:bg-orange-primary/5">
+<td class="px-6 py-4 font-medium text-charcoal-text">Germany</td>
+<td class="px-6 py-4">VAT</td>
+<td class="px-6 py-4 text-right">$150,900.20</td>
+<td class="px-6 py-4 text-right">$28,671.04</td>
+<td class="px-6 py-4 text-right">$3,450.10</td>
+<td class="px-6 py-4 text-right font-bold text-charcoal-text">$25,220.94</td>
+</tr>
+<tr class="bg-white border-b border-gray-border hover:bg-orange-primary/5">
+<td class="px-6 py-4 font-medium text-charcoal-text">Florida</td>
+<td class="px-6 py-4">Sales Tax</td>
+<td class="px-6 py-4 text-right">$98,321.10</td>
+<td class="px-6 py-4 text-right">$5,899.27</td>
+<td class="px-6 py-4 text-right">$1,500.00</td>
+<td class="px-6 py-4 text-right font-bold text-charcoal-text">$4,399.27</td>
+</tr>
+<tr class="bg-white hover:bg-orange-primary/5">
+<td class="px-6 py-4 font-medium text-charcoal-text">United Kingdom</td>
+<td class="px-6 py-4">VAT</td>
+<td class="px-6 py-4 text-right">$74,070.00</td>
+<td class="px-6 py-4 text-right">$14,814.00</td>
+<td class="px-6 py-4 text-right">$1,014.74</td>
+<td class="px-6 py-4 text-right font-bold text-red-secondary">($13,799.26)</td>
+</tr>
+</tbody>
+<tfoot class="bg-off-white-bg">
+<tr class="font-bold text-charcoal-text">
+<td class="px-6 py-4" colspan="2">Total</td>
+<td class="px-6 py-4 text-right">$753,864.80</td>
+<td class="px-6 py-4 text-right">$60,309.18</td>
+<td class="px-6 py-4 text-right">$15,077.29</td>
+<td class="px-6 py-4 text-right text-lg">$45,231.89</td>
+</tr>
+</tfoot>
+</table>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

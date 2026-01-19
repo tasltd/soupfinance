@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Cash Flow Statement - Apex Corp</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#f24a0d",
+              "background-light": "#f8f6f5",
+              "background-dark": "#221510",
+              "orange-primary": "#FF6F00",
+              "red-secondary": "#D32F2F",
+              "charcoal": "#37474F",
+              "medium-gray": "#78909C",
+              "light-gray": "#ECEFF1",
+            },
+            fontFamily: {
+              "display": ["Manrope", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="font-display bg-background-light dark:bg-background-dark">
+<div class="relative flex min-h-screen w-full">
+<!-- SideNavBar -->
+<aside class="flex h-screen w-64 flex-col border-r border-[#e6dedb] dark:border-background-dark/20 bg-white dark:bg-background-dark/50 sticky top-0">
+<div class="flex flex-col gap-4 p-4">
+<div class="flex items-center gap-3">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10" data-alt="Apex Corp logo" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBMXIm17oiy2GchxuRIXMh9B7UquMJh7J8u8Vz0GKMTGVk1Th8USx4xEi1yph2SDcpZaLAtJFXgLJb3A_SPvegGLfZdyMtupXIWwYBZ56zqfW0I6gGp_ky27bDcs3yji3K1QFA98OGXGzm8avSG38ItLUUDmzYZBU0JWnTaxKiusHZgyLbdkluWeCz2MYk0Ap4T4spw9JsV71tSmPsPP7ekZehyJ2FC6ZnkCxmZjnznicf11k29QG-k3kiAVgY_WfEcPj-wnL-gwfLo");'></div>
+<div class="flex flex-col">
+<h1 class="text-charcoal dark:text-white text-base font-medium leading-normal">Apex Corp</h1>
+<p class="text-medium-gray dark:text-gray-400 text-sm font-normal leading-normal">Accounting</p>
+</div>
+</div>
+<div class="flex flex-col gap-2">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-light-gray dark:hover:bg-white/10" href="#">
+<span class="material-symbols-outlined text-charcoal dark:text-gray-300">dashboard</span>
+<p class="text-charcoal dark:text-gray-200 text-sm font-medium leading-normal">Dashboard</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-light-gray dark:hover:bg-white/10" href="#">
+<span class="material-symbols-outlined text-charcoal dark:text-gray-300">receipt_long</span>
+<p class="text-charcoal dark:text-gray-200 text-sm font-medium leading-normal">Invoices</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-light-gray dark:hover:bg-white/10" href="#">
+<span class="material-symbols-outlined text-charcoal dark:text-gray-300">account_balance</span>
+<p class="text-charcoal dark:text-gray-200 text-sm font-medium leading-normal">General Ledger</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg bg-orange-primary/10 dark:bg-orange-primary/20" href="#">
+<span class="material-symbols-outlined text-orange-primary font-bold">bar_chart</span>
+<p class="text-orange-primary text-sm font-bold leading-normal">Reporting</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-light-gray dark:hover:bg-white/10" href="#">
+<span class="material-symbols-outlined text-charcoal dark:text-gray-300">settings</span>
+<p class="text-charcoal dark:text-gray-200 text-sm font-medium leading-normal">Settings</p>
+</a>
+</div>
+</div>
+<div class="mt-auto flex flex-col gap-1 p-4">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-light-gray dark:hover:bg-white/10" href="#">
+<span class="material-symbols-outlined text-charcoal dark:text-gray-300">help_outline</span>
+<p class="text-charcoal dark:text-gray-200 text-sm font-medium leading-normal">Help</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-light-gray dark:hover:bg-white/10" href="#">
+<span class="material-symbols-outlined text-charcoal dark:text-gray-300">logout</span>
+<p class="text-charcoal dark:text-gray-200 text-sm font-medium leading-normal">Log Out</p>
+</a>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="flex-1 p-6 lg:p-8">
+<div class="max-w-7xl mx-auto">
+<!-- PageHeading -->
+<div class="flex flex-wrap justify-between items-center gap-4 mb-6">
+<h1 class="text-charcoal dark:text-white text-4xl font-black leading-tight tracking-[-0.033em]">Cash Flow Statement</h1>
+</div>
+<!-- Toolbar and Chips -->
+<div class="flex flex-col gap-4">
+<div class="flex flex-wrap items-center justify-between gap-4 p-4 bg-white dark:bg-background-dark/50 rounded-lg border border-light-gray dark:border-white/10">
+<div class="relative flex-1 min-w-[200px]">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-medium-gray dark:text-gray-400">search</span>
+<input class="w-full h-10 pl-10 pr-4 rounded-lg border-light-gray dark:border-white/20 bg-background-light dark:bg-white/5 focus:ring-orange-primary focus:border-orange-primary dark:text-white" placeholder="Search line items..." type="text"/>
+</div>
+<div class="flex items-center gap-2">
+<button class="relative group flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 bg-orange-primary text-white gap-2 text-sm font-bold leading-normal tracking-[0.015em] min-w-0 px-4">
+<span class="material-symbols-outlined text-white text-[20px]">download</span>
+<span class="truncate">Export</span>
+<span class="material-symbols-outlined text-white text-[20px]">expand_more</span>
+<div class="absolute top-full mt-2 w-full bg-white dark:bg-charcoal rounded-lg shadow-lg opacity-0 group-focus-within:opacity-100 transition-opacity duration-200 z-10">
+<a class="block px-4 py-2 text-sm text-charcoal dark:text-white hover:bg-light-gray dark:hover:bg-white/10" href="#">Export to PDF</a>
+<a class="block px-4 py-2 text-sm text-charcoal dark:text-white hover:bg-light-gray dark:hover:bg-white/10" href="#">Export to Excel</a>
+</div>
+</button>
+</div>
+</div>
+<div class="flex gap-3 overflow-x-auto pb-2">
+<button class="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-full bg-white dark:bg-white/10 pl-4 pr-3 border border-light-gray dark:border-white/10">
+<p class="text-charcoal dark:text-gray-200 text-sm font-medium leading-normal">Date Range: Last Quarter</p>
+<span class="material-symbols-outlined text-medium-gray dark:text-gray-400 text-[20px]">expand_more</span>
+</button>
+<button class="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-full bg-white dark:bg-white/10 pl-4 pr-3 border border-light-gray dark:border-white/10">
+<p class="text-charcoal dark:text-gray-200 text-sm font-medium leading-normal">Subsidiary: All</p>
+<span class="material-symbols-outlined text-medium-gray dark:text-gray-400 text-[20px]">expand_more</span>
+</button>
+<button class="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-full bg-white dark:bg-white/10 pl-4 pr-3 border border-light-gray dark:border-white/10">
+<p class="text-charcoal dark:text-gray-200 text-sm font-medium leading-normal">Department: All</p>
+<span class="material-symbols-outlined text-medium-gray dark:text-gray-400 text-[20px]">expand_more</span>
+</button>
+</div>
+</div>
+<!-- Stats -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 my-6">
+<div class="flex flex-col gap-2 rounded-xl p-6 bg-white dark:bg-background-dark/50 border border-light-gray dark:border-white/10">
+<p class="text-medium-gray dark:text-gray-400 text-base font-medium leading-normal">Net Change in Cash</p>
+<p class="text-charcoal dark:text-white tracking-light text-3xl font-bold leading-tight">$150,000</p>
+<p class="text-green-600 text-base font-medium leading-normal flex items-center gap-1">
+<span class="material-symbols-outlined text-lg">arrow_upward</span>
+<span>5.2%</span>
+</p>
+</div>
+<div class="flex flex-col gap-2 rounded-xl p-6 bg-white dark:bg-background-dark/50 border border-light-gray dark:border-white/10">
+<p class="text-medium-gray dark:text-gray-400 text-base font-medium leading-normal">Ending Cash Balance</p>
+<p class="text-charcoal dark:text-white tracking-light text-3xl font-bold leading-tight">$850,000</p>
+<p class="text-green-600 text-base font-medium leading-normal flex items-center gap-1">
+<span class="material-symbols-outlined text-lg">arrow_upward</span>
+<span>21.4%</span>
+</p>
+</div>
+<div class="flex flex-col gap-2 rounded-xl p-6 bg-white dark:bg-background-dark/50 border border-light-gray dark:border-white/10">
+<p class="text-medium-gray dark:text-gray-400 text-base font-medium leading-normal">Cash from Operating</p>
+<p class="text-charcoal dark:text-white tracking-light text-3xl font-bold leading-tight">$220,000</p>
+<p class="text-green-600 text-base font-medium leading-normal flex items-center gap-1">
+<span class="material-symbols-outlined text-lg">arrow_upward</span>
+<span>8.1%</span>
+</p>
+</div>
+<div class="flex flex-col gap-2 rounded-xl p-6 bg-white dark:bg-background-dark/50 border border-light-gray dark:border-white/10">
+<p class="text-medium-gray dark:text-gray-400 text-base font-medium leading-normal">Cash from Investing</p>
+<p class="text-charcoal dark:text-white tracking-light text-3xl font-bold leading-tight">($50,000)</p>
+<p class="text-red-secondary text-base font-medium leading-normal flex items-center gap-1">
+<span class="material-symbols-outlined text-lg">arrow_downward</span>
+<span>-12.5%</span>
+</p>
+</div>
+</div>
+<!-- Chart and Table Layout -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<!-- Data Table -->
+<div class="lg:col-span-2 bg-white dark:bg-background-dark/50 rounded-xl border border-light-gray dark:border-white/10 overflow-hidden">
+<div class="p-6">
+<h2 class="text-xl font-bold text-charcoal dark:text-white">Statement Details</h2>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left">
+<thead>
+<tr class="border-b border-light-gray dark:border-white/10 bg-background-light dark:bg-white/5">
+<th class="p-4 font-semibold text-charcoal dark:text-gray-300">Description</th>
+<th class="p-4 font-semibold text-charcoal dark:text-gray-300 text-right">Amount (USD)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="font-bold bg-light-gray/50 dark:bg-white/5">
+<td class="p-4 text-charcoal dark:text-gray-200" colspan="2">Cash Flow from Operating Activities</td>
+</tr>
+<tr class="border-b border-light-gray dark:border-white/10 hover:bg-background-light dark:hover:bg-white/5">
+<td class="p-4 text-medium-gray dark:text-gray-400">Net Income</td>
+<td class="p-4 text-charcoal dark:text-gray-300 text-right">$180,000</td>
+</tr>
+<tr class="border-b border-light-gray dark:border-white/10 hover:bg-background-light dark:hover:bg-white/5">
+<td class="p-4 text-medium-gray dark:text-gray-400">Depreciation &amp; Amortization</td>
+<td class="p-4 text-charcoal dark:text-gray-300 text-right">$40,000</td>
+</tr>
+<tr class="border-b border-light-gray dark:border-white/10 font-semibold">
+<td class="p-4 text-charcoal dark:text-gray-200">Net Cash from Operating Activities</td>
+<td class="p-4 text-charcoal dark:text-gray-200 text-right">$220,000</td>
+</tr>
+<tr class="font-bold bg-light-gray/50 dark:bg-white/5">
+<td class="p-4 text-charcoal dark:text-gray-200" colspan="2">Cash Flow from Investing Activities</td>
+</tr>
+<tr class="border-b border-light-gray dark:border-white/10 hover:bg-background-light dark:hover:bg-white/5">
+<td class="p-4 text-medium-gray dark:text-gray-400">Purchase of Equipment</td>
+<td class="p-4 text-red-secondary text-right">($50,000)</td>
+</tr>
+<tr class="border-b border-light-gray dark:border-white/10 font-semibold">
+<td class="p-4 text-charcoal dark:text-gray-200">Net Cash from Investing Activities</td>
+<td class="p-4 text-red-secondary text-right">($50,000)</td>
+</tr>
+<tr class="font-bold bg-light-gray/50 dark:bg-white/5">
+<td class="p-4 text-charcoal dark:text-gray-200" colspan="2">Cash Flow from Financing Activities</td>
+</tr>
+<tr class="border-b border-light-gray dark:border-white/10 hover:bg-background-light dark:hover:bg-white/5">
+<td class="p-4 text-medium-gray dark:text-gray-400">Dividends Paid</td>
+<td class="p-4 text-red-secondary text-right">($20,000)</td>
+</tr>
+<tr class="border-b border-light-gray dark:border-white/10 font-semibold">
+<td class="p-4 text-charcoal dark:text-gray-200">Net Cash from Financing Activities</td>
+<td class="p-4 text-red-secondary text-right">($20,000)</td>
+</tr>
+</tbody>
+<tfoot>
+<tr class="bg-background-light dark:bg-white/5 border-t-2 border-charcoal dark:border-white/20">
+<td class="p-4 font-bold text-lg text-charcoal dark:text-white">Ending Cash Balance</td>
+<td class="p-4 font-bold text-lg text-charcoal dark:text-white text-right">$850,000</td>
+</tr>
+</tfoot>
+</table>
+</div>
+</div>
+<!-- Chart -->
+<div class="bg-white dark:bg-background-dark/50 rounded-xl border border-light-gray dark:border-white/10 p-6 flex flex-col">
+<h2 class="text-xl font-bold text-charcoal dark:text-white mb-4">Cash Flow Overview</h2>
+<div class="flex-grow flex items-end gap-4 justify-center" data-alt="A bar chart showing cash flow from operating, investing, and financing activities. Operating is a tall positive green bar. Investing is a shorter negative red bar. Financing is the shortest negative red bar.">
+<div class="flex flex-col items-center gap-2">
+<div class="w-12 h-56 bg-green-500 rounded-t-lg" style="background: linear-gradient(to top, #4CAF50, #81C784);"></div>
+<p class="text-sm text-medium-gray dark:text-gray-400">Operating</p>
+</div>
+<div class="flex flex-col items-center gap-2">
+<div class="w-12 h-16 bg-red-secondary rounded-t-lg" style="background: linear-gradient(to top, #D32F2F, #EF5350);"></div>
+<p class="text-sm text-medium-gray dark:text-gray-400">Investing</p>
+</div>
+<div class="flex flex-col items-center gap-2">
+<div class="w-12 h-8 bg-red-secondary/70 rounded-t-lg" style="background: linear-gradient(to top, #D32F2F, #EF5350); opacity: 0.7;"></div>
+<p class="text-sm text-medium-gray dark:text-gray-400">Financing</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

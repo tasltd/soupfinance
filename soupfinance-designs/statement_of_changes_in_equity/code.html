@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Statement of Changes in Equity</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#f24a0d",
+              "background-light": "#f8f6f5",
+              "background-dark": "#221510",
+            },
+            fontFamily: {
+              "display": ["Manrope"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            font-family: 'Manrope', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display">
+<div class="relative flex h-auto min-h-screen w-full flex-col group/design-root overflow-x-hidden">
+<div class="layout-container flex h-full grow flex-col">
+<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-b-[#e6dedb] dark:border-b-background-dark px-10 py-3 bg-white dark:bg-[#1a110e]">
+<div class="flex items-center gap-4 text-[#181311] dark:text-white">
+<div class="size-6 text-primary">
+<svg fill="none" viewbox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<path clip-rule="evenodd" d="M24 4H42V17.3333V30.6667H24V44H6V30.6667V17.3333H24V4Z" fill="currentColor" fill-rule="evenodd"></path>
+</svg>
+</div>
+<h2 class="text-[#181311] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">Corporate Accounting</h2>
+</div>
+<div class="flex flex-1 justify-end gap-8">
+<div class="hidden lg:flex items-center gap-9">
+<a class="text-[#8a6b60] dark:text-gray-400 text-sm font-medium leading-normal hover:text-primary" href="#">Dashboard</a>
+<a class="text-[#8a6b60] dark:text-gray-400 text-sm font-medium leading-normal hover:text-primary" href="#">Invoices</a>
+<a class="text-[#8a6b60] dark:text-gray-400 text-sm font-medium leading-normal hover:text-primary" href="#">General Ledger</a>
+<a class="text-primary dark:text-primary text-sm font-bold leading-normal" href="#">Reporting &amp; Analytics</a>
+</div>
+<div class="flex items-center gap-2">
+<button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-primary text-white text-sm font-bold leading-normal tracking-[0.015em] gap-2">
+<span class="material-symbols-outlined text-base">ios_share</span>
+<span class="truncate">Export</span>
+</button>
+<button class="hidden sm:flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 bg-[#f5f1f0] dark:bg-background-dark text-[#181311] dark:text-white gap-2 text-sm font-bold leading-normal tracking-[0.015em] min-w-0 px-2.5">
+<span class="material-symbols-outlined text-xl">settings</span>
+</button>
+<button class="hidden sm:flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 bg-[#f5f1f0] dark:bg-background-dark text-[#181311] dark:text-white gap-2 text-sm font-bold leading-normal tracking-[0.015em] min-w-0 px-2.5">
+<span class="material-symbols-outlined text-xl">help</span>
+</button>
+<button class="hidden sm:flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 bg-[#f5f1f0] dark:bg-background-dark text-[#181311] dark:text-white gap-2 text-sm font-bold leading-normal tracking-[0.015em] min-w-0 px-2.5">
+<span class="material-symbols-outlined text-xl">notifications</span>
+</button>
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10" data-alt="User avatar image" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDGwV0Kgnjfsa7tYqPFGQmh0QujSOMP75zKYnnTovdeZ1Ru3DGG63Ohis01Wcv5eGBYqwu2cEaRUBz18L4hezO70VUa8krCiFpdBZI8_M-oJYvToQhmTtWfY5Dw-hxdtqncAe-qNz5nDu_13t3CnwA6H7FlkrAkJR2n1Y_UjRJHpbumSV4B5cBHOBgzusRESQ8T-3LHETpfHmruH5p-5QIEsEnAVgnQ3hBzQz4L23VqhJjaa2dIGYy0lUYZYby7hR99tHJv41A2VSKt");'></div>
+</div>
+</div>
+</header>
+<main class="px-4 sm:px-6 md:px-10 py-8">
+<div class="layout-content-container flex flex-col max-w-7xl mx-auto flex-1 gap-8">
+<div class="flex flex-wrap justify-between items-center gap-4">
+<p class="text-[#181311] dark:text-white text-4xl font-black leading-tight tracking-[-0.033em]">Statement of Changes in Equity</p>
+</div>
+<div class="flex flex-col md:flex-row justify-between gap-4 px-4 py-3 bg-white dark:bg-[#1a110e] rounded-xl border border-[#e6dedb] dark:border-background-dark">
+<div class="flex flex-wrap items-center gap-4">
+<div class="relative min-w-64">
+<label class="text-xs font-medium text-[#8a6b60] dark:text-gray-400" for="date-range">Date Range</label>
+<div class="flex items-center gap-2 mt-1">
+<span class="material-symbols-outlined text-[#8a6b60] dark:text-gray-400">calendar_month</span>
+<select class="w-full text-sm font-medium text-[#181311] dark:text-white bg-transparent border-0 p-0 focus:ring-0" id="date-range">
+<option>Last Quarter</option>
+<option>This Quarter</option>
+<option>Year to Date</option>
+<option>Last Year</option>
+</select>
+</div>
+</div>
+<div class="border-l border-[#e6dedb] dark:border-background-dark h-10 hidden md:block"></div>
+<div class="relative w-full md:w-auto">
+<span class="material-symbols-outlined text-[#8a6b60] dark:text-gray-400 absolute left-2 top-1/2 -translate-y-1/2 text-xl">search</span>
+<input class="pl-9 pr-4 py-2 h-10 w-full md:w-64 rounded-lg bg-[#f5f1f0] dark:bg-background-dark border-transparent focus:border-primary focus:ring-primary text-sm text-[#181311] dark:text-white" placeholder="Search accounts..." type="search"/>
+</div>
+<button class="p-2 text-[#181311] dark:text-white rounded-lg hover:bg-[#f5f1f0] dark:hover:bg-background-dark">
+<span class="material-symbols-outlined text-2xl">filter_list</span>
+</button>
+</div>
+<button class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 bg-primary text-white gap-2 text-sm font-bold leading-normal tracking-[0.015em] min-w-0 px-4">
+<span class="material-symbols-outlined text-xl">line_axis</span>
+<span class="truncate">Generate Report</span>
+</button>
+</div>
+<div class="flex flex-wrap gap-4">
+<div class="flex min-w-[158px] flex-1 flex-col gap-2 rounded-xl p-6 border border-[#e6dedb] dark:border-background-dark bg-white dark:bg-[#1a110e]">
+<p class="text-[#181311] dark:text-gray-300 text-base font-medium leading-normal">Total Opening Equity</p>
+<p class="text-[#181311] dark:text-white tracking-light text-2xl font-bold leading-tight">$15,450,000</p>
+<p class="text-[#07880b] text-base font-medium leading-normal">+2.5% vs prior period</p>
+</div>
+<div class="flex min-w-[158px] flex-1 flex-col gap-2 rounded-xl p-6 border border-[#e6dedb] dark:border-background-dark bg-white dark:bg-[#1a110e]">
+<p class="text-[#181311] dark:text-gray-300 text-base font-medium leading-normal">Total Net Change</p>
+<p class="text-[#181311] dark:text-white tracking-light text-2xl font-bold leading-tight">-$250,000</p>
+<p class="text-[#e70c08] text-base font-medium leading-normal">-1.6% change</p>
+</div>
+<div class="flex min-w-[158px] flex-1 flex-col gap-2 rounded-xl p-6 border border-[#e6dedb] dark:border-background-dark bg-white dark:bg-[#1a110e]">
+<p class="text-[#181311] dark:text-gray-300 text-base font-medium leading-normal">Total Closing Equity</p>
+<p class="text-[#181311] dark:text-white tracking-light text-2xl font-bold leading-tight">$15,200,000</p>
+<p class="text-[#07880b] text-base font-medium leading-normal">+1.8% vs prior period</p>
+</div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+<div class="lg:col-span-3">
+<h3 class="text-xl font-bold text-[#181311] dark:text-white mb-4">Equity Movement</h3>
+<div class="h-80 rounded-xl bg-white dark:bg-[#1a110e] border border-[#e6dedb] dark:border-background-dark flex items-center justify-center">
+<img class="w-full h-auto object-contain p-4" data-alt="A waterfall chart showing the flow from opening to closing equity balance." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCAeJOERbJ35IzCZ94O6u3wlTponmuge8cWIMP5NFlGtUnUQgHTgsxgUJ807yUKRFOIKNwCShPQoQLP7iCIcFEg_whJJueF_CTLEiRmXxU9N-zdC_5bCoQW4K3OE9hfrj1NemRPOAlA8A4wW5Vfx-NyKjBoaiTuKiW6nT1iQJihw3mCIbgqYkmWw8BKveYq52_c5ZqmJtPnipDQRJqzv-rCWdp4q_df6B1BfknkfDMD_PMpCINvlgNXX4WcTPYXW7j5ZOVvKiCgILyn"/>
+</div>
+</div>
+<div class="lg:col-span-2">
+<h3 class="text-xl font-bold text-[#181311] dark:text-white mb-4">Composition of Closing Equity</h3>
+<div class="h-80 rounded-xl bg-white dark:bg-[#1a110e] border border-[#e6dedb] dark:border-background-dark flex items-center justify-center">
+<img class="w-full h-auto object-contain p-4" data-alt="A pie chart showing the composition of total equity by account." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBDJ4uCiGD_hfFTTsik2KzX5CuUjzoOVm-pFYq7RWySy1kSH8hO6xJU_vqKzMQKf480kLvRLbpetZV-k9gtbHwnsvDHymMsEpggMtZmOY-Eyt-F2OaVgV_77MqDzd0ok92cnlIMKXhoN3DgAg4G1VXEBlP0b9ALfNQyyVp-yd6GrqVCyJxr-ZEiQehqiqTQZDsoHBqGa7SS39OiAKy7CoJek3ZSEQ8ElmxO1aAcONQGJhRIVSEqkN2vc7boCMcFLv0K02wdjuoqvYhg"/>
+</div>
+</div>
+</div>
+<div class="@container">
+<div class="overflow-hidden rounded-xl border border-[#e6dedb] dark:border-background-dark bg-white dark:bg-[#1a110e]">
+<div class="overflow-x-auto">
+<table class="w-full min-w-[800px]">
+<thead>
+<tr class="bg-background-light dark:bg-background-dark">
+<th class="table-c073080a-e627-4f82-8349-462355800774-column-120 px-4 py-3 text-left text-[#181311] dark:text-gray-300 w-[25%] text-sm font-medium leading-normal">Equity Account</th>
+<th class="table-c073080a-e627-4f82-8349-462355800774-column-240 px-4 py-3 text-right text-[#181311] dark:text-gray-300 text-sm font-medium leading-normal">Opening Balance</th>
+<th class="table-c073080a-e627-4f82-8349-462355800774-column-360 px-4 py-3 text-right text-[#181311] dark:text-gray-300 text-sm font-medium leading-normal">Net Income</th>
+<th class="table-c073080a-e627-4f82-8349-462355800774-column-480 px-4 py-3 text-right text-[#181311] dark:text-gray-300 text-sm font-medium leading-normal">Dividends</th>
+<th class="table-c073080a-e627-4f82-8349-462355800774-column-600 px-4 py-3 text-right text-[#181311] dark:text-gray-300 text-sm font-medium leading-normal">Other Comprehensive Income</th>
+<th class="table-c073080a-e627-4f82-8349-462355800774-column-720 px-4 py-3 text-right text-[#181311] dark:text-gray-300 text-sm font-medium leading-normal">Closing Balance</th>
+<th class="table-c073080a-e627-4f82-8349-462355800774-column-840 px-4 py-3 text-center text-[#8a6b60] dark:text-gray-500 w-24 text-sm font-medium leading-normal">Details</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-[#e6dedb] dark:divide-background-dark">
+<tr class="hover:bg-background-light dark:hover:bg-background-dark/80">
+<td class="h-[72px] px-4 py-2 text-[#181311] dark:text-white text-sm font-normal leading-normal">Common Stock</td>
+<td class="h-[72px] px-4 py-2 text-[#8a6b60] dark:text-gray-400 text-sm font-normal leading-normal text-right">$5,000,000</td>
+<td class="h-[72px] px-4 py-2 text-[#8a6b60] dark:text-gray-400 text-sm font-normal leading-normal text-right">$0</td>
+<td class="h-[72px] px-4 py-2 text-[#8a6b60] dark:text-gray-400 text-sm font-normal leading-normal text-right">$0</td>
+<td class="h-[72px] px-4 py-2 text-[#8a6b60] dark:text-gray-400 text-sm font-normal leading-normal text-right">$0</td>
+<td class="h-[72px] px-4 py-2 text-[#8a6b60] dark:text-gray-400 text-sm font-normal leading-normal text-right">$5,000,000</td>
+<td class="h-[72px] px-4 py-2 text-center text-sm font-bold leading-normal tracking-[0.015em]"><a class="text-primary hover:underline" href="#">View</a></td>
+</tr>
+<tr class="hover:bg-background-light dark:hover:bg-background-dark/80">
+<td class="h-[72px] px-4 py-2 text-[#181311] dark:text-white text-sm font-normal leading-normal">Retained Earnings</td>
+<td class="h-[72px] px-4 py-2 text-[#8a6b60] dark:text-gray-400 text-sm font-normal leading-normal text-right">$8,500,000</td>
+<td class="h-[72px] px-4 py-2 text-green-700 text-sm font-normal leading-normal text-right">$750,000</td>
+<td class="h-[72px] px-4 py-2 text-red-600 text-sm font-normal leading-normal text-right">($200,000)</td>
+<td class="h-[72px] px-4 py-2 text-[#8a6b60] dark:text-gray-400 text-sm font-normal leading-normal text-right">$0</td>
+<td class="h-[72px] px-4 py-2 text-[#8a6b60] dark:text-gray-400 text-sm font-normal leading-normal text-right">$9,050,000</td>
+<td class="h-[72px] px-4 py-2 text-center text-sm font-bold leading-normal tracking-[0.015em]"><a class="text-primary hover:underline" href="#">View</a></td>
+</tr>
+<tr class="hover:bg-background-light dark:hover:bg-background-dark/80">
+<td class="h-[72px] px-4 py-2 text-[#181311] dark:text-white text-sm font-normal leading-normal">Additional Paid-in Capital</td>
+<td class="h-[72px] px-4 py-2 text-[#8a6b60] dark:text-gray-400 text-sm font-normal leading-normal text-right">$1,500,000</td>
+<td class="h-[72px] px-4 py-2 text-[#8a6b60] dark:text-gray-400 text-sm font-normal leading-normal text-right">$0</td>
+<td class="h-[72px] px-4 py-2 text-[#8a6b60] dark:text-gray-400 text-sm font-normal leading-normal text-right">$0</td>
+<td class="h-[72px] px-4 py-2 text-[#8a6b60] dark:text-gray-400 text-sm font-normal leading-normal text-right">$0</td>
+<td class="h-[72px] px-4 py-2 text-[#8a6b60] dark:text-gray-400 text-sm font-normal leading-normal text-right">$1,500,000</td>
+<td class="h-[72px] px-4 py-2 text-center text-sm font-bold leading-normal tracking-[0.015em]"><a class="text-primary hover:underline" href="#">View</a></td>
+</tr>
+<tr class="hover:bg-background-light dark:hover:bg-background-dark/80">
+<td class="h-[72px] px-4 py-2 text-[#181311] dark:text-white text-sm font-normal leading-normal">Accumulated OCI</td>
+<td class="h-[72px] px-4 py-2 text-[#8a6b60] dark:text-gray-400 text-sm font-normal leading-normal text-right">$450,000</td>
+<td class="h-[72px] px-4 py-2 text-[#8a6b60] dark:text-gray-400 text-sm font-normal leading-normal text-right">$0</td>
+<td class="h-[72px] px-4 py-2 text-[#8a6b60] dark:text-gray-400 text-sm font-normal leading-normal text-right">$0</td>
+<td class="h-[72px] px-4 py-2 text-red-600 text-sm font-normal leading-normal text-right">($800,000)</td>
+<td class="h-[72px] px-4 py-2 text-red-600 text-sm font-normal leading-normal text-right">($350,000)</td>
+<td class="h-[72px] px-4 py-2 text-center text-sm font-bold leading-normal tracking-[0.015em]"><a class="text-primary hover:underline" href="#">View</a></td>
+</tr>
+</tbody>
+<tfoot>
+<tr class="bg-background-light dark:bg-background-dark font-bold">
+<td class="h-16 px-4 py-2 text-[#181311] dark:text-white text-sm">Total Equity</td>
+<td class="h-16 px-4 py-2 text-[#181311] dark:text-white text-sm text-right">$15,450,000</td>
+<td class="h-16 px-4 py-2 text-[#181311] dark:text-white text-sm text-right">$750,000</td>
+<td class="h-16 px-4 py-2 text-[#181311] dark:text-white text-sm text-right">($200,000)</td>
+<td class="h-16 px-4 py-2 text-[#181311] dark:text-white text-sm text-right">($800,000)</td>
+<td class="h-16 px-4 py-2 text-[#181311] dark:text-white text-sm text-right">$15,200,000</td>
+<td class="h-16 px-4 py-2"></td>
+</tr>
+</tfoot>
+</table>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</div>
+</body></html>

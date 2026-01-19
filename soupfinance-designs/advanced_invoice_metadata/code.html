@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Advanced Invoice Details</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#f24a0d",
+            "background-light": "#f8f6f5",
+            "background-dark": "#221510",
+            "orange-accent": "#FF6F00",
+            "red-accent": "#D32F2F"
+          },
+          fontFamily: {
+            "display": ["Manrope", "sans-serif"]
+          },
+          borderRadius: {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+        },
+      },
+    }
+  </script>
+<style>
+    body {
+      font-family: 'Manrope', sans-serif;
+    }
+    .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    .material-symbols-outlined.fill {
+        font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+  </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-[#212529] dark:text-white">
+<div class="relative flex h-auto min-h-screen w-full flex-col group/design-root overflow-x-hidden">
+<div class="layout-container flex h-full grow flex-col">
+<div class="flex flex-1 justify-center p-4 sm:p-8 md:p-12">
+<div class="layout-content-container flex flex-col w-full max-w-6xl flex-1">
+<header class="flex items-center justify-between pb-6 border-b border-[#e6dedb] dark:border-gray-700 mb-8">
+<div>
+<h1 class="text-[#212529] dark:text-white text-2xl font-bold leading-tight">Advanced Invoice Details</h1>
+<p class="text-[#6c757d] dark:text-gray-400 text-sm font-normal leading-normal">Manage additional invoice data for Invoice #INV-2024-001</p>
+</div>
+<button class="text-[#6c757d] dark:text-gray-400 hover:text-[#212529] dark:hover:text-white">
+<span class="material-symbols-outlined text-3xl">close</span>
+</button>
+</header>
+<main class="flex flex-col md:flex-row flex-1 gap-8">
+<!-- Left Navigation Column -->
+<aside class="w-full md:w-1/3 lg:w-1/4">
+<div class="flex flex-col gap-2">
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg bg-primary/20 dark:bg-primary/30" href="#">
+<span class="material-symbols-outlined fill text-primary">credit_card</span>
+<p class="text-primary text-base font-semibold leading-normal">Payment Terms</p>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10" href="#">
+<span class="material-symbols-outlined text-[#212529] dark:text-white">local_shipping</span>
+<p class="text-[#212529] dark:text-white text-base font-medium leading-normal">Shipping Details</p>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10" href="#">
+<span class="material-symbols-outlined text-[#212529] dark:text-white">add_circle</span>
+<p class="text-[#212529] dark:text-white text-base font-medium leading-normal">Custom Fields</p>
+</a>
+</div>
+</aside>
+<!-- Right Content Column -->
+<div class="w-full md:w-2/3 lg:w-3/4 bg-white dark:bg-background-dark p-6 rounded-xl border border-[#e6dedb] dark:border-gray-700 shadow-sm">
+<div class="flex flex-col gap-8">
+<!-- Payment Terms Section -->
+<section>
+<h2 class="text-xl font-bold text-[#212529] dark:text-white mb-6">Payment Terms</h2>
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+<label class="flex flex-col flex-1">
+<p class="text-[#212529] dark:text-white text-sm font-medium leading-normal pb-2">Payment Terms</p>
+<select class="form-select flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#212529] dark:text-white dark:bg-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-accent/50 border border-[#e6dedb] dark:border-gray-600 bg-white focus:border-orange-accent h-14 placeholder:text-[#6c757d] p-[15px] text-base font-normal leading-normal appearance-none bg-no-repeat bg-right" style="background-image: url('data:image/svg+xml,%3csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2724px%27 height=%2724px%27 fill=%27%236c757d%27 viewBox=%270 0 256 256%27%3e%3cpath d=%27M215.39,92.94a8,8,0,0,0-11.31,0L128,169.05,51.92,92.94a8,8,0,0,0-11.32,11.32l82.05,82.05a8,8,0,0,0,11.32,0l81.42-82.06A8,8,0,0,0,215.39,92.94Z%27%3e%3c/path%3e%3c/svg%3e'); background-position: right 1rem center; background-size: 1.5em 1.5em;">
+<option>Net 30</option>
+<option>Net 60</option>
+<option>Net 90</option>
+<option>Due on Receipt</option>
+</select>
+</label>
+<label class="flex flex-col flex-1">
+<p class="text-[#212529] dark:text-white text-sm font-medium leading-normal pb-2">Due Date</p>
+<div class="flex w-full flex-1 items-stretch">
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-l-lg text-[#212529] dark:text-white dark:bg-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-accent/50 border border-[#e6dedb] dark:border-gray-600 bg-white focus:border-orange-accent h-14 placeholder:text-[#6c757d] p-[15px] border-r-0 pr-2 text-base font-normal leading-normal" type="text" value="2024-08-15"/>
+<div class="text-[#6c757d] flex border border-[#e6dedb] dark:border-gray-600 bg-white dark:bg-gray-800 items-center justify-center pr-[15px] rounded-r-lg border-l-0">
+<span class="material-symbols-outlined">calendar_today</span>
+</div>
+</div>
+</label>
+<label class="flex flex-col flex-1 sm:col-span-2">
+<p class="text-[#212529] dark:text-white text-sm font-medium leading-normal pb-2">PO Reference Number</p>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#212529] dark:text-white dark:bg-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-accent/50 border border-[#e6dedb] dark:border-gray-600 bg-white focus:border-orange-accent h-14 placeholder:text-[#6c757d] p-[15px] text-base font-normal leading-normal" placeholder="Enter PO number" value="PO-12345"/>
+</label>
+</div>
+</section>
+<hr class="border-t border-[#e6dedb] dark:border-gray-700"/>
+<!-- Custom Fields Section -->
+<section>
+<div class="flex justify-between items-center mb-6">
+<h2 class="text-xl font-bold text-[#212529] dark:text-white">Custom Fields</h2>
+<button class="flex items-center gap-2 px-4 py-2 rounded-lg bg-orange-accent/10 dark:bg-orange-accent/20 text-orange-accent font-semibold text-sm hover:bg-orange-accent/20 dark:hover:bg-orange-accent/30 transition-colors">
+<span class="material-symbols-outlined text-base">add</span>
+                            Add Custom Field
+                        </button>
+</div>
+<div class="space-y-4">
+<div class="flex flex-col sm:flex-row items-center gap-4">
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#212529] dark:text-white dark:bg-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-accent/50 border border-[#e6dedb] dark:border-gray-600 bg-white focus:border-orange-accent h-14 placeholder:text-[#6c757d] p-[15px] text-base" placeholder="Field Name (e.g., Department)" value="Project ID"/>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#212529] dark:text-white dark:bg-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-accent/50 border border-[#e6dedb] dark:border-gray-600 bg-white focus:border-orange-accent h-14 placeholder:text-[#6c757d] p-[15px] text-base" placeholder="Value" value="PROJ-MAIN-Q3"/>
+<button class="p-2 text-[#6c757d] hover:text-red-accent dark:hover:text-red-accent/80 transition-colors">
+<span class="material-symbols-outlined">delete</span>
+</button>
+</div>
+<div class="flex flex-col sm:flex-row items-center gap-4">
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#212529] dark:text-white dark:bg-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-accent/50 border border-[#e6dedb] dark:border-gray-600 bg-white focus:border-orange-accent h-14 placeholder:text-[#6c757d] p-[15px] text-base" placeholder="Field Name (e.g., Department)" value="Cost Center"/>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#212529] dark:text-white dark:bg-gray-800 focus:outline-0 focus:ring-2 focus:ring-orange-accent/50 border border-[#e6dedb] dark:border-gray-600 bg-white focus:border-orange-accent h-14 placeholder:text-[#6c757d] p-[15px] text-base" placeholder="Value" value="CC-FIN-02"/>
+<button class="p-2 text-[#6c757d] hover:text-red-accent dark:hover:text-red-accent/80 transition-colors">
+<span class="material-symbols-outlined">delete</span>
+</button>
+</div>
+</div>
+</section>
+</div>
+</div>
+</main>
+<footer class="flex justify-end items-center gap-4 pt-8 mt-8 border-t border-[#e6dedb] dark:border-gray-700">
+<button class="px-6 py-3 rounded-lg text-base font-semibold bg-gray-200/80 dark:bg-gray-700 text-[#212529] dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">Cancel</button>
+<button class="px-6 py-3 rounded-lg text-base font-semibold bg-orange-accent text-white hover:bg-orange-accent/90 transition-colors disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed">Save Changes</button>
+</footer>
+</div>
+</div>
+</div>
+</div>
+</body></html>

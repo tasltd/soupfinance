@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Invoice Review and Approval Workflow</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#f24a0d",
+              "background-light": "#f8f6f5",
+              "background-dark": "#221510",
+              "orange-primary": "#F7931E",
+              "red-secondary": "#D94141"
+            },
+            fontFamily: {
+              "display": ["Manrope", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings:
+        'FILL' 0,
+        'wght' 400,
+        'GRAD' 0,
+        'opsz' 24
+      }
+    </style>
+</head>
+<body class="font-display bg-background-light dark:bg-background-dark text-[#181311] dark:text-gray-200">
+<div class="relative flex h-auto min-h-screen w-full flex-col group/design-root overflow-x-hidden">
+<div class="layout-container flex h-full grow flex-col">
+<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-b-[#f5f1f0] dark:border-b-gray-800 px-6 md:px-10 py-3 bg-white dark:bg-background-dark sticky top-0 z-20">
+<div class="flex items-center gap-4 text-[#181311] dark:text-white">
+<div class="size-6 text-primary">
+<svg fill="none" viewbox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<path d="M36.7273 44C33.9891 44 31.6043 39.8386 30.3636 33.69C29.123 39.8386 26.7382 44 24 44C21.2618 44 18.877 39.8386 17.6364 33.69C16.3957 39.8386 14.0109 44 11.2727 44C7.25611 44 4 35.0457 4 24C4 12.9543 7.25611 4 11.2727 4C14.0109 4 16.3957 8.16144 17.6364 14.31C18.877 8.16144 21.2618 4 24 4C26.7382 4 29.123 8.16144 30.3636 14.31C31.6043 8.16144 33.9891 4 36.7273 4C40.7439 4 44 12.9543 44 24C44 35.0457 40.7439 44 36.7273 44Z" fill="currentColor"></path>
+</svg>
+</div>
+<h2 class="text-[#181311] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">Invoice Management</h2>
+</div>
+<div class="flex flex-1 justify-end gap-2 md:gap-4">
+<div class="flex items-center gap-2">
+<button class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full size-10 bg-[#f5f1f0] dark:bg-gray-800 text-[#181311] dark:text-white gap-2 text-sm font-bold leading-normal tracking-[0.015em] min-w-0">
+<span class="material-symbols-outlined text-xl">notifications</span>
+</button>
+<button class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full size-10 bg-[#f5f1f0] dark:bg-gray-800 text-[#181311] dark:text-white gap-2 text-sm font-bold leading-normal tracking-[0.015em] min-w-0">
+<span class="material-symbols-outlined text-xl">help</span>
+</button>
+<button class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full size-10 bg-[#f5f1f0] dark:bg-gray-800 text-[#181311] dark:text-white gap-2 text-sm font-bold leading-normal tracking-[0.015em] min-w-0">
+<span class="material-symbols-outlined text-xl">settings</span>
+</button>
+</div>
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10" data-alt="User avatar image" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAN1WN1TpNnb7J4aQj3fHFY2RTLTXVLGeVTgbhvn0BZsngOa1MzLIGHrK9_dDXGohwTyP_g6_1AZ4EWmCDwEi0B7kUcdA6Z-fls8N5Lko_X1twhvsc4-D6qQ-ULm9YsSFxlye7D1N2ciqjJq67vySkNt4KZeTjKnsErvbj7sl5fSJyrc2lorYJRGCoxepfwOC6VPyeTIu7FmyiLlvjmLtLnZpc8SLLsdSGa3HsjcKNuzaMA5810wterZrE-PBwA7X4sgbk6e-jYvq7M");'></div>
+</div>
+</header>
+<main class="flex-1 px-4 sm:px-6 lg:px-8 py-8">
+<div class="flex flex-wrap justify-between gap-4 p-4 items-center border-b border-gray-200 dark:border-gray-800 pb-6 mb-6">
+<div class="flex flex-col gap-2">
+<p class="text-[#181311] dark:text-white text-3xl font-black leading-tight tracking-[-0.033em]">Invoice Review: #INV-2023-123</p>
+<p class="text-[#8a6b60] dark:text-gray-400 text-base font-normal leading-normal">Pending Manager Approval</p>
+</div>
+<div class="flex flex-wrap gap-3">
+<button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-orange-primary hover:bg-orange-primary/90 text-white text-sm font-bold leading-normal tracking-[0.015em] gap-2">
+<span class="material-symbols-outlined text-lg">check_circle</span>
+<span class="truncate">Approve</span>
+</button>
+<button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-red-secondary hover:bg-red-secondary/90 text-white text-sm font-bold leading-normal tracking-[0.015em] gap-2">
+<span class="material-symbols-outlined text-lg">cancel</span>
+<span class="truncate">Reject</span>
+</button>
+<button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-[#f5f1f0] dark:bg-gray-800 text-[#181311] dark:text-white text-sm font-bold leading-normal tracking-[0.015em] hover:bg-gray-200 dark:hover:bg-gray-700 gap-2">
+<span class="material-symbols-outlined text-lg">help_center</span>
+<span class="truncate">Request Info</span>
+</button>
+</div>
+</div>
+<div class="grid grid-cols-12 gap-6">
+<!-- Left Panel: Status Timeline -->
+<div class="col-span-12 lg:col-span-3">
+<div class="bg-white dark:bg-background-dark p-6 rounded-xl shadow-sm">
+<h3 class="text-lg font-bold mb-6 text-[#181311] dark:text-white">Approval Workflow</h3>
+<div class="grid grid-cols-[32px_1fr] gap-x-2">
+<div class="flex flex-col items-center gap-1 pt-1.5">
+<div class="text-green-500">
+<span class="material-symbols-outlined">task_alt</span>
+</div>
+<div class="w-[2px] bg-gray-200 dark:bg-gray-700 h-full grow"></div>
+</div>
+<div class="flex flex-1 flex-col pb-6">
+<p class="text-[#181311] dark:text-white text-base font-medium leading-normal">Submitted</p>
+<p class="text-[#8a6b60] dark:text-gray-400 text-sm leading-normal">Completed by Sales Dept on 2023-10-25</p>
+</div>
+<div class="flex flex-col items-center gap-1">
+<div class="w-[2px] bg-gray-200 dark:bg-gray-700 h-1"></div>
+<div class="text-orange-primary animate-pulse">
+<span class="material-symbols-outlined">hourglass_top</span>
+</div>
+<div class="w-[2px] bg-gray-200 dark:bg-gray-700 h-full grow"></div>
+</div>
+<div class="flex flex-1 flex-col pb-6">
+<p class="text-orange-primary text-base font-bold leading-normal">Manager Review</p>
+<p class="text-[#8a6b60] dark:text-gray-400 text-sm leading-normal">Pending approval from John Doe</p>
+</div>
+<div class="flex flex-col items-center gap-1">
+<div class="w-[2px] bg-gray-200 dark:bg-gray-700 h-1"></div>
+<div class="text-gray-400 dark:text-gray-500">
+<span class="material-symbols-outlined">radio_button_unchecked</span>
+</div>
+<div class="w-[2px] bg-gray-200 dark:bg-gray-700 h-full grow"></div>
+</div>
+<div class="flex flex-1 flex-col pb-6">
+<p class="text-[#8a6b60] dark:text-gray-500 text-base font-medium leading-normal">Finance Review</p>
+<p class="text-gray-400 dark:text-gray-600 text-sm leading-normal">Awaiting review</p>
+</div>
+<div class="flex flex-col items-center gap-1 pb-1.5">
+<div class="w-[2px] bg-gray-200 dark:bg-gray-700 h-1"></div>
+<div class="text-gray-400 dark:text-gray-500">
+<span class="material-symbols-outlined">radio_button_unchecked</span>
+</div>
+</div>
+<div class="flex flex-1 flex-col">
+<p class="text-[#8a6b60] dark:text-gray-500 text-base font-medium leading-normal">Approved</p>
+<p class="text-gray-400 dark:text-gray-600 text-sm leading-normal">Not started</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Center Panel: Invoice Details -->
+<div class="col-span-12 lg:col-span-6 space-y-6">
+<div class="p-4 bg-white dark:bg-background-dark rounded-xl shadow-sm">
+<div class="flex flex-col items-stretch justify-start">
+<div class="flex w-full min-w-72 grow flex-col items-stretch justify-center gap-1 py-4 px-4">
+<p class="text-[#8a6b60] dark:text-gray-400 text-sm font-normal leading-normal">Summary</p>
+<p class="text-[#181311] dark:text-white text-xl font-bold leading-tight tracking-[-0.015em]">TechSolutions Inc.</p>
+<div class="flex flex-col sm:flex-row items-start sm:items-end gap-3 justify-between mt-2">
+<div class="flex flex-col gap-1">
+<p class="text-[#8a6b60] dark:text-gray-400 text-sm font-normal leading-normal">Invoice Number: #INV-2023-123</p>
+<p class="text-[#8a6b60] dark:text-gray-400 text-sm font-normal leading-normal">Due Date: 2023-11-30</p>
+</div>
+<p class="text-2xl font-bold text-[#181311] dark:text-white">$5,450.00</p>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-white dark:bg-background-dark p-6 rounded-xl shadow-sm">
+<h3 class="text-lg font-bold mb-4 text-[#181311] dark:text-white">Invoice Document</h3>
+<div class="w-full bg-gray-100 dark:bg-gray-800 aspect-video bg-cover rounded-lg flex items-center justify-center">
+<p class="text-gray-500">Embedded PDF Viewer</p>
+</div>
+</div>
+<div class="bg-white dark:bg-background-dark p-6 rounded-xl shadow-sm">
+<h3 class="text-lg font-bold mb-4 text-[#181311] dark:text-white">Line Items &amp; GL Coding</h3>
+<div class="overflow-x-auto">
+<table class="w-full text-left text-sm">
+<thead class="text-xs text-[#8a6b60] dark:text-gray-400 uppercase bg-gray-50 dark:bg-gray-800">
+<tr>
+<th class="px-4 py-3" scope="col">Description</th>
+<th class="px-4 py-3 text-center" scope="col">Qty</th>
+<th class="px-4 py-3 text-right" scope="col">Price</th>
+<th class="px-4 py-3 text-right" scope="col">Total</th>
+<th class="px-4 py-3" scope="col">GL Code</th>
+</tr>
+</thead>
+<tbody>
+<tr class="border-b dark:border-gray-700">
+<td class="px-4 py-3 font-medium text-gray-900 dark:text-white whitespace-nowrap">Cloud Hosting Services</td>
+<td class="px-4 py-3 text-center">1</td>
+<td class="px-4 py-3 text-right">$3,000.00</td>
+<td class="px-4 py-3 text-right">$3,000.00</td>
+<td class="px-4 py-3"><input class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-orange-primary focus:border-orange-primary block p-2" placeholder="e.g. 5120-IT" type="text" value="5120-IT"/></td>
+</tr>
+<tr class="border-b dark:border-gray-700">
+<td class="px-4 py-3 font-medium text-gray-900 dark:text-white whitespace-nowrap">Software Licensing</td>
+<td class="px-4 py-3 text-center">5</td>
+<td class="px-4 py-3 text-right">$450.00</td>
+<td class="px-4 py-3 text-right">$2,250.00</td>
+<td class="px-4 py-3"><input class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-orange-primary focus:border-orange-primary block p-2" placeholder="e.g. 5121-Software" type="text"/></td>
+</tr>
+<tr class="border-b dark:border-gray-700">
+<td class="px-4 py-3 font-medium text-gray-900 dark:text-white whitespace-nowrap">Consulting Fee</td>
+<td class="px-4 py-3 text-center">1</td>
+<td class="px-4 py-3 text-right">$200.00</td>
+<td class="px-4 py-3 text-right">$200.00</td>
+<td class="px-4 py-3"><input class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-orange-primary focus:border-orange-primary block p-2" placeholder="e.g. 5130-Consulting" type="text"/></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<!-- Right Panel: Activity -->
+<div class="col-span-12 lg:col-span-3">
+<div class="bg-white dark:bg-background-dark p-6 rounded-xl shadow-sm sticky top-24">
+<h3 class="text-lg font-bold mb-4 text-[#181311] dark:text-white">Activity Feed</h3>
+<div class="space-y-6">
+<div>
+<label class="block mb-2 text-sm font-medium text-gray-900 dark:text-white" for="comment">Add a comment</label>
+<textarea class="block p-2.5 w-full text-sm text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-orange-primary focus:border-orange-primary" id="comment" placeholder="Write your thoughts here..." rows="4"></textarea>
+<button class="mt-2 w-full flex items-center justify-center rounded-lg h-9 px-3 bg-orange-primary/20 text-orange-primary text-sm font-bold hover:bg-orange-primary/30">Post Comment</button>
+</div>
+<div class="space-y-4 max-h-96 overflow-y-auto pr-2">
+<div class="flex items-start gap-3">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-8" data-alt="User Avatar" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAQrU8SODtlJXOZjFrGV4RNfQdjc5NiTvhtadwxC8AEnjzoPHxET9lXbP9prfwrK8ZgExcWjLDB8yjWxLKhfx--qEZEx_26CUiqFUXiIL_EzYbIz36OOI-SLb29-sPOdDUlFHjWEcjenhts_w0KfsKhph_lsN8Bu08fQFes1JuWPWWDazLzXNO93J2OS0IXxDj9x7AKTQFAYwfkCdWsRat8NE47CE-ThFqCSda5SmeLWlWeqpC3D01fz4OjUuPUGMnOsnFVhil-A5H7");'></div>
+<div class="flex-1">
+<div class="bg-gray-100 dark:bg-gray-800 p-3 rounded-lg">
+<p class="font-bold text-sm text-gray-900 dark:text-white">Mark Johnson</p>
+<p class="text-sm text-gray-700 dark:text-gray-300">Please double check the GL code for the consulting fee.</p>
+</div>
+<p class="text-xs text-gray-500 mt-1">2 hours ago</p>
+</div>
+</div>
+<div class="flex items-start gap-3">
+<div class="flex items-center justify-center rounded-full size-8 bg-gray-200 dark:bg-gray-700">
+<span class="material-symbols-outlined text-gray-500 text-lg">history</span>
+</div>
+<div class="flex-1">
+<div class="p-3">
+<p class="font-medium text-sm text-gray-800 dark:text-gray-200">System</p>
+<p class="text-sm text-gray-600 dark:text-gray-400">Invoice submitted by Sales Department.</p>
+</div>
+<p class="text-xs text-gray-500 mt-1 px-3">Oct 25, 2023 at 10:45 AM</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</div>
+</body></html>

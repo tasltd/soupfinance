@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Inventory Valuation Report</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#f24a0d",
+                        "background-light": "#f8f6f5",
+                        "background-dark": "#221510",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings:
+            'FILL' 0,
+            'wght' 400,
+            'GRAD' 0,
+            'opsz' 24
+        }
+    </style>
+</head>
+<body class="font-display bg-background-light dark:bg-background-dark">
+<div class="relative flex min-h-screen w-full">
+<!-- SideNavBar -->
+<aside class="flex w-64 flex-col border-r border-[#e6dedb] bg-white p-4 dark:border-zinc-700 dark:bg-black/50">
+<div class="flex flex-col gap-4">
+<div class="flex items-center gap-3">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10" data-alt="Apex Corp. company logo" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCS6rbUqh_8GZuRdPz1HqAWy1NGv_cCzIvg8QKw_zC-rQayAeaNg1GCRE6ddYrcaSDBCP5sNyZNSprfTEyYcJu_0HC2ZcUdFMQ7tAuhkmF50PjOgbGfVTs0kodGQeYKI6V4xRSGWketjF_2-c1hvvZ2PKNRdIvpAvbEKpE6-8TXzEpJcZcODFUpwA6U4Nr3FB_TceDyK-lWEkiucFU_Hu2odWl-AovBd0HUq8i7W6vWViGwZe4aok3R-35rmVcBpgayYvyZMF7D3mGD");'></div>
+<div class="flex flex-col">
+<h1 class="text-[#181311] dark:text-white text-base font-medium leading-normal">Apex Corp.</h1>
+<p class="text-[#8a6b60] dark:text-gray-400 text-sm font-normal leading-normal">Finance Dept.</p>
+</div>
+</div>
+<nav class="flex flex-col gap-2">
+<a class="flex items-center gap-3 rounded-lg px-3 py-2 text-[#8a6b60] dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-zinc-800" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<p class="text-sm font-medium leading-normal">Dashboard</p>
+</a>
+<a class="flex items-center gap-3 rounded-lg px-3 py-2 text-[#8a6b60] dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-zinc-800" href="#">
+<span class="material-symbols-outlined">receipt_long</span>
+<p class="text-sm font-medium leading-normal">Invoices</p>
+</a>
+<a class="flex items-center gap-3 rounded-lg bg-primary/10 px-3 py-2 text-primary dark:bg-primary/20" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">monitoring</span>
+<p class="text-sm font-medium leading-normal">Reporting</p>
+</a>
+<a class="flex items-center gap-3 rounded-lg px-3 py-2 text-[#8a6b60] dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-zinc-800" href="#">
+<span class="material-symbols-outlined">book</span>
+<p class="text-sm font-medium leading-normal">Accounting</p>
+</a>
+<a class="flex items-center gap-3 rounded-lg px-3 py-2 text-[#8a6b60] dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-zinc-800" href="#">
+<span class="material-symbols-outlined">settings</span>
+<p class="text-sm font-medium leading-normal">Settings</p>
+</a>
+</nav>
+</div>
+<div class="mt-auto flex flex-col gap-1">
+<a class="flex items-center gap-3 rounded-lg px-3 py-2 text-[#8a6b60] dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-zinc-800" href="#">
+<span class="material-symbols-outlined">help</span>
+<p class="text-sm font-medium leading-normal">Help Center</p>
+</a>
+<a class="flex items-center gap-3 rounded-lg px-3 py-2 text-[#8a6b60] dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-zinc-800" href="#">
+<span class="material-symbols-outlined">logout</span>
+<p class="text-sm font-medium leading-normal">Log Out</p>
+</a>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="flex-1 overflow-auto p-8">
+<div class="mx-auto max-w-7xl">
+<!-- PageHeading -->
+<div class="flex flex-wrap items-start justify-between gap-4 border-b border-[#e6dedb] pb-6 dark:border-zinc-700">
+<div class="flex min-w-72 flex-col gap-2">
+<p class="text-[#181311] dark:text-white text-4xl font-black leading-tight tracking-[-0.033em]">Inventory Valuation Report</p>
+<p class="text-[#8a6b60] dark:text-gray-400 text-base font-normal leading-normal">Showing data for: Finance Manager</p>
+</div>
+<div class="flex items-center gap-3">
+<button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-gray-200/50 text-[#181311] text-sm font-bold leading-normal tracking-[0.015em] hover:bg-gray-200 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700">
+<span class="truncate">Export</span>
+</button>
+<button class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 bg-primary text-white gap-2 text-sm font-bold leading-normal tracking-[0.015em] min-w-0 px-4 hover:bg-primary/90">
+<span class="material-symbols-outlined text-base">print</span>
+<span class="truncate">Print Report</span>
+</button>
+</div>
+</div>
+<!-- ToolBar & SegmentedButtons -->
+<div class="flex flex-wrap items-center justify-between gap-4 py-4">
+<div class="flex flex-wrap items-center gap-2">
+<button class="flex items-center gap-2 rounded-lg border border-[#e6dedb] px-3 py-2 text-[#181311] hover:bg-gray-100 dark:border-zinc-700 dark:text-white dark:hover:bg-zinc-800">
+<span class="material-symbols-outlined text-xl">calendar_today</span>
+<span class="text-sm">This Quarter vs Last Quarter</span>
+</button>
+<button class="flex items-center gap-2 rounded-lg border border-[#e6dedb] px-3 py-2 text-[#181311] hover:bg-gray-100 dark:border-zinc-700 dark:text-white dark:hover:bg-zinc-800">
+<span class="material-symbols-outlined text-xl">warehouse</span>
+<span class="text-sm">All Warehouses</span>
+</button>
+<button class="flex items-center gap-2 rounded-lg border border-[#e6dedb] px-3 py-2 text-[#181311] hover:bg-gray-100 dark:border-zinc-700 dark:text-white dark:hover:bg-zinc-800">
+<span class="material-symbols-outlined text-xl">label</span>
+<span class="text-sm">Category</span>
+</button>
+<div class="relative min-w-48">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">search</span>
+<input class="w-full rounded-lg border border-[#e6dedb] bg-transparent py-2 pl-10 pr-3 text-sm text-[#181311] focus:border-primary focus:ring-primary dark:border-zinc-700 dark:text-white dark:focus:border-primary dark:focus:ring-primary" placeholder="Search by SKU..." type="text"/>
+</div>
+</div>
+<div class="flex h-10 min-w-64 items-center justify-center rounded-lg bg-[#f5f1f0] p-1 dark:bg-zinc-800">
+<label class="flex h-full grow cursor-pointer items-center justify-center overflow-hidden rounded-lg px-2 text-sm font-medium leading-normal text-[#8a6b60] has-[:checked]:bg-white has-[:checked]:text-[#181311] has-[:checked]:shadow-[0_0_4px_rgba(0,0,0,0.1)] dark:text-gray-400 dark:has-[:checked]:bg-zinc-700 dark:has-[:checked]:text-white">
+<span class="truncate">Summary View</span>
+<input checked="" class="invisible w-0" name="view-toggle" type="radio" value="Summary View"/>
+</label>
+<label class="flex h-full grow cursor-pointer items-center justify-center overflow-hidden rounded-lg px-2 text-sm font-medium leading-normal text-[#8a6b60] has-[:checked]:bg-white has-[:checked]:text-[#181311] has-[:checked]:shadow-[0_0_4px_rgba(0,0,0,0.1)] dark:text-gray-400 dark:has-[:checked]:bg-zinc-700 dark:has-[:checked]:text-white">
+<span class="truncate">Detailed View</span>
+<input class="invisible w-0" name="view-toggle" type="radio" value="Detailed View"/>
+</label>
+</div>
+</div>
+<!-- Stats -->
+<div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 py-4">
+<div class="flex flex-col gap-2 rounded-xl border border-[#e6dedb] bg-white p-6 dark:border-zinc-700 dark:bg-zinc-900">
+<p class="text-[#181311] dark:text-gray-300 text-base font-medium leading-normal">Total Inventory Value</p>
+<p class="text-[#181311] dark:text-white tracking-light text-2xl font-bold leading-tight">$1,245,830</p>
+<p class="flex items-center gap-1 text-green-600 dark:text-green-500 text-base font-medium leading-normal">
+<span class="material-symbols-outlined text-lg">arrow_upward</span>
+<span>+5.2%</span>
+</p>
+</div>
+<div class="flex flex-col gap-2 rounded-xl border border-[#e6dedb] bg-white p-6 dark:border-zinc-700 dark:bg-zinc-900">
+<p class="text-[#181311] dark:text-gray-300 text-base font-medium leading-normal">Cost of Goods Sold (COGS)</p>
+<p class="text-[#181311] dark:text-white tracking-light text-2xl font-bold leading-tight">$890,120</p>
+<p class="flex items-center gap-1 text-red-600 dark:text-red-500 text-base font-medium leading-normal">
+<span class="material-symbols-outlined text-lg">arrow_downward</span>
+<span>-1.8%</span>
+</p>
+</div>
+<div class="flex flex-col gap-2 rounded-xl border border-[#e6dedb] bg-white p-6 dark:border-zinc-700 dark:bg-zinc-900">
+<p class="text-[#181311] dark:text-gray-300 text-base font-medium leading-normal">Total Units on Hand</p>
+<p class="text-[#181311] dark:text-white tracking-light text-2xl font-bold leading-tight">78,940</p>
+<p class="flex items-center gap-1 text-green-600 dark:text-green-500 text-base font-medium leading-normal">
+<span class="material-symbols-outlined text-lg">arrow_upward</span>
+<span>+12.5%</span>
+</p>
+</div>
+<div class="flex flex-col gap-2 rounded-xl border border-[#e6dedb] bg-white p-6 dark:border-zinc-700 dark:bg-zinc-900">
+<p class="text-[#181311] dark:text-gray-300 text-base font-medium leading-normal">Avg. Inventory Turnover</p>
+<p class="text-[#181311] dark:text-white tracking-light text-2xl font-bold leading-tight">4.2</p>
+<p class="flex items-center gap-1 text-green-600 dark:text-green-500 text-base font-medium leading-normal">
+<span class="material-symbols-outlined text-lg">arrow_upward</span>
+<span>+0.3%</span>
+</p>
+</div>
+</div>
+<!-- Chart & Table Container -->
+<div class="mt-4 space-y-8">
+<!-- Data Visualization -->
+<div class="rounded-xl border border-[#e6dedb] bg-white p-6 dark:border-zinc-700 dark:bg-zinc-900">
+<h3 class="text-lg font-bold text-[#181311] dark:text-white">Inventory Value vs. COGS</h3>
+<p class="text-sm text-[#8a6b60] dark:text-gray-400">Comparison for selected periods</p>
+<div class="mt-4 h-80 w-full">
+<div class="bg-center bg-no-repeat aspect-[2/1] bg-contain size-full" data-alt="A bar chart showing Inventory Value in orange and Cost of Goods Sold in a darker shade over several months, with value on the y-axis and time on the x-axis." style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBMHt1cv2TB1iXxOGm_TM9N-j0u2Is1Aq-evL6P1-_J8ulJiQTbCT-_pR2WK_Xj3-U2fs6KsO7R7F3_3DftZZqimKmKyyEO7Bj5KDgBN4Fe1k8WBdl9FnEeKeikgBPrPIydScM9YnHOtHIY2MiCfDnOhnUU_7aQYsfdrg7W2ZKOzmPkN0rLYetpzOJHfiOYISNkLUbBzAiXbm3siuooYTKyNpHGXnmGbqXvfHFkJ0D5Bm2U5EVmL46nz5dUgfDTGzkWCmzafvDOy9eJ");'></div>
+</div>
+</div>
+<!-- Interactive Data Table -->
+<div class="overflow-x-auto rounded-xl border border-[#e6dedb] bg-white dark:border-zinc-700 dark:bg-zinc-900">
+<table class="min-w-full divide-y divide-[#e6dedb] text-left text-sm dark:divide-zinc-700">
+<thead class="bg-[#f5f1f0] dark:bg-zinc-800">
+<tr>
+<th class="px-6 py-3 font-medium text-[#181311] dark:text-gray-300" scope="col">Product/SKU</th>
+<th class="px-6 py-3 font-medium text-[#181311] dark:text-gray-300" scope="col">Category</th>
+<th class="px-6 py-3 font-medium text-[#181311] dark:text-gray-300" scope="col">Warehouse</th>
+<th class="px-6 py-3 font-medium text-[#181311] dark:text-gray-300" scope="col">Beginning Inv.</th>
+<th class="px-6 py-3 font-medium text-[#181311] dark:text-gray-300" scope="col">Purchases</th>
+<th class="px-6 py-3 font-medium text-[#181311] dark:text-gray-300" scope="col">Ending Inv.</th>
+<th class="px-6 py-3 font-medium text-[#181311] dark:text-gray-300" scope="col">COGS</th>
+<th class="px-6 py-3 font-medium text-[#181311] dark:text-gray-300" scope="col">Ending Value</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-[#e6dedb] dark:divide-zinc-800">
+<tr class="hover:bg-primary/5 dark:hover:bg-primary/10">
+<td class="whitespace-nowrap px-6 py-4 font-medium text-[#181311] dark:text-white">A-Pro Keyboard / 72415</td>
+<td class="whitespace-nowrap px-6 py-4 text-[#8a6b60] dark:text-gray-400">Electronics</td>
+<td class="whitespace-nowrap px-6 py-4 text-[#8a6b60] dark:text-gray-400">North-HUB</td>
+<td class="whitespace-nowrap px-6 py-4 text-[#181311] dark:text-white">1,200</td>
+<td class="whitespace-nowrap px-6 py-4 text-[#181311] dark:text-white">500</td>
+<td class="whitespace-nowrap px-6 py-4 text-[#181311] dark:text-white">1,150</td>
+<td class="whitespace-nowrap px-6 py-4 text-[#181311] dark:text-white">$12,500</td>
+<td class="whitespace-nowrap px-6 py-4 font-semibold text-[#181311] dark:text-white">$57,500</td>
+</tr>
+<tr class="hover:bg-primary/5 dark:hover:bg-primary/10">
+<td class="whitespace-nowrap px-6 py-4 font-medium text-[#181311] dark:text-white">ErgoMouse Pro / 72418</td>
+<td class="whitespace-nowrap px-6 py-4 text-[#8a6b60] dark:text-gray-400">Electronics</td>
+<td class="whitespace-nowrap px-6 py-4 text-[#8a6b60] dark:text-gray-400">North-HUB</td>
+<td class="whitespace-nowrap px-6 py-4 text-[#181311] dark:text-white">850</td>
+<td class="whitespace-nowrap px-6 py-4 text-[#181311] dark:text-white">300</td>
+<td class="whitespace-nowrap px-6 py-4 text-[#181311] dark:text-white">820</td>
+<td class="whitespace-nowrap px-6 py-4 text-[#181311] dark:text-white">$6,600</td>
+<td class="whitespace-nowrap px-6 py-4 font-semibold text-[#181311] dark:text-white">$32,800</td>
+</tr>
+<tr class="hover:bg-primary/5 dark:hover:bg-primary/10">
+<td class="whitespace-nowrap px-6 py-4 font-medium text-[#181311] dark:text-white">Office Chair X / 91102</td>
+<td class="whitespace-nowrap px-6 py-4 text-[#8a6b60] dark:text-gray-400">Furniture</td>
+<td class="whitespace-nowrap px-6 py-4 text-[#8a6b60] dark:text-gray-400">West-HUB</td>
+<td class="whitespace-nowrap px-6 py-4 text-[#181311] dark:text-white">300</td>
+<td class="whitespace-nowrap px-6 py-4 text-[#181311] dark:text-white">100</td>
+<td class="whitespace-nowrap px-6 py-4 text-[#181311] dark:text-white">280</td>
+<td class="whitespace-nowrap px-6 py-4 text-[#181311] dark:text-white">$3,600</td>
+<td class="whitespace-nowrap px-6 py-4 font-semibold text-[#181311] dark:text-white">$50,400</td>
+</tr>
+<tr class="hover:bg-primary/5 dark:hover:bg-primary/10">
+<td class="whitespace-nowrap px-6 py-4 font-medium text-[#181311] dark:text-white">Desk Lamp LED / 88543</td>
+<td class="whitespace-nowrap px-6 py-4 text-[#8a6b60] dark:text-gray-400">Lighting</td>
+<td class="whitespace-nowrap px-6 py-4 text-[#8a6b60] dark:text-gray-400">East-HUB</td>
+<td class="whitespace-nowrap px-6 py-4 text-[#181311] dark:text-white">2,500</td>
+<td class="whitespace-nowrap px-6 py-4 text-[#181311] dark:text-white">1,000</td>
+<td class="whitespace-nowrap px-6 py-4 text-[#181311] dark:text-white">2,400</td>
+<td class="whitespace-nowrap px-6 py-4 text-[#181311] dark:text-white">$2,750</td>
+<td class="whitespace-nowrap px-6 py-4 font-semibold text-[#181311] dark:text-white">$60,000</td>
+</tr>
+<tr class="hover:bg-primary/5 dark:hover:bg-primary/10">
+<td class="whitespace-nowrap px-6 py-4 font-medium text-[#181311] dark:text-white">Standing Desk / 91105</td>
+<td class="whitespace-nowrap px-6 py-4 text-[#8a6b60] dark:text-gray-400">Furniture</td>
+<td class="whitespace-nowrap px-6 py-4 text-[#8a6b60] dark:text-gray-400">West-HUB</td>
+<td class="whitespace-nowrap px-6 py-4 text-[#181311] dark:text-white">150</td>
+<td class="whitespace-nowrap px-6 py-4 text-[#181311] dark:text-white">50</td>
+<td class="whitespace-nowrap px-6 py-4 text-[#181311] dark:text-white">140</td>
+<td class="whitespace-nowrap px-6 py-4 text-[#181311] dark:text-white">$6,000</td>
+<td class="whitespace-nowrap px-6 py-4 font-semibold text-[#181311] dark:text-white">$84,000</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Add Services to Invoice</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#f24a0d",
+              "background-light": "#FAFAFA",
+              "background-dark": "#1a1a1a",
+              "container-light": "#FFFFFF",
+              "container-dark": "#242424",
+              "text-light-primary": "#333333",
+              "text-dark-primary": "#E0E0E0",
+              "text-light-secondary": "#666666",
+              "text-dark-secondary": "#BDBDBD",
+              "border-light": "#E0E0E0",
+              "border-dark": "#424242",
+              "destructive": "#D32F2F"
+            },
+            fontFamily: {
+              "display": ["Manrope", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.5rem", "lg": "0.75rem", "xl": "1rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings:
+        'FILL' 0,
+        'wght' 400,
+        'GRAD' 0,
+        'opsz' 24
+      }
+    </style>
+</head>
+<body class="font-display bg-background-light dark:bg-background-dark">
+<div class="relative flex h-auto min-h-screen w-full flex-col group/design-root">
+<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-border-light dark:border-border-dark px-6 py-3 bg-container-light dark:bg-container-dark sticky top-0 z-20">
+<div class="flex items-center gap-4 text-text-light-primary dark:text-text-dark-primary">
+<div class="size-6 text-primary">
+<svg fill="none" viewbox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<path clip-rule="evenodd" d="M39.475 21.6262C40.358 21.4363 40.6863 21.5589 40.7581 21.5934C40.7876 21.655 40.8547 21.857 40.8082 22.3336C40.7408 23.0255 40.4502 24.0046 39.8572 25.2301C38.6799 27.6631 36.5085 30.6631 33.5858 33.5858C30.6631 36.5085 27.6632 38.6799 25.2301 39.8572C24.0046 40.4502 23.0255 40.7407 22.3336 40.8082C21.8571 40.8547 21.6551 40.7875 21.5934 40.7581C21.5589 40.6863 21.4363 40.358 21.6262 39.475C21.8562 38.4054 22.4689 36.9657 23.5038 35.2817C24.7575 33.2417 26.5497 30.9744 28.7621 28.762C30.9744 26.5497 33.2417 24.7574 35.2817 23.5037C36.9657 22.4689 38.4054 21.8562 39.475 21.6262ZM4.41189 29.2403L18.7597 43.5881C19.8813 44.7097 21.4027 44.9179 22.7217 44.7893C24.0585 44.659 25.5148 44.1631 26.9723 43.4579C29.9052 42.0387 33.2618 39.5667 36.4142 36.4142C39.5667 33.2618 42.0387 29.9052 43.4579 26.9723C44.1631 25.5148 44.659 24.0585 44.7893 22.7217C44.9179 21.4027 44.7097 19.8813 43.5881 18.7597L29.2403 4.41187C27.8527 3.02428 25.8765 3.02573 24.2861 3.36776C22.6081 3.72863 20.7334 4.58419 18.8396 5.74801C16.4978 7.18716 13.9881 9.18353 11.5858 11.5858C9.18354 13.988 7.18717 16.4978 5.74802 18.8396C4.58421 20.7334 3.72865 22.6081 3.36778 24.2861C3.02574 25.8765 3.02429 27.8527 4.41189 29.2403Z" fill="currentColor" fill-rule="evenodd"></path>
+</svg>
+</div>
+<h2 class="text-lg font-bold leading-tight tracking-[-0.015em]">Accounting App</h2>
+</div>
+<div class="flex flex-1 justify-center gap-8">
+<div class="flex items-center gap-9 text-sm font-medium leading-normal text-text-light-primary dark:text-text-dark-primary">
+<a class="hover:text-primary" href="#">Dashboard</a>
+<a class="text-primary font-bold" href="#">Invoices</a>
+<a class="hover:text-primary" href="#">Clients</a>
+<a class="hover:text-primary" href="#">Reports</a>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-primary text-white text-sm font-bold leading-normal tracking-[0.015em] hover:bg-primary/90">
+<span class="truncate">New Invoice</span>
+</button>
+<button class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 bg-background-light dark:bg-background-dark text-text-light-primary dark:text-text-dark-primary gap-2 text-sm font-bold leading-normal tracking-[0.015em] min-w-0 px-2.5 hover:bg-black/5 dark:hover:bg-white/5">
+<span class="material-symbols-outlined text-xl">notifications</span>
+</button>
+<button class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 bg-background-light dark:bg-background-dark text-text-light-primary dark:text-text-dark-primary gap-2 text-sm font-bold leading-normal tracking-[0.015em] min-w-0 px-2.5 hover:bg-black/5 dark:hover:bg-white/5">
+<span class="material-symbols-outlined text-xl">help</span>
+</button>
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 ml-2" data-alt="User avatar" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCXUlCwAgnX07qz0b1fju5ms4PPeNIl2635f0BrtTy39isHtu3i7_JqXqv0N2_cMSfja_wyZ8N_xC_Lcp0_1GeddmErnmy_J0QEpkZKGw-PCUhPVPmAuyQ0QFPoHhsMMr6vApvEfzXexTkQImBUAPRzWaF2xkTyh0Lqm-qxPjGrOtONvTfTjE_gLB2GnKIPgAwNtvN1zdNoLFRNQKyF4T3eTxmon3_Q2acOUNAul5_YAzpOWQ0fGv3Bq33DPQt020Y4qct1yJmWIJTb");'></div>
+</div>
+</header>
+<div class="flex flex-1">
+<!-- Left Sidebar -->
+<aside class="w-64 flex-shrink-0 bg-container-light dark:bg-container-dark p-4 border-r border-border-light dark:border-border-dark">
+<div class="flex flex-col gap-6">
+<div class="px-2">
+<label class="flex flex-col min-w-40 h-10 w-full">
+<div class="flex w-full flex-1 items-stretch rounded-lg h-full">
+<div class="text-text-light-secondary dark:text-text-dark-secondary flex border-none bg-background-light dark:bg-background-dark items-center justify-center pl-3 rounded-l-lg border-r-0">
+<span class="material-symbols-outlined text-xl">search</span>
+</div>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-text-light-primary dark:text-text-dark-primary focus:outline-0 focus:ring-0 border-none bg-background-light dark:bg-background-dark focus:border-none h-full placeholder:text-text-light-secondary dark:placeholder:text-text-dark-secondary px-4 rounded-l-none border-l-0 pl-2 text-sm font-normal leading-normal" placeholder="Find category..." value=""/>
+</div>
+</label>
+</div>
+<nav class="flex flex-col gap-2">
+<a class="flex items-center gap-3 px-3 py-2 text-sm font-medium leading-normal text-text-light-primary dark:text-text-dark-primary" href="#">Strategic Consulting</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg bg-primary/10 text-primary dark:text-primary font-bold" href="#">Software Development</a>
+<a class="flex items-center gap-3 px-3 py-2 text-sm font-medium leading-normal text-text-light-primary dark:text-text-dark-primary" href="#">System Maintenance</a>
+<a class="flex items-center gap-3 px-3 py-2 text-sm font-medium leading-normal text-text-light-primary dark:text-text-dark-primary" href="#">Technical Support</a>
+<a class="flex items-center gap-3 px-3 py-2 text-sm font-medium leading-normal text-text-light-primary dark:text-text-dark-primary" href="#">Design Services</a>
+</nav>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 p-8 overflow-y-auto">
+<div class="flex flex-wrap gap-2 mb-4">
+<a class="text-text-light-secondary dark:text-text-dark-secondary text-base font-medium leading-normal hover:text-primary" href="#">Invoices</a>
+<span class="text-text-light-secondary dark:text-text-dark-secondary text-base font-medium leading-normal">/</span>
+<a class="text-text-light-secondary dark:text-text-dark-secondary text-base font-medium leading-normal hover:text-primary" href="#">New Invoice</a>
+<span class="text-text-light-secondary dark:text-text-dark-secondary text-base font-medium leading-normal">/</span>
+<span class="text-text-light-primary dark:text-text-dark-primary text-base font-medium leading-normal">Add Services</span>
+</div>
+<div class="flex flex-wrap justify-between gap-4 mb-8">
+<h1 class="text-text-light-primary dark:text-text-dark-primary text-4xl font-black leading-tight tracking-[-0.033em] min-w-72">Select Services for Invoice #INV-00123</h1>
+<button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-primary text-white text-sm font-bold leading-normal tracking-[0.015em] hover:bg-primary/90 disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed">
+<span class="truncate">Review Invoice (2)</span>
+</button>
+</div>
+<!-- Service Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+<!-- Service Card 1 - Added -->
+<div class="relative flex flex-col gap-4 rounded-lg border-2 border-primary bg-container-light dark:bg-container-dark p-4 shadow-sm">
+<div class="flex items-start justify-between">
+<div class="flex-1">
+<h3 class="font-bold text-text-light-primary dark:text-text-dark-primary">Senior Developer - Hourly</h3>
+<p class="text-sm text-text-light-secondary dark:text-text-dark-secondary mt-1">Advanced development services.</p>
+<p class="text-lg font-bold text-text-light-primary dark:text-text-dark-primary mt-2">$150 / hour</p>
+</div>
+<button class="text-text-light-secondary dark:text-text-dark-secondary hover:text-text-light-primary dark:hover:text-text-dark-primary cursor-grab">
+<span class="material-symbols-outlined">drag_indicator</span>
+</button>
+</div>
+<div class="flex items-center gap-3">
+<label class="text-sm font-medium text-text-light-primary dark:text-text-dark-primary" for="hours-1">Hours:</label>
+<input class="form-input w-20 rounded-md border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-text-light-primary dark:text-text-dark-primary text-sm focus:ring-primary focus:border-primary" id="hours-1" type="number" value="8"/>
+</div>
+<button class="flex w-full items-center justify-center gap-2 rounded-md bg-green-600/20 text-green-700 dark:text-green-400 h-10 px-4 text-sm font-bold leading-normal tracking-[0.015em]">
+<span class="material-symbols-outlined text-base">check_circle</span>
+<span>Added</span>
+</button>
+</div>
+<!-- Service Card 2 -->
+<div class="relative flex flex-col gap-4 rounded-lg border border-border-light dark:border-border-dark bg-container-light dark:bg-container-dark p-4 shadow-sm hover:border-primary/50">
+<div class="flex items-start justify-between">
+<div class="flex-1">
+<h3 class="font-bold text-text-light-primary dark:text-text-dark-primary">UI/UX Design Package</h3>
+<p class="text-sm text-text-light-secondary dark:text-text-dark-secondary mt-1">Complete design mockups.</p>
+<p class="text-lg font-bold text-text-light-primary dark:text-text-dark-primary mt-2">$4,500 / project</p>
+</div>
+<button class="text-text-light-secondary dark:text-text-dark-secondary hover:text-text-light-primary dark:hover:text-text-dark-primary cursor-grab">
+<span class="material-symbols-outlined">drag_indicator</span>
+</button>
+</div>
+<div class="flex items-center gap-3">
+<label class="text-sm font-medium text-text-light-primary dark:text-text-dark-primary" for="qty-2">Quantity:</label>
+<input class="form-input w-20 rounded-md border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-text-light-primary dark:text-text-dark-primary text-sm focus:ring-primary focus:border-primary" id="qty-2" type="number" value="1"/>
+</div>
+<button class="flex w-full items-center justify-center rounded-md bg-primary text-white h-10 px-4 text-sm font-bold leading-normal tracking-[0.015em] hover:bg-primary/90">
+<span>Add to Invoice</span>
+</button>
+</div>
+<!-- Service Card 3 -->
+<div class="relative flex flex-col gap-4 rounded-lg border border-border-light dark:border-border-dark bg-container-light dark:bg-container-dark p-4 shadow-sm hover:border-primary/50">
+<div class="flex items-start justify-between">
+<div class="flex-1">
+<h3 class="font-bold text-text-light-primary dark:text-text-dark-primary">API Integration</h3>
+<p class="text-sm text-text-light-secondary dark:text-text-dark-secondary mt-1">Connect to third-party services.</p>
+<p class="text-lg font-bold text-text-light-primary dark:text-text-dark-primary mt-2">$2,000 / integration</p>
+</div>
+<button class="text-text-light-secondary dark:text-text-dark-secondary hover:text-text-light-primary dark:hover:text-text-dark-primary cursor-grab">
+<span class="material-symbols-outlined">drag_indicator</span>
+</button>
+</div>
+<div class="flex items-center gap-3">
+<label class="text-sm font-medium text-text-light-primary dark:text-text-dark-primary" for="qty-3">Quantity:</label>
+<input class="form-input w-20 rounded-md border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-text-light-primary dark:text-text-dark-primary text-sm focus:ring-primary focus:border-primary" id="qty-3" type="number" value="1"/>
+</div>
+<button class="flex w-full items-center justify-center rounded-md bg-primary text-white h-10 px-4 text-sm font-bold leading-normal tracking-[0.015em] hover:bg-primary/90">
+<span>Add to Invoice</span>
+</button>
+</div>
+<!-- Service Card 4 - Added -->
+<div class="relative flex flex-col gap-4 rounded-lg border-2 border-primary bg-container-light dark:bg-container-dark p-4 shadow-sm">
+<div class="flex items-start justify-between">
+<div class="flex-1">
+<h3 class="font-bold text-text-light-primary dark:text-text-dark-primary">QA Testing</h3>
+<p class="text-sm text-text-light-secondary dark:text-text-dark-secondary mt-1">Manual and automated testing.</p>
+<p class="text-lg font-bold text-text-light-primary dark:text-text-dark-primary mt-2">$80 / hour</p>
+</div>
+<button class="text-text-light-secondary dark:text-text-dark-secondary hover:text-text-light-primary dark:hover:text-text-dark-primary cursor-grab">
+<span class="material-symbols-outlined">drag_indicator</span>
+</button>
+</div>
+<div class="flex items-center gap-3">
+<label class="text-sm font-medium text-text-light-primary dark:text-text-dark-primary" for="hours-4">Hours:</label>
+<input class="form-input w-20 rounded-md border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-text-light-primary dark:text-text-dark-primary text-sm focus:ring-primary focus:border-primary" id="hours-4" type="number" value="10"/>
+</div>
+<button class="flex w-full items-center justify-center gap-2 rounded-md bg-green-600/20 text-green-700 dark:text-green-400 h-10 px-4 text-sm font-bold leading-normal tracking-[0.015em]">
+<span class="material-symbols-outlined text-base">check_circle</span>
+<span>Added</span>
+</button>
+</div>
+<!-- Service Card 5 -->
+<div class="relative flex flex-col gap-4 rounded-lg border border-border-light dark:border-border-dark bg-container-light dark:bg-container-dark p-4 shadow-sm hover:border-primary/50">
+<div class="flex items-start justify-between">
+<div class="flex-1">
+<h3 class="font-bold text-text-light-primary dark:text-text-dark-primary">Database Management</h3>
+<p class="text-sm text-text-light-secondary dark:text-text-dark-secondary mt-1">Setup and optimization.</p>
+<p class="text-lg font-bold text-text-light-primary dark:text-text-dark-primary mt-2">$120 / hour</p>
+</div>
+<button class="text-text-light-secondary dark:text-text-dark-secondary hover:text-text-light-primary dark:hover:text-text-dark-primary cursor-grab">
+<span class="material-symbols-outlined">drag_indicator</span>
+</button>
+</div>
+<div class="flex items-center gap-3">
+<label class="text-sm font-medium text-text-light-primary dark:text-text-dark-primary" for="hours-5">Hours:</label>
+<input class="form-input w-20 rounded-md border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-text-light-primary dark:text-text-dark-primary text-sm focus:ring-primary focus:border-primary" id="hours-5" type="number" value="1"/>
+</div>
+<button class="flex w-full items-center justify-center rounded-md bg-primary text-white h-10 px-4 text-sm font-bold leading-normal tracking-[0.015em] hover:bg-primary/90">
+<span>Add to Invoice</span>
+</button>
+</div>
+</div>
+</main>
+<!-- Right Panel (Invoice Summary) -->
+<aside class="w-96 flex-shrink-0 bg-container-light dark:bg-container-dark border-l border-border-light dark:border-border-dark p-6 flex flex-col">
+<div class="flex-1">
+<h2 class="text-2xl font-bold text-text-light-primary dark:text-text-dark-primary mb-6">Invoice Items</h2>
+<div class="space-y-4">
+<!-- Invoice Item 1 -->
+<div class="flex items-center gap-4 p-3 rounded-lg bg-background-light dark:bg-background-dark">
+<button class="text-text-light-secondary dark:text-text-dark-secondary hover:text-text-light-primary dark:hover:text-text-dark-primary cursor-grab">
+<span class="material-symbols-outlined">drag_indicator</span>
+</button>
+<div class="flex-1">
+<p class="font-medium text-text-light-primary dark:text-text-dark-primary">Senior Developer - Hourly</p>
+<p class="text-sm text-text-light-secondary dark:text-text-dark-secondary">8 hrs @ $150.00</p>
+</div>
+<p class="font-semibold text-text-light-primary dark:text-text-dark-primary">$1,200.00</p>
+<button class="text-destructive/70 hover:text-destructive">
+<span class="material-symbols-outlined">delete</span>
+</button>
+</div>
+<!-- Invoice Item 2 -->
+<div class="flex items-center gap-4 p-3 rounded-lg bg-background-light dark:bg-background-dark">
+<button class="text-text-light-secondary dark:text-text-dark-secondary hover:text-text-light-primary dark:hover:text-text-dark-primary cursor-grab">
+<span class="material-symbols-outlined">drag_indicator</span>
+</button>
+<div class="flex-1">
+<p class="font-medium text-text-light-primary dark:text-text-dark-primary">QA Testing</p>
+<p class="text-sm text-text-light-secondary dark:text-text-dark-secondary">10 hrs @ $80.00</p>
+</div>
+<p class="font-semibold text-text-light-primary dark:text-text-dark-primary">$800.00</p>
+<button class="text-destructive/70 hover:text-destructive">
+<span class="material-symbols-outlined">delete</span>
+</button>
+</div>
+</div>
+</div>
+<div class="border-t border-border-light dark:border-border-dark pt-6 mt-6">
+<div class="flex justify-between items-center text-text-light-secondary dark:text-text-dark-secondary">
+<span>Subtotal</span>
+<span>$2,000.00</span>
+</div>
+<div class="flex justify-between items-center text-text-light-secondary dark:text-text-dark-secondary mt-2">
+<span>Tax (10%)</span>
+<span>$200.00</span>
+</div>
+<div class="flex justify-between items-center text-2xl font-bold text-text-light-primary dark:text-text-dark-primary mt-4">
+<span>Total Amount</span>
+<span>$2,200.00</span>
+</div>
+</div>
+</aside>
+</div>
+</div>
+</body></html>

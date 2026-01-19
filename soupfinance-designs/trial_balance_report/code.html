@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Trial Balance Report</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#f24a0d",
+              "background-light": "#f8f6f5",
+              "background-dark": "#221510",
+              "text-light": "#181311",
+              "text-dark": "#f8f6f5",
+              "border-light": "#e6dedb",
+              "border-dark": "#443b38",
+              "card-light": "#ffffff",
+              "card-dark": "#2d201c",
+              "muted-light": "#8a6b60",
+              "muted-dark": "#a18c84",
+              "secondary-button-light": "#f5f1f0",
+              "secondary-button-dark": "#3a2d29"
+            },
+            fontFamily: {
+              "display": ["Manrope", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+      body {
+        font-family: 'Manrope', sans-serif;
+      }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-text-light dark:text-text-dark">
+<div class="relative flex h-auto min-h-screen w-full flex-col group/design-root overflow-x-hidden">
+<div class="layout-container flex h-full grow flex-col">
+<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-border-light dark:border-border-dark px-6 md:px-10 py-3 bg-card-light dark:bg-card-dark sticky top-0 z-10">
+<div class="flex items-center gap-4 text-text-light dark:text-text-dark">
+<div class="size-6 text-primary">
+<svg fill="none" viewbox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<path clip-rule="evenodd" d="M24 4H42V17.3333V30.6667H24V44H6V30.6667V17.3333H24V4Z" fill="currentColor" fill-rule="evenodd"></path>
+</svg>
+</div>
+<h2 class="text-lg font-bold leading-tight tracking-[-0.015em]">Corporate Accounting</h2>
+</div>
+<div class="flex flex-1 justify-end items-center gap-4 md:gap-8">
+<nav class="hidden md:flex items-center gap-9">
+<a class="text-sm font-medium leading-normal text-muted-light dark:text-muted-dark hover:text-primary dark:hover:text-primary" href="#">Dashboard</a>
+<a class="text-sm font-medium leading-normal text-primary" href="#">Invoices</a>
+<a class="text-sm font-medium leading-normal text-muted-light dark:text-muted-dark hover:text-primary dark:hover:text-primary" href="#">Reports</a>
+<a class="text-sm font-medium leading-normal text-muted-light dark:text-muted-dark hover:text-primary dark:hover:text-primary" href="#">Settings</a>
+</nav>
+<div class="flex items-center gap-2">
+<button class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 w-10 bg-secondary-button-light dark:bg-secondary-button-dark text-muted-light dark:text-muted-dark hover:text-primary dark:hover:text-primary">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 w-10 bg-secondary-button-light dark:bg-secondary-button-dark text-muted-light dark:text-muted-dark hover:text-primary dark:hover:text-primary">
+<span class="material-symbols-outlined">help</span>
+</button>
+</div>
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10" data-alt="User profile picture" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDFm4zAGcImeUHFrf9e78dAmKSDtFT48nuf4pthO27cG5SHf5vyWugiROzkoYV6IIA5fPxNrKNNhOerKiCmb8BcrVeShhIqRqqPgzfX7dO4PQSztRA0MsD6HueVMr7Ld8qdeiKGqUkxa4ZIBaLcLRcXbSfgdce2quk7HcEVzAirFyfK2InKtia3So5C4cJMTNT0KV2zsBoWKvDmEBNCIvGubsZBcbFplGdJCsvF7Zn8zDeLwxGMf73b-c8opmSNrSYzCSf2JDdBBAyY");'></div>
+</div>
+</header>
+<main class="flex-1 px-4 sm:px-6 lg:px-10 py-8">
+<div class="max-w-7xl mx-auto">
+<div class="flex flex-wrap justify-between items-center gap-4 mb-8">
+<h1 class="text-4xl font-black leading-tight tracking-[-0.033em]">Trial Balance Report</h1>
+<div class="flex flex-wrap gap-3">
+<button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-lg h-10 px-4 bg-secondary-button-light dark:bg-secondary-button-dark text-text-light dark:text-text-dark text-sm font-bold leading-normal tracking-[0.015em] border border-border-light dark:border-border-dark hover:bg-primary/10">
+<span class="material-symbols-outlined text-base">print</span>
+<span class="truncate">Print</span>
+</button>
+<button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-lg h-10 px-4 bg-secondary-button-light dark:bg-secondary-button-dark text-text-light dark:text-text-dark text-sm font-bold leading-normal tracking-[0.015em] border border-border-light dark:border-border-dark hover:bg-primary/10">
+<span class="material-symbols-outlined text-base">ios_share</span>
+<span class="truncate">Export</span>
+</button>
+</div>
+</div>
+<div class="bg-card-light dark:bg-card-dark p-6 rounded-xl border border-border-light dark:border-border-dark mb-8">
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-end">
+<label class="flex flex-col w-full">
+<p class="text-base font-medium leading-normal pb-2">Start Date</p>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-text-light dark:text-text-dark focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark h-12 placeholder:text-muted-light dark:placeholder:text-muted-dark px-4 text-base font-normal leading-normal" type="date" value="2023-01-01"/>
+</label>
+<label class="flex flex-col w-full">
+<p class="text-base font-medium leading-normal pb-2">End Date</p>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-text-light dark:text-text-dark focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark h-12 placeholder:text-muted-light dark:placeholder:text-muted-dark px-4 text-base font-normal leading-normal" type="date" value="2023-12-31"/>
+</label>
+<label class="flex flex-col w-full">
+<p class="text-base font-medium leading-normal pb-2">Account Type</p>
+<select class="form-select flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-text-light dark:text-text-dark focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark h-12 placeholder:text-muted-light dark:placeholder:text-muted-dark px-4 text-base font-normal leading-normal">
+<option>All</option>
+<option>Assets</option>
+<option>Liabilities</option>
+<option>Equity</option>
+<option>Revenue</option>
+<option>Expenses</option>
+</select>
+</label>
+<div class="flex flex-wrap gap-3 justify-start md:justify-end lg:col-start-4">
+<button class="flex w-full sm:w-auto flex-1 min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-4 bg-secondary-button-light dark:bg-secondary-button-dark text-text-light dark:text-text-dark text-sm font-bold leading-normal tracking-[0.015em] border border-border-light dark:border-border-dark hover:bg-primary/10">
+<span class="truncate">Clear Filters</span>
+</button>
+<button class="flex w-full sm:w-auto flex-1 min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-4 bg-primary text-white text-sm font-bold leading-normal tracking-[0.015em]">
+<span class="truncate">Generate Report</span>
+</button>
+</div>
+</div>
+</div>
+<div class="overflow-x-auto bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark">
+<table class="w-full min-w-[640px] text-left text-sm">
+<thead class="border-b border-border-light dark:border-border-dark">
+<tr>
+<th class="px-6 py-4 font-semibold" scope="col">Account Code</th>
+<th class="px-6 py-4 font-semibold" scope="col">Account Name</th>
+<th class="px-6 py-4 font-semibold text-right" scope="col">Debit</th>
+<th class="px-6 py-4 font-semibold text-right" scope="col">Credit</th>
+</tr>
+</thead>
+<tbody>
+<tr class="border-b border-border-light dark:border-border-dark hover:bg-primary/10">
+<td class="px-6 py-4">1001</td>
+<td class="px-6 py-4">Cash and Bank</td>
+<td class="px-6 py-4 text-right font-mono">$150,000.00</td>
+<td class="px-6 py-4 text-right font-mono"></td>
+</tr>
+<tr class="border-b border-border-light dark:border-border-dark hover:bg-primary/10">
+<td class="px-6 py-4">1201</td>
+<td class="px-6 py-4">Accounts Receivable</td>
+<td class="px-6 py-4 text-right font-mono">$75,000.00</td>
+<td class="px-6 py-4 text-right font-mono"></td>
+</tr>
+<tr class="border-b border-border-light dark:border-border-dark hover:bg-primary/10">
+<td class="px-6 py-4">1401</td>
+<td class="px-6 py-4">Prepaid Expenses</td>
+<td class="px-6 py-4 text-right font-mono">$10,000.00</td>
+<td class="px-6 py-4 text-right font-mono"></td>
+</tr>
+<tr class="border-b border-border-light dark:border-border-dark hover:bg-primary/10">
+<td class="px-6 py-4">2001</td>
+<td class="px-6 py-4">Accounts Payable</td>
+<td class="px-6 py-4 text-right font-mono"></td>
+<td class="px-6 py-4 text-right font-mono">$50,000.00</td>
+</tr>
+<tr class="border-b border-border-light dark:border-border-dark hover:bg-primary/10">
+<td class="px-6 py-4">3001</td>
+<td class="px-6 py-4">Common Stock</td>
+<td class="px-6 py-4 text-right font-mono"></td>
+<td class="px-6 py-4 text-right font-mono">$100,000.00</td>
+</tr>
+<tr class="border-b border-border-light dark:border-border-dark hover:bg-primary/10">
+<td class="px-6 py-4">3201</td>
+<td class="px-6 py-4">Retained Earnings</td>
+<td class="px-6 py-4 text-right font-mono"></td>
+<td class="px-6 py-4 text-right font-mono">$85,000.00</td>
+</tr>
+<tr class="border-b border-border-light dark:border-border-dark hover:bg-primary/10">
+<td class="px-6 py-4">4001</td>
+<td class="px-6 py-4">Sales Revenue</td>
+<td class="px-6 py-4 text-right font-mono"></td>
+<td class="px-6 py-4 text-right font-mono">$250,000.00</td>
+</tr>
+<tr class="border-b border-border-light dark:border-border-dark hover:bg-primary/10">
+<td class="px-6 py-4">5001</td>
+<td class="px-6 py-4">Cost of Goods Sold</td>
+<td class="px-6 py-4 text-right font-mono">$120,000.00</td>
+<td class="px-6 py-4 text-right font-mono"></td>
+</tr>
+<tr class="border-b border-border-light dark:border-border-dark hover:bg-primary/10">
+<td class="px-6 py-4">6001</td>
+<td class="px-6 py-4">Salaries Expense</td>
+<td class="px-6 py-4 text-right font-mono">$80,000.00</td>
+<td class="px-6 py-4 text-right font-mono"></td>
+</tr>
+<tr class="hover:bg-primary/10">
+<td class="px-6 py-4">6101</td>
+<td class="px-6 py-4">Rent Expense</td>
+<td class="px-6 py-4 text-right font-mono">$50,000.00</td>
+<td class="px-6 py-4 text-right font-mono"></td>
+</tr>
+</tbody>
+<tfoot class="bg-secondary-button-light dark:bg-secondary-button-dark">
+<tr>
+<th class="px-6 py-4 text-left text-base font-bold" colspan="2" scope="row">Totals</th>
+<td class="px-6 py-4 text-right text-base font-bold font-mono">$485,000.00</td>
+<td class="px-6 py-4 text-right text-base font-bold font-mono">$485,000.00</td>
+</tr>
+</tfoot>
+</table>
+</div>
+</div>
+</main>
+</div>
+</div>
+</body></html>

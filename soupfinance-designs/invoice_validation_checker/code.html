@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Invoice Validation Checker</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#E65100",
+              "background-light": "#f8f6f5",
+              "background-dark": "#221510",
+              "error": "#D32F2F",
+              "warning": "#FFA000"
+            },
+            fontFamily: {
+              "display": ["Manrope", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-[#181311] dark:text-gray-200">
+<div class="relative flex min-h-screen w-full flex-col group/design-root">
+<!-- TopNavBar Component -->
+<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-gray-200 dark:border-gray-700 px-6 sm:px-10 py-3 bg-white dark:bg-background-dark/50 sticky top-0 z-10 backdrop-blur-sm">
+<div class="flex items-center gap-4 text-[#181311] dark:text-gray-200">
+<div class="size-6 text-primary">
+<svg fill="currentColor" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M18.17 10.5h-1.88l-3.3-6.6a.5.5 0 0 0-.88 0l-3.3 6.6H7.17l-3.9 7.8a.5.5 0 0 0 .44.7h18a.5.5 0 0 0 .44-.7l-3.9-7.8ZM8.62 17.5 12 10.8l3.38 6.7H8.62Z"></path></svg>
+</div>
+<h2 class="text-[#181311] dark:text-gray-200 text-lg font-bold leading-tight tracking-[-0.015em]">Invoice Management</h2>
+</div>
+<div class="flex flex-1 justify-end gap-4">
+<div class="flex gap-2">
+<button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-gray-200/50 dark:bg-white/10 text-[#181311] dark:text-gray-200 text-sm font-bold leading-normal tracking-[0.015em]">
+<span class="truncate">Return to List</span>
+</button>
+<button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-gray-200/50 dark:bg-white/10 text-[#181311] dark:text-gray-200 text-sm font-bold leading-normal tracking-[0.015em]">
+<span class="truncate">Close</span>
+</button>
+</div>
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10" data-alt="User profile picture" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuA-YqXI0Rn1q4c44A_uR8uYSWwqawlx5d6v_JUaFFndz6sJJTrN33_J9z6nVqAwhOXy5oEK9W0igeO5TPP6JNnYprWNZzD00xBcoOrb_RIdkS4NgInUheQxVFClKmnwebwFjkPLRppRpeclP-1KuA7KpemnR2oatkcsMOoMg8SuRF_3qFa8shis0Dag2lfqiqHp50bxSwu_0K-0BL0HKBNSM-N_a0yXLzNFsxGadfEKQMPT0AObt797nab1kELAXVY7YeT-OxvnAGq4");'></div>
+</div>
+</header>
+<main class="flex-1 w-full max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+<!-- PageHeading Component -->
+<div class="flex flex-wrap justify-between items-center gap-4 p-4 mb-6">
+<div class="flex min-w-72 flex-col gap-2">
+<p class="text-[#181311] dark:text-white text-3xl md:text-4xl font-black leading-tight tracking-[-0.033em]">Invoice Validation: INV-2024-00123</p>
+<div class="flex items-center gap-2 p-3 rounded-lg bg-error/10 text-error border border-error/20">
+<span class="material-symbols-outlined text-xl">error</span>
+<p class="text-base font-semibold leading-normal">Validation Failed: 3 Errors Found</p>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-gray-200/50 dark:bg-white/10 text-[#181311] dark:text-gray-200 text-sm font-bold leading-normal tracking-[0.015em]">
+<span class="truncate">Save as Draft</span>
+</button>
+<button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-primary text-white text-sm font-bold leading-normal tracking-[0.015em]">
+<span class="truncate">Re-validate Invoice</span>
+</button>
+</div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+<!-- Left Column: Validation Errors -->
+<div class="lg:col-span-1 flex flex-col gap-6">
+<div class="bg-white dark:bg-background-dark/50 p-6 rounded-xl border border-gray-200 dark:border-gray-700">
+<!-- SectionHeader Component -->
+<h2 class="text-[#181311] dark:text-white text-[22px] font-bold leading-tight tracking-[-0.015em] pb-4">Validation Errors</h2>
+<div class="flex flex-col divide-y divide-gray-200 dark:divide-gray-700">
+<!-- ListItem Component (Error) -->
+<div class="flex items-start gap-4 py-4 justify-between">
+<div class="flex items-start gap-4">
+<div class="text-error flex items-center justify-center rounded-lg bg-error/10 shrink-0 size-12 mt-1">
+<span class="material-symbols-outlined">cancel</span>
+</div>
+<div class="flex flex-col justify-center">
+<p class="text-[#181311] dark:text-white text-base font-medium leading-normal">Missing GL Code for Line Item #2</p>
+<p class="text-gray-600 dark:text-gray-400 text-sm font-normal leading-normal">Each line item must be assigned a valid General Ledger code.</p>
+</div>
+</div>
+<div class="shrink-0">
+<button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-8 px-4 bg-gray-200/50 dark:bg-white/10 text-[#181311] dark:text-gray-200 text-sm font-medium leading-normal w-fit">
+<span class="truncate">Fix</span>
+</button>
+</div>
+</div>
+<!-- ListItem Component (Error) -->
+<div class="flex items-start gap-4 py-4 justify-between">
+<div class="flex items-start gap-4">
+<div class="text-error flex items-center justify-center rounded-lg bg-error/10 shrink-0 size-12 mt-1">
+<span class="material-symbols-outlined">cancel</span>
+</div>
+<div class="flex flex-col justify-center">
+<p class="text-[#181311] dark:text-white text-base font-medium leading-normal">Invoice total doesn't match line items</p>
+<p class="text-gray-600 dark:text-gray-400 text-sm font-normal leading-normal">The grand total must equal the sum of all line item totals.</p>
+</div>
+</div>
+<div class="shrink-0">
+<button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-8 px-4 bg-gray-200/50 dark:bg-white/10 text-[#181311] dark:text-gray-200 text-sm font-medium leading-normal w-fit">
+<span class="truncate">Go to Field</span>
+</button>
+</div>
+</div>
+<!-- ListItem Component (Warning) -->
+<div class="flex items-start gap-4 py-4 justify-between">
+<div class="flex items-start gap-4">
+<div class="text-warning flex items-center justify-center rounded-lg bg-warning/10 shrink-0 size-12 mt-1">
+<span class="material-symbols-outlined">warning</span>
+</div>
+<div class="flex flex-col justify-center">
+<p class="text-[#181311] dark:text-white text-base font-medium leading-normal">Supplier not found in master data</p>
+<p class="text-gray-600 dark:text-gray-400 text-sm font-normal leading-normal">The supplier 'Innovate Inc.' is not a registered vendor.</p>
+</div>
+</div>
+<div class="shrink-0">
+<button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-8 px-4 bg-gray-200/50 dark:bg-white/10 text-[#181311] dark:text-gray-200 text-sm font-medium leading-normal w-fit">
+<span class="truncate">Review</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Column: Invoice Details -->
+<div class="lg:col-span-2 flex flex-col gap-6">
+<div class="bg-white dark:bg-background-dark/50 p-6 rounded-xl border border-gray-200 dark:border-gray-700">
+<h3 class="text-xl font-bold mb-4 text-[#181311] dark:text-white">Invoice Details</h3>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+<div>
+<p class="text-gray-500 dark:text-gray-400">Supplier Name</p>
+<p class="font-semibold text-[#181311] dark:text-white bg-warning/10 p-1 rounded-md inline-block">Innovate Inc.</p>
+</div>
+<div>
+<p class="text-gray-500 dark:text-gray-400">Invoice Number</p>
+<p class="font-semibold text-[#181311] dark:text-white">INV-2024-00123</p>
+</div>
+<div>
+<p class="text-gray-500 dark:text-gray-400">Invoice Date</p>
+<p class="font-semibold text-[#181311] dark:text-white">2024-07-28</p>
+</div>
+<div>
+<p class="text-gray-500 dark:text-gray-400">Due Date</p>
+<p class="font-semibold text-[#181311] dark:text-white">2024-08-27</p>
+</div>
+</div>
+</div>
+<div class="bg-white dark:bg-background-dark/50 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+<h3 class="text-xl font-bold p-6 text-[#181311] dark:text-white">Line Items</h3>
+<div class="overflow-x-auto">
+<table class="w-full text-sm text-left">
+<thead class="bg-gray-50 dark:bg-white/5 text-xs text-gray-700 dark:text-gray-400 uppercase">
+<tr>
+<th class="px-6 py-3" scope="col">Description</th>
+<th class="px-6 py-3" scope="col">Qty</th>
+<th class="px-6 py-3" scope="col">Unit Price</th>
+<th class="px-6 py-3" scope="col">GL Code</th>
+<th class="px-6 py-3 text-right" scope="col">Line Total</th>
+</tr>
+</thead>
+<tbody>
+<tr class="border-b dark:border-gray-700">
+<td class="px-6 py-4 font-medium text-gray-900 dark:text-white">Cloud Hosting Services - Pro Tier</td>
+<td class="px-6 py-4">1</td>
+<td class="px-6 py-4">$500.00</td>
+<td class="px-6 py-4">7110</td>
+<td class="px-6 py-4 text-right">$500.00</td>
+</tr>
+<tr class="border-b dark:border-gray-700 bg-error/10">
+<td class="px-6 py-4 font-medium text-gray-900 dark:text-white">Software License - Annual</td>
+<td class="px-6 py-4">2</td>
+<td class="px-6 py-4">$150.00</td>
+<td class="px-6 py-4 text-error font-bold">MISSING</td>
+<td class="px-6 py-4 text-right">$300.00</td>
+</tr>
+<tr class="border-b dark:border-gray-700">
+<td class="px-6 py-4 font-medium text-gray-900 dark:text-white">Consulting Hours</td>
+<td class="px-6 py-4">5</td>
+<td class="px-6 py-4">$100.00</td>
+<td class="px-6 py-4">7130</td>
+<td class="px-6 py-4 text-right">$500.00</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="bg-white dark:bg-background-dark/50 p-6 rounded-xl border border-gray-200 dark:border-gray-700">
+<h3 class="text-xl font-bold mb-4 text-[#181311] dark:text-white">Totals &amp; Balance</h3>
+<div class="flex flex-col gap-2 max-w-sm ml-auto text-sm">
+<div class="flex justify-between">
+<span class="text-gray-500 dark:text-gray-400">Subtotal</span>
+<span>$1,300.00</span>
+</div>
+<div class="flex justify-between">
+<span class="text-gray-500 dark:text-gray-400">Tax (10%)</span>
+<span>$130.00</span>
+</div>
+<div class="flex justify-between font-bold text-base border-t dark:border-gray-700 pt-2 text-error">
+<span>Grand Total (Header)</span>
+<span>$1,450.00</span>
+</div>
+<div class="flex justify-between font-bold text-base text-error">
+<span>Calculated Total (Lines)</span>
+<span>$1,430.00</span>
+</div>
+<div class="flex justify-between text-base font-bold bg-error/10 p-2 rounded-lg mt-2">
+<span>Balance (Difference)</span>
+<span>-$20.00</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

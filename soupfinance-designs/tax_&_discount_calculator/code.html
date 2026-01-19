@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>InvoicePro - Tax &amp; Discount Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#f2330d",
+              "background-light": "#f8f6f5",
+              "background-dark": "#221310",
+              "orange": "#F39C12",
+              "red": "#E74C3C",
+              "light-gray": "#F8F9FA",
+              "charcoal": "#343A40"
+            },
+            fontFamily: {
+              "display": ["Manrope", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        font-size: 20px;
+      }
+    </style>
+</head>
+<body class="font-display bg-light-gray dark:bg-background-dark">
+<div class="relative flex h-auto min-h-screen w-full flex-col group/design-root">
+<div class="layout-container flex h-full grow flex-col">
+<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-[#e6dddb] bg-white dark:bg-background-dark dark:border-gray-700 px-6 sm:px-10 lg:px-20 py-3 sticky top-0 z-10">
+<div class="flex items-center gap-4 text-charcoal dark:text-white">
+<div class="size-6 text-primary">
+<svg fill="none" viewbox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<path d="M36.7273 44C33.9891 44 31.6043 39.8386 30.3636 33.69C29.123 39.8386 26.7382 44 24 44C21.2618 44 18.877 39.8386 17.6364 33.69C16.3957 39.8386 14.0109 44 11.2727 44C7.25611 44 4 35.0457 4 24C4 12.9543 7.25611 4 11.2727 4C14.0109 4 16.3957 8.16144 17.6364 14.31C18.877 8.16144 21.2618 4 24 4C26.7382 4 29.123 8.16144 30.3636 14.31C31.6043 8.16144 33.9891 4 36.7273 4C40.7439 4 44 12.9543 44 24C44 35.0457 40.7439 44 36.7273 44Z" fill="currentColor"></path>
+</svg>
+</div>
+<h2 class="text-charcoal dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">InvoicePro</h2>
+</div>
+<div class="hidden lg:flex flex-1 justify-center gap-8">
+<div class="flex items-center gap-9">
+<a class="text-charcoal dark:text-gray-300 text-sm font-medium leading-normal" href="#">Dashboard</a>
+<a class="text-primary dark:text-orange text-sm font-bold leading-normal" href="#">Invoices</a>
+<a class="text-charcoal dark:text-gray-300 text-sm font-medium leading-normal" href="#">Clients</a>
+<a class="text-charcoal dark:text-gray-300 text-sm font-medium leading-normal" href="#">Reports</a>
+<a class="text-charcoal dark:text-gray-300 text-sm font-medium leading-normal" href="#">Settings</a>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="hidden sm:flex gap-2">
+<button class="flex cursor-pointer items-center justify-center rounded-lg h-10 w-10 bg-[#f5f1f0] dark:bg-gray-800 text-charcoal dark:text-white">
+<span class="material-symbols-outlined">help</span>
+</button>
+<button class="flex cursor-pointer items-center justify-center rounded-lg h-10 w-10 bg-[#f5f1f0] dark:bg-gray-800 text-charcoal dark:text-white">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+</div>
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10" data-alt="User avatar image" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBnf8PxWntW3V3bsLEnraRcRRcPbbZuSa5IjoGGJfmnPsOLMbvjALaz_csRVdIXMxyMG7MhL3leeaRtvvhagOHtebNdWLULCJVy2kLz_6uf3L75Cra6eckNXx6qfqiO7kLbt4zN-0hp6rgcac0tmDYCIXx71IfVPAZkvDh_gItG9ckAv0Mk5upV7nmubALFTiff8ZJS1GQY7xFvbX4pjGXy_LrM_hJk1vJF6b9w2glY9r8iNdp4go4ojfQLMIQM85nfGYAmdWqdedBA");'></div>
+</div>
+</header>
+<main class="px-4 sm:px-6 lg:px-8 py-8">
+<div class="max-w-7xl mx-auto">
+<div class="mb-6">
+<div class="flex flex-wrap gap-2 text-sm">
+<a class="text-gray-500 dark:text-gray-400 font-medium leading-normal hover:text-primary" href="#">Invoice Management</a>
+<span class="text-gray-500 dark:text-gray-400 font-medium leading-normal">/</span>
+<a class="text-gray-500 dark:text-gray-400 font-medium leading-normal hover:text-primary" href="#">Invoice #INV-2024-001</a>
+<span class="text-gray-500 dark:text-gray-400 font-medium leading-normal">/</span>
+<span class="text-charcoal dark:text-white font-medium leading-normal">Tax &amp; Discount Calculator</span>
+</div>
+</div>
+<div class="mb-8">
+<div class="flex flex-wrap justify-between items-center gap-4">
+<div class="flex flex-col gap-2">
+<p class="text-charcoal dark:text-white text-3xl md:text-4xl font-black leading-tight tracking-[-0.033em]">Tax &amp; Discount Calculator</p>
+<p class="text-gray-600 dark:text-gray-300 text-base font-normal leading-normal">Calculate and apply adjustments for Invoice #INV-2024-001</p>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+<!-- Left Column: Invoice Items -->
+<div class="lg:col-span-1">
+<h2 class="text-charcoal dark:text-white text-[22px] font-bold leading-tight tracking-[-0.015em] pb-3 pt-1">Invoice Items</h2>
+<div class="overflow-hidden rounded-lg border border-[#e6dddb] dark:border-gray-700 bg-white dark:bg-background-dark">
+<table class="w-full">
+<thead>
+<tr class="bg-white dark:bg-background-dark">
+<th class="px-4 py-3 text-left text-charcoal dark:text-gray-200 text-sm font-medium leading-normal">Item</th>
+<th class="px-4 py-3 text-right text-charcoal dark:text-gray-200 text-sm font-medium leading-normal">Amount</th>
+</tr>
+</thead>
+<tbody>
+<tr class="border-t border-t-[#e6dddb] dark:border-gray-700">
+<td class="px-4 py-3 text-charcoal dark:text-white text-sm font-normal leading-normal">Web Design Services</td>
+<td class="px-4 py-3 text-right text-gray-600 dark:text-gray-300 text-sm font-normal leading-normal">$4,000.00</td>
+</tr>
+<tr class="border-t border-t-[#e6dddb] dark:border-gray-700">
+<td class="px-4 py-3 text-charcoal dark:text-white text-sm font-normal leading-normal">Logo Design</td>
+<td class="px-4 py-3 text-right text-gray-600 dark:text-gray-300 text-sm font-normal leading-normal">$1,200.00</td>
+</tr>
+<tr class="border-t border-t-[#e6dddb] dark:border-gray-700">
+<td class="px-4 py-3 text-charcoal dark:text-white text-sm font-normal leading-normal">SEO Consulting (Monthly)</td>
+<td class="px-4 py-3 text-right text-gray-600 dark:text-gray-300 text-sm font-normal leading-normal">$800.00</td>
+</tr>
+<tr class="border-t-2 border-t-[#e6dddb] dark:border-gray-600 bg-gray-50 dark:bg-gray-800">
+<td class="px-4 py-4 text-charcoal dark:text-white text-sm font-bold leading-normal">Gross Amount</td>
+<td class="px-4 py-4 text-right text-charcoal dark:text-white text-sm font-bold leading-normal">$6,000.00</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Center Column: Calculator -->
+<div class="lg:col-span-1">
+<div class="bg-white dark:bg-background-dark p-6 rounded-lg shadow-sm border border-transparent dark:border-gray-700 space-y-6">
+<div>
+<h3 class="text-charcoal dark:text-white text-lg font-bold mb-4">Discounts</h3>
+<div class="space-y-4">
+<div class="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-md">
+<p class="flex-1 text-charcoal dark:text-white text-sm">Early Payment</p>
+<p class="text-red font-medium text-sm">-10%</p>
+<button class="text-gray-500 hover:text-red">
+<span class="material-symbols-outlined" style="font-size: 18px;">delete</span>
+</button>
+</div>
+</div>
+<button class="mt-4 flex items-center gap-2 text-sm font-bold text-orange hover:text-orange/80">
+<span class="material-symbols-outlined">add_circle</span>
+                                        Add Discount
+                                    </button>
+</div>
+<hr class="border-gray-200 dark:border-gray-700"/>
+<div>
+<h3 class="text-charcoal dark:text-white text-lg font-bold mb-4">Taxes</h3>
+<div class="space-y-4">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2 text-charcoal dark:text-white text-sm">
+<span>Apply Sales Tax (VAT)</span>
+<span class="material-symbols-outlined text-gray-400 cursor-pointer" style="font-size: 16px;">help_outline</span>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox" value=""/>
+<div class="w-11 h-6 bg-gray-200 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-orange"></div>
+</label>
+</div>
+<div class="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-md">
+<select class="w-full bg-transparent border-none text-charcoal dark:text-white text-sm focus:ring-0">
+<option>VAT (Value Added Tax)</option>
+<option>GST (Goods and Services Tax)</option>
+</select>
+<input class="w-20 text-right bg-transparent border-none text-charcoal dark:text-white text-sm font-medium focus:ring-0" type="text" value="8.00"/>
+<span class="text-charcoal dark:text-white text-sm">%</span>
+<button class="text-gray-500 hover:text-red">
+<span class="material-symbols-outlined" style="font-size: 18px;">delete</span>
+</button>
+</div>
+</div>
+<button class="mt-4 flex items-center gap-2 text-sm font-bold text-orange hover:text-orange/80">
+<span class="material-symbols-outlined">add_circle</span>
+                                        Add Tax
+                                    </button>
+</div>
+</div>
+</div>
+<!-- Right Column: Summary -->
+<div class="lg:col-span-1">
+<div class="bg-white dark:bg-background-dark p-6 rounded-lg shadow-sm border border-transparent dark:border-gray-700 sticky top-28">
+<h3 class="text-charcoal dark:text-white text-xl font-bold mb-6">Summary</h3>
+<div class="space-y-4 text-sm">
+<div class="flex justify-between">
+<p class="text-gray-600 dark:text-gray-300">Subtotal</p>
+<p class="text-charcoal dark:text-white">$6,000.00</p>
+</div>
+<div class="flex justify-between">
+<p class="text-gray-600 dark:text-gray-300">Total Discounts (10%)</p>
+<p class="text-red">-$600.00</p>
+</div>
+<div class="flex justify-between font-medium">
+<p class="text-charcoal dark:text-white">Amount Before Tax</p>
+<p class="text-charcoal dark:text-white">$5,400.00</p>
+</div>
+<hr class="border-gray-200 dark:border-gray-700 !my-5"/>
+<div class="flex justify-between">
+<p class="text-gray-600 dark:text-gray-300">Total Tax (VAT 8%)</p>
+<p class="text-charcoal dark:text-white">+$432.00</p>
+</div>
+<div class="bg-orange/10 dark:bg-orange/20 p-4 rounded-lg flex justify-between items-center !mt-6">
+<p class="text-orange font-bold text-lg">Grand Total</p>
+<p class="text-orange font-black text-2xl tracking-tight">$5,832.00</p>
+</div>
+</div>
+<div class="mt-8 flex flex-col sm:flex-row gap-3">
+<button class="flex-1 flex max-w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 bg-orange text-white gap-2 text-base font-bold leading-normal tracking-wide px-6 hover:bg-orange/90 transition-colors">Apply to Invoice</button>
+<button class="flex-1 flex max-w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 bg-gray-200 dark:bg-gray-700 text-charcoal dark:text-white gap-2 text-base font-bold leading-normal tracking-wide px-6 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">Reset</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</div>
+</body></html>

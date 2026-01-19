@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>General Ledger Reconciliation Report</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#f24a0d",
+                        "background-light": "#f8f6f5",
+                        "background-dark": "#221510",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings:
+            'FILL' 0,
+            'wght' 400,
+            'GRAD' 0,
+            'opsz' 24
+        }
+        .material-symbols-outlined.fill {
+            font-variation-settings:
+            'FILL' 1,
+            'wght' 400,
+            'GRAD' 0,
+            'opsz' 24
+        }
+    </style>
+</head>
+<body class="font-display bg-background-light dark:bg-background-dark">
+<div class="relative flex min-h-screen w-full">
+<!-- SideNavBar -->
+<aside class="flex-shrink-0 w-64 bg-white dark:bg-black/20 flex flex-col justify-between p-4 border-r border-stone-200 dark:border-stone-800">
+<div class="flex flex-col gap-4">
+<div class="flex items-center gap-3 px-3">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10" data-alt="Acme Corp logo" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBMyW7J0jypooxDH0QztBleQdb3eiFQ0EYM75qGHkHLiO0XIgnObuZ1ra4L8QXa2uwjk9JYKcfE_1qmSEtuzGHk-Bch_UIC51CFS6acEkf5-yhb-bC83Xvv_GPYgHv4DIpzcnXhKWtxiYwOTWiq3HouI_HTP1tj0DOEVRE0yAgbKm8EeTaD4g8m8mdfTpWvPWmDFjVL-pVhAxRIRXTuH0uk3WHjtnbhHi370BXiwJm-snwE_YAdwUA1Lh6Z6auTvYMdcqfGrmRSYK5j");'></div>
+<div class="flex flex-col">
+<h1 class="text-stone-900 dark:text-stone-100 text-base font-medium leading-normal">Acme Corp.</h1>
+<p class="text-stone-500 dark:text-stone-400 text-sm font-normal leading-normal">Accounting</p>
+</div>
+</div>
+<nav class="flex flex-col gap-2 mt-4">
+<a class="flex items-center gap-3 px-3 py-2 text-stone-900 dark:text-stone-100 hover:bg-stone-100 dark:hover:bg-stone-800 rounded-lg" href="#">
+<span class="material-symbols-outlined text-xl">dashboard</span>
+<p class="text-sm font-medium leading-normal">Dashboard</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-stone-900 dark:text-stone-100 hover:bg-stone-100 dark:hover:bg-stone-800 rounded-lg" href="#">
+<span class="material-symbols-outlined text-xl">receipt_long</span>
+<p class="text-sm font-medium leading-normal">Invoices</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-stone-900 dark:text-stone-100 hover:bg-stone-100 dark:hover:bg-stone-800 rounded-lg" href="#">
+<span class="material-symbols-outlined text-xl">credit_card</span>
+<p class="text-sm font-medium leading-normal">Payments</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg bg-primary/20 dark:bg-primary/30 text-primary" href="#">
+<span class="material-symbols-outlined fill text-xl">lab_profile</span>
+<p class="text-sm font-medium leading-normal">Reporting &amp; Analytics</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-stone-900 dark:text-stone-100 hover:bg-stone-100 dark:hover:bg-stone-800 rounded-lg" href="#">
+<span class="material-symbols-outlined text-xl">settings</span>
+<p class="text-sm font-medium leading-normal">Settings</p>
+</a>
+</nav>
+</div>
+<div class="flex flex-col gap-1">
+<a class="flex items-center gap-3 px-3 py-2 text-stone-900 dark:text-stone-100 hover:bg-stone-100 dark:hover:bg-stone-800 rounded-lg" href="#">
+<span class="material-symbols-outlined text-xl">help</span>
+<p class="text-sm font-medium leading-normal">Help</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-stone-900 dark:text-stone-100 hover:bg-stone-100 dark:hover:bg-stone-800 rounded-lg" href="#">
+<span class="material-symbols-outlined text-xl">logout</span>
+<p class="text-sm font-medium leading-normal">Logout</p>
+</a>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="flex-1 flex flex-col p-6 md:p-8 overflow-y-auto">
+<div class="w-full max-w-7xl mx-auto">
+<!-- Breadcrumbs -->
+<div class="flex flex-wrap gap-2 mb-4">
+<a class="text-stone-500 dark:text-stone-400 text-sm font-medium leading-normal hover:text-primary" href="#">Home</a>
+<span class="text-stone-500 dark:text-stone-400 text-sm font-medium leading-normal">/</span>
+<a class="text-stone-500 dark:text-stone-400 text-sm font-medium leading-normal hover:text-primary" href="#">Reporting &amp; Analytics</a>
+<span class="text-stone-500 dark:text-stone-400 text-sm font-medium leading-normal">/</span>
+<span class="text-stone-900 dark:text-stone-100 text-sm font-medium leading-normal">GL Reconciliation</span>
+</div>
+<!-- PageHeading -->
+<header class="flex flex-wrap justify-between items-center gap-4 mb-8">
+<div class="flex flex-col gap-1">
+<h1 class="text-stone-900 dark:text-stone-100 text-3xl font-black leading-tight tracking-tight">General Ledger Reconciliation Report</h1>
+<p class="text-stone-500 dark:text-stone-400 text-base font-normal leading-normal">Compare account balances against sub-ledgers for multiple periods.</p>
+</div>
+</header>
+<!-- Filters & Controls Panel -->
+<div class="flex flex-col xl:flex-row gap-6">
+<div class="xl:w-1/3">
+<div class="bg-white dark:bg-stone-900 rounded-xl border border-stone-200 dark:border-stone-800 p-6">
+<h2 class="text-lg font-bold text-stone-900 dark:text-stone-100 mb-4">Filters &amp; Controls</h2>
+<div class="flex flex-col gap-6">
+<!-- CalendarPicker for Date Range -->
+<details class="flex flex-col group" open="">
+<summary class="flex cursor-pointer items-center justify-between gap-2 list-none">
+<p class="text-stone-900 dark:text-stone-100 text-sm font-medium leading-normal">Date Range</p>
+<span class="material-symbols-outlined text-stone-500 dark:text-stone-400 group-open:rotate-180 transition-transform">expand_more</span>
+</summary>
+<div class="mt-4">
+<div class="flex min-w-72 flex-col gap-0.5">
+<div class="flex items-center p-1 justify-between">
+<button><span class="material-symbols-outlined flex size-8 items-center justify-center text-stone-900 dark:text-stone-100">chevron_left</span></button>
+<p class="text-stone-900 dark:text-stone-100 text-sm font-bold leading-tight">October 2023</p>
+<button><span class="material-symbols-outlined flex size-8 items-center justify-center text-stone-900 dark:text-stone-100">chevron_right</span></button>
+</div>
+<div class="grid grid-cols-7">
+<p class="text-stone-500 dark:text-stone-400 text-xs font-bold flex h-8 items-center justify-center">S</p>
+<p class="text-stone-500 dark:text-stone-400 text-xs font-bold flex h-8 items-center justify-center">M</p>
+<p class="text-stone-500 dark:text-stone-400 text-xs font-bold flex h-8 items-center justify-center">T</p>
+<p class="text-stone-500 dark:text-stone-400 text-xs font-bold flex h-8 items-center justify-center">W</p>
+<p class="text-stone-500 dark:text-stone-400 text-xs font-bold flex h-8 items-center justify-center">T</p>
+<p class="text-stone-500 dark:text-stone-400 text-xs font-bold flex h-8 items-center justify-center">F</p>
+<p class="text-stone-500 dark:text-stone-400 text-xs font-bold flex h-8 items-center justify-center">S</p>
+<button class="h-8 col-start-1 text-sm text-stone-400 dark:text-stone-500">24</button>
+<button class="h-8 col-start-2 text-sm text-stone-400 dark:text-stone-500">25</button>
+<button class="h-8 col-start-3 text-sm text-stone-400 dark:text-stone-500">26</button>
+<button class="h-8 col-start-4 text-sm text-stone-400 dark:text-stone-500">27</button>
+<button class="h-8 col-start-5 text-sm text-stone-400 dark:text-stone-500">28</button>
+<button class="h-8 col-start-6 text-sm text-stone-400 dark:text-stone-500">29</button>
+<button class="h-8 col-start-7 text-sm text-stone-400 dark:text-stone-500">30</button>
+<button class="h-8 text-sm text-stone-900 dark:text-stone-100">1</button>
+<button class="h-8 text-sm bg-primary/20 text-primary rounded-l-full">2</button>
+<button class="h-8 text-sm bg-primary/20 text-primary">3</button>
+<button class="h-8 text-sm bg-primary/20 text-primary">4</button>
+<button class="h-8 text-sm bg-primary/20 text-primary">5</button>
+<button class="h-8 text-sm bg-primary/20 text-primary">6</button>
+<button class="h-8 text-sm bg-primary/20 text-primary rounded-r-full">7</button>
+<button class="h-8 text-sm text-stone-900 dark:text-stone-100">8</button>
+<button class="h-8 text-sm text-stone-900 dark:text-stone-100">9</button>
+<button class="h-8 text-sm text-stone-900 dark:text-stone-100">10</button>
+<button class="h-8 text-sm text-stone-900 dark:text-stone-100">11</button>
+<button class="h-8 text-sm text-stone-900 dark:text-stone-100">12</button>
+<button class="h-8 text-sm text-stone-900 dark:text-stone-100">13</button>
+<button class="h-8 text-sm text-stone-900 dark:text-stone-100">14</button>
+<button class="h-8 text-sm text-stone-900 dark:text-stone-100">15</button>
+<button class="h-8 text-sm text-stone-900 dark:text-stone-100">16</button>
+<button class="h-8 text-sm text-stone-900 dark:text-stone-100">17</button>
+<button class="h-8 text-sm text-stone-900 dark:text-stone-100">18</button>
+<button class="h-8 text-sm text-stone-900 dark:text-stone-100">19</button>
+<button class="h-8 text-sm text-stone-900 dark:text-stone-100">20</button>
+<button class="h-8 text-sm text-stone-900 dark:text-stone-100">21</button>
+<button class="h-8 text-sm text-stone-900 dark:text-stone-100">22</button>
+<button class="h-8 text-sm text-stone-900 dark:text-stone-100">23</button>
+<button class="h-8 text-sm text-stone-900 dark:text-stone-100">24</button>
+<button class="h-8 text-sm text-stone-900 dark:text-stone-100">25</button>
+<button class="h-8 text-sm text-stone-900 dark:text-stone-100">26</button>
+<button class="h-8 text-sm text-stone-900 dark:text-stone-100">27</button>
+<button class="h-8 text-sm text-stone-900 dark:text-stone-100">28</button>
+<button class="h-8 text-sm text-stone-900 dark:text-stone-100">29</button>
+<button class="h-8 text-sm text-stone-900 dark:text-stone-100">30</button>
+<button class="h-8 text-sm text-stone-900 dark:text-stone-100">31</button>
+</div>
+</div>
+</div>
+</details>
+<!-- Dropdown Selectors -->
+<div class="flex flex-col gap-4">
+<div class="relative">
+<label class="block text-sm font-medium text-stone-500 dark:text-stone-400 mb-1" for="subsidiary">Subsidiary</label>
+<select class="w-full text-stone-900 dark:text-stone-100 bg-background-light dark:bg-stone-800 border-stone-300 dark:border-stone-700 rounded-lg focus:ring-primary focus:border-primary" id="subsidiary">
+<option>All Subsidiaries</option>
+<option>North America Division</option>
+<option>European Operations</option>
+</select>
+</div>
+<div class="relative">
+<label class="block text-sm font-medium text-stone-500 dark:text-stone-400 mb-1" for="account">GL Account</label>
+<select class="w-full text-stone-900 dark:text-stone-100 bg-background-light dark:bg-stone-800 border-stone-300 dark:border-stone-700 rounded-lg focus:ring-primary focus:border-primary" id="account">
+<option>All Accounts</option>
+<option>1010 - Cash</option>
+<option>1200 - Accounts Receivable</option>
+</select>
+</div>
+</div>
+<!-- Toggles/Switches -->
+<div class="flex flex-col gap-3">
+<label class="flex items-center justify-between cursor-pointer">
+<span class="text-sm font-medium text-stone-900 dark:text-stone-100">Show Detailed View</span>
+<div class="relative">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-stone-200 dark:bg-stone-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</div>
+</label>
+<label class="flex items-center justify-between cursor-pointer">
+<span class="text-sm font-medium text-stone-900 dark:text-stone-100">Include Prior Period</span>
+<div class="relative">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-stone-200 dark:bg-stone-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</div>
+</label>
+</div>
+<!-- Primary Action Buttons -->
+<div class="flex flex-col gap-3 mt-4">
+<button class="w-full bg-primary text-white font-bold py-2.5 px-4 rounded-lg hover:bg-primary/90 transition-colors">Generate Report</button>
+<button class="w-full bg-stone-200 dark:bg-stone-700 text-stone-900 dark:text-stone-100 font-bold py-2.5 px-4 rounded-lg hover:bg-stone-300 dark:hover:bg-stone-600 transition-colors">Reset Filters</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Report Content -->
+<div class="xl:w-2/3 flex flex-col gap-6">
+<!-- Summary Cards -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+<div class="bg-white dark:bg-stone-900 p-4 rounded-xl border border-stone-200 dark:border-stone-800">
+<p class="text-sm font-medium text-stone-500 dark:text-stone-400">Total GL Balance</p>
+<p class="text-2xl font-bold text-stone-900 dark:text-stone-100 mt-1">$1,250,650.75</p>
+</div>
+<div class="bg-white dark:bg-stone-900 p-4 rounded-xl border border-stone-200 dark:border-stone-800">
+<p class="text-sm font-medium text-stone-500 dark:text-stone-400">Total Sub-Ledger</p>
+<p class="text-2xl font-bold text-stone-900 dark:text-stone-100 mt-1">$1,250,550.75</p>
+</div>
+<div class="bg-white dark:bg-stone-900 p-4 rounded-xl border border-red-500/50 dark:border-red-500/50">
+<p class="text-sm font-medium text-stone-500 dark:text-stone-400">Total Variance</p>
+<p class="text-2xl font-bold text-red-600 dark:text-red-500 mt-1">($100.00)</p>
+</div>
+<div class="bg-white dark:bg-stone-900 p-4 rounded-xl border border-stone-200 dark:border-stone-800">
+<p class="text-sm font-medium text-stone-500 dark:text-stone-400">Items to Review</p>
+<p class="text-2xl font-bold text-primary mt-1">4</p>
+</div>
+</div>
+<!-- Report Data Table -->
+<div class="bg-white dark:bg-stone-900 rounded-xl border border-stone-200 dark:border-stone-800 overflow-hidden">
+<!-- Report Actions Toolbar -->
+<div class="p-4 flex flex-wrap items-center justify-between gap-4 border-b border-stone-200 dark:border-stone-800">
+<div class="relative flex-1 min-w-[200px]">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-stone-400">search</span>
+<input class="w-full pl-10 pr-4 py-2 text-sm text-stone-900 dark:text-stone-100 bg-background-light dark:bg-stone-800 border-stone-300 dark:border-stone-700 rounded-lg focus:ring-primary focus:border-primary" placeholder="Search report..." type="search"/>
+</div>
+<div class="relative">
+<button class="inline-flex items-center gap-2 bg-primary/10 dark:bg-primary/20 text-primary font-bold py-2 px-4 rounded-lg hover:bg-primary/20 dark:hover:bg-primary/30 transition-colors">
+<span class="material-symbols-outlined text-base">download</span>
+                                        Export
+                                    </button>
+</div>
+</div>
+<!-- Table -->
+<div class="overflow-x-auto">
+<table class="w-full text-sm text-left text-stone-500 dark:text-stone-400">
+<thead class="text-xs text-stone-700 dark:text-stone-300 uppercase bg-stone-50 dark:bg-stone-800">
+<tr>
+<th class="px-6 py-3" scope="col">GL Account</th>
+<th class="px-6 py-3" scope="col">Description</th>
+<th class="px-6 py-3 text-right" scope="col">Sub-Ledger Balance</th>
+<th class="px-6 py-3 text-right" scope="col">GL Balance</th>
+<th class="px-6 py-3 text-right" scope="col">Variance</th>
+</tr>
+</thead>
+<tbody>
+<tr class="bg-white dark:bg-stone-900 border-b dark:border-stone-800 hover:bg-stone-50 dark:hover:bg-stone-800/50">
+<th class="px-6 py-4 font-medium text-primary whitespace-nowrap" scope="row"><a href="#">1010-01</a></th>
+<td class="px-6 py-4 text-stone-900 dark:text-stone-100">Cash - Operating</td>
+<td class="px-6 py-4 text-right text-stone-900 dark:text-stone-100">$550,123.45</td>
+<td class="px-6 py-4 text-right text-stone-900 dark:text-stone-100">$550,123.45</td>
+<td class="px-6 py-4 text-right text-stone-900 dark:text-stone-100">$0.00</td>
+</tr>
+<tr class="bg-red-500/10 dark:bg-red-500/10 border-b dark:border-stone-800 hover:bg-red-500/20 dark:hover:bg-red-500/20">
+<th class="px-6 py-4 font-medium text-primary whitespace-nowrap" scope="row"><a href="#">1200-01</a></th>
+<td class="px-6 py-4 text-stone-900 dark:text-stone-100">A/R Trade</td>
+<td class="px-6 py-4 text-right text-stone-900 dark:text-stone-100">$250,000.00</td>
+<td class="px-6 py-4 text-right text-stone-900 dark:text-stone-100">$250,100.00</td>
+<td class="px-6 py-4 text-right font-bold text-red-600 dark:text-red-500">($100.00)</td>
+</tr>
+<tr class="bg-white dark:bg-stone-900 border-b dark:border-stone-800 hover:bg-stone-50 dark:hover:bg-stone-800/50">
+<th class="px-6 py-4 font-medium text-primary whitespace-nowrap" scope="row"><a href="#">1400-01</a></th>
+<td class="px-6 py-4 text-stone-900 dark:text-stone-100">Prepaid Expenses</td>
+<td class="px-6 py-4 text-right text-stone-900 dark:text-stone-100">$45,321.80</td>
+<td class="px-6 py-4 text-right text-stone-900 dark:text-stone-100">$45,321.80</td>
+<td class="px-6 py-4 text-right text-stone-900 dark:text-stone-100">$0.00</td>
+</tr>
+<tr class="bg-white dark:bg-stone-900 border-b dark:border-stone-800 hover:bg-stone-50 dark:hover:bg-stone-800/50">
+<th class="px-6 py-4 font-medium text-primary whitespace-nowrap" scope="row"><a href="#">2010-01</a></th>
+<td class="px-6 py-4 text-stone-900 dark:text-stone-100">Accounts Payable</td>
+<td class="px-6 py-4 text-right text-stone-900 dark:text-stone-100">$300,500.50</td>
+<td class="px-6 py-4 text-right text-stone-900 dark:text-stone-100">$300,500.50</td>
+<td class="px-6 py-4 text-right text-stone-900 dark:text-stone-100">$0.00</td>
+</tr>
+<tr class="bg-white dark:bg-stone-900 border-b dark:border-stone-800 hover:bg-stone-50 dark:hover:bg-stone-800/50">
+<th class="px-6 py-4 font-medium text-primary whitespace-nowrap" scope="row"><a href="#">2200-01</a></th>
+<td class="px-6 py-4 text-stone-900 dark:text-stone-100">Accrued Liabilities</td>
+<td class="px-6 py-4 text-right text-stone-900 dark:text-stone-100">$104,505.00</td>
+<td class="px-6 py-4 text-right text-stone-900 dark:text-stone-100">$104,505.00</td>
+<td class="px-6 py-4 text-right text-stone-900 dark:text-stone-100">$0.00</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pagination -->
+<div class="flex items-center justify-between p-4 text-sm">
+<span class="text-stone-500 dark:text-stone-400">Showing 1-5 of 24 items</span>
+<div class="inline-flex items-center gap-1">
+<button class="inline-flex items-center justify-center size-8 rounded-lg text-stone-500 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800" disabled=""><span class="material-symbols-outlined text-lg">chevron_left</span></button>
+<button class="inline-flex items-center justify-center size-8 rounded-lg bg-primary/20 text-primary font-bold">1</button>
+<button class="inline-flex items-center justify-center size-8 rounded-lg text-stone-500 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800">2</button>
+<button class="inline-flex items-center justify-center size-8 rounded-lg text-stone-500 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800">3</button>
+<span class="text-stone-500 dark:text-stone-400">...</span>
+<button class="inline-flex items-center justify-center size-8 rounded-lg text-stone-500 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800">5</button>
+<button class="inline-flex items-center justify-center size-8 rounded-lg text-stone-500 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800"><span class="material-symbols-outlined text-lg">chevron_right</span></button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

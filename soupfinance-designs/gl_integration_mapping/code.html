@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>GL Integration Mapping</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#f24a0d",
+                        "background-light": "#f8f6f5",
+                        "background-dark": "#221510",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+</head>
+<body class="font-display bg-background-light dark:bg-background-dark text-[#424242] dark:text-gray-300">
+<div class="relative flex h-auto min-h-screen w-full flex-col group/design-root overflow-x-hidden">
+<div class="layout-container flex h-full grow flex-col">
+<main class="flex-1 px-4 sm:px-6 md:px-10 lg:px-20 py-8">
+<div class="mx-auto max-w-7xl">
+<!-- Breadcrumbs -->
+<div class="flex flex-wrap gap-2 mb-4">
+<a class="text-[#8a6b60] dark:text-gray-400 text-sm font-medium leading-normal" href="#">Invoice Management</a>
+<span class="text-[#8a6b60] dark:text-gray-400 text-sm font-medium leading-normal">/</span>
+<a class="text-[#8a6b60] dark:text-gray-400 text-sm font-medium leading-normal" href="#">Invoice #12345</a>
+<span class="text-[#8a6b60] dark:text-gray-400 text-sm font-medium leading-normal">/</span>
+<span class="text-[#181311] dark:text-white text-sm font-medium leading-normal">GL Mapping</span>
+</div>
+<!-- Page Heading and Actions -->
+<div class="flex flex-col sm:flex-row flex-wrap justify-between items-start gap-4 mb-8">
+<div class="flex flex-col gap-2">
+<p class="text-[#181311] dark:text-white text-3xl font-black leading-tight tracking-tighter">GL Integration Mapping for Invoice #12345</p>
+<p class="text-[#8a6b60] dark:text-gray-400 text-base font-normal leading-normal">Map invoice line items to the appropriate GL accounts.</p>
+</div>
+<div class="flex flex-wrap gap-3 justify-start">
+<button class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-[#f24a0d] text-white text-sm font-bold leading-normal tracking-[0.015em] transition-opacity hover:opacity-90">
+<span class="truncate">Save Mapping</span>
+</button>
+<button class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-[#f5f1f0] dark:bg-white/10 text-[#181311] dark:text-white text-sm font-bold leading-normal tracking-[0.015em] transition-colors hover:bg-gray-200 dark:hover:bg-white/20">
+<span class="truncate">Cancel</span>
+</button>
+</div>
+</div>
+<!-- Main Content Area: Two-Column Layout -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+<!-- Left Column: Invoice Line Items -->
+<div class="flex flex-col gap-4">
+<div class="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+<h2 class="text-[#181311] dark:text-white text-xl font-bold leading-tight tracking-tight">Invoice Line Items</h2>
+<button class="flex items-center gap-2 text-sm font-bold text-[#f24a0d]">
+<span class="material-symbols-outlined text-base">auto_awesome</span>
+<span>Auto-Map Suggestions</span>
+</button>
+</div>
+<label class="flex flex-col min-w-40 h-12 w-full">
+<div class="flex w-full flex-1 items-stretch rounded-lg h-full">
+<div class="text-[#8a6b60] dark:text-gray-400 flex border-none bg-white dark:bg-background-dark items-center justify-center pl-4 rounded-l-lg border-r-0">
+<span class="material-symbols-outlined">search</span>
+</div>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#181311] dark:text-white focus:outline-0 focus:ring-2 focus:ring-[#f24a0d]/50 border-gray-300 dark:border-gray-700 bg-white dark:bg-background-dark h-full placeholder:text-[#8a6b60] dark:placeholder:text-gray-500 px-4 rounded-l-none border-l-0 pl-2 text-base font-normal leading-normal" placeholder="Search for specific invoice items..." value=""/>
+</div>
+</label>
+<!-- Invoice Items List -->
+<div class="space-y-3">
+<!-- Unmapped Item -->
+<div class="bg-white dark:bg-background-dark/80 rounded-lg p-4 border border-gray-200 dark:border-gray-700 shadow-sm cursor-grab active:cursor-grabbing">
+<div class="flex justify-between items-start">
+<div class="flex flex-col">
+<p class="font-bold text-[#181311] dark:text-white">Software License Subscription</p>
+<p class="text-sm text-[#8a6b60] dark:text-gray-400">1 unit @ $1,500.00</p>
+</div>
+<div class="text-right">
+<p class="text-lg font-bold text-[#181311] dark:text-white">$1,500.00</p>
+<span class="inline-flex items-center gap-1.5 rounded-full bg-[#FFF3E0] dark:bg-yellow-900/40 px-2 py-0.5 text-xs font-medium text-orange-800 dark:text-yellow-300">
+<svg aria-hidden="true" class="h-1.5 w-1.5 fill-orange-500 dark:fill-yellow-400" viewbox="0 0 6 6"><circle cx="3" cy="3" r="3"></circle></svg>
+                                                Unmapped
+                                            </span>
+</div>
+</div>
+</div>
+<!-- Suggested Item -->
+<div class="bg-[#FFF3E0]/50 dark:bg-[#f24a0d]/10 rounded-lg p-4 border border-orange-200 dark:border-[#f24a0d]/30 shadow-sm cursor-grab active:cursor-grabbing">
+<div class="flex justify-between items-start">
+<div class="flex flex-col">
+<p class="font-bold text-[#181311] dark:text-white">Cloud Hosting Services</p>
+<p class="text-sm text-[#8a6b60] dark:text-gray-400">1 unit @ $350.00</p>
+</div>
+<div class="text-right">
+<p class="text-lg font-bold text-[#181311] dark:text-white">$350.00</p>
+<span class="inline-flex items-center gap-1.5 rounded-full bg-blue-100 dark:bg-blue-900/40 px-2 py-0.5 text-xs font-medium text-blue-800 dark:text-blue-300">
+<svg aria-hidden="true" class="h-1.5 w-1.5 fill-blue-500 dark:fill-blue-400" viewbox="0 0 6 6"><circle cx="3" cy="3" r="3"></circle></svg>
+                                                Suggested
+                                            </span>
+</div>
+</div>
+</div>
+<!-- Mapped Item -->
+<div class="bg-green-50 dark:bg-green-900/20 rounded-lg p-4 border border-green-200 dark:border-green-800/50 shadow-sm opacity-60">
+<div class="flex justify-between items-start">
+<div class="flex flex-col">
+<p class="font-bold text-[#181311] dark:text-white">Office Supplies</p>
+<p class="text-sm text-[#8a6b60] dark:text-gray-400">25 units @ $10.00</p>
+</div>
+<div class="text-right">
+<p class="text-lg font-bold text-[#181311] dark:text-white">$250.00</p>
+<span class="inline-flex items-center gap-1.5 rounded-full bg-green-100 dark:bg-green-900/40 px-2 py-0.5 text-xs font-medium text-green-800 dark:text-green-300">
+<svg aria-hidden="true" class="h-1.5 w-1.5 fill-green-500" viewbox="0 0 6 6"><circle cx="3" cy="3" r="3"></circle></svg>
+                                                Mapped
+                                            </span>
+</div>
+</div>
+<div class="mt-3 pt-3 border-t border-green-200 dark:border-green-800/50 flex items-center justify-between">
+<div class="flex items-center gap-2 text-sm text-green-700 dark:text-green-300">
+<span class="material-symbols-outlined text-base">arrow_right_alt</span>
+<span>7210 - Office Supplies Expense</span>
+</div>
+<button class="text-red-600 dark:text-red-500 hover:text-red-800 dark:hover:text-red-400">
+<span class="material-symbols-outlined text-xl">delete</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Column: General Ledger Accounts -->
+<div class="flex flex-col gap-4">
+<h2 class="text-[#181311] dark:text-white text-xl font-bold leading-tight tracking-tight">General Ledger Accounts</h2>
+<label class="flex flex-col min-w-40 h-12 w-full">
+<div class="flex w-full flex-1 items-stretch rounded-lg h-full">
+<div class="text-[#8a6b60] dark:text-gray-400 flex border-none bg-white dark:bg-background-dark items-center justify-center pl-4 rounded-l-lg border-r-0">
+<span class="material-symbols-outlined">search</span>
+</div>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#181311] dark:text-white focus:outline-0 focus:ring-2 focus:ring-[#f24a0d]/50 border-gray-300 dark:border-gray-700 bg-white dark:bg-background-dark h-full placeholder:text-[#8a6b60] dark:placeholder:text-gray-500 px-4 rounded-l-none border-l-0 pl-2 text-base font-normal leading-normal" placeholder="Search GL accounts by code or name..." value=""/>
+</div>
+</label>
+<!-- GL Accounts List -->
+<div class="bg-white dark:bg-background-dark/80 rounded-lg p-4 border border-gray-200 dark:border-gray-700 shadow-sm h-[420px] overflow-y-auto">
+<div class="space-y-4">
+<div>
+<h3 class="font-bold text-gray-500 dark:text-gray-400 text-sm uppercase tracking-wider pb-2 border-b border-gray-200 dark:border-gray-700 mb-2">Expenses</h3>
+<ul class="space-y-1">
+<li class="p-2 rounded-md hover:bg-[#f5f1f0] dark:hover:bg-white/10 cursor-pointer transition-colors">
+<p class="font-semibold text-[#181311] dark:text-white">6010 - Software Expenses</p>
+<p class="text-sm text-[#8a6b60] dark:text-gray-400">For all software subscriptions and licenses.</p>
+</li>
+<li class="p-2 rounded-md hover:bg-[#f5f1f0] dark:hover:bg-white/10 cursor-pointer transition-colors">
+<p class="font-semibold text-[#181311] dark:text-white">6020 - Cloud Services &amp; Hosting</p>
+<p class="text-sm text-[#8a6b60] dark:text-gray-400">AWS, Azure, Google Cloud, etc.</p>
+</li>
+<li class="p-2 rounded-md hover:bg-[#f5f1f0] dark:hover:bg-white/10 cursor-pointer transition-colors">
+<p class="font-semibold text-[#181311] dark:text-white">7210 - Office Supplies Expense</p>
+<p class="text-sm text-[#8a6b60] dark:text-gray-400">Stationery, equipment, and general supplies.</p>
+</li>
+</ul>
+</div>
+<div>
+<h3 class="font-bold text-gray-500 dark:text-gray-400 text-sm uppercase tracking-wider pb-2 border-b border-gray-200 dark:border-gray-700 mb-2">Assets</h3>
+<ul class="space-y-1">
+<li class="p-2 rounded-md hover:bg-[#f5f1f0] dark:hover:bg-white/10 cursor-pointer transition-colors">
+<p class="font-semibold text-[#181311] dark:text-white">1500 - Computer Equipment</p>
+<p class="text-sm text-[#8a6b60] dark:text-gray-400">Laptops, monitors, and peripherals.</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</div>
+</body></html>

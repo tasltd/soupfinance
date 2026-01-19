@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Invoice Status Summary - Accounting App</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#f24a0d",
+              "background-light": "#f8f6f5",
+              "background-dark": "#221510",
+              "brand": {
+                "orange": "#F97316",
+                "red": "#EF4444",
+                "light-orange": "#FED7AA",
+                "dark-red": "#B91C1C",
+                "neutral": "#F3F4F6",
+                "text": "#1F2937"
+              }
+            },
+            fontFamily: {
+              "display": ["Manrope", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+</head>
+<body class="font-display bg-background-light dark:bg-background-dark text-brand-text">
+<div class="relative flex min-h-screen w-full flex-col">
+<!-- TopNavBar -->
+<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-[#e6dedb] dark:border-gray-700 bg-white dark:bg-background-dark px-6 sm:px-10 py-3 sticky top-0 z-10">
+<div class="flex items-center gap-4">
+<div class="size-6 text-primary">
+<svg fill="none" viewbox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<path clip-rule="evenodd" d="M39.475 21.6262C40.358 21.4363 40.6863 21.5589 40.7581 21.5934C40.7876 21.655 40.8547 21.857 40.8082 22.3336C40.7408 23.0255 40.4502 24.0046 39.8572 25.2301C38.6799 27.6631 36.5085 30.6631 33.5858 33.5858C30.6631 36.5085 27.6632 38.6799 25.2301 39.8572C24.0046 40.4502 23.0255 40.7407 22.3336 40.8082C21.8571 40.8547 21.6551 40.7875 21.5934 40.7581C21.5589 40.6863 21.4363 40.358 21.6262 39.475C21.8562 38.4054 22.4689 36.9657 23.5038 35.2817C24.7575 33.2417 26.5497 30.9744 28.7621 28.762C30.9744 26.5497 33.2417 24.7574 35.2817 23.5037C36.9657 22.4689 38.4054 21.8562 39.475 21.6262ZM4.41189 29.2403L18.7597 43.5881C19.8813 44.7097 21.4027 44.9179 22.7217 44.7893C24.0585 44.659 25.5148 44.1631 26.9723 43.4579C29.9052 42.0387 33.2618 39.5667 36.4142 36.4142C39.5667 33.2618 42.0387 29.9052 43.4579 26.9723C44.1631 25.5148 44.659 24.0585 44.7893 22.7217C44.9179 21.4027 44.7097 19.8813 43.5881 18.7597L29.2403 4.41187C27.8527 3.02428 25.8765 3.02573 24.2861 3.36776C22.6081 3.72863 20.7334 4.58419 18.8396 5.74801C16.4978 7.18716 13.9881 9.18353 11.5858 11.5858C9.18354 13.988 7.18717 16.4978 5.74802 18.8396C4.58421 20.7334 3.72865 22.6081 3.36778 24.2861C3.02574 25.8765 3.02429 27.8527 4.41189 29.2403Z" fill="currentColor" fill-rule="evenodd"></path>
+</svg>
+</div>
+<h2 class="text-[#181311] dark:text-gray-200 text-lg font-bold leading-tight tracking-[-0.015em]">Accounting App</h2>
+</div>
+<div class="hidden md:flex flex-1 justify-center items-center gap-9">
+<a class="text-[#181311] dark:text-gray-300 dark:hover:text-white text-sm font-medium leading-normal" href="#">Dashboard</a>
+<a class="text-[#181311] dark:text-gray-300 dark:hover:text-white text-sm font-medium leading-normal" href="#">Invoices</a>
+<a class="text-brand-orange text-sm font-bold leading-normal border-b-2 border-brand-orange" href="#">Reports</a>
+<a class="text-[#181311] dark:text-gray-300 dark:hover:text-white text-sm font-medium leading-normal" href="#">Settings</a>
+</div>
+<div class="flex items-center gap-2">
+<button class="hidden sm:flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-brand-orange hover:bg-opacity-90 text-white text-sm font-bold leading-normal tracking-[0.015em]">
+<span class="truncate">Create New Invoice</span>
+</button>
+<button class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 bg-brand-neutral dark:bg-gray-800 text-[#181311] dark:text-gray-300 dark:hover:bg-gray-700 gap-2 text-sm font-bold leading-normal tracking-[0.015em] min-w-0 px-2.5">
+<span class="material-symbols-outlined text-xl">notifications</span>
+</button>
+<button class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 bg-brand-neutral dark:bg-gray-800 text-[#181311] dark:text-gray-300 dark:hover:bg-gray-700 gap-2 text-sm font-bold leading-normal tracking-[0.015em] min-w-0 px-2.5">
+<span class="material-symbols-outlined text-xl">help_outline</span>
+</button>
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 ml-2" data-alt="User profile picture" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCp1t6DWCoUDeJBAxscvVwMgTDJuwuih1z8oC0i-NlHTvI86rvLz-AmHkvxCkUe7gjb_0WmQrsGsm_IVSINQJn4oRoQg5NgJpmw_wQ165YEePwvl7v8hUtpaVELwkoiDksjVIgkOnMVJRiDBJj0gXQRilsVCGeQISPFCVJJ0jkmNV1Uv70Mq5-Rag_hjwO87RkRPkaznl2kseQj8ES5AEMyM1K16RpEyGCAGJq6qgkgK0qa8Vm83S6EDlKEWwF0XlHXIJJhuubiqNvk");'></div>
+</div>
+</header>
+<main class="flex-1 px-4 sm:px-6 lg:px-8 py-8">
+<div class="max-w-7xl mx-auto">
+<!-- PageHeading -->
+<div class="flex flex-wrap justify-between items-center gap-4 mb-6">
+<div class="flex min-w-72 flex-col gap-2">
+<p class="text-3xl lg:text-4xl font-black leading-tight tracking-[-0.033em] dark:text-white">Reporting: Invoice Status Summary</p>
+<p class="text-gray-500 dark:text-gray-400 text-base font-normal leading-normal">View, filter, and export the status of all invoices.</p>
+</div>
+<div class="flex items-center gap-3">
+<button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-brand-orange hover:bg-opacity-90 text-white text-sm font-bold leading-normal tracking-[0.015em] gap-2">
+<span class="material-symbols-outlined text-lg">download</span>
+<span class="truncate">Export</span>
+</button>
+</div>
+</div>
+<!-- Filter Bar -->
+<div class="mb-6 p-4 bg-white dark:bg-gray-800/50 rounded-xl border border-[#e6dedb] dark:border-gray-700">
+<h3 class="text-[#181311] dark:text-gray-200 text-lg font-bold leading-tight tracking-[-0.015em] pb-3">Filters</h3>
+<div class="flex gap-3 flex-wrap">
+<button class="flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-lg bg-brand-neutral dark:bg-gray-700 dark:text-gray-200 pl-4 pr-2 hover:bg-gray-200 dark:hover:bg-gray-600">
+<p class="text-sm font-medium leading-normal">Date Range: This Quarter</p>
+<span class="material-symbols-outlined text-lg">expand_more</span>
+</button>
+<button class="flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-lg bg-brand-neutral dark:bg-gray-700 dark:text-gray-200 pl-4 pr-2 hover:bg-gray-200 dark:hover:bg-gray-600">
+<p class="text-sm font-medium leading-normal">All Clients</p>
+<span class="material-symbols-outlined text-lg">expand_more</span>
+</button>
+<button class="flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-lg bg-brand-neutral dark:bg-gray-700 dark:text-gray-200 pl-4 pr-2 hover:bg-gray-200 dark:hover:bg-gray-600">
+<p class="text-sm font-medium leading-normal">Status: All</p>
+<span class="material-symbols-outlined text-lg">expand_more</span>
+</button>
+<button class="flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-lg bg-brand-orange/20 text-brand-orange pl-4 pr-2 font-semibold">
+<p class="text-sm leading-normal">Apply Filters</p>
+</button>
+<button class="flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-lg pl-4 pr-2">
+<p class="text-sm font-medium leading-normal text-gray-500 dark:text-gray-400 hover:text-brand-text">Clear Filters</p>
+</button>
+</div>
+</div>
+<!-- Stats / KPIs -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+<div class="flex flex-col gap-2 rounded-xl p-6 border border-[#e6dedb] dark:border-gray-700 bg-white dark:bg-gray-800/50">
+<p class="text-base font-medium leading-normal text-gray-600 dark:text-gray-300">Total Outstanding</p>
+<p class="tracking-light text-3xl font-bold leading-tight dark:text-white">$1,234,567</p>
+</div>
+<div class="flex flex-col gap-2 rounded-xl p-6 border border-brand-red/50 dark:border-brand-red/70 bg-brand-red/5 dark:bg-brand-red/10">
+<p class="text-base font-medium leading-normal text-brand-red/80 dark:text-brand-red/90">Amount Overdue</p>
+<p class="tracking-light text-3xl font-bold leading-tight text-brand-red dark:text-brand-red">$45,678</p>
+</div>
+<div class="flex flex-col gap-2 rounded-xl p-6 border border-[#e6dedb] dark:border-gray-700 bg-white dark:bg-gray-800/50">
+<p class="text-base font-medium leading-normal text-gray-600 dark:text-gray-300">Paid This Period</p>
+<p class="tracking-light text-3xl font-bold leading-tight dark:text-white">$890,123</p>
+</div>
+</div>
+<!-- Graphical Visualization Section -->
+<div class="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-8">
+<!-- Pie Chart -->
+<div class="lg:col-span-2 flex flex-col gap-4 p-6 rounded-xl border border-[#e6dedb] dark:border-gray-700 bg-white dark:bg-gray-800/50">
+<h3 class="text-lg font-bold leading-tight tracking-[-0.015em] dark:text-gray-200">Invoice Status Breakdown</h3>
+<div class="flex-1 flex items-center justify-center">
+<img class="max-h-64" data-alt="Pie chart showing invoice status: 65% paid, 25% pending, 10% overdue" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA9KkxQcel5WKTB6uZadVoR0oi53krc_UvgcJPKbgeqpvQLRombSGfjldWSlEnyTbfOMqvpxJIrzUupY01M7y42RKy5w3p-mPFWZ6mA2gJsyhvlL22Bu7TTalx9jGLGk59lqSYFjp4-spC8WDqvdQoUomU0mMOpfYdB9SyuoxeUuoZVa8J1AxGlrA6Q-4dhMHSTziEyyCl24tHuO_TneaI4MZuY-v7L3D65RVxyDcXk2E9nrYNpFPLcM3RGf8m3O1m2vmV-nU1f9y4L"/>
+</div>
+</div>
+<!-- Bar Chart -->
+<div class="lg:col-span-3 flex flex-col gap-4 p-6 rounded-xl border border-[#e6dedb] dark:border-gray-700 bg-white dark:bg-gray-800/50">
+<h3 class="text-lg font-bold leading-tight tracking-[-0.015em] dark:text-gray-200">Outstanding Amount by Client</h3>
+<div class="flex-1 flex items-center justify-center">
+<img class="w-full h-auto" data-alt="Bar chart displaying outstanding amounts for different clients, showing varied levels of debt for each." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAOvBLWcBfCXLvp56URTBbuQNYaJcCQA5UfJt8qYxRviVXGHwjWJ5H7Pq_xUqGXtPzw3CqHhbbKiOEaC_XNRvGFHwomNAGmwj4FS7W5x6oOXnWM7nNatPXtLvRbX0Qz7jDl1q59dM9iYqImJuTxkUL1xMTfr65JZXWMKid8wplJT_ZS62nJVJmyF2vG2OzM4kX1B6p3ZQO6i1-5nRQW3ltMnTy_HssHgqZtmvSXuCccWvYBpFBvoOOfuPSNdYY3z9WnERkL_r5-WL25"/>
+</div>
+</div>
+</div>
+<!-- Data Table -->
+<div class="bg-white dark:bg-gray-800/50 rounded-xl border border-[#e6dedb] dark:border-gray-700 overflow-hidden">
+<div class="overflow-x-auto">
+<table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+<thead class="text-xs text-gray-700 dark:text-gray-300 uppercase bg-gray-50 dark:bg-gray-700/50">
+<tr>
+<th class="px-6 py-4 font-semibold" scope="col">Invoice #</th>
+<th class="px-6 py-4 font-semibold" scope="col">Client</th>
+<th class="px-6 py-4 font-semibold" scope="col">Issue Date</th>
+<th class="px-6 py-4 font-semibold" scope="col">Due Date</th>
+<th class="px-6 py-4 font-semibold text-right" scope="col">Amount</th>
+<th class="px-6 py-4 font-semibold text-center" scope="col">Status</th>
+<th class="px-6 py-4 font-semibold text-right" scope="col">Actions</th>
+</tr>
+</thead>
+<tbody>
+<tr class="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/30">
+<td class="px-6 py-4 font-medium text-gray-900 dark:text-white whitespace-nowrap">INV-2024-001</td>
+<td class="px-6 py-4">Innovate Corp</td>
+<td class="px-6 py-4">2024-05-01</td>
+<td class="px-6 py-4">2024-06-01</td>
+<td class="px-6 py-4 text-right">$15,200.00</td>
+<td class="px-6 py-4 text-center">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Paid</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full"><span class="material-symbols-outlined text-lg">visibility</span></button>
+<button class="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full"><span class="material-symbols-outlined text-lg">download</span></button>
+</td>
+</tr>
+<tr class="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/30">
+<td class="px-6 py-4 font-medium text-gray-900 dark:text-white whitespace-nowrap">INV-2024-002</td>
+<td class="px-6 py-4">Quantum Solutions</td>
+<td class="px-6 py-4">2024-05-15</td>
+<td class="px-6 py-4">2024-06-15</td>
+<td class="px-6 py-4 text-right">$8,500.00</td>
+<td class="px-6 py-4 text-center">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Pending</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full"><span class="material-symbols-outlined text-lg">visibility</span></button>
+<button class="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full"><span class="material-symbols-outlined text-lg">download</span></button>
+</td>
+</tr>
+<tr class="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/30">
+<td class="px-6 py-4 font-medium text-gray-900 dark:text-white whitespace-nowrap">INV-2024-003</td>
+<td class="px-6 py-4">Apex Industries</td>
+<td class="px-6 py-4">2024-04-20</td>
+<td class="px-6 py-4 text-brand-red">2024-05-20</td>
+<td class="px-6 py-4 text-right font-semibold text-brand-red">$21,350.00</td>
+<td class="px-6 py-4 text-center">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Overdue</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full"><span class="material-symbols-outlined text-lg">visibility</span></button>
+<button class="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full"><span class="material-symbols-outlined text-lg">download</span></button>
+</td>
+</tr>
+<tr class="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/30">
+<td class="px-6 py-4 font-medium text-gray-900 dark:text-white whitespace-nowrap">INV-2024-004</td>
+<td class="px-6 py-4">Stellar Tech</td>
+<td class="px-6 py-4">2024-06-01</td>
+<td class="px-6 py-4">2024-07-01</td>
+<td class="px-6 py-4 text-right">$5,000.00</td>
+<td class="px-6 py-4 text-center">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Pending</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full"><span class="material-symbols-outlined text-lg">visibility</span></button>
+<button class="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full"><span class="material-symbols-outlined text-lg">download</span></button>
+</td>
+</tr>
+<tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+<td class="px-6 py-4 font-medium text-gray-900 dark:text-white whitespace-nowrap">INV-2024-005</td>
+<td class="px-6 py-4">Fusion Dynamics</td>
+<td class="px-6 py-4">2024-05-25</td>
+<td class="px-6 py-4">2024-06-25</td>
+<td class="px-6 py-4 text-right">$3,750.00</td>
+<td class="px-6 py-4 text-center">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Paid</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full"><span class="material-symbols-outlined text-lg">visibility</span></button>
+<button class="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full"><span class="material-symbols-outlined text-lg">download</span></button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pagination -->
+<nav aria-label="Table navigation" class="flex items-center justify-between p-4">
+<span class="text-sm font-normal text-gray-500 dark:text-gray-400">Showing <span class="font-semibold text-gray-900 dark:text-white">1-5</span> of <span class="font-semibold text-gray-900 dark:text-white">100</span></span>
+<ul class="inline-flex items-center -space-x-px">
+<li>
+<a class="px-3 py-2 ml-0 leading-tight text-gray-500 bg-white border border-gray-300 rounded-l-lg hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white" href="#">Previous</a>
+</li>
+<li>
+<a class="px-3 py-2 leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white" href="#">1</a>
+</li>
+<li>
+<a class="px-3 py-2 leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white" href="#">2</a>
+</li>
+<li>
+<a aria-current="page" class="z-10 px-3 py-2 leading-tight text-brand-orange border border-brand-orange bg-brand-orange/10 hover:bg-brand-orange/20 dark:border-gray-700 dark:bg-gray-700 dark:text-white" href="#">3</a>
+</li>
+<li>
+<a class="px-3 py-2 leading-tight text-gray-500 bg-white border border-gray-300 rounded-r-lg hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white" href="#">Next</a>
+</li>
+</ul>
+</nav>
+</div>
+</div>
+</main>
+</div>
+</body></html>

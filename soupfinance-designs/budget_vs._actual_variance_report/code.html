@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Budget vs. Actual Variance Report</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#f24a0d",
+                        "background-light": "#f8f6f5",
+                        "background-dark": "#221510",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            font-size: 24px;
+        }
+    </style>
+</head>
+<body class="font-display bg-background-light dark:bg-background-dark text-slate-800 dark:text-slate-200">
+<div class="relative flex min-h-screen w-full">
+<!-- SideNavBar -->
+<aside class="flex h-screen flex-col justify-between border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-background-dark p-4 sticky top-0">
+<div class="flex flex-col gap-4">
+<div class="flex items-center gap-3">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10" data-alt="Company logo for Apex Corp" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuC-zzb5WBMp-aPu-FB_xFkDTdBM1C4ScCedOQQ4PI4C8ZCLHFnQuByTfaoivgnvQKGIX3P-U8qpqyywvStvTyty1iDZOQlpMSTfEHCBm34YlT0Y7dHjCDRLUaDLd1adO8o1ADNwM1ylTB9VFeeGPn5LwtmM6JLC_N7c0PNqRNpa3ffXgIWeCsCRavEfwF0o_MJtAZVGPC570FtSFuBqNk77r95Sp_ey83C5UcA8Ewwwkqj4NqwFEtnN-ct5nrhawX4PFMU_CLsSnZPR");'></div>
+<div class="flex flex-col">
+<h1 class="text-slate-900 dark:text-slate-100 text-base font-medium leading-normal">Apex Corp</h1>
+<p class="text-slate-500 dark:text-slate-400 text-sm font-normal leading-normal">Accounting</p>
+</div>
+</div>
+<nav class="flex flex-col gap-2">
+<a class="flex items-center gap-3 px-3 py-2 text-slate-700 dark:text-slate-300 hover:bg-background-light dark:hover:bg-slate-800 rounded-lg" href="#">
+<span class="material-symbols-outlined" style="font-size: 24px;">dashboard</span>
+<p class="text-sm font-medium leading-normal">Dashboard</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-700 dark:text-slate-300 hover:bg-background-light dark:hover:bg-slate-800 rounded-lg" href="#">
+<span class="material-symbols-outlined" style="font-size: 24px;">receipt_long</span>
+<p class="text-sm font-medium leading-normal">Invoices</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-700 dark:text-slate-300 hover:bg-background-light dark:hover:bg-slate-800 rounded-lg" href="#">
+<span class="material-symbols-outlined" style="font-size: 24px;">credit_card</span>
+<p class="text-sm font-medium leading-normal">Payments</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary-300" href="#">
+<span class="material-symbols-outlined" style="font-size: 24px; font-variation-settings: 'FILL' 1;">assessment</span>
+<p class="text-sm font-medium leading-normal">Reporting</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-700 dark:text-slate-300 hover:bg-background-light dark:hover:bg-slate-800 rounded-lg" href="#">
+<span class="material-symbols-outlined" style="font-size: 24px;">settings</span>
+<p class="text-sm font-medium leading-normal">Settings</p>
+</a>
+</nav>
+</div>
+<div class="flex flex-col gap-1">
+<a class="flex items-center gap-3 px-3 py-2 text-slate-700 dark:text-slate-300 hover:bg-background-light dark:hover:bg-slate-800 rounded-lg" href="#">
+<span class="material-symbols-outlined" style="font-size: 24px;">help_outline</span>
+<p class="text-sm font-medium leading-normal">Help Center</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-700 dark:text-slate-300 hover:bg-background-light dark:hover:bg-slate-800 rounded-lg" href="#">
+<span class="material-symbols-outlined" style="font-size: 24px;">logout</span>
+<p class="text-sm font-medium leading-normal">Logout</p>
+</a>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="flex-1 p-6 lg:p-8">
+<div class="max-w-7xl mx-auto">
+<!-- PageHeading -->
+<header class="flex flex-wrap items-center justify-between gap-4 mb-6">
+<p class="text-slate-900 dark:text-slate-100 text-3xl md:text-4xl font-black tracking-tighter">Budget vs. Actual Variance Report</p>
+<div class="flex items-center gap-2">
+<button class="flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700">
+<span class="material-symbols-outlined" style="font-size: 20px;">print</span>
+                            Print
+                        </button>
+<button class="flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-white hover:bg-primary/90">
+<span class="material-symbols-outlined" style="font-size: 20px;">download</span>
+                            Export
+                        </button>
+</div>
+</header>
+<!-- Filter & Control Section -->
+<div class="mb-6 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-background-dark p-4">
+<h3 class="text-slate-900 dark:text-slate-100 text-lg font-bold tracking-tight pb-2">Filters &amp; Controls</h3>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+<!-- Chips as Dropdown Filters -->
+<div class="flex flex-col gap-2">
+<label class="text-sm font-medium text-slate-600 dark:text-slate-400">Date Range</label>
+<button class="flex h-10 w-full items-center justify-between gap-x-2 rounded-lg bg-background-light dark:bg-slate-800 px-3 border border-slate-200 dark:border-slate-700">
+<p class="text-slate-800 dark:text-slate-200 text-sm font-medium">Q1 2024</p>
+<span class="material-symbols-outlined text-slate-500" style="font-size: 20px;">expand_more</span>
+</button>
+</div>
+<div class="flex flex-col gap-2">
+<label class="text-sm font-medium text-slate-600 dark:text-slate-400">Department</label>
+<button class="flex h-10 w-full items-center justify-between gap-x-2 rounded-lg bg-background-light dark:bg-slate-800 px-3 border border-slate-200 dark:border-slate-700">
+<p class="text-slate-800 dark:text-slate-200 text-sm font-medium">All Departments</p>
+<span class="material-symbols-outlined text-slate-500" style="font-size: 20px;">expand_more</span>
+</button>
+</div>
+<div class="flex flex-col gap-2">
+<label class="text-sm font-medium text-slate-600 dark:text-slate-400">GL Account</label>
+<button class="flex h-10 w-full items-center justify-between gap-x-2 rounded-lg bg-background-light dark:bg-slate-800 px-3 border border-slate-200 dark:border-slate-700">
+<p class="text-slate-800 dark:text-slate-200 text-sm font-medium">All Accounts</p>
+<span class="material-symbols-outlined text-slate-500" style="font-size: 20px;">expand_more</span>
+</button>
+</div>
+<!-- SegmentedButtons as Toggle -->
+<div class="flex flex-col gap-2">
+<label class="text-sm font-medium text-slate-600 dark:text-slate-400">Variance View</label>
+<div class="flex h-10 items-center justify-center rounded-lg bg-background-light dark:bg-slate-800 p-1 border border-slate-200 dark:border-slate-700">
+<label class="flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-md px-2 has-[:checked]:bg-white dark:has-[:checked]:bg-slate-700 has-[:checked]:shadow-sm has-[:checked]:text-slate-900 dark:has-[:checked]:text-slate-100 text-slate-500 dark:text-slate-400 text-sm font-medium">
+<span class="truncate">Percentage (%)</span>
+<input checked="" class="sr-only" name="variance_view" type="radio" value="Percentage"/>
+</label>
+<label class="flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-md px-2 has-[:checked]:bg-white dark:has-[:checked]:bg-slate-700 has-[:checked]:shadow-sm has-[:checked]:text-slate-900 dark:has-[:checked]:text-slate-100 text-slate-500 dark:text-slate-400 text-sm font-medium">
+<span class="truncate">Absolute ($)</span>
+<input class="sr-only" name="variance_view" type="radio" value="Absolute"/>
+</label>
+</div>
+</div>
+</div>
+</div>
+<!-- Summary Cards -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+<div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-background-dark p-5">
+<p class="text-sm font-medium text-slate-500 dark:text-slate-400">Total Budget</p>
+<p class="text-3xl font-bold text-slate-900 dark:text-slate-100 mt-1">$1,250,000</p>
+</div>
+<div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-background-dark p-5">
+<p class="text-sm font-medium text-slate-500 dark:text-slate-400">Total Actual Spend</p>
+<p class="text-3xl font-bold text-slate-900 dark:text-slate-100 mt-1">$1,315,750</p>
+</div>
+<div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-background-dark p-5">
+<p class="text-sm font-medium text-slate-500 dark:text-slate-400">Net Variance ($)</p>
+<p class="text-3xl font-bold text-red-600 dark:text-red-500 mt-1">($65,750)</p>
+</div>
+<div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-background-dark p-5">
+<p class="text-sm font-medium text-slate-500 dark:text-slate-400">Net Variance (%)</p>
+<p class="text-3xl font-bold text-red-600 dark:text-red-500 mt-1">5.26%</p>
+</div>
+</div>
+<!-- Data Table -->
+<div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-background-dark overflow-hidden">
+<div class="overflow-x-auto">
+<table class="w-full text-sm text-left text-slate-500 dark:text-slate-400">
+<thead class="text-xs text-slate-700 dark:text-slate-300 uppercase bg-slate-50 dark:bg-slate-800">
+<tr>
+<th class="px-6 py-3 font-semibold" scope="col">GL Account</th>
+<th class="px-6 py-3 font-semibold" scope="col">Description</th>
+<th class="px-6 py-3 font-semibold text-right" scope="col">Budget Amount</th>
+<th class="px-6 py-3 font-semibold text-right" scope="col">Actual Amount</th>
+<th class="px-6 py-3 font-semibold text-right" scope="col">Variance ($)</th>
+<th class="px-6 py-3 font-semibold text-right" scope="col">Variance (%)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="bg-white dark:bg-background-dark border-b dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+<td class="px-6 py-4 font-medium text-slate-900 dark:text-slate-100">4000</td>
+<td class="px-6 py-4">Software Subscriptions</td>
+<td class="px-6 py-4 text-right">$50,000</td>
+<td class="px-6 py-4 text-right">$55,200</td>
+<td class="px-6 py-4 text-right text-red-600 dark:text-red-500 font-medium">($5,200)</td>
+<td class="px-6 py-4 text-right"><span class="bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-400 text-xs font-semibold px-2.5 py-0.5 rounded-full">10.40%</span></td>
+</tr>
+<tr class="bg-white dark:bg-background-dark border-b dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+<td class="px-6 py-4 font-medium text-slate-900 dark:text-slate-100">4100</td>
+<td class="px-6 py-4">Cloud Hosting Services</td>
+<td class="px-6 py-4 text-right">$120,000</td>
+<td class="px-6 py-4 text-right">$115,500</td>
+<td class="px-6 py-4 text-right text-green-600 dark:text-green-500 font-medium">$4,500</td>
+<td class="px-6 py-4 text-right"><span class="bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-400 text-xs font-semibold px-2.5 py-0.5 rounded-full">-3.75%</span></td>
+</tr>
+<tr class="bg-white dark:bg-background-dark border-b dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+<td class="px-6 py-4 font-medium text-slate-900 dark:text-slate-100">5010</td>
+<td class="px-6 py-4">Marketing Campaigns</td>
+<td class="px-6 py-4 text-right">$200,000</td>
+<td class="px-6 py-4 text-right">$240,000</td>
+<td class="px-6 py-4 text-right text-red-600 dark:text-red-500 font-medium">($40,000)</td>
+<td class="px-6 py-4 text-right"><span class="bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-400 text-xs font-semibold px-2.5 py-0.5 rounded-full">20.00%</span></td>
+</tr>
+<tr class="bg-white dark:bg-background-dark border-b dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+<td class="px-6 py-4 font-medium text-slate-900 dark:text-slate-100">5200</td>
+<td class="px-6 py-4">Office Supplies</td>
+<td class="px-6 py-4 text-right">$15,000</td>
+<td class="px-6 py-4 text-right">$14,800</td>
+<td class="px-6 py-4 text-right text-green-600 dark:text-green-500 font-medium">$200</td>
+<td class="px-6 py-4 text-right"><span class="bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-400 text-xs font-semibold px-2.5 py-0.5 rounded-full">-1.33%</span></td>
+</tr>
+<tr class="bg-white dark:bg-background-dark border-b dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+<td class="px-6 py-4 font-medium text-slate-900 dark:text-slate-100">6300</td>
+<td class="px-6 py-4">Travel &amp; Entertainment</td>
+<td class="px-6 py-4 text-right">$75,000</td>
+<td class="px-6 py-4 text-right">$82,000</td>
+<td class="px-6 py-4 text-right text-red-600 dark:text-red-500 font-medium">($7,000)</td>
+<td class="px-6 py-4 text-right"><span class="bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-400 text-xs font-semibold px-2.5 py-0.5 rounded-full">9.33%</span></td>
+</tr>
+<tr class="bg-white dark:bg-background-dark hover:bg-slate-50 dark:hover:bg-slate-800/50">
+<td class="px-6 py-4 font-medium text-slate-900 dark:text-slate-100">7000</td>
+<td class="px-6 py-4">Salaries &amp; Wages</td>
+<td class="px-6 py-4 text-right">$790,000</td>
+<td class="px-6 py-4 text-right">$808,250</td>
+<td class="px-6 py-4 text-right text-red-600 dark:text-red-500 font-medium">($18,250)</td>
+<td class="px-6 py-4 text-right"><span class="bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-400 text-xs font-semibold px-2.5 py-0.5 rounded-full">2.31%</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

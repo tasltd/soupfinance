@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Vendor Payment Analysis</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#f24a0d",
+                        "background-light": "#f8f6f5",
+                        "background-dark": "#221510",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings:
+                'FILL' 0,
+                'wght' 400,
+                'GRAD' 0,
+                'opsz' 24
+        }
+    </style>
+</head>
+<body class="font-display bg-background-light dark:bg-background-dark">
+<div class="relative flex min-h-screen w-full">
+<!-- SideNavBar -->
+<aside class="flex flex-col w-64 bg-white dark:bg-black/20 border-r border-[#e6dedb] dark:border-white/10">
+<div class="flex flex-col gap-4 p-4">
+<div class="flex items-center gap-3">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10" data-alt="Company Logo" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBTLZPnrCSmK2lg9OLzoKZCfUuGnSaaXoPCql39K9qc-XqLZW4-7ZIbAVsPX2ksbN2Kei8zcQzm-_kED645-WOdPKm1tgkW59JX0fbIu45LmIsnzwGgKdxUrD8fryTXGvt44CvZuu9LOs8opxp8cHS5poGhHygdb9l4OTreDeGjLPdykVGZxCUaPuJMzJUa7qKykY3YaVLW91VWC1aOrZ5TG0TvQeK_YDLe8S-bZeQ_5O1pf4ri5ecWDwfe8k6KvTzlwp0I-bykhnn9");'></div>
+<div class="flex flex-col">
+<h1 class="text-[#181311] dark:text-white text-base font-medium leading-normal">Acme Corp.</h1>
+<p class="text-[#8a6b60] dark:text-gray-400 text-sm font-normal leading-normal">Finance Department</p>
+</div>
+</div>
+<nav class="flex flex-col gap-2 mt-4">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-primary/10 transition-colors" href="#">
+<span class="material-symbols-outlined text-[#181311] dark:text-gray-300">dashboard</span>
+<p class="text-[#181311] dark:text-gray-200 text-sm font-medium leading-normal">Dashboard</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-primary/10 transition-colors" href="#">
+<span class="material-symbols-outlined text-[#181311] dark:text-gray-300">receipt_long</span>
+<p class="text-[#181311] dark:text-gray-200 text-sm font-medium leading-normal">Invoices</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-primary/10 transition-colors" href="#">
+<span class="material-symbols-outlined text-[#181311] dark:text-gray-300">group</span>
+<p class="text-[#181311] dark:text-gray-200 text-sm font-medium leading-normal">Vendors</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg bg-primary/20 dark:bg-primary/30" href="#">
+<span class="material-symbols-outlined text-primary dark:text-orange-300" style="font-variation-settings: 'FILL' 1;">bar_chart</span>
+<p class="text-primary dark:text-orange-300 text-sm font-bold leading-normal">Reporting</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-primary/10 transition-colors" href="#">
+<span class="material-symbols-outlined text-[#181311] dark:text-gray-300">settings</span>
+<p class="text-[#181311] dark:text-gray-200 text-sm font-medium leading-normal">Settings</p>
+</a>
+</nav>
+</div>
+<div class="mt-auto flex flex-col gap-1 p-4">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-primary/10 transition-colors" href="#">
+<span class="material-symbols-outlined text-[#181311] dark:text-gray-300">help</span>
+<p class="text-[#181311] dark:text-gray-200 text-sm font-medium leading-normal">Help</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-primary/10 transition-colors" href="#">
+<span class="material-symbols-outlined text-[#181311] dark:text-gray-300">logout</span>
+<p class="text-[#181311] dark:text-gray-200 text-sm font-medium leading-normal">Logout</p>
+</a>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="flex-1 p-6 lg:p-8">
+<div class="w-full max-w-7xl mx-auto">
+<!-- PageHeading -->
+<div class="flex flex-wrap items-center justify-between gap-4">
+<p class="text-[#181311] dark:text-white text-4xl font-black leading-tight tracking-[-0.033em]">Vendor Payment Analysis</p>
+</div>
+<!-- ToolBar / Filter Bar -->
+<div class="flex flex-wrap items-center justify-between gap-4 mt-6 border-b border-[#e6dedb] dark:border-white/10 pb-4">
+<div class="flex flex-wrap items-center gap-3">
+<div class="relative">
+<button class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-[#181311] dark:text-gray-200 bg-white dark:bg-black/20 border border-[#e6dedb] dark:border-white/20 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5">
+<span class="material-symbols-outlined text-base">calendar_today</span>
+<span>Last 90 Days</span>
+<span class="material-symbols-outlined text-base">expand_more</span>
+</button>
+</div>
+<div class="relative">
+<button class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-[#181311] dark:text-gray-200 bg-white dark:bg-black/20 border border-[#e6dedb] dark:border-white/20 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5">
+<span class="material-symbols-outlined text-base">group</span>
+<span>All Vendors</span>
+<span class="material-symbols-outlined text-base">expand_more</span>
+</button>
+</div>
+<button class="flex items-center justify-center rounded-lg h-10 bg-primary/90 text-white gap-2 text-sm font-bold leading-normal tracking-[0.015em] px-4 hover:bg-primary">
+<span>Apply Filters</span>
+</button>
+</div>
+<div class="flex items-center gap-2">
+<button class="relative flex items-center justify-center rounded-lg h-10 bg-primary text-white gap-2 text-sm font-bold leading-normal tracking-[0.015em] min-w-0 px-4 group">
+<span class="material-symbols-outlined text-white text-lg" style="font-variation-settings: 'FILL' 1;">download</span>
+<span class="truncate">Export</span>
+</button>
+</div>
+</div>
+<!-- Stats -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-6">
+<div class="flex flex-col gap-2 rounded-xl p-6 bg-white dark:bg-black/20 border border-[#e6dedb] dark:border-white/10 shadow-sm">
+<p class="text-[#181311] dark:text-gray-200 text-base font-medium leading-normal">On-Time Payment Rate</p>
+<p class="text-[#181311] dark:text-white tracking-light text-3xl font-bold leading-tight">92.3%</p>
+<p class="text-green-600 dark:text-green-400 text-sm font-medium leading-normal flex items-center gap-1">
+<span class="material-symbols-outlined text-base">arrow_upward</span>
+<span>1.5%</span>
+</p>
+</div>
+<div class="flex flex-col gap-2 rounded-xl p-6 bg-white dark:bg-black/20 border border-[#e6dedb] dark:border-white/10 shadow-sm">
+<p class="text-[#181311] dark:text-gray-200 text-base font-medium leading-normal">Average Payment Delay</p>
+<p class="text-[#181311] dark:text-white tracking-light text-3xl font-bold leading-tight">2.5 Days</p>
+<p class="text-red-600 dark:text-red-400 text-sm font-medium leading-normal flex items-center gap-1">
+<span class="material-symbols-outlined text-base">arrow_downward</span>
+<span>0.5 Days</span>
+</p>
+</div>
+<div class="flex flex-col gap-2 rounded-xl p-6 bg-white dark:bg-black/20 border border-[#e6dedb] dark:border-white/10 shadow-sm">
+<p class="text-[#181311] dark:text-gray-200 text-base font-medium leading-normal">Total Amount Overdue</p>
+<p class="text-red-600 dark:text-red-400 tracking-light text-3xl font-bold leading-tight">$15,430.00</p>
+<p class="text-green-600 dark:text-green-400 text-sm font-medium leading-normal flex items-center gap-1">
+<span class="material-symbols-outlined text-base">arrow_upward</span>
+<span>$2,100</span>
+</p>
+</div>
+<div class="flex flex-col gap-2 rounded-xl p-6 bg-white dark:bg-black/20 border border-[#e6dedb] dark:border-white/10 shadow-sm">
+<p class="text-[#181311] dark:text-gray-200 text-base font-medium leading-normal">Total Paid (90 Days)</p>
+<p class="text-[#181311] dark:text-white tracking-light text-3xl font-bold leading-tight">$250,120.50</p>
+<p class="text-green-600 dark:text-green-400 text-sm font-medium leading-normal flex items-center gap-1">
+<span class="material-symbols-outlined text-base">arrow_upward</span>
+<span>$50,000</span>
+</p>
+</div>
+</div>
+<!-- Charts -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+<div class="flex flex-col gap-4 rounded-xl border border-[#e6dedb] dark:border-white/10 p-6 bg-white dark:bg-black/20 shadow-sm">
+<p class="text-[#181311] dark:text-gray-200 text-base font-medium leading-normal">On-Time vs. Late Payments by Vendor</p>
+<div class="flex items-end gap-1">
+<p class="text-primary tracking-light text-3xl font-bold leading-tight truncate">85% On-Time</p>
+<p class="text-green-600 dark:text-green-400 text-base font-medium leading-normal">+2.1%</p>
+</div>
+<div class="h-[240px] w-full mt-4">
+<!-- Placeholder for Bar Chart -->
+<div class="flex items-end h-full gap-4 justify-around">
+<div class="flex flex-col items-center gap-2 h-full justify-end w-12"><div class="w-full bg-primary/20 rounded-t-sm" style="height: 75%;"></div><span class="text-xs text-[#8a6b60] dark:text-gray-400">Vendor A</span></div>
+<div class="flex flex-col items-center gap-2 h-full justify-end w-12"><div class="w-full bg-primary/20 rounded-t-sm" style="height: 90%;"></div><span class="text-xs text-[#8a6b60] dark:text-gray-400">Vendor B</span></div>
+<div class="flex flex-col items-center gap-2 h-full justify-end w-12"><div class="w-full bg-red-500/50 rounded-t-sm" style="height: 40%;"></div><span class="text-xs text-[#8a6b60] dark:text-gray-400">Vendor C</span></div>
+<div class="flex flex-col items-center gap-2 h-full justify-end w-12"><div class="w-full bg-primary/20 rounded-t-sm" style="height: 95%;"></div><span class="text-xs text-[#8a6b60] dark:text-gray-400">Vendor D</span></div>
+<div class="flex flex-col items-center gap-2 h-full justify-end w-12"><div class="w-full bg-red-500/50 rounded-t-sm" style="height: 60%;"></div><span class="text-xs text-[#8a6b60] dark:text-gray-400">Vendor E</span></div>
+<div class="flex flex-col items-center gap-2 h-full justify-end w-12"><div class="w-full bg-primary/20 rounded-t-sm" style="height: 82%;"></div><span class="text-xs text-[#8a6b60] dark:text-gray-400">Vendor F</span></div>
+</div>
+</div>
+</div>
+<div class="flex flex-col gap-4 rounded-xl border border-[#e6dedb] dark:border-white/10 p-6 bg-white dark:bg-black/20 shadow-sm">
+<p class="text-[#181311] dark:text-gray-200 text-base font-medium leading-normal">Trend of Average Payment Delays</p>
+<div class="flex items-end gap-1">
+<p class="text-primary tracking-light text-3xl font-bold leading-tight truncate">Avg. 2.5 Days</p>
+<p class="text-red-600 dark:text-red-400 text-base font-medium leading-normal">-8.0%</p>
+</div>
+<div class="h-[240px] w-full flex items-center justify-center mt-4">
+<svg class="w-full h-full" fill="none" preserveaspectratio="none" viewbox="0 0 475 150" xmlns="http://www.w3.org/2000/svg">
+<path d="M0 109C18.1538 109 18.1538 21 36.3077 21C54.4615 21 54.4615 41 72.6154 41C90.7692 41 90.7692 93 108.923 93C127.077 93 127.077 33 145.231 33C163.385 33 163.385 101 181.538 101C199.692 101 199.692 61 217.846 61C236 61 236 45 254.154 45C272.308 45 272.308 121 290.462 121C308.615 121 308.615 149 326.769 149C344.923 149 344.923 1 363.077 1C381.231 1 381.231 81 399.385 81C417.538 81 417.538 129 435.692 129C453.846 129 453.846 25 472 25V149H326.769H0V109Z" fill="url(#paint0_linear_chart)"></path>
+<path d="M0 109C18.1538 109 18.1538 21 36.3077 21C54.4615 21 54.4615 41 72.6154 41C90.7692 41 90.7692 93 108.923 93C127.077 93 127.077 33 145.231 33C163.385 33 163.385 101 181.538 101C199.692 101 199.692 61 217.846 61C236 61 236 45 254.154 45C272.308 45 272.308 121 290.462 121C308.615 121 308.615 149 326.769 149C344.923 149 344.923 1 363.077 1C381.231 1 381.231 81 399.385 81C417.538 81 417.538 129 435.692 129C453.846 129 453.846 25 472 25" stroke="#f24a0d" stroke-linecap="round" stroke-width="3"></path>
+<defs>
+<lineargradient gradientunits="userSpaceOnUse" id="paint0_linear_chart" x1="236" x2="236" y1="1" y2="149">
+<stop stop-color="#f24a0d" stop-opacity="0.3"></stop>
+<stop offset="1" stop-color="#f24a0d" stop-opacity="0"></stop>
+</lineargradient>
+</defs>
+</svg>
+</div>
+</div>
+</div>
+<!-- Data Table -->
+<div class="mt-6 bg-white dark:bg-black/20 rounded-xl border border-[#e6dedb] dark:border-white/10 shadow-sm overflow-hidden">
+<div class="p-6">
+<h3 class="text-[#181311] dark:text-white text-lg font-bold">Detailed Payment Records</h3>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left text-sm">
+<thead class="border-b border-[#e6dedb] dark:border-white/10 bg-gray-50 dark:bg-white/5">
+<tr>
+<th class="px-6 py-3 font-medium text-[#8a6b60] dark:text-gray-400">Vendor</th>
+<th class="px-6 py-3 font-medium text-[#8a6b60] dark:text-gray-400">Invoice ID</th>
+<th class="px-6 py-3 font-medium text-[#8a6b60] dark:text-gray-400">Due Date</th>
+<th class="px-6 py-3 font-medium text-[#8a6b60] dark:text-gray-400">Paid Date</th>
+<th class="px-6 py-3 font-medium text-[#8a6b60] dark:text-gray-400 text-right">Amount</th>
+<th class="px-6 py-3 font-medium text-[#8a6b60] dark:text-gray-400">Status</th>
+<th class="px-6 py-3 font-medium text-[#8a6b60] dark:text-gray-400 text-right">Days Overdue</th>
+</tr>
+</thead>
+<tbody>
+<tr class="border-b border-[#e6dedb] dark:border-white/10">
+<td class="px-6 py-4 text-[#181311] dark:text-gray-200 font-medium">Innovate Inc.</td>
+<td class="px-6 py-4 text-[#8a6b60] dark:text-gray-400">INV-00123</td>
+<td class="px-6 py-4 text-[#181311] dark:text-gray-200">2023-10-15</td>
+<td class="px-6 py-4 text-[#181311] dark:text-gray-200">2023-10-14</td>
+<td class="px-6 py-4 text-[#181311] dark:text-gray-200 font-medium text-right">$5,200.00</td>
+<td class="px-6 py-4"><span class="inline-flex items-center gap-1.5 rounded-full bg-green-100 dark:bg-green-900/50 px-2 py-1 text-xs font-medium text-green-700 dark:text-green-300"><span class="size-1.5 rounded-full bg-green-500"></span>Paid On-Time</span></td>
+<td class="px-6 py-4 text-[#181311] dark:text-gray-200 text-right">0</td>
+</tr>
+<tr class="border-b border-[#e6dedb] dark:border-white/10">
+<td class="px-6 py-4 text-[#181311] dark:text-gray-200 font-medium">Quantum Solutions</td>
+<td class="px-6 py-4 text-[#8a6b60] dark:text-gray-400">INV-00124</td>
+<td class="px-6 py-4 text-[#181311] dark:text-gray-200">2023-10-12</td>
+<td class="px-6 py-4 text-[#181311] dark:text-gray-200">2023-10-18</td>
+<td class="px-6 py-4 text-[#181311] dark:text-gray-200 font-medium text-right">$8,750.00</td>
+<td class="px-6 py-4"><span class="inline-flex items-center gap-1.5 rounded-full bg-orange-100 dark:bg-orange-900/50 px-2 py-1 text-xs font-medium text-orange-700 dark:text-orange-300"><span class="size-1.5 rounded-full bg-orange-500"></span>Paid Late</span></td>
+<td class="px-6 py-4 text-[#181311] dark:text-gray-200 text-right">6</td>
+</tr>
+<tr class="border-b border-[#e6dedb] dark:border-white/10">
+<td class="px-6 py-4 text-[#181311] dark:text-gray-200 font-medium">Apex Logistics</td>
+<td class="px-6 py-4 text-[#8a6b60] dark:text-gray-400">INV-00125</td>
+<td class="px-6 py-4 text-[#181311] dark:text-gray-200">2023-09-20</td>
+<td class="px-6 py-4 text-[#8a6b60] dark:text-gray-400">-</td>
+<td class="px-6 py-4 text-red-600 dark:text-red-400 font-medium text-right">$12,300.00</td>
+<td class="px-6 py-4"><span class="inline-flex items-center gap-1.5 rounded-full bg-red-100 dark:bg-red-900/50 px-2 py-1 text-xs font-medium text-red-700 dark:text-red-300"><span class="size-1.5 rounded-full bg-red-500"></span>Overdue</span></td>
+<td class="px-6 py-4 text-red-600 dark:text-red-400 font-bold text-right">35</td>
+</tr>
+<tr class="border-b border-[#e6dedb] dark:border-white/10">
+<td class="px-6 py-4 text-[#181311] dark:text-gray-200 font-medium">Stellar Supplies</td>
+<td class="px-6 py-4 text-[#8a6b60] dark:text-gray-400">INV-00126</td>
+<td class="px-6 py-4 text-[#181311] dark:text-gray-200">2023-10-25</td>
+<td class="px-6 py-4 text-[#181311] dark:text-gray-200">2023-10-25</td>
+<td class="px-6 py-4 text-[#181311] dark:text-gray-200 font-medium text-right">$1,500.00</td>
+<td class="px-6 py-4"><span class="inline-flex items-center gap-1.5 rounded-full bg-green-100 dark:bg-green-900/50 px-2 py-1 text-xs font-medium text-green-700 dark:text-green-300"><span class="size-1.5 rounded-full bg-green-500"></span>Paid On-Time</span></td>
+<td class="px-6 py-4 text-[#181311] dark:text-gray-200 text-right">0</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="flex items-center justify-between p-4 border-t border-[#e6dedb] dark:border-white/10">
+<p class="text-sm text-[#8a6b60] dark:text-gray-400">Showing 1 to 4 of 256 results</p>
+<div class="flex items-center gap-2">
+<button class="px-3 py-1.5 text-sm font-medium rounded-md border border-[#e6dedb] dark:border-white/20 text-[#181311] dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5">Previous</button>
+<button class="px-3 py-1.5 text-sm font-medium rounded-md border border-[#e6dedb] dark:border-white/20 text-[#181311] dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5">Next</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

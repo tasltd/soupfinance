@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Customer Credit Limit Report</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#f24a0d",
+            "background-light": "#f8f6f5",
+            "background-dark": "#221510",
+          },
+          fontFamily: {
+            "display": ["Manrope"]
+          },
+          borderRadius: {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+        },
+      },
+    }
+  </script>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display">
+<div class="relative flex min-h-screen w-full flex-row">
+<!-- SideNavBar -->
+<aside class="flex h-screen w-64 flex-col border-r border-[#e6dedb] bg-white p-4 dark:border-gray-700 dark:bg-black/20">
+<div class="flex h-full flex-col justify-between">
+<div class="flex flex-col gap-4">
+<div class="flex items-center gap-3">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10" data-alt="Company logo for Acme Inc." style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuB0KMA432u8pFb5ggE7WgzBbX0Z0-u0L4YxROEoTK0KwJrJANRJRCfe7MTQRmdeifkVa4u4WQDnRHC0QCp-tIDXot-ee1zpmiIiDg7XiJhXmh9koxZEmBMCKrIQywhN9NCWUZiJHawb0cTS9crQKq5jD5WszqTascbWbgr3LkW4epsiHLD_ugeuFTiZ39tiKcbomSSTPn5LWRmK60nI5onxoF4scKpqO9xbtnScU6DKUAbnMZfjPMD5-ZvcIAxhSNFDuWSmWsSwEKWL");'></div>
+<div class="flex flex-col">
+<h1 class="text-[#181311] dark:text-white text-base font-medium leading-normal">Acme Inc.</h1>
+<p class="text-[#8a6b60] dark:text-gray-400 text-sm font-normal leading-normal">finance@acme.inc</p>
+</div>
+</div>
+<nav class="flex flex-col gap-2">
+<a class="flex items-center gap-3 rounded-lg px-3 py-2 text-[#181311] hover:bg-[#f5f1f0] dark:text-gray-300 dark:hover:bg-gray-800" href="#">
+<span class="material-symbols-outlined text-[#181311] dark:text-gray-300">dashboard</span>
+<p class="text-sm font-medium leading-normal">Dashboard</p>
+</a>
+<a class="flex items-center gap-3 rounded-lg px-3 py-2 text-[#181311] hover:bg-[#f5f1f0] dark:text-gray-300 dark:hover:bg-gray-800" href="#">
+<span class="material-symbols-outlined text-[#181311] dark:text-gray-300">receipt_long</span>
+<p class="text-sm font-medium leading-normal">Invoices</p>
+</a>
+<a class="flex items-center gap-3 rounded-lg px-3 py-2 text-[#181311] hover:bg-[#f5f1f0] dark:text-gray-300 dark:hover:bg-gray-800" href="#">
+<span class="material-symbols-outlined text-[#181311] dark:text-gray-300">groups</span>
+<p class="text-sm font-medium leading-normal">Clients</p>
+</a>
+<a class="flex items-center gap-3 rounded-lg bg-[#f5f1f0] px-3 py-2 text-[#181311] dark:bg-primary/20 dark:text-white" href="#">
+<span class="material-symbols-outlined text-[#181311] dark:text-white" style="font-variation-settings: 'FILL' 1;">lab_profile</span>
+<p class="text-sm font-medium leading-normal">Reporting</p>
+</a>
+<a class="flex items-center gap-3 rounded-lg px-3 py-2 text-[#181311] hover:bg-[#f5f1f0] dark:text-gray-300 dark:hover:bg-gray-800" href="#">
+<span class="material-symbols-outlined text-[#181311] dark:text-gray-300">settings</span>
+<p class="text-sm font-medium leading-normal">Settings</p>
+</a>
+</nav>
+</div>
+<div class="flex flex-col gap-4">
+<button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-primary text-white text-sm font-bold leading-normal tracking-[0.015em] hover:bg-primary/90">
+<span class="truncate">New Invoice</span>
+</button>
+<div class="flex flex-col gap-1">
+<a class="flex items-center gap-3 rounded-lg px-3 py-2 text-[#181311] hover:bg-[#f5f1f0] dark:text-gray-300 dark:hover:bg-gray-800" href="#">
+<span class="material-symbols-outlined text-[#181311] dark:text-gray-300">help</span>
+<p class="text-sm font-medium leading-normal">Support</p>
+</a>
+<a class="flex items-center gap-3 rounded-lg px-3 py-2 text-[#181311] hover:bg-[#f5f1f0] dark:text-gray-300 dark:hover:bg-gray-800" href="#">
+<span class="material-symbols-outlined text-[#181311] dark:text-gray-300">logout</span>
+<p class="text-sm font-medium leading-normal">Logout</p>
+</a>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="flex-1 overflow-y-auto">
+<div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+<!-- PageHeading -->
+<div class="flex flex-wrap items-center justify-between gap-4">
+<div class="flex min-w-72 flex-col gap-2">
+<h1 class="text-[#181311] dark:text-white text-3xl font-black leading-tight tracking-[-0.033em]">Customer Credit Limit Report</h1>
+<p class="text-[#8a6b60] dark:text-gray-400 text-base font-normal leading-normal">Analyze outstanding balances versus credit limits for your clients.</p>
+</div>
+</div>
+<!-- ToolBar and Filters -->
+<div class="my-6 flex flex-wrap items-center justify-between gap-4 rounded-lg border border-[#e6dedb] bg-white p-3 dark:border-gray-700 dark:bg-black/20">
+<div class="flex flex-wrap items-center gap-3">
+<div class="relative">
+<span class="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">search</span>
+<input class="h-10 w-60 rounded-lg border-[#e6dedb] bg-background-light pl-10 text-sm placeholder:text-gray-500 focus:border-primary focus:ring-primary dark:border-gray-600 dark:bg-background-dark dark:text-white" placeholder="Search by Client Name..." type="text"/>
+</div>
+<div class="relative">
+<span class="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">calendar_month</span>
+<input class="h-10 w-52 rounded-lg border-[#e6dedb] bg-background-light pl-10 text-sm placeholder:text-gray-500 focus:border-primary focus:ring-primary dark:border-gray-600 dark:bg-background-dark dark:text-white" placeholder="Select Date Range" type="text"/>
+</div>
+<button class="flex h-10 cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-lg border border-[#e6dedb] bg-white px-4 text-[#181311] text-sm font-medium hover:bg-gray-50 dark:border-gray-600 dark:bg-background-dark dark:text-white dark:hover:bg-gray-800">
+<span class="material-symbols-outlined text-xl">file_download</span>
+<span class="truncate">Export As...</span>
+</button>
+</div>
+<button class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 bg-primary px-4 text-white gap-2 text-sm font-bold leading-normal tracking-[0.015em] hover:bg-primary/90">
+<span class="material-symbols-outlined text-lg" style="font-variation-settings: 'FILL' 1;">done</span>
+<span class="truncate">Apply Filters</span>
+</button>
+</div>
+<!-- Chips for status filter -->
+<div class="flex gap-3 py-3 overflow-x-auto">
+<button class="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-full bg-primary/20 px-4 text-primary text-sm font-medium dark:bg-primary/30 dark:text-white">All Statuses</button>
+<button class="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-full bg-[#f5f1f0] px-4 text-[#181311] hover:bg-[#e6dedb] dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">Over Limit</button>
+<button class="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-full bg-[#f5f1f0] px-4 text-[#181311] hover:bg-[#e6dedb] dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">Nearing Limit</button>
+<button class="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-full bg-[#f5f1f0] px-4 text-[#181311] hover:bg-[#e6dedb] dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">Within Limit</button>
+</div>
+<!-- Stats -->
+<div class="grid grid-cols-1 gap-4 py-4 md:grid-cols-3">
+<div class="flex flex-1 flex-col gap-2 rounded-lg border border-[#e6dedb] bg-white p-6 dark:border-gray-700 dark:bg-black/20">
+<p class="text-[#181311] dark:text-gray-300 text-base font-medium leading-normal">Total Outstanding</p>
+<p class="text-[#181311] dark:text-white tracking-tight text-3xl font-bold leading-tight">$1,254,300</p>
+</div>
+<div class="flex flex-1 flex-col gap-2 rounded-lg border border-[#e6dedb] bg-white p-6 dark:border-gray-700 dark:bg-black/20">
+<p class="text-[#181311] dark:text-gray-300 text-base font-medium leading-normal">Aggregate Limit</p>
+<p class="text-[#181311] dark:text-white tracking-tight text-3xl font-bold leading-tight">$2,500,000</p>
+</div>
+<div class="flex flex-1 flex-col gap-2 rounded-lg border border-red-500/50 bg-red-500/5 p-6 dark:border-red-500/70 dark:bg-red-500/10">
+<p class="text-red-800 dark:text-red-300 text-base font-medium leading-normal">Clients Over Limit</p>
+<p class="text-red-600 dark:text-red-400 tracking-tight text-3xl font-bold leading-tight">12</p>
+</div>
+</div>
+<!-- Data Table -->
+<div class="mt-4 overflow-hidden rounded-lg border border-[#e6dedb] bg-white dark:border-gray-700 dark:bg-black/20">
+<div class="overflow-x-auto">
+<table class="min-w-full divide-y divide-[#e6dedb] dark:divide-gray-700">
+<thead class="bg-[#f5f1f0] dark:bg-gray-800">
+<tr>
+<th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-[#8a6b60] dark:text-gray-400" scope="col">Client</th>
+<th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-[#8a6b60] dark:text-gray-400" scope="col">Credit Limit</th>
+<th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-[#8a6b60] dark:text-gray-400" scope="col">Outstanding</th>
+<th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-[#8a6b60] dark:text-gray-400" scope="col">Available Credit</th>
+<th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-[#8a6b60] dark:text-gray-400" scope="col">% Used</th>
+<th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-[#8a6b60] dark:text-gray-400" scope="col">Status</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-[#e6dedb] bg-white dark:divide-gray-700 dark:bg-black/20">
+<tr class="bg-red-500/10 dark:bg-red-500/20">
+<td class="whitespace-nowrap px-6 py-4 text-sm font-semibold text-red-800 dark:text-red-300">Innovate LLC</td>
+<td class="whitespace-nowrap px-6 py-4 text-sm text-[#181311] dark:text-white">$50,000</td>
+<td class="whitespace-nowrap px-6 py-4 text-sm font-medium text-red-700 dark:text-red-300">$52,300</td>
+<td class="whitespace-nowrap px-6 py-4 text-sm text-[#181311] dark:text-white">-$2,300</td>
+<td class="whitespace-nowrap px-6 py-4 text-sm">
+<div class="flex items-center gap-2">
+<div class="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700">
+<div class="h-2 rounded-full bg-red-600" style="width: 100%;"></div>
+</div>
+<span class="font-medium text-red-700 dark:text-red-300">104.6%</span>
+</div>
+</td>
+<td class="whitespace-nowrap px-6 py-4 text-sm"><span class="inline-flex items-center rounded-md bg-red-100 px-2 py-1 text-xs font-medium text-red-700 dark:bg-red-900/50 dark:text-red-300">Over Limit</span></td>
+</tr>
+<tr class="bg-orange-500/10 dark:bg-orange-500/20">
+<td class="whitespace-nowrap px-6 py-4 text-sm font-medium text-[#181311] dark:text-white">Quantum Solutions</td>
+<td class="whitespace-nowrap px-6 py-4 text-sm text-[#181311] dark:text-white">$100,000</td>
+<td class="whitespace-nowrap px-6 py-4 text-sm font-medium text-orange-600 dark:text-orange-400">$94,800</td>
+<td class="whitespace-nowrap px-6 py-4 text-sm text-[#181311] dark:text-white">$5,200</td>
+<td class="whitespace-nowrap px-6 py-4 text-sm">
+<div class="flex items-center gap-2">
+<div class="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700">
+<div class="h-2 rounded-full bg-orange-500" style="width: 94.8%;"></div>
+</div>
+<span class="font-medium text-orange-600 dark:text-orange-400">94.8%</span>
+</div>
+</td>
+<td class="whitespace-nowrap px-6 py-4 text-sm"><span class="inline-flex items-center rounded-md bg-orange-100 px-2 py-1 text-xs font-medium text-orange-700 dark:bg-orange-900/50 dark:text-orange-300">Nearing Limit</span></td>
+</tr>
+<tr>
+<td class="whitespace-nowrap px-6 py-4 text-sm font-medium text-[#181311] dark:text-white">Apex Industries</td>
+<td class="whitespace-nowrap px-6 py-4 text-sm text-[#181311] dark:text-white">$75,000</td>
+<td class="whitespace-nowrap px-6 py-4 text-sm text-[#181311] dark:text-white">$32,000</td>
+<td class="whitespace-nowrap px-6 py-4 text-sm text-[#181311] dark:text-white">$43,000</td>
+<td class="whitespace-nowrap px-6 py-4 text-sm">
+<div class="flex items-center gap-2">
+<div class="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700">
+<div class="h-2 rounded-full bg-green-500" style="width: 42.6%;"></div>
+</div>
+<span class="font-medium text-[#181311] dark:text-white">42.6%</span>
+</div>
+</td>
+<td class="whitespace-nowrap px-6 py-4 text-sm"><span class="inline-flex items-center rounded-md bg-green-100 px-2 py-1 text-xs font-medium text-green-700 dark:bg-green-900/50 dark:text-green-300">Within Limit</span></td>
+</tr>
+<tr>
+<td class="whitespace-nowrap px-6 py-4 text-sm font-medium text-[#181311] dark:text-white">Stellar Corp</td>
+<td class="whitespace-nowrap px-6 py-4 text-sm text-[#181311] dark:text-white">$250,000</td>
+<td class="whitespace-nowrap px-6 py-4 text-sm text-[#181311] dark:text-white">$150,500</td>
+<td class="whitespace-nowrap px-6 py-4 text-sm text-[#181311] dark:text-white">$99,500</td>
+<td class="whitespace-nowrap px-6 py-4 text-sm">
+<div class="flex items-center gap-2">
+<div class="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700">
+<div class="h-2 rounded-full bg-green-500" style="width: 60.2%;"></div>
+</div>
+<span class="font-medium text-[#181311] dark:text-white">60.2%</span>
+</div>
+</td>
+<td class="whitespace-nowrap px-6 py-4 text-sm"><span class="inline-flex items-center rounded-md bg-green-100 px-2 py-1 text-xs font-medium text-green-700 dark:bg-green-900/50 dark:text-green-300">Within Limit</span></td>
+</tr>
+<tr class="bg-red-500/10 dark:bg-red-500/20">
+<td class="whitespace-nowrap px-6 py-4 text-sm font-semibold text-red-800 dark:text-red-300">Fusion Dynamics</td>
+<td class="whitespace-nowrap px-6 py-4 text-sm text-[#181311] dark:text-white">$20,000</td>
+<td class="whitespace-nowrap px-6 py-4 text-sm font-medium text-red-700 dark:text-red-300">$20,150</td>
+<td class="whitespace-nowrap px-6 py-4 text-sm text-[#181311] dark:text-white">-$150</td>
+<td class="whitespace-nowrap px-6 py-4 text-sm">
+<div class="flex items-center gap-2">
+<div class="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700">
+<div class="h-2 rounded-full bg-red-600" style="width: 100%;"></div>
+</div>
+<span class="font-medium text-red-700 dark:text-red-300">100.8%</span>
+</div>
+</td>
+<td class="whitespace-nowrap px-6 py-4 text-sm"><span class="inline-flex items-center rounded-md bg-red-100 px-2 py-1 text-xs font-medium text-red-700 dark:bg-red-900/50 dark:text-red-300">Over Limit</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pagination -->
+<div class="flex items-center justify-between border-t border-[#e6dedb] bg-white px-4 py-3 sm:px-6 dark:border-gray-700 dark:bg-black/20">
+<div class="flex flex-1 justify-between sm:hidden">
+<a class="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-background-dark dark:text-gray-300 dark:hover:bg-gray-800" href="#">Previous</a>
+<a class="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-background-dark dark:text-gray-300 dark:hover:bg-gray-800" href="#">Next</a>
+</div>
+<div class="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+<div>
+<p class="text-sm text-gray-700 dark:text-gray-400">
+                  Showing
+                  <span class="font-medium">1</span>
+                  to
+                  <span class="font-medium">5</span>
+                  of
+                  <span class="font-medium">42</span>
+                  results
+                </p>
+</div>
+<div>
+<nav aria-label="Pagination" class="isolate inline-flex -space-x-px rounded-md shadow-sm">
+<a class="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 dark:ring-gray-600 dark:hover:bg-gray-800" href="#">
+<span class="material-symbols-outlined text-lg">chevron_left</span>
+</a>
+<a aria-current="page" class="relative z-10 inline-flex items-center bg-primary/20 px-4 py-2 text-sm font-semibold text-primary focus:z-20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary dark:bg-primary/30 dark:text-white" href="#">1</a>
+<a class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 dark:text-white dark:ring-gray-600 dark:hover:bg-gray-800" href="#">2</a>
+<a class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 dark:text-white dark:ring-gray-600 dark:hover:bg-gray-800" href="#">3</a>
+<span class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-700 ring-1 ring-inset ring-gray-300 focus:outline-offset-0 dark:text-gray-400 dark:ring-gray-600">...</span>
+<a class="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 dark:ring-gray-600 dark:hover:bg-gray-800" href="#">
+<span class="material-symbols-outlined text-lg">chevron_right</span>
+</a>
+</nav>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

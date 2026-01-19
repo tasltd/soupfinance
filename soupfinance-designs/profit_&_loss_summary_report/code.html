@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Profit &amp; Loss Summary</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#f24a0d",
+                        "background-light": "#f8f6f5",
+                        "background-dark": "#221510",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings:
+            'FILL' 0,
+            'wght' 400,
+            'GRAD' 0,
+            'opsz' 24
+        }
+    </style>
+</head>
+<body class="font-display bg-background-light dark:bg-background-dark">
+<div class="relative flex min-h-screen w-full flex-col">
+<div class="flex h-full flex-1">
+<!-- SideNavBar -->
+<aside class="flex h-screen min-h-[700px] w-64 flex-shrink-0 flex-col justify-between border-r border-[#f5f1f0] bg-white p-4 dark:border-background-dark dark:bg-[#181311]">
+<div class="flex flex-col gap-4">
+<div class="flex items-center gap-3">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10" data-alt="Company logo for Acme Corp" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDFUtSLausaFGWkNCdguSFZ_DZkETs3POPejRmrvG-kOaP2n9LYwq67lC35OQcZg1i2giUMlQgXziTf-lu1wnTN5Qtg4MizX8VFahGsjmMCcWmopVB0G5oTzdx7oa3bJOOQG39dBP7Sok6kcXPiqZRer751RP5W_qBc68j6vnDyl2bvApRDV4lWd91A5120p2sDukpTdCmK0omQIPI_-b08UqadL-t4F7I7rlEe1_1hTV0f785prFMwEo-VtjeG2_wSevzzj_i3-hdB");'></div>
+<div class="flex flex-col">
+<h1 class="text-[#181311] dark:text-white text-base font-medium leading-normal">Acme Corp</h1>
+<p class="text-[#8a6b60] dark:text-gray-400 text-sm font-normal leading-normal">Finance Department</p>
+</div>
+</div>
+<nav class="flex flex-col gap-2">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-[#f5f1f0] dark:hover:bg-background-dark" href="#">
+<span class="material-symbols-outlined text-[#181311] dark:text-gray-300">dashboard</span>
+<p class="text-[#181311] dark:text-gray-300 text-sm font-medium leading-normal">Dashboard</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-[#f5f1f0] dark:hover:bg-background-dark" href="#">
+<span class="material-symbols-outlined text-[#181311] dark:text-gray-300">receipt_long</span>
+<p class="text-[#181311] dark:text-gray-300 text-sm font-medium leading-normal">Invoices</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg bg-[#f5f1f0] dark:bg-background-dark" href="#">
+<span class="material-symbols-outlined text-primary">monitoring</span>
+<p class="text-primary text-sm font-bold leading-normal">Reporting</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-[#f5f1f0] dark:hover:bg-background-dark" href="#">
+<span class="material-symbols-outlined text-[#181311] dark:text-gray-300">menu_book</span>
+<p class="text-[#181311] dark:text-gray-300 text-sm font-medium leading-normal">Accounting</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-[#f5f1f0] dark:hover:bg-background-dark" href="#">
+<span class="material-symbols-outlined text-[#181311] dark:text-gray-300">settings</span>
+<p class="text-[#181311] dark:text-gray-300 text-sm font-medium leading-normal">Settings</p>
+</a>
+</nav>
+</div>
+<div class="flex flex-col gap-4">
+<button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-primary text-white text-sm font-bold leading-normal tracking-[0.015em] hover:bg-primary/90">
+<span class="truncate">New Invoice</span>
+</button>
+<div class="flex flex-col gap-1">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-[#f5f1f0] dark:hover:bg-background-dark" href="#">
+<span class="material-symbols-outlined text-[#181311] dark:text-gray-300">help_outline</span>
+<p class="text-[#181311] dark:text-gray-300 text-sm font-medium leading-normal">Help</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-[#f5f1f0] dark:hover:bg-background-dark" href="#">
+<span class="material-symbols-outlined text-[#181311] dark:text-gray-300">logout</span>
+<p class="text-[#181311] dark:text-gray-300 text-sm font-medium leading-normal">Logout</p>
+</a>
+</div>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="flex-1 overflow-y-auto p-8">
+<div class="mx-auto max-w-7xl space-y-6">
+<!-- PageHeading -->
+<div class="flex flex-wrap items-center justify-between gap-4">
+<div class="flex min-w-72 flex-col">
+<h1 class="text-[#181311] dark:text-white text-4xl font-black leading-tight tracking-[-0.033em]">Profit &amp; Loss Summary</h1>
+<p class="text-[#8a6b60] dark:text-gray-400 text-base font-normal leading-normal">An overview of the company's financial performance.</p>
+</div>
+<div class="flex flex-1 gap-3 flex-wrap justify-end">
+<button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-[#f5f1f0] dark:bg-background-dark dark:text-white text-[#181311] text-sm font-bold leading-normal tracking-[0.015em] hover:bg-gray-200 dark:hover:bg-white/10">
+<span class="material-symbols-outlined mr-2 text-base">download</span>
+<span class="truncate">Export</span>
+</button>
+<button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-primary text-white text-sm font-bold leading-normal tracking-[0.015em] hover:bg-primary/90">
+<span class="truncate">Apply Filters</span>
+</button>
+</div>
+</div>
+<!-- Filter & Search Panel -->
+<div class="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white p-4 dark:border-zinc-800 dark:bg-[#181311]">
+<div class="flex flex-wrap items-center gap-4">
+<!-- SearchBar -->
+<div class="flex-grow min-w-[280px]">
+<label class="flex flex-col h-12 w-full">
+<div class="flex w-full flex-1 items-stretch rounded-lg h-full">
+<div class="text-[#8a6b60] dark:text-gray-400 flex border-none bg-[#f5f1f0] dark:bg-background-dark items-center justify-center pl-4 rounded-l-lg border-r-0">
+<span class="material-symbols-outlined">search</span>
+</div>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#181311] dark:text-white focus:outline-0 focus:ring-0 border-none bg-[#f5f1f0] dark:bg-background-dark focus:border-none h-full placeholder:text-[#8a6b60] dark:placeholder:text-gray-500 px-4 rounded-l-none border-l-0 pl-2 text-base font-normal leading-normal" placeholder="Find specific accounts or line items" value=""/>
+</div>
+</label>
+</div>
+<!-- Chips -->
+<div class="flex gap-3 flex-wrap items-center">
+<button class="flex h-10 shrink-0 items-center justify-center gap-x-2 rounded-lg bg-[#f5f1f0] dark:bg-background-dark dark:text-white px-3 hover:bg-gray-200 dark:hover:bg-white/10">
+<span class="material-symbols-outlined text-[#181311] dark:text-gray-300 text-xl">calendar_today</span>
+<p class="text-[#181311] dark:text-white text-sm font-medium leading-normal">Date Range: This Quarter</p>
+<span class="material-symbols-outlined text-[#181311] dark:text-gray-300 text-xl">expand_more</span>
+</button>
+<button class="flex h-10 shrink-0 items-center justify-center gap-x-2 rounded-lg bg-[#f5f1f0] dark:bg-background-dark dark:text-white px-3 hover:bg-gray-200 dark:hover:bg-white/10">
+<span class="material-symbols-outlined text-[#181311] dark:text-gray-300 text-xl">corporate_fare</span>
+<p class="text-[#181311] dark:text-white text-sm font-medium leading-normal">Department: All</p>
+<span class="material-symbols-outlined text-[#181311] dark:text-gray-300 text-xl">expand_more</span>
+</button>
+<button class="flex h-10 shrink-0 items-center justify-center gap-x-2 rounded-lg bg-[#f5f1f0] dark:bg-background-dark dark:text-white px-3 hover:bg-gray-200 dark:hover:bg-white/10">
+<span class="material-symbols-outlined text-[#181311] dark:text-gray-300 text-xl">archive</span>
+<p class="text-[#181311] dark:text-white text-sm font-medium leading-normal">Cost Center: All</p>
+<span class="material-symbols-outlined text-[#181311] dark:text-gray-300 text-xl">expand_more</span>
+</button>
+</div>
+</div>
+</div>
+<!-- KPI Cards -->
+<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+<div class="rounded-xl border border-gray-200 bg-white p-5 dark:border-zinc-800 dark:bg-[#181311]">
+<p class="text-sm font-medium text-[#8a6b60] dark:text-gray-400">Total Revenue</p>
+<p class="mt-1 text-3xl font-bold text-[#181311] dark:text-white">$1,250,450</p>
+<div class="mt-2 flex items-center gap-1 text-sm text-green-600">
+<span class="material-symbols-outlined text-base">arrow_upward</span>
+<span>12.5% vs last quarter</span>
+</div>
+</div>
+<div class="rounded-xl border border-gray-200 bg-white p-5 dark:border-zinc-800 dark:bg-[#181311]">
+<p class="text-sm font-medium text-[#8a6b60] dark:text-gray-400">Gross Profit</p>
+<p class="mt-1 text-3xl font-bold text-[#181311] dark:text-white">$875,315</p>
+<div class="mt-2 flex items-center gap-1 text-sm text-green-600">
+<span class="material-symbols-outlined text-base">arrow_upward</span>
+<span>15.2% vs last quarter</span>
+</div>
+</div>
+<div class="rounded-xl border border-gray-200 bg-white p-5 dark:border-zinc-800 dark:bg-[#181311]">
+<p class="text-sm font-medium text-[#8a6b60] dark:text-gray-400">Operating Expenses</p>
+<p class="mt-1 text-3xl font-bold text-[#181311] dark:text-white">$450,120</p>
+<div class="mt-2 flex items-center gap-1 text-sm text-red-600">
+<span class="material-symbols-outlined text-base">arrow_downward</span>
+<span>-2.1% vs last quarter</span>
+</div>
+</div>
+<div class="rounded-xl border border-gray-200 bg-white p-5 dark:border-zinc-800 dark:bg-[#181311]">
+<p class="text-sm font-medium text-[#8a6b60] dark:text-gray-400">Operating Income</p>
+<p class="mt-1 text-3xl font-bold text-[#181311] dark:text-white">$425,195</p>
+<div class="mt-2 flex items-center gap-1 text-sm text-green-600">
+<span class="material-symbols-outlined text-base">arrow_upward</span>
+<span>8.9% vs last quarter</span>
+</div>
+</div>
+<div class="rounded-xl border border-gray-200 bg-white p-5 dark:border-zinc-800 dark:bg-[#181311]">
+<p class="text-sm font-medium text-[#8a6b60] dark:text-gray-400">Net Income</p>
+<p class="mt-1 text-3xl font-bold text-[#181311] dark:text-white">$310,500</p>
+<div class="mt-2 flex items-center gap-1 text-sm text-green-600">
+<span class="material-symbols-outlined text-base">arrow_upward</span>
+<span>11.4% vs last quarter</span>
+</div>
+</div>
+</div>
+<!-- Data Visualization Chart -->
+<div class="rounded-xl border border-gray-200 bg-white p-6 dark:border-zinc-800 dark:bg-[#181311]">
+<div class="flex flex-wrap items-center justify-between gap-4">
+<h3 class="text-lg font-bold text-[#181311] dark:text-white">P&amp;L Trend</h3>
+<div class="flex items-center gap-1 rounded-lg bg-[#f5f1f0] p-1 dark:bg-background-dark">
+<button class="rounded-md px-3 py-1 text-sm font-semibold text-white bg-primary">Monthly</button>
+<button class="rounded-md px-3 py-1 text-sm font-medium text-[#181311] dark:text-gray-300 hover:bg-white dark:hover:bg-zinc-700">Quarterly</button>
+</div>
+</div>
+<div class="mt-6 h-80 w-full" data-alt="A bar chart showing monthly profit and loss trends. Revenue is represented by orange bars, expenses by dark gray bars, and net profit by a red line. The x-axis shows months from January to March, and the y-axis shows currency in thousands.">
+<img alt="P&amp;L Trend Chart" class="h-full w-full object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDnBBhxw2Sa_5k-hfQrKFyOmy9NlytTrhZIR_Z6Szyh31iNMZAR3V1lL4CQ-X519fsJomgiII-13KAliuM6yfgrMdFeO2kSkE9Zx4qtY8tQvbvpvMgyXlR2kSUU4owiKWZRn12icSViLv63EVwP4f6mG1ntlpucLwTAmLZM3E-7dGSSwWXeT8rLPnyzcDOwoC0xe0HW60c7LygpVV-mgIFB-tG7JW4nqeAZ_qkGXsa60p8SsVPROylUFg4huZgi79XPIWWq9NOS1xIJ"/>
+</div>
+</div>
+<!-- Detailed P&L Table -->
+<div class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-zinc-800 dark:bg-[#181311]">
+<table class="min-w-full divide-y divide-gray-200 dark:divide-zinc-700">
+<thead class="bg-[#f8f6f5] dark:bg-background-dark">
+<tr>
+<th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-[#8a6b60] dark:text-gray-400" scope="col">Account</th>
+<th class="px-6 py-3 text-right text-xs font-bold uppercase tracking-wider text-[#8a6b60] dark:text-gray-400" scope="col">Jan 2024</th>
+<th class="px-6 py-3 text-right text-xs font-bold uppercase tracking-wider text-[#8a6b60] dark:text-gray-400" scope="col">Feb 2024</th>
+<th class="px-6 py-3 text-right text-xs font-bold uppercase tracking-wider text-[#8a6b60] dark:text-gray-400" scope="col">Mar 2024</th>
+<th class="px-6 py-3 text-right text-xs font-bold uppercase tracking-wider text-[#8a6b60] dark:text-gray-400" scope="col">Total</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-gray-200 dark:divide-zinc-800 text-[#181311] dark:text-gray-200">
+<tr class="font-bold">
+<td class="px-6 py-4 whitespace-nowrap text-sm">Revenue</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-right">$400,150</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-right">$420,300</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-right">$430,000</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-right">$1,250,450</td>
+</tr>
+<tr class="hover:bg-[#f8f6f5] dark:hover:bg-background-dark">
+<td class="px-6 py-4 whitespace-nowrap text-sm pl-10 text-gray-600 dark:text-gray-400">Product Sales</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-600 dark:text-gray-400">$350,000</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-600 dark:text-gray-400">$370,000</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-600 dark:text-gray-400">$380,000</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-600 dark:text-gray-400">$1,100,000</td>
+</tr>
+<tr class="hover:bg-[#f8f6f5] dark:hover:bg-background-dark">
+<td class="px-6 py-4 whitespace-nowrap text-sm pl-10 text-gray-600 dark:text-gray-400">Service Revenue</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-600 dark:text-gray-400">$50,150</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-600 dark:text-gray-400">$50,300</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-600 dark:text-gray-400">$50,000</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-600 dark:text-gray-400">$150,450</td>
+</tr>
+<tr class="font-bold">
+<td class="px-6 py-4 whitespace-nowrap text-sm">Operating Expenses</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-right text-red-600">($150,000)</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-right text-red-600">($150,060)</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-right text-red-600">($150,060)</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-right text-red-600">($450,120)</td>
+</tr>
+<tr class="hover:bg-[#f8f6f5] dark:hover:bg-background-dark">
+<td class="px-6 py-4 whitespace-nowrap text-sm pl-10 text-gray-600 dark:text-gray-400">Sales &amp; Marketing</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-600 dark:text-gray-400">($70,000)</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-600 dark:text-gray-400">($70,030)</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-600 dark:text-gray-400">($70,030)</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-600 dark:text-gray-400">($210,060)</td>
+</tr>
+<tr class="hover:bg-[#f8f6f5] dark:hover:bg-background-dark">
+<td class="px-6 py-4 whitespace-nowrap text-sm pl-10 text-gray-600 dark:text-gray-400">General &amp; Admin</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-600 dark:text-gray-400">($80,000)</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-600 dark:text-gray-400">($80,030)</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-600 dark:text-gray-400">($80,030)</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-600 dark:text-gray-400">($240,060)</td>
+</tr>
+<tr class="font-bold bg-[#f8f6f5] dark:bg-background-dark">
+<td class="px-6 py-4 whitespace-nowrap text-sm">Net Income</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-right">$250,150</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-right">$270,240</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-right">$279,940</td>
+<td class="px-6 py-4 whitespace-nowrap text-sm text-right">$800,330</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</main>
+</div>
+</div>
+</body></html>

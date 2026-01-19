@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Retained Earnings Statement</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#f24a0d",
+                        "background-light": "#f8f6f5",
+                        "background-dark": "#221510",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-[#181311] dark:text-[#f5f1f0]">
+<div class="relative flex h-auto min-h-screen w-full flex-col group/design-root overflow-x-hidden">
+<div class="layout-container flex h-full grow flex-col">
+<div class="px-4 sm:px-8 md:px-12 lg:px-20 xl:px-40 flex flex-1 justify-center py-5">
+<div class="layout-content-container flex flex-col max-w-7xl flex-1">
+<!-- Header: Page Heading + Toolbar -->
+<div class="flex flex-col sm:flex-row flex-wrap justify-between items-start sm:items-center gap-4 p-4">
+<p class="text-[#181311] dark:text-[#f5f1f0] text-4xl font-black leading-tight tracking-[-0.033em] min-w-72">Retained Earnings Statement</p>
+<div class="flex gap-2">
+<button class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 border border-[#e6dedb] dark:border-[#3f302b] bg-background-light dark:bg-background-dark text-[#181311] dark:text-[#f5f1f0] gap-2 text-sm font-bold leading-normal tracking-[0.015em] min-w-0 px-4">
+<span class="material-symbols-outlined text-lg">print</span>
+<span class="truncate">Print</span>
+</button>
+<button class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 bg-primary text-white gap-2 text-sm font-bold leading-normal tracking-[0.015em] min-w-0 px-4">
+<span class="material-symbols-outlined text-lg">download</span>
+<span class="truncate">Export</span>
+</button>
+</div>
+</div>
+<!-- Filters: Chips + SearchBar -->
+<div class="flex flex-col md:flex-row justify-between gap-4 p-4">
+<div class="flex gap-3 overflow-x-auto pb-2">
+<button class="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-lg bg-[#f5f1f0] dark:bg-[#3f302b] pl-3 pr-2 text-[#181311] dark:text-[#f5f1f0]">
+<span class="material-symbols-outlined text-base">calendar_today</span>
+<p class="text-sm font-medium leading-normal">This Year</p>
+<span class="material-symbols-outlined text-base">expand_more</span>
+</button>
+<button class="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-lg bg-[#f5f1f0] dark:bg-[#3f302b] pl-3 pr-2 text-[#181311] dark:text-[#f5f1f0]">
+<span class="material-symbols-outlined text-base">domain</span>
+<p class="text-sm font-medium leading-normal">Subsidiary: All</p>
+<span class="material-symbols-outlined text-base">expand_more</span>
+</button>
+<button class="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-lg bg-[#f5f1f0] dark:bg-[#3f302b] pl-3 pr-2 text-[#181311] dark:text-[#f5f1f0]">
+<span class="material-symbols-outlined text-base">groups</span>
+<p class="text-sm font-medium leading-normal">Department: All</p>
+<span class="material-symbols-outlined text-base">expand_more</span>
+</button>
+</div>
+<div class="w-full md:max-w-xs">
+<label class="flex flex-col min-w-40 h-10 w-full">
+<div class="flex w-full flex-1 items-stretch rounded-lg h-full">
+<div class="text-[#8a6b60] dark:text-[#a18a82] flex border-none bg-[#f5f1f0] dark:bg-[#3f302b] items-center justify-center pl-3 rounded-l-lg border-r-0">
+<span class="material-symbols-outlined text-xl">search</span>
+</div>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#181311] dark:text-[#f5f1f0] focus:outline-0 focus:ring-0 border-none bg-[#f5f1f0] dark:bg-[#3f302b] focus:border-none h-full placeholder:text-[#8a6b60] dark:placeholder:text-[#a18a82] px-4 rounded-l-none border-l-0 pl-2 text-sm font-normal leading-normal" placeholder="Search within report data" value=""/>
+</div>
+</label>
+</div>
+</div>
+<!-- Stats -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-4">
+<div class="flex min-w-[158px] flex-1 flex-col gap-2 rounded-lg p-6 border border-[#e6dedb] dark:border-[#3f302b] bg-white dark:bg-[#2c1d17]">
+<p class="text-[#4d3d37] dark:text-[#b0a19b] text-base font-medium leading-normal">Beginning Retained Earnings</p>
+<p class="text-[#181311] dark:text-[#f5f1f0] tracking-light text-2xl font-bold leading-tight">$1,200,000</p>
+<p class="text-[#07880b] text-base font-medium leading-normal">+5.2%</p>
+</div>
+<div class="flex min-w-[158px] flex-1 flex-col gap-2 rounded-lg p-6 border border-[#e6dedb] dark:border-[#3f302b] bg-white dark:bg-[#2c1d17]">
+<p class="text-[#4d3d37] dark:text-[#b0a19b] text-base font-medium leading-normal">Net Income</p>
+<p class="text-[#181311] dark:text-[#f5f1f0] tracking-light text-2xl font-bold leading-tight">$250,000</p>
+<p class="text-[#07880b] text-base font-medium leading-normal">+12.5%</p>
+</div>
+<div class="flex min-w-[158px] flex-1 flex-col gap-2 rounded-lg p-6 border border-[#e6dedb] dark:border-[#3f302b] bg-white dark:bg-[#2c1d17]">
+<p class="text-[#4d3d37] dark:text-[#b0a19b] text-base font-medium leading-normal">Dividends Paid</p>
+<p class="text-[#181311] dark:text-[#f5f1f0] tracking-light text-2xl font-bold leading-tight">-$50,000</p>
+<p class="text-red-600 dark:text-red-500 text-base font-medium leading-normal">-2.0%</p>
+</div>
+<div class="flex min-w-[158px] flex-1 flex-col gap-2 rounded-lg p-6 border border-primary/50 dark:border-primary/70 bg-primary/10 dark:bg-primary/20">
+<p class="text-[#4d3d37] dark:text-[#b0a19b] text-base font-medium leading-normal">Ending Retained Earnings</p>
+<p class="text-[#181311] dark:text-[#f5f1f0] tracking-light text-2xl font-bold leading-tight">$1,400,000</p>
+<p class="text-[#07880b] text-base font-medium leading-normal">+6.8%</p>
+</div>
+</div>
+<!-- Data Visualization Chart -->
+<div class="p-4">
+<div class="rounded-lg border border-[#e6dedb] dark:border-[#3f302b] p-6 bg-white dark:bg-[#2c1d17]">
+<h3 class="text-lg font-bold text-[#181311] dark:text-[#f5f1f0] mb-4">Year-over-Year Retained Earnings</h3>
+<div class="flex items-end h-72 w-full space-x-4">
+<!-- Placeholder for chart -->
+<div class="w-full h-full flex items-center justify-center text-gray-500 dark:text-gray-400">
+<div class="grid grid-cols-4 gap-4 w-full h-full items-end">
+<div class="flex flex-col items-center gap-2">
+<div class="flex items-end gap-1 h-full w-full justify-center">
+<div class="w-8 bg-primary/30 rounded-t-sm" style="height: 60%"></div>
+<div class="w-8 bg-primary rounded-t-sm" style="height: 75%"></div>
+</div>
+<span class="text-xs text-[#4d3d37] dark:text-[#b0a19b]">Q1</span>
+</div>
+<div class="flex flex-col items-center gap-2">
+<div class="flex items-end gap-1 h-full w-full justify-center">
+<div class="w-8 bg-primary/30 rounded-t-sm" style="height: 65%"></div>
+<div class="w-8 bg-primary rounded-t-sm" style="height: 80%"></div>
+</div>
+<span class="text-xs text-[#4d3d37] dark:text-[#b0a19b]">Q2</span>
+</div>
+<div class="flex flex-col items-center gap-2">
+<div class="flex items-end gap-1 h-full w-full justify-center">
+<div class="w-8 bg-primary/30 rounded-t-sm" style="height: 70%"></div>
+<div class="w-8 bg-primary rounded-t-sm" style="height: 85%"></div>
+</div>
+<span class="text-xs text-[#4d3d37] dark:text-[#b0a19b]">Q3</span>
+</div>
+<div class="flex flex-col items-center gap-2">
+<div class="flex items-end gap-1 h-full w-full justify-center">
+<div class="w-8 bg-primary/30 rounded-t-sm" style="height: 75%"></div>
+<div class="w-8 bg-primary rounded-t-sm" style="height: 90%"></div>
+</div>
+<span class="text-xs text-[#4d3d37] dark:text-[#b0a19b]">Q4</span>
+</div>
+</div>
+</div>
+</div>
+<div class="flex justify-center gap-6 mt-4 text-sm">
+<div class="flex items-center gap-2">
+<div class="w-3 h-3 rounded-sm bg-primary/30"></div>
+<span class="text-[#4d3d37] dark:text-[#b0a19b]">Prior Period</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-3 h-3 rounded-sm bg-primary"></div>
+<span class="text-[#4d3d37] dark:text-[#b0a19b]">Current Period</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Data Table -->
+<div class="p-4">
+<div class="overflow-x-auto rounded-lg border border-[#e6dedb] dark:border-[#3f302b] bg-white dark:bg-[#2c1d17]">
+<table class="w-full text-left text-sm">
+<thead class="border-b border-[#e6dedb] dark:border-[#3f302b] bg-[#f5f1f0] dark:bg-[#3f302b]">
+<tr>
+<th class="px-6 py-3 font-semibold text-[#181311] dark:text-[#f5f1f0]" scope="col">Description</th>
+<th class="px-6 py-3 font-semibold text-right text-[#181311] dark:text-[#f5f1f0]" scope="col">Current Period</th>
+<th class="px-6 py-3 font-semibold text-right text-[#181311] dark:text-[#f5f1f0]" scope="col">Prior Period</th>
+<th class="px-6 py-3 font-semibold text-right text-[#181311] dark:text-[#f5f1f0]" scope="col">Variance $</th>
+<th class="px-6 py-3 font-semibold text-right text-[#181311] dark:text-[#f5f1f0]" scope="col">Variance %</th>
+</tr>
+</thead>
+<tbody>
+<tr class="border-b border-[#e6dedb] dark:border-[#3f302b]">
+<td class="px-6 py-4 font-medium">Beginning Balance</td>
+<td class="px-6 py-4 text-right">$1,200,000</td>
+<td class="px-6 py-4 text-right">$1,140,700</td>
+<td class="px-6 py-4 text-right text-[#07880b]">$59,300</td>
+<td class="px-6 py-4 text-right text-[#07880b]">5.2%</td>
+</tr>
+<tr class="border-b border-[#e6dedb] dark:border-[#3f302b]">
+<td class="px-6 py-4 font-medium">Net Income</td>
+<td class="px-6 py-4 text-right">$250,000</td>
+<td class="px-6 py-4 text-right">$222,200</td>
+<td class="px-6 py-4 text-right text-[#07880b]">$27,800</td>
+<td class="px-6 py-4 text-right text-[#07880b]">12.5%</td>
+</tr>
+<tr class="border-b border-[#e6dedb] dark:border-[#3f302b]">
+<td class="px-6 py-4 font-medium">Other Comprehensive Income</td>
+<td class="px-6 py-4 text-right">$10,000</td>
+<td class="px-6 py-4 text-right">-$5,000</td>
+<td class="px-6 py-4 text-right text-[#07880b]">$15,000</td>
+<td class="px-6 py-4 text-right text-[#07880b]">300.0%</td>
+</tr>
+<tr class="border-b border-[#e6dedb] dark:border-[#3f302b]">
+<td class="px-6 py-4 font-medium">Dividends</td>
+<td class="px-6 py-4 text-right">($50,000)</td>
+<td class="px-6 py-4 text-right">($49,000)</td>
+<td class="px-6 py-4 text-right text-red-600 dark:text-red-500">($1,000)</td>
+<td class="px-6 py-4 text-right text-red-600 dark:text-red-500">-2.0%</td>
+</tr>
+<tr class="bg-[#f5f1f0] dark:bg-[#3f302b]">
+<td class="px-6 py-4 font-bold">Ending Balance</td>
+<td class="px-6 py-4 text-right font-bold">$1,410,000</td>
+<td class="px-6 py-4 text-right font-bold">$1,308,900</td>
+<td class="px-6 py-4 text-right font-bold text-[#07880b]">$101,100</td>
+<td class="px-6 py-4 text-right font-bold text-[#07880b]">7.7%</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</body></html>

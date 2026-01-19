@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Overdue Reminder Generator</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#f24a0d",
+                        "background-light": "#f8f6f5",
+                        "background-dark": "#221510",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings:
+            'FILL' 0,
+            'wght' 400,
+            'GRAD' 0,
+            'opsz' 24
+        }
+    </style>
+</head>
+<body class="font-display bg-background-light dark:bg-background-dark">
+<div class="relative flex min-h-screen w-full">
+<!-- SideNavBar -->
+<aside class="flex h-screen flex-col border-r border-[#e6dedb] dark:border-background-dark/50 bg-white dark:bg-background-dark/30 p-4 sticky top-0">
+<div class="flex flex-col gap-4">
+<div class="flex items-center gap-3">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10" data-alt="AK Corp company logo" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAcV4uTS_A5zklw4d5lDz-9tVo8pBwquKU7DMYeyvbcbxSFY6scaBhCbvulGQyNvo5reUc5oyodxYEKzhi2TRMNdlml9vbipbZIwaWiSfS0roop8qKW-V3DVOGwNryxnBf3zrssINwezxCBbxV8J0lm0ltQ4n7cOW_5UG9_LhHf-xfdRLxZnMhgtwMOEM_kCVX0XxKsRMQM9QdCYlTJqb8BdoNqBc_YEwB6OIXI4ucx7o-TYcu_knY1PY-BsPGz75_f31L3a_Munip_");'></div>
+<div class="flex flex-col">
+<h1 class="text-[#181311] dark:text-white text-base font-medium leading-normal">AK Corp</h1>
+<p class="text-[#8a6b60] dark:text-gray-400 text-sm font-normal leading-normal">Accounting</p>
+</div>
+</div>
+<nav class="flex flex-col gap-2">
+<a class="flex items-center gap-3 px-3 py-2 text-[#181311] dark:text-gray-300 hover:bg-[#f5f1f0] dark:hover:bg-primary/20 rounded-lg" href="#">
+<span class="material-symbols-outlined text-2xl">dashboard</span>
+<p class="text-sm font-medium leading-normal">Dashboard</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg bg-[#f5f1f0] dark:bg-primary/20 text-[#181311] dark:text-white" href="#">
+<span class="material-symbols-outlined text-2xl" style="font-variation-settings: 'FILL' 1;">receipt_long</span>
+<p class="text-sm font-medium leading-normal">Invoices</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#181311] dark:text-gray-300 hover:bg-[#f5f1f0] dark:hover:bg-primary/20 rounded-lg" href="#">
+<span class="material-symbols-outlined text-2xl">groups</span>
+<p class="text-sm font-medium leading-normal">Clients</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#181311] dark:text-gray-300 hover:bg-[#f5f1f0] dark:hover:bg-primary/20 rounded-lg" href="#">
+<span class="material-symbols-outlined text-2xl">lab_profile</span>
+<p class="text-sm font-medium leading-normal">Reports</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#181311] dark:text-gray-300 hover:bg-[#f5f1f0] dark:hover:bg-primary/20 rounded-lg" href="#">
+<span class="material-symbols-outlined text-2xl">settings</span>
+<p class="text-sm font-medium leading-normal">Settings</p>
+</a>
+</nav>
+</div>
+<div class="mt-auto flex flex-col gap-1">
+<a class="flex items-center gap-3 px-3 py-2 text-[#181311] dark:text-gray-300 hover:bg-[#f5f1f0] dark:hover:bg-primary/20 rounded-lg" href="#">
+<span class="material-symbols-outlined text-2xl">help</span>
+<p class="text-sm font-medium leading-normal">Help</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#181311] dark:text-gray-300 hover:bg-[#f5f1f0] dark:hover:bg-primary/20 rounded-lg" href="#">
+<span class="material-symbols-outlined text-2xl">logout</span>
+<p class="text-sm font-medium leading-normal">Log Out</p>
+</a>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="flex-1 p-6 md:p-10">
+<div class="mx-auto max-w-4xl">
+<!-- PageHeading -->
+<header class="flex flex-col md:flex-row md:flex-wrap justify-between gap-4 items-start md:items-center mb-8">
+<div class="flex flex-col gap-2">
+<p class="text-[#181311] dark:text-white text-3xl md:text-4xl font-black leading-tight tracking-[-0.033em]">Automated Invoice Reminders</p>
+<p class="text-[#8a6b60] dark:text-gray-400 text-base font-normal leading-normal">Set up rules to automatically follow up on overdue invoices.</p>
+</div>
+<button class="flex min-w-[84px] items-center justify-center overflow-hidden rounded-lg h-10 px-6 bg-primary text-white text-sm font-bold leading-normal tracking-[0.015em] hover:opacity-90 transition-opacity">
+<span class="truncate">Save Changes</span>
+</button>
+</header>
+<div class="space-y-8">
+<!-- Global Settings Card -->
+<div class="bg-white dark:bg-background-dark/30 rounded-xl border border-[#e6dedb] dark:border-white/10 shadow-sm">
+<!-- SectionHeader -->
+<h2 class="text-[#181311] dark:text-white text-[22px] font-bold leading-tight tracking-[-0.015em] px-6 pb-3 pt-5 border-b border-[#e6dedb] dark:border-white/10">Global Settings</h2>
+<!-- ListItem -->
+<div class="flex items-center gap-4 px-6 min-h-14 justify-between py-4 border-b border-[#e6dedb] dark:border-white/10">
+<div class="flex items-center gap-4">
+<div class="text-[#181311] dark:text-white flex items-center justify-center rounded-lg bg-[#f5f1f0] dark:bg-white/10 shrink-0 size-10">
+<span class="material-symbols-outlined">notifications_active</span>
+</div>
+<p class="text-[#181311] dark:text-gray-100 text-base font-normal leading-normal flex-1 truncate">Enable Automated Reminders</p>
+</div>
+<div class="shrink-0">
+<label class="relative flex h-[31px] w-[51px] cursor-pointer items-center rounded-full border-none bg-[#e6dedb] dark:bg-white/10 p-0.5 has-[:checked]:justify-end has-[:checked]:bg-primary">
+<div class="h-full w-[27px] rounded-full bg-white" style="box-shadow: rgba(0, 0, 0, 0.15) 0px 3px 8px, rgba(0, 0, 0, 0.06) 0px 3px 1px;"></div>
+<input checked="" class="invisible absolute" type="checkbox"/>
+</label>
+</div>
+</div>
+<!-- RadioList -->
+<div class="p-6">
+<p class="text-[#181311] dark:text-gray-100 text-base font-medium mb-3">Communication Channel</p>
+<div class="flex flex-wrap gap-3">
+<label class="text-sm font-medium leading-normal flex items-center justify-center rounded-lg border border-[#e6dedb] dark:border-white/20 px-4 h-11 text-[#181311] dark:text-gray-200 has-[:checked]:border-[3px] has-[:checked]:px-3.5 has-[:checked]:border-primary relative cursor-pointer">
+                                    Email
+                                    <input checked="" class="invisible absolute" name="channel" type="radio"/>
+</label>
+<label class="text-sm font-medium leading-normal flex items-center justify-center rounded-lg border border-[#e6dedb] dark:border-white/20 px-4 h-11 text-[#181311] dark:text-gray-200 has-[:checked]:border-[3px] has-[:checked]:px-3.5 has-[:checked]:border-primary relative cursor-pointer">
+                                    SMS
+                                    <input class="invisible absolute" name="channel" type="radio"/>
+</label>
+<label class="text-sm font-medium leading-normal flex items-center justify-center rounded-lg border border-[#e6dedb] dark:border-white/20 px-4 h-11 text-[#181311] dark:text-gray-200 has-[:checked]:border-[3px] has-[:checked]:px-3.5 has-[:checked]:border-primary relative cursor-pointer">
+                                    Both
+                                    <input class="invisible absolute" name="channel" type="radio"/>
+</label>
+</div>
+</div>
+</div>
+<!-- Reminder Rules Card -->
+<div class="bg-white dark:bg-background-dark/30 rounded-xl border border-[#e6dedb] dark:border-white/10 shadow-sm">
+<h2 class="text-[#181311] dark:text-white text-[22px] font-bold leading-tight tracking-[-0.015em] px-6 pb-3 pt-5 border-b border-[#e6dedb] dark:border-white/10">Define Reminder Cadence</h2>
+<div class="p-6 space-y-4">
+<!-- Rule Row -->
+<div class="flex items-center gap-3">
+<p class="text-[#181311] dark:text-gray-200">Remind after</p>
+<input class="w-20 rounded-lg border-[#e6dedb] dark:border-white/20 dark:bg-background-dark focus:border-primary focus:ring-primary text-[#181311] dark:text-white" type="number" value="7"/>
+<p class="text-[#181311] dark:text-gray-200">days</p>
+<p class="text-[#181311] dark:text-gray-200">past due date.</p>
+<button class="ml-auto text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-500/10 transition-colors">
+<span class="material-symbols-outlined">delete</span>
+</button>
+</div>
+<!-- Rule Row -->
+<div class="flex items-center gap-3">
+<p class="text-[#181311] dark:text-gray-200">Remind after</p>
+<input class="w-20 rounded-lg border-[#e6dedb] dark:border-white/20 dark:bg-background-dark focus:border-primary focus:ring-primary text-[#181311] dark:text-white" type="number" value="14"/>
+<p class="text-[#181311] dark:text-gray-200">days</p>
+<p class="text-[#181311] dark:text-gray-200">past due date.</p>
+<button class="ml-auto text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-500/10 transition-colors">
+<span class="material-symbols-outlined">delete</span>
+</button>
+</div>
+<button class="flex items-center gap-2 text-primary font-bold text-sm py-2 px-3 rounded-lg hover:bg-primary/10 transition-colors">
+<span class="material-symbols-outlined">add_circle</span>
+                                 Add New Rule
+                             </button>
+</div>
+</div>
+<!-- Message Templates Card -->
+<div class="bg-white dark:bg-background-dark/30 rounded-xl border border-[#e6dedb] dark:border-white/10 shadow-sm overflow-hidden">
+<h2 class="text-[#181311] dark:text-white text-[22px] font-bold leading-tight tracking-[-0.015em] px-6 pb-3 pt-5 border-b border-[#e6dedb] dark:border-white/10">Message Templates</h2>
+<!-- Tabs -->
+<div class="border-b border-[#e6dedb] dark:border-white/10 px-6">
+<nav class="flex space-x-6">
+<button class="py-3 font-semibold border-b-2 border-primary text-primary">Email</button>
+<button class="py-3 font-semibold border-b-2 border-transparent text-[#8a6b60] dark:text-gray-400 hover:text-[#181311] dark:hover:text-white">SMS</button>
+</nav>
+</div>
+<div class="p-6">
+<div class="space-y-4">
+<div>
+<label class="block text-sm font-medium text-[#181311] dark:text-gray-200 mb-1" for="email-subject">Email Subject</label>
+<input class="w-full rounded-lg border-[#e6dedb] dark:border-white/20 dark:bg-background-dark focus:border-primary focus:ring-primary text-[#181311] dark:text-white" id="email-subject" type="text" value="Reminder: Invoice [Invoice Number] is Overdue"/>
+</div>
+<div>
+<label class="block text-sm font-medium text-[#181311] dark:text-gray-200 mb-1" for="email-body">Email Body</label>
+<textarea class="w-full rounded-lg border-[#e6dedb] dark:border-white/20 dark:bg-background-dark focus:border-primary focus:ring-primary text-[#181311] dark:text-white" id="email-body" rows="8">Dear [Client Name],
+
+This is a friendly reminder that invoice [Invoice Number] for [Amount Due] is now overdue. Please make your payment at your earliest convenience.
+
+You can view the invoice here: [Invoice Link]
+
+Thank you,
+AK Corp</textarea>
+</div>
+<div>
+<p class="text-sm font-medium text-[#181311] dark:text-gray-200 mb-2">Dynamic Placeholders</p>
+<div class="flex flex-wrap gap-2">
+<button class="text-xs font-mono bg-[#f5f1f0] dark:bg-white/10 text-[#8a6b60] dark:text-gray-300 px-2 py-1 rounded-md hover:bg-primary/20 dark:hover:bg-primary/30">[Client Name]</button>
+<button class="text-xs font-mono bg-[#f5f1f0] dark:bg-white/10 text-[#8a6b60] dark:text-gray-300 px-2 py-1 rounded-md hover:bg-primary/20 dark:hover:bg-primary/30">[Invoice Number]</button>
+<button class="text-xs font-mono bg-[#f5f1f0] dark:bg-white/10 text-[#8a6b60] dark:text-gray-300 px-2 py-1 rounded-md hover:bg-primary/20 dark:hover:bg-primary/30">[Amount Due]</button>
+<button class="text-xs font-mono bg-[#f5f1f0] dark:bg-white/10 text-[#8a6b60] dark:text-gray-300 px-2 py-1 rounded-md hover:bg-primary/20 dark:hover:bg-primary/30">[Due Date]</button>
+<button class="text-xs font-mono bg-[#f5f1f0] dark:bg-white/10 text-[#8a6b60] dark:text-gray-300 px-2 py-1 rounded-md hover:bg-primary/20 dark:hover:bg-primary/30">[Invoice Link]</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>
