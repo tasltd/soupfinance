@@ -777,6 +777,105 @@ Dark mode is implemented using Tailwind's `class` strategy. Toggle by adding/rem
 | Overdue Reminders | `overdue-reminder-generator/` | Generate overdue notices |
 | Tax Calculator | `tax-and-discount-calculator/` | Tax & discount tool |
 
+### Loading States
+| Screen | Path | Description |
+|--------|------|-------------|
+| Full Page Spinner | `loading-full-page-spinner/` | Centered spinner with "Loading" text |
+| Table Skeleton | `loading-table-skeleton/` | Invoice table placeholder rows |
+| Dashboard Skeleton | `loading-dashboard-skeleton/` | Dashboard cards with shimmer |
+| Button Saving | `loading-button-saving-state/` | Button with spinner and "Saving..." |
+| Data Sync Indicator | `loading-data-sync-indicator/` | Top banner with sync progress |
+
+### Empty States
+| Screen | Path | Description |
+|--------|------|-------------|
+| No Invoices | `empty-state-no-invoices/` | CTA to create first invoice |
+| No Clients | `empty-state-no-clients/` | CTA to add first client |
+| No Payments | `empty-state-no-payments/` | CTA to record payment |
+| No Notifications | `empty-state-no-notifications/` | Bell icon with "All caught up" |
+| No Search Results | `empty-state-no-search-results/` | Try different keywords |
+| Welcome Dashboard | `empty-state-welcome-dashboard/` | New user onboarding checklist |
+
+### Error States
+| Screen | Path | Description |
+|--------|------|-------------|
+| 404 Not Found | `error-404-page-not-found/` | Page not found with home link |
+| 500 Server Error | `error-500-internal-server/` | Server error with support contact |
+| 403 Access Denied | `error-403-access-denied/` | Permission denied screen |
+| Offline Connection | `error-offline-connection/` | No internet connection |
+| Session Expired | `error-session-expired-page/` | Full page session expired |
+
+### Alerts & Notifications
+| Screen | Path | Description |
+|--------|------|-------------|
+| Success Banner | `alert-banner-success/` | Green banner with checkmark |
+| Error Banner | `alert-banner-error/` | Red banner with retry button |
+| Warning Banner | `alert-banner-warning/` | Yellow banner with action |
+| Info Banner | `alert-banner-info/` | Blue banner with dismiss |
+| Toast Stack | `alert-toast-notification-stack/` | Stacked toast notifications |
+| Notification Dropdown | `interactive-notification-dropdown/` | Header notification popover |
+
+### Modals & Dialogs
+| Screen | Path | Description |
+|--------|------|-------------|
+| Delete Confirmation | `modal-delete-confirmation/` | Destructive action modal |
+| Discard Changes | `modal-discard-changes/` | Unsaved changes warning |
+| Export Options | `modal-export-options/` | PDF/Excel/CSV export selection |
+| File Upload Progress | `modal-file-upload-progress/` | Upload progress with cancel |
+| Quick Edit Client | `modal-quick-edit-client/` | Inline client edit form |
+| Session Timeout | `modal-session-timeout/` | "Stay logged in?" warning |
+| Success Confirmation | `modal-success-confirmation/` | Success checkmark modal |
+| Invoice Detail Panel | `panel-invoice-detail-slideover/` | Right-side slide-over panel |
+
+### Form Elements (Component Styles)
+| Screen | Path | Description | Also applies to |
+|--------|------|-------------|-----------------|
+| Checkbox Styles | `form-checkbox-styles/` | Settings notification preferences | Any checkbox group |
+| Radio Button Styles | `form-radio-button-styles/` | Payment method selection | Any radio selection |
+| Toggle Switch Styles | `form-toggle-switch-styles/` | General preferences toggles | Any on/off settings |
+| Multi-select Dropdown | `form-multiselect-dropdown/` | Team assignment with tags | Any multi-select |
+| Date Range Picker | `form-date-range-picker/` | Calendar popup with range | Any date filters |
+| Search Autocomplete | `form-search-autocomplete/` | Grouped search results | Any search field |
+| Validation Errors | `form-validation-error-states/` | Inline field error messages | Any form validation |
+| GL Transactions Base | `gl-transactions-base-page/` | Base GL page layout | Reference for data tables |
+
+### Interactive Elements
+| Screen | Path | Description | Also applies to |
+|--------|------|-------------|-----------------|
+| User Profile Dropdown | `interactive-user-profile-dropdown/` | Header profile menu | Any user menu |
+| Action Dropdown | `interactive-action-dropdown-menu/` | Row three-dot menu | Any action menus |
+| Tooltip Examples | `interactive-tooltip-examples/` | Form field help icons | Any tooltip usage |
+| Avatar Status | `interactive-avatar-status-team/` | Team member status dots | Any presence indicators |
+| Invoice Actions | `interactive-invoice-actions/` | Table row action menu | Any table actions |
+| Context Menu | `interactive-context-menu/` | Right-click popover menu | Any context menus |
+| Team Status Card | `interactive-team-status-card/` | Standalone team widget | Any team displays |
+
+### P&L Report Variants
+| Screen | Path | Description |
+|--------|------|-------------|
+| Table Layout | `report-pnl-table-layout/` | Standard hierarchical table |
+| Expandable Sections | `report-pnl-expandable/` | Collapsible category sections |
+| Comparison View | `report-pnl-comparison/` | Year-over-year columns |
+| Dashboard View | `report-pnl-dashboard/` | Charts and summary cards |
+| Annotated | `report-pnl-annotated/` | Notes and highlights |
+| Simplified Summary | `report-pnl-simplified/` | Executive summary view |
+
+### Mobile Navigation
+| Screen | Path | Description |
+|--------|------|-------------|
+| Bottom Navigation | `mobile-bottom-nav/` | 5-icon bottom bar (primary) |
+| Mobile Header | `mobile-header/` | Header with search (primary) |
+| Side Navigation | `mobile-sidenav/` | Organized slide-out menu (primary) |
+| Filter Drawer | `mobile-filter-drawer/` | Bottom sheet filter panel (primary) |
+| Invoice List | `mobile-invoice-list/` | Card-based invoice list (primary) |
+| Invoice Form | `mobile-invoice-form/` | Sectioned mobile form (primary) |
+| Bottom Nav (Alt) | `mobile-bottom-nav-alt/` | Alternative icon style |
+| Header (Alt) | `mobile-header-alt/` | Basic header variant |
+| Sidenav (Alt) | `mobile-sidenav-alt/` | Simple menu variant |
+| Filter Drawer (Alt) | `mobile-filter-drawer-alt/` | Simplified filters |
+| Invoice List (Alt) | `mobile-invoice-list-alt/` | Alternative card layout |
+| Invoice Form (Alt) | `mobile-invoice-form-alt/` | Basic mobile form |
+
 ---
 
 ## Tailwind Configuration Template

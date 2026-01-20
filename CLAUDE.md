@@ -4,170 +4,193 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**SoupFinance** is a design assets repository containing HTML mockups and screenshots for a corporate accounting/invoicing platform. This is part of the Soupmarkets ecosystem.
+**SoupFinance** is a corporate accounting/invoicing platform with a React frontend and HTML design assets. Part of the Soupmarkets ecosystem.
 
-**Status**: Design phase (no application code yet)
+| Component | Tech Stack | Status |
+|-----------|------------|--------|
+| `soupfinance-web/` | React 19 + TypeScript + Vite + TailwindCSS v4 | Active development |
+| `soupfinance-designs/` | HTML mockups + screenshots (114 screens) | Design reference |
+
+## Quick Commands
+
+```bash
+# React Web App (soupfinance-web/)
+cd soupfinance-web
+npm install                    # Install dependencies
+npm run dev                    # Start dev server (port 5173)
+npm run build                  # Production build (runs tsc -b first)
+npm run lint                   # ESLint
+npm run preview                # Preview production build
+
+# Unit/Integration Tests (Vitest)
+npm run test                   # Watch mode
+npm run test:run               # Run once (CI mode)
+npm run test:coverage          # With V8 coverage report
+npx vitest run src/api/__tests__/client.test.ts           # Single test file
+npx vitest run -t "should attach Bearer token"            # Single test by name
+
+# E2E Tests (Playwright) - requires dev server running
+npm run test:e2e               # Run all E2E tests (headless)
+npm run test:e2e:headed        # Run with browser visible
+npm run test:e2e:ui            # Interactive Playwright UI
+npx playwright test e2e/login.spec.ts                     # Single E2E file
+npx playwright test --grep "login flow"                   # By test name
+
+# Storybook (component documentation)
+npm run storybook              # Start Storybook dev server (port 6006)
+npm run build-storybook        # Build static Storybook
+
+# Design Mockups (soupfinance-designs/)
+cd soupfinance-designs && python3 -m http.server 8000  # Preview at localhost:8000
+```
+
+## Architecture
+
+### React App (`soupfinance-web/`)
+
+```
+src/
+├── api/                    # Axios client + endpoint modules
+│   ├── client.ts          # Base Axios instance + toFormData helper
+│   ├── auth.ts            # Auth endpoints
+│   └── endpoints/         # Feature-specific endpoints (invoices, bills, ledger, vendors, corporate)
+├── components/
+│   ├── layout/            # MainLayout, AuthLayout, SideNav, TopNav
+│   ├── forms/             # Input, Select, Textarea, Checkbox, Radio, DatePicker (with Storybook)
+│   └── feedback/          # AlertBanner, Spinner, Toast, Tooltip (with Storybook)
+├── features/              # Feature modules (page components)
+│   ├── auth/              # LoginPage
+│   ├── dashboard/         # DashboardPage
+│   ├── invoices/          # List, Form, Detail pages
+│   ├── bills/             # List, Form, Detail pages
+│   ├── payments/          # List, Form pages
+│   ├── ledger/            # ChartOfAccounts, Transactions
+│   ├── reports/           # P&L, Balance Sheet, Cash Flow, Aging
+│   └── corporate/         # KYC onboarding (Registration, CompanyInfo, Directors, Documents, Status)
+├── stores/                # Zustand stores (authStore, uiStore)
+├── types/                 # TypeScript interfaces
+├── hooks/                 # Custom React hooks
+├── test/                  # Test setup (Vitest + Testing Library)
+├── App.tsx                # Routes + providers
+└── index.css              # Tailwind + design system tokens
+```
+
+**Key Tech:**
+- State: Zustand (auth, UI) with localStorage persistence
+- Data Fetching: TanStack Query (React Query) - 5min stale time
+- Forms: React Hook Form + Zod validation
+- Routing: React Router v7
+- Charts: Recharts
+- HTTP: Axios (proxied to `/rest` → `localhost:9090`)
+- Testing: Vitest + Testing Library + Playwright (browser)
+- Component Docs: Storybook 10
+
+### Routes
+
+| Path | Component |
+|------|-----------|
+| `/login` | LoginPage |
+| `/register` | RegistrationPage (public, corporate) |
+| `/dashboard` | DashboardPage |
+| `/invoices`, `/invoices/new`, `/invoices/:id`, `/invoices/:id/edit` | Invoice CRUD |
+| `/bills`, `/bills/new`, `/bills/:id`, `/bills/:id/edit` | Bill CRUD |
+| `/payments`, `/payments/new` | Payment CRUD |
+| `/ledger/accounts` | ChartOfAccountsPage |
+| `/ledger/transactions` | LedgerTransactionsPage |
+| `/reports/*` | Report pages (pnl, balance-sheet, cash-flow, aging) |
+| `/onboarding/*` | Corporate KYC (company, directors, documents, status) |
+
+### Backend Proxy
+
+Vite proxies to `http://localhost:9090` (Soupmarkets Grails backend):
+- `/rest/*` → Authenticated admin API endpoints
+- `/client/*` → Public/unauthenticated client endpoints (registration, etc.)
+
+### API Client Patterns
+
+The API client (`src/api/client.ts`) handles:
+- **Bearer token auth**: Stored in localStorage (`access_token`), auto-attached to requests
+- **FormData serialization**: POST/PUT use `application/x-www-form-urlencoded`
+- **Foreign key references**: Nested objects serialize as `field.id` (e.g., `client.id: uuid`)
+- **401 handling**: Auto-redirects to `/login` and clears credentials
+
+### Test Organization
+
+```
+soupfinance-web/
+├── src/**/__tests__/           # Unit/integration tests (Vitest)
+│   ├── *.test.ts              # Co-located with source
+│   └── integration/*.test.ts  # API integration tests
+├── e2e/                        # E2E tests (Playwright) - create when needed
+│   └── *.spec.ts              # Browser automation tests
+├── test-results/               # Playwright artifacts (gitignored)
+└── playwright-report/          # HTML test report (gitignored)
+```
 
 ## Design System
 
-**See [.claude/rules/soupfinance-design-system.md](.claude/rules/soupfinance-design-system.md) for the complete design system documentation.**
-
-Quick reference:
+**Full documentation: [.claude/rules/soupfinance-design-system.md](.claude/rules/soupfinance-design-system.md)**
 
 | Property | Value |
 |----------|-------|
-| **CSS Framework** | TailwindCSS (CDN) |
-| **Primary Color** | `#f24a0d` (orange) |
-| **Background Light** | `#f8f6f5` |
-| **Background Dark** | `#221510` |
-| **Font** | Manrope (Google Fonts) |
-| **Icons** | Material Symbols Outlined |
-| **Dark Mode** | Supported via `class` strategy |
+| CSS Framework | TailwindCSS v4 |
+| Primary Color | `#f24a0d` (orange) |
+| Background Light | `#f8f6f5` |
+| Background Dark | `#221510` |
+| Font | Manrope (Google Fonts) |
+| Icons | Material Symbols Outlined |
+| Dark Mode | `class` strategy on `<html>` |
 
-## Repository Structure
+### CSS Tokens (Tailwind v4)
 
-```
-soupfinance/
-├── .claude/
-│   └── rules/
-│       └── soupfinance-design-system.md   # Complete design system docs
-├── soupfinance-designs/                    # 43 screen designs
-│   ├── {screen-name}/
-│   │   ├── code.html                       # TailwindCSS HTML mockup
-│   │   └── screen.png                      # Screenshot of the design
-│   └── ...
-└── CLAUDE.md
-```
+Defined in `src/index.css` via `@theme`:
 
-## Screen Catalog
-
-### Authentication
-- `login-authentication/` - Split-screen login with branding
-
-### Dashboard & Analytics
-- `financial-overview-dashboard/` - Main dashboard with KPIs, charts, recent invoices
-- `reporting-and-analytics/` - Analytics overview
-
-### Invoices (10 screens)
-- `invoice-management/` - Invoice list with pagination
-- `new-invoice-form/` - Create invoice with line items
-- `invoice-draft-preview/` - Preview before sending
-- `invoice-line-items-table/` - Editable line items
-- `advanced-invoice-metadata/` - Extended invoice details
-- `invoice-status-summary/` - Status dashboard
-- `invoice-status-update-log/` - Status change history
-- `invoice-validation-checker/` - Validation rules
-- `invoice-approval-workflow/` - Multi-step approval timeline
-- `closed-invoice-archive/` - Completed invoices
-
-### Payments (3 screens)
-- `payment-entry-form/` - Record payment
-- `payment-allocation-screen/` - Allocate payments
-- `payment-history-report/` - Transaction history
-
-### Vendors/Clients (2 screens)
-- `vendor-client-management/` - Client CRUD
-- `vendor-payment-analysis/` - Payment trends
-
-### Items/Services (3 screens)
-- `item-services-catalog-browser/` - Browse catalog
-- `item-creation-modal/` - Add item modal
-- `services-selection-grid/` - Services grid
-
-### Financial Reports (7 screens)
-- `balance-sheet-report/` - Assets/Liabilities/Equity
-- `income-statement-report/` - Revenue/Expenses
-- `cash-flow-statement-report/` - Cash flows
-- `trial-balance-report/` - Debits/Credits
-- `profit-and-loss-summary-report/` - P&L summary
-- `budget-vs-actual-variance-report/` - Variance analysis
-- `expense-category-breakdown/` - Expenses by category
-
-### Equity Reports (2 screens)
-- `statement-of-changes-in-equity/` - Equity changes
-- `retained-earnings-statement/` - Retained earnings
-
-### Aging Reports (2 screens)
-- `ar-aging-report/` - Accounts receivable
-- `ap-aging-report/` - Accounts payable
-
-### General Ledger (3 screens)
-- `general-ledger-entries/` - GL transactions
-- `gl-integration-mapping/` - Account mapping
-- `gl-reconciliation-report/` - Reconciliation
-
-### Other Reports (4 screens)
-- `tax-liability-report/` - Tax obligations
-- `inventory-valuation-report/` - Inventory value
-- `customer-credit-limit-report/` - Credit limits
-- `audit-trail-log/` - System audit log
-
-### Utilities (4 screens)
-- `amount-due-tracker/` - Outstanding amounts
-- `amount-due-summary/` - Due amounts overview
-- `overdue-reminder-generator/` - Generate notices
-- `tax-and-discount-calculator/` - Calculator tool
-
-## Working with Designs
-
-### Preview a Design
-
-```bash
-# Open in browser
-xdg-open soupfinance-designs/financial-overview-dashboard/code.html
-
-# Or use HTTP server for proper font loading
-cd soupfinance-designs && python3 -m http.server 8000
-# Visit http://localhost:8000/financial-overview-dashboard/code.html
+```css
+--color-primary: #f24a0d;
+--color-background-light: #f8f6f5;
+--color-background-dark: #221510;
+--color-surface-light: #FFFFFF;
+--color-surface-dark: #1f1715;
+--color-text-light: #181311;
+--color-subtle-text: #8a6b60;
+--color-border-light: #e6dedb;
+--color-danger: #EF4444;
+--font-display: "Manrope", "Noto Sans", sans-serif;
 ```
 
-### Toggle Dark Mode
+## Design Mockups (114 screens)
 
-Add/remove `dark` class on the `<html>` element:
-```html
-<html class="dark" lang="en">  <!-- Dark mode -->
-<html class="light" lang="en"> <!-- Light mode -->
-```
+Located in `soupfinance-designs/{screen-name}/`:
+- `code.html` - TailwindCSS HTML mockup
+- `screen.png` - Screenshot
 
-## When Implementing
+### Screen Categories
 
-1. **Read the design system** - `.claude/rules/soupfinance-design-system.md`
-2. **Extract Tailwind config** - Use the embedded config as base
-3. **Follow component patterns** - Each HTML demonstrates reusable patterns
-4. **Use semantic colors** - `primary`, `background-light`, etc.
-5. **Include dark mode** - All components support light/dark
-6. **Use Material Symbols** - Consistent icon settings
+| Category | Count | Examples |
+|----------|-------|----------|
+| Invoices | 10 | `invoice-management/`, `new-invoice-form/`, `invoice-approval-workflow/` |
+| Reports | 13 | `balance-sheet-report/`, `income-statement-report/`, `report-pnl-*` |
+| Forms | 10 | `form-checkbox-styles/`, `form-date-range-picker/`, `form-validation-error-states/` |
+| Mobile | 12 | `mobile-bottom-nav/`, `mobile-sidenav/`, `mobile-invoice-form/` |
+| Modals | 8 | `modal-delete-confirmation/`, `modal-export-options/` |
+| States | 17 | `loading-*`, `empty-state-*`, `error-*`, `alert-*` |
+| Interactive | 8 | `interactive-user-dropdown/`, `interactive-tooltip-examples/` |
 
-## Tailwind Config (Quick Start)
+## When Implementing Features
 
-```javascript
-module.exports = {
-  darkMode: "class",
-  theme: {
-    extend: {
-      colors: {
-        "primary": "#f24a0d",
-        "background-light": "#f8f6f5",
-        "background-dark": "#221510",
-      },
-      fontFamily: {
-        "display": ["Manrope", "sans-serif"]
-      },
-      borderRadius: {
-        "DEFAULT": "0.25rem",
-        "lg": "0.5rem",
-        "xl": "0.75rem",
-        "full": "9999px"
-      },
-    },
-  },
-  plugins: [
-    require('@tailwindcss/forms'),
-    require('@tailwindcss/container-queries'),
-  ],
-}
-```
+1. Check `soupfinance-designs/` for the relevant mockup
+2. Reference `.claude/rules/soupfinance-design-system.md` for component patterns
+3. Use existing feature modules as templates (e.g., copy invoice patterns for new entities)
+4. Use Tailwind v4 tokens from `index.css` (`text-primary`, `bg-background-light`, etc.)
+5. Include dark mode variants (`dark:bg-background-dark`)
+
+## Git Remotes
+
+| Remote | URL |
+|--------|-----|
+| origin (GitHub) | https://github.com/tasltd/soupfinance |
+| gitlab | git@gitlab.com:tasltd/soupfinance.git |
 
 ## Parent Project
 
-Part of the **Soupmarkets** ecosystem. See `../CLAUDE.md` for workspace docs.
+Part of **Soupmarkets** ecosystem. Backend runs on port 9090. See `../CLAUDE.md` for ecosystem docs.
