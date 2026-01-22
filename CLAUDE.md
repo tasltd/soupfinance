@@ -28,6 +28,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Quick Commands
 
+**IMPORTANT**: Most development requires the soupmarkets-web backend running on port 9090:
+```bash
+cd ../soupmarkets-web && source env-variables.sh && ./gradlew bootRun
+```
+
 ```bash
 cd soupfinance-web
 
@@ -49,7 +54,8 @@ npx vitest run -t "should attach Bearer token"            # Single test by name
 npm run test:e2e               # Run all E2E tests (headless)
 npm run test:e2e:headed        # Run with browser visible
 npm run test:e2e:ui            # Interactive Playwright UI
-npx playwright test e2e/login.spec.ts                     # Single E2E file
+npm run test:e2e:report        # Open HTML report in browser
+npx playwright test e2e/auth.spec.ts                      # Single E2E file
 npx playwright test --grep "login flow"                   # By test name
 
 # Storybook (component documentation)
@@ -166,22 +172,12 @@ src/
 
 ### Routes
 
-| Path | Component |
-|------|-----------|
-| `/login` | LoginPage |
-| `/register` | RegistrationPage (public, corporate) |
-| `/dashboard` | DashboardPage |
-| `/invoices`, `/invoices/new`, `/invoices/:id`, `/invoices/:id/edit` | Invoice CRUD |
-| `/bills`, `/bills/new`, `/bills/:id`, `/bills/:id/edit` | Bill CRUD |
-| `/vendors`, `/vendors/new`, `/vendors/:id`, `/vendors/:id/edit` | Vendor CRUD |
-| `/payments`, `/payments/new` | Payment CRUD |
-| `/ledger/accounts` | ChartOfAccountsPage |
-| `/ledger/transactions` | LedgerTransactionsPage |
-| `/accounting/transactions` | TransactionRegisterPage |
-| `/accounting/journal-entry/new`, `/accounting/journal-entry/:id` | JournalEntryPage |
-| `/accounting/vouchers/new`, `/accounting/vouchers/:id` | VoucherFormPage |
-| `/reports/*` | Report pages (pnl, balance-sheet, cash-flow, aging, trial-balance) |
-| `/onboarding/*` | Corporate KYC (company, directors, documents, status) |
+See `src/App.tsx` for complete route definitions. Key routes:
+- **Public**: `/login`, `/register`
+- **Finance**: `/invoices/*`, `/bills/*`, `/vendors/*`, `/payments/*`
+- **Accounting**: `/ledger/*`, `/accounting/*` (journal entries, vouchers)
+- **Reports**: `/reports/*` (pnl, balance-sheet, cash-flow, aging, trial-balance)
+- **Onboarding**: `/onboarding/*` (corporate KYC)
 
 ### Backend Proxy
 
@@ -192,18 +188,57 @@ Vite proxies to `http://localhost:9090` (Soupmarkets Grails backend):
 ### API Client Patterns
 
 The API client (`src/api/client.ts`) handles:
-- **Bearer token auth**: Stored in localStorage (`access_token`), auto-attached to requests
+- **X-Auth-Token header**: Stored in localStorage (`access_token`), auto-attached via `X-Auth-Token` header (NOT Bearer token)
 - **FormData serialization**: POST/PUT use `application/x-www-form-urlencoded`
 - **Foreign key references**: Nested objects serialize as `field.id` (e.g., `client.id: uuid`)
 - **401 handling**: Auto-redirects to `/login` and clears credentials
 
+### Critical API Notes (For Backend Integration)
+
+| Pattern | Detail |
+|---------|--------|
+| **Auth Header** | `X-Auth-Token: {token}` (NOT `Authorization: Bearer`) |
+| **Login Endpoint** | POST `/rest/api/login` with JSON body (`{"username": "...", "password": "..."}`) |
+| **Content-Type (Auth)** | `application/json` for login only |
+| **Content-Type (Data)** | `application/x-www-form-urlencoded` for all other POST/PUT |
+| **Token Validation** | On app mount, validates token with GET `/rest/user/current.json` |
+| **2FA (Corporate)** | POST `/client/authenticate.json` then `/client/verifyCode.json` |
+
+### Backend API Endpoints (Verified 2026-01-22)
+
+**Finance Controllers** (in `soupmarkets-web/grails-app/controllers/soupbroker/finance/`):
+
+| Controller | Endpoints | Notes |
+|------------|-----------|-------|
+| `InvoiceController` | `/rest/invoice/*` | CRUD + status actions, PDF, email |
+| `BillController` | `/rest/bill/*` | CRUD + status actions |
+| `InvoicePaymentController` | `/rest/invoicePayment/*` | Payment allocation |
+| `BillPaymentController` | `/rest/billPayment/*` | Payment allocation |
+| `VendorController` | `/rest/vendor/*` | CRUD |
+| `LedgerAccountController` | `/rest/ledgerAccount/*` | Chart of accounts |
+| `LedgerTransactionController` | `/rest/ledgerTransaction/*` | GL entries |
+| `LedgerTransactionGroupController` | `/rest/ledgerTransactionGroup/*` | Standard CRUD (journal entries) |
+| `VoucherController` | `/rest/voucher/*` | CRUD + PDF + email |
+| `FinanceReportsController` | `/rest/financeReports/*` | P&L, Balance Sheet, Trial Balance, Aging |
+
+**Approval Workflows**:
+
+| Controller | Action | Endpoint | Description |
+|------------|--------|----------|-------------|
+| `VoucherApprovalController` | `save` | POST `/rest/voucherApproval/save` | Create approval record with ApprovalState |
+| `LedgerTransactionApprovalController` | `approve` | POST `/rest/ledgerTransactionApproval/approve/{id}` | Approve a transaction |
+
+**Note**: Voucher approval is managed by creating `VoucherApproval` records. Ledger transaction approval has explicit `approve` action.
+
 ### Key Architectural Patterns
 
 **Authentication Flow** (spans: `authStore.ts`, `client.ts`, `App.tsx`, `LoginPage.tsx`):
-1. User submits credentials → `authStore.login()` → POST to `/rest/auth/login.json`
+1. User submits credentials → `authStore.login()` → POST to `/rest/api/login` (JSON body)
 2. Success: Store token in localStorage + Zustand state → Redirect to `/dashboard`
 3. On app mount: `authStore.initialize()` checks localStorage for existing token
-4. 401 response: `client.ts` interceptor clears credentials and redirects to `/login`
+4. Token validation: `validateToken()` calls GET `/rest/user/current.json` to verify token is valid
+5. Invalid token: Clears localStorage and shows "Session expired" message
+6. 401 response: `client.ts` interceptor clears credentials and redirects to `/login`
 
 **Data Fetching Pattern** (React Query + Axios):
 - TanStack Query with 5-minute stale time wraps API calls
@@ -217,125 +252,23 @@ The API client (`src/api/client.ts`) handles:
 
 ### Internationalization (i18n)
 
-**Supported Languages**: English (en), German (de), French (fr), Dutch (nl)
+**Languages**: English (en), German (de), French (fr), Dutch (nl)
 
-**Tech Stack**: react-i18next v16.5 + i18next v25.8 + i18next-browser-languagedetector v8.2
+**12 Namespaces**: `common`, `auth`, `navigation`, `invoices`, `reports`, `accounting` (★ core), `bills`, `payments`, `ledger`, `vendors`, `dashboard`, `corporate`
 
-**File Structure** (48 translation files total):
-```
-src/i18n/
-├── index.ts                   # i18n configuration (12 namespaces)
-├── i18next.d.ts              # TypeScript types for type-safe translations
-└── locales/
-    ├── en/                    # English translations (12 files)
-    │   ├── common.json       # Shared actions, status, messages, validation
-    │   ├── auth.json         # Login, register, logout, 2FA
-    │   ├── navigation.json   # Sidebar, header, breadcrumbs
-    │   ├── invoices.json     # Invoice management
-    │   ├── reports.json      # Financial reports
-    │   ├── accounting.json   # ★ CORE: Journal entries, vouchers, transactions
-    │   ├── bills.json        # Vendor bills management
-    │   ├── payments.json     # Payment tracking
-    │   ├── ledger.json       # Chart of accounts, GL transactions
-    │   ├── vendors.json      # Vendor management
-    │   ├── dashboard.json    # Dashboard overview
-    │   └── corporate.json    # KYC onboarding
-    ├── de/                    # German (Deutsch) - 12 files
-    ├── fr/                    # French (Français) - 12 files
-    └── nl/                    # Dutch (Nederlands) - 12 files
-```
-
-**Namespaces (12 total)**:
-
-| Namespace | Content | Priority |
-|-----------|---------|----------|
-| `common` | Shared actions (save, cancel), status labels, validation messages, pagination | Shared |
-| `auth` | Login, registration, logout, 2FA | Auth |
-| `navigation` | Sidebar menu items, header elements, breadcrumbs | UI |
-| `invoices` | Invoice CRUD, line items, status, filters, messages | Finance |
-| `reports` | Report types, periods, P&L, balance sheet, cash flow, aging | Finance |
-| **`accounting`** | **★ Journal entries, vouchers, transaction register - CORE for integrations** | **Core** |
-| `bills` | Vendor bills management, line items, status | Finance |
-| `payments` | Incoming/outgoing payments, methods, allocation | Finance |
-| `ledger` | Chart of accounts, account types, GL transactions | Core |
-| `vendors` | Vendor CRUD, banking info, address | Finance |
-| `dashboard` | Stats, charts, quick actions, alerts | UI |
-| `corporate` | KYC onboarding: registration, directors, documents, status | Onboarding |
-
-**★ Accounting Namespace (Core Feature)**
-
-The `accounting` namespace is the **dominant feature for integrations**. It covers:
-- **Journal Entries**: Create, edit, post, balance validation
-- **Vouchers**: Payment/receipt/journal/contra vouchers with approval workflow
-- **Transaction Register**: View all accounting transactions with filters
-
-```tsx
-// Accounting namespace usage
-const { t } = useTranslation('accounting');
-
-// Journal entry fields
-t('journalEntry.debitAccount')     // "Debit Account"
-t('journalEntry.totalDebits')      // "Total Debits"
-t('journalEntry.balanced')         // "Balanced"
-t('journalEntry.unbalanced')       // "Unbalanced"
-
-// Voucher types
-t('voucher.types.payment')         // "Payment Voucher"
-t('voucher.types.receipt')         // "Receipt Voucher"
-t('voucher.status.approved')       // "Approved"
-
-// Transaction types
-t('transactions.types.journal')    // "Journal Entry"
-t('transactions.filters.dateRange') // "Date Range"
-```
-
-**Usage in Components**:
+**Usage**:
 ```tsx
 import { useTranslation } from 'react-i18next';
 
-function MyComponent() {
-  const { t } = useTranslation('invoices');  // Use 'invoices' namespace
+const { t } = useTranslation('invoices');       // Single namespace
+const { t } = useTranslation(['accounting', 'common']);  // Multiple
 
-  return (
-    <h1>{t('title')}</h1>           // Simple key
-    <p>{t('common:actions.save')}</p>  // Cross-namespace reference
-    <p>{t('summary.invoiceCount', { count: 5 })}</p>  // With interpolation
-  );
-}
-
-// Multiple namespaces
-function AccountingPage() {
-  const { t } = useTranslation(['accounting', 'common', 'ledger']);
-
-  return (
-    <h1>{t('accounting:journalEntry.title')}</h1>
-    <button>{t('common:actions.save')}</button>
-    <select>{t('ledger:accountTypes.asset')}</select>
-  );
-}
+t('title');                           // Simple key
+t('common:actions.save');             // Cross-namespace
+t('count', { count: 5 });             // Interpolation {{count}}
 ```
 
-**Language Switching**:
-- `LanguageSwitcher` component in `src/components/layout/LanguageSwitcher.tsx`
-- Compact variant `LanguageSwitcherCompact` for header/navbar
-- Language preference persisted to localStorage (`soupfinance_language`)
-- Auto-detects browser language on first visit
-
-**Adding Translations**:
-1. Add key to English file first (source of truth)
-2. Add same key to all other language files (de, fr, nl)
-3. TypeScript will warn if keys don't match (via `i18next.d.ts`)
-4. **For accounting features**: Always add to `accounting.json` namespace
-
-**Interpolation**: Use `{{variable}}` syntax in JSON, pass values as second argument to `t()`
-
-**Pluralization**: Use `_plural` suffix for plural forms
-```json
-{
-  "billCount": "{{count}} bill",
-  "billCount_plural": "{{count}} bills"
-}
-```
+**Adding Translations**: Add to `en/*.json` first (source of truth), then to de/fr/nl. TypeScript validates via `i18next.d.ts`.
 
 ### Test Organization
 
@@ -355,6 +288,30 @@ soupfinance-web/
 - Axios is globally mocked in `src/test/setup.ts` (auto-clears before each test)
 - localStorage and window.location are mocked globally
 - Integration tests in `__tests__/integration/` test API modules against mock responses
+
+**IMPORTANT - Axios Mocking in Unit Tests:**
+```typescript
+// Axios is globally mocked - set up return values like this:
+import apiClient from '../api/client';
+import { vi } from 'vitest';
+
+vi.mocked(apiClient.get).mockResolvedValue({ data: { ... } });
+vi.mocked(apiClient.post).mockResolvedValue({ data: { ... } });
+
+// For integration tests needing real HTTP, unmock at top of file:
+vi.unmock('axios');
+```
+
+**E2E Test Fixtures** (`e2e/fixtures.ts`):
+- `authenticatedPage` - Pre-authenticates via localStorage injection
+- `mockApiResponse()` - Generic route intercept helper
+- `mockLoginApi()`, `mockInvoicesApi()`, `mockBillsApi()`, etc. - Domain-specific mocks
+- E2E tests auto-start Vite dev server if not running (see `playwright.config.ts`)
+
+**IMPORTANT - No Fallback to Mock Data in Production**:
+- Pages MUST fetch from backend API, never use mock data as fallback
+- Show error state if API fails, empty state if data is empty
+- Mock data is ONLY for tests (`e2e/fixtures.ts`) and Storybook stories
 
 ### Type System (`src/types/index.ts`)
 
@@ -414,21 +371,7 @@ Defined in `src/index.css` via `@theme`:
 
 ## Design Mockups (114 screens)
 
-Located in `soupfinance-designs/{screen-name}/`:
-- `code.html` - TailwindCSS HTML mockup
-- `screen.png` - Screenshot
-
-### Screen Categories
-
-| Category | Count | Examples |
-|----------|-------|----------|
-| Invoices | 10 | `invoice-management/`, `new-invoice-form/`, `invoice-approval-workflow/` |
-| Reports | 13 | `balance-sheet-report/`, `income-statement-report/`, `report-pnl-*` |
-| Forms | 10 | `form-checkbox-styles/`, `form-date-range-picker/`, `form-validation-error-states/` |
-| Mobile | 12 | `mobile-bottom-nav/`, `mobile-sidenav/`, `mobile-invoice-form/` |
-| Modals | 8 | `modal-delete-confirmation/`, `modal-export-options/` |
-| States | 17 | `loading-*`, `empty-state-*`, `error-*`, `alert-*` |
-| Interactive | 8 | `interactive-user-dropdown/`, `interactive-tooltip-examples/` |
+Located in `soupfinance-designs/{screen-name}/` with `code.html` (TailwindCSS) + `screen.png`. See `.claude/rules/soupfinance-design-system.md` for full screen catalog.
 
 ## When Implementing Features
 
