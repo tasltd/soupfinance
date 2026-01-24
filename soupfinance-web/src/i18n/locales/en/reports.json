@@ -1,0 +1,84 @@
+{
+  "title": "Reports",
+  "subtitle": "Financial reports and analytics",
+  "types": {
+    "profitLoss": "Profit & Loss",
+    "balanceSheet": "Balance Sheet",
+    "cashFlow": "Cash Flow Statement",
+    "trialBalance": "Trial Balance",
+    "aging": "Aging Reports",
+    "arAging": "Accounts Receivable Aging",
+    "apAging": "Accounts Payable Aging"
+  },
+  "periods": {
+    "thisMonth": "This Month",
+    "lastMonth": "Last Month",
+    "thisQuarter": "This Quarter",
+    "lastQuarter": "Last Quarter",
+    "thisYear": "This Year",
+    "lastYear": "Last Year",
+    "custom": "Custom Period"
+  },
+  "profitLoss": {
+    "title": "Profit & Loss Statement",
+    "income": "Income",
+    "totalIncome": "Total Income",
+    "expenses": "Expenses",
+    "totalExpenses": "Total Expenses",
+    "grossProfit": "Gross Profit",
+    "netProfit": "Net Profit",
+    "netLoss": "Net Loss"
+  },
+  "balanceSheet": {
+    "title": "Balance Sheet",
+    "asOf": "As of {{date}}",
+    "assets": "Assets",
+    "currentAssets": "Current Assets",
+    "fixedAssets": "Fixed Assets",
+    "totalAssets": "Total Assets",
+    "liabilities": "Liabilities",
+    "currentLiabilities": "Current Liabilities",
+    "longTermLiabilities": "Long-term Liabilities",
+    "totalLiabilities": "Total Liabilities",
+    "equity": "Equity",
+    "totalEquity": "Total Equity",
+    "liabilitiesAndEquity": "Total Liabilities & Equity"
+  },
+  "cashFlow": {
+    "title": "Cash Flow Statement",
+    "operatingActivities": "Operating Activities",
+    "investingActivities": "Investing Activities",
+    "financingActivities": "Financing Activities",
+    "netCashFlow": "Net Cash Flow",
+    "beginningBalance": "Beginning Cash Balance",
+    "endingBalance": "Ending Cash Balance"
+  },
+  "trialBalance": {
+    "title": "Trial Balance",
+    "account": "Account",
+    "debit": "Debit",
+    "credit": "Credit",
+    "totalDebits": "Total Debits",
+    "totalCredits": "Total Credits",
+    "balanced": "Balanced",
+    "unbalanced": "Unbalanced"
+  },
+  "aging": {
+    "title": "Aging Report",
+    "current": "Current",
+    "days30": "1-30 Days",
+    "days60": "31-60 Days",
+    "days90": "61-90 Days",
+    "over90": "Over 90 Days",
+    "total": "Total"
+  },
+  "actions": {
+    "generate": "Generate Report",
+    "export": "Export",
+    "exportPdf": "Export as PDF",
+    "exportExcel": "Export as Excel",
+    "exportCsv": "Export as CSV",
+    "print": "Print",
+    "refresh": "Refresh Data"
+  }
+}

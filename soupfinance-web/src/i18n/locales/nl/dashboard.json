@@ -1,0 +1,60 @@
+{
+  "title": "Dashboard",
+  "subtitle": "Financieel overzicht",
+  "welcome": "Welkom terug, {{name}}",
+  "overview": {
+    "title": "Financieel overzicht",
+    "period": "Deze maand"
+  },
+  "stats": {
+    "totalRevenue": "Totale omzet",
+    "totalExpenses": "Totale kosten",
+    "netIncome": "Netto-inkomen",
+    "cashBalance": "Kassaldo",
+    "accountsReceivable": "Debiteuren",
+    "accountsPayable": "Crediteuren",
+    "invoicesDue": "Vervallende facturen",
+    "billsDue": "Vervallende inkoopfacturen"
+  },
+  "charts": {
+    "revenueExpenses": "Omzet vs Kosten",
+    "cashFlow": "Cashflow",
+    "incomeBreakdown": "Inkomstenverdeling",
+    "expenseBreakdown": "Kostenverdeling",
+    "monthlyTrend": "Maandelijkse trend",
+    "topClients": "Top klanten",
+    "topVendors": "Top leveranciers"
+  },
+  "recentActivity": {
+    "title": "Recente activiteit",
+    "invoices": "Recente facturen",
+    "bills": "Recente inkoopfacturen",
+    "payments": "Recente betalingen",
+    "viewAll": "Alles bekijken"
+  },
+  "quickActions": {
+    "title": "Snelle acties",
+    "newInvoice": "Factuur aanmaken",
+    "newBill": "Inkoopfactuur invoeren",
+    "recordPayment": "Betaling registreren",
+    "newJournalEntry": "Journaalpost"
+  },
+  "alerts": {
+    "title": "Waarschuwingen",
+    "overdueInvoices": "{{count}} achterstallige factuur",
+    "overdueInvoices_plural": "{{count}} achterstallige facturen",
+    "overdueBills": "{{count}} achterstallige inkoopfactuur",
+    "overdueBills_plural": "{{count}} achterstallige inkoopfacturen",
+    "lowCashBalance": "Laag kassaldo",
+    "pendingApprovals": "{{count}} goedkeuring in behandeling",
+    "pendingApprovals_plural": "{{count}} goedkeuringen in behandeling"
+  },
+  "periods": {
+    "today": "Vandaag",
+    "thisWeek": "Deze week",
+    "thisMonth": "Deze maand",
+    "thisQuarter": "Dit kwartaal",
+    "thisYear": "Dit jaar",
+    "custom": "Aangepast bereik"
+  }
+}

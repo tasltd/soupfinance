@@ -1,0 +1,81 @@
+{
+  "title": "Betalingen",
+  "subtitle": "Volg inkomende en uitgaande betalingen",
+  "newPayment": "Nieuwe betaling",
+  "editPayment": "Betaling bewerken",
+  "paymentDetails": "Betalingsdetails",
+  "incoming": {
+    "title": "Inkomende betalingen",
+    "subtitle": "Betalingen ontvangen van klanten"
+  },
+  "outgoing": {
+    "title": "Uitgaande betalingen",
+    "subtitle": "Betalingen aan leveranciers"
+  },
+  "fields": {
+    "paymentNumber": "Betalingsnummer",
+    "paymentDate": "Betalingsdatum",
+    "paymentMethod": "Betaalmethode",
+    "reference": "Referentienummer",
+    "referencePlaceholder": "Chequenummer, transactie-ID, enz.",
+    "amount": "Bedrag",
+    "client": "Klant",
+    "vendor": "Leverancier",
+    "selectClient": "Selecteer een klant",
+    "selectVendor": "Selecteer een leverancier",
+    "invoice": "Factuur",
+    "bill": "Inkoopfactuur",
+    "selectInvoice": "Selecteer een factuur",
+    "selectBill": "Selecteer een inkoopfactuur",
+    "bankAccount": "Bankrekening",
+    "selectBankAccount": "Selecteer bankrekening",
+    "notes": "Notities",
+    "notesPlaceholder": "Aanvullende betalingsnotities..."
+  },
+  "methods": {
+    "cash": "Contant",
+    "check": "Cheque",
+    "bankTransfer": "Bankoverschrijving",
+    "creditCard": "Creditcard",
+    "debitCard": "Pinpas",
+    "wire": "Overboeking",
+    "ach": "Automatische incasso",
+    "other": "Overig"
+  },
+  "status": {
+    "pending": "In behandeling",
+    "completed": "Voltooid",
+    "failed": "Mislukt",
+    "cancelled": "Geannuleerd",
+    "refunded": "Terugbetaald"
+  },
+  "allocation": {
+    "title": "Betalingstoewijzing",
+    "allocateTo": "Toewijzen aan",
+    "amountToAllocate": "Toe te wijzen bedrag",
+    "remainingAmount": "Resterend bedrag",
+    "fullyAllocated": "Volledig toegewezen",
+    "partiallyAllocated": "Gedeeltelijk toegewezen",
+    "unallocated": "Niet toegewezen"
+  },
+  "filters": {
+    "all": "Alle betalingen",
+    "incoming": "Inkomend",
+    "outgoing": "Uitgaand",
+    "dateRange": "Datumbereik",
+    "method": "Betaalmethode",
+    "status": "Status"
+  },
+  "summary": {
+    "totalReceived": "Totaal ontvangen",
+    "totalPaid": "Totaal betaald",
+    "netCashFlow": "Netto cashflow",
+    "pendingPayments": "Betalingen in behandeling"
+  },
+  "messages": {
+    "created": "Betaling succesvol geregistreerd",
+    "updated": "Betaling succesvol bijgewerkt",
+    "deleted": "Betaling succesvol verwijderd",
+    "allocated": "Betaling succesvol toegewezen"
+  }
+}

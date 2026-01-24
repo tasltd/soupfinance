@@ -1,0 +1,42 @@
+{
+  "sidebar": {
+    "dashboard": "Dashboard",
+    "invoices": "Invoices",
+    "bills": "Bills",
+    "vendors": "Vendors",
+    "payments": "Payments",
+    "ledger": "Ledger",
+    "chartOfAccounts": "Chart of Accounts",
+    "transactions": "Transactions",
+    "accounting": "Accounting",
+    "journalEntries": "Journal Entries",
+    "vouchers": "Vouchers",
+    "reports": "Reports",
+    "settings": "Settings",
+    "help": "Help",
+    "logout": "Logout"
+  },
+  "header": {
+    "search": "Search...",
+    "notifications": "Notifications",
+    "profile": "Profile",
+    "settings": "Settings",
+    "darkMode": "Dark mode",
+    "lightMode": "Light mode",
+    "language": "Language"
+  },
+  "breadcrumb": {
+    "home": "Home",
+    "new": "New",
+    "edit": "Edit",
+    "view": "View",
+    "list": "List"
+  },
+  "onboarding": {
+    "title": "Onboarding",
+    "companyInfo": "Company Information",
+    "directors": "Directors",
+    "documents": "Documents",
+    "status": "KYC Status"
+  }
+}

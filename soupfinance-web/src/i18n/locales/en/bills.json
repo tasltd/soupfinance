@@ -1,0 +1,73 @@
+{
+  "title": "Bills",
+  "subtitle": "Manage vendor bills and track payments",
+  "newBill": "New Bill",
+  "editBill": "Edit Bill",
+  "billDetails": "Bill Details",
+  "fields": {
+    "billNumber": "Bill Number",
+    "vendor": "Vendor",
+    "selectVendor": "Select a vendor",
+    "billDate": "Bill Date",
+    "dueDate": "Due Date",
+    "status": "Status",
+    "subtotal": "Subtotal",
+    "taxAmount": "Tax Amount",
+    "discountAmount": "Discount",
+    "totalAmount": "Total Amount",
+    "amountPaid": "Amount Paid",
+    "amountDue": "Amount Due",
+    "notes": "Notes",
+    "notesPlaceholder": "Add notes about this bill...",
+    "terms": "Payment Terms",
+    "termsPlaceholder": "Payment terms..."
+  },
+  "lineItems": {
+    "title": "Line Items",
+    "description": "Description",
+    "quantity": "Qty",
+    "unitPrice": "Unit Price",
+    "taxRate": "Tax %",
+    "discount": "Discount %",
+    "amount": "Amount",
+    "addItem": "Add Line Item",
+    "removeItem": "Remove Item",
+    "noItems": "No line items added"
+  },
+  "actions": {
+    "markPaid": "Mark as Paid",
+    "recordPayment": "Record Payment",
+    "download": "Download PDF",
+    "duplicate": "Duplicate",
+    "void": "Void Bill"
+  },
+  "status": {
+    "draft": "Draft",
+    "received": "Received",
+    "partial": "Partially Paid",
+    "paid": "Paid",
+    "overdue": "Overdue",
+    "cancelled": "Cancelled"
+  },
+  "filters": {
+    "all": "All Bills",
+    "draft": "Drafts",
+    "received": "Received",
+    "paid": "Paid",
+    "overdue": "Overdue",
+    "dateRange": "Date Range"
+  },
+  "summary": {
+    "totalOutstanding": "Total Outstanding",
+    "totalOverdue": "Total Overdue",
+    "totalPaidThisMonth": "Paid This Month",
+    "billCount": "{{count}} bill",
+    "billCount_plural": "{{count}} bills"
+  },
+  "messages": {
+    "created": "Bill created successfully",
+    "updated": "Bill updated successfully",
+    "deleted": "Bill deleted successfully",
+    "paymentRecorded": "Payment recorded successfully"
+  }
+}

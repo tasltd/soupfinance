@@ -1,0 +1,103 @@
+{
+  "title": "Boekhouding",
+  "subtitle": "Beheer journaalposten, bonnen en transacties",
+  "journalEntry": {
+    "title": "Journaalpost",
+    "newEntry": "Nieuwe journaalpost",
+    "editEntry": "Journaalpost bewerken",
+    "entryNumber": "Postnummer",
+    "entryDate": "Datum",
+    "reference": "Referentie",
+    "description": "Omschrijving",
+    "descriptionPlaceholder": "Beschrijf het doel van deze post...",
+    "memo": "Memo",
+    "memoPlaceholder": "Aanvullende opmerkingen...",
+    "debitAccount": "Debetrekening",
+    "creditAccount": "Creditrekening",
+    "amount": "Bedrag",
+    "selectAccount": "Selecteer een rekening",
+    "addLine": "Regel toevoegen",
+    "removeLine": "Regel verwijderen",
+    "totalDebits": "Totaal debet",
+    "totalCredits": "Totaal credit",
+    "difference": "Verschil",
+    "balanced": "In balans",
+    "unbalanced": "Niet in balans",
+    "postEntry": "Boeken",
+    "saveDraft": "Opslaan als concept"
+  },
+  "voucher": {
+    "title": "Bon",
+    "newVoucher": "Nieuwe bon",
+    "editVoucher": "Bon bewerken",
+    "voucherNumber": "Bonnummer",
+    "voucherDate": "Bondatum",
+    "voucherType": "Bontype",
+    "payee": "Begunstigde",
+    "payeePlaceholder": "Voer naam begunstigde in",
+    "amount": "Bedrag",
+    "description": "Omschrijving",
+    "attachments": "Bijlagen",
+    "addAttachment": "Bijlage toevoegen",
+    "approvedBy": "Goedgekeurd door",
+    "approvalDate": "Goedkeuringsdatum",
+    "types": {
+      "payment": "Betaalbon",
+      "receipt": "Ontvangstbon",
+      "journal": "Journaalbon",
+      "contra": "Tegenbon",
+      "debitNote": "Debetnota",
+      "creditNote": "Creditnota"
+    },
+    "status": {
+      "draft": "Concept",
+      "pending": "In afwachting van goedkeuring",
+      "approved": "Goedgekeurd",
+      "rejected": "Afgewezen",
+      "posted": "Geboekt",
+      "cancelled": "Geannuleerd"
+    }
+  },
+  "transactions": {
+    "title": "Transactieregister",
+    "subtitle": "Bekijk alle boekhoukundige transacties",
+    "transactionId": "Transactie-ID",
+    "date": "Datum",
+    "type": "Type",
+    "account": "Rekening",
+    "debit": "Debet",
+    "credit": "Credit",
+    "balance": "Saldo",
+    "reference": "Referentie",
+    "description": "Omschrijving",
+    "postedBy": "Geboekt door",
+    "filters": {
+      "all": "Alle transacties",
+      "dateRange": "Datumbereik",
+      "account": "Rekening",
+      "type": "Transactietype",
+      "minAmount": "Min bedrag",
+      "maxAmount": "Max bedrag"
+    },
+    "types": {
+      "invoice": "Factuur",
+      "bill": "Inkoopfactuur",
+      "payment": "Betaling",
+      "receipt": "Ontvangst",
+      "journal": "Journaalpost",
+      "adjustment": "Correctie"
+    }
+  },
+  "messages": {
+    "entryCreated": "Journaalpost succesvol aangemaakt",
+    "entryUpdated": "Journaalpost succesvol bijgewerkt",
+    "entryPosted": "Journaalpost succesvol geboekt",
+    "entryDeleted": "Journaalpost succesvol verwijderd",
+    "voucherCreated": "Bon succesvol aangemaakt",
+    "voucherUpdated": "Bon succesvol bijgewerkt",
+    "voucherApproved": "Bon succesvol goedgekeurd",
+    "voucherRejected": "Bon afgewezen",
+    "mustBalance": "Debet en credit moeten gelijk zijn",
+    "atLeastTwoLines": "Journaalpost moet minimaal twee regels hebben"
+  }
+}

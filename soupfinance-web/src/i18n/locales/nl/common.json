@@ -1,0 +1,85 @@
+{
+  "actions": {
+    "save": "Opslaan",
+    "cancel": "Annuleren",
+    "delete": "Verwijderen",
+    "edit": "Bewerken",
+    "create": "Aanmaken",
+    "submit": "Verzenden",
+    "confirm": "Bevestigen",
+    "back": "Terug",
+    "next": "Volgende",
+    "close": "Sluiten",
+    "search": "Zoeken",
+    "filter": "Filteren",
+    "export": "Exporteren",
+    "import": "Importeren",
+    "download": "Downloaden",
+    "upload": "Uploaden",
+    "refresh": "Vernieuwen",
+    "view": "Bekijken",
+    "print": "Afdrukken",
+    "send": "Versturen",
+    "approve": "Goedkeuren",
+    "reject": "Afwijzen"
+  },
+  "status": {
+    "active": "Actief",
+    "inactive": "Inactief",
+    "pending": "In behandeling",
+    "approved": "Goedgekeurd",
+    "rejected": "Afgewezen",
+    "draft": "Concept",
+    "sent": "Verzonden",
+    "paid": "Betaald",
+    "overdue": "Te laat",
+    "cancelled": "Geannuleerd",
+    "partial": "Gedeeltelijk"
+  },
+  "messages": {
+    "loading": "Laden...",
+    "saving": "Opslaan...",
+    "saved": "Succesvol opgeslagen",
+    "deleted": "Succesvol verwijderd",
+    "error": "Er is een fout opgetreden",
+    "noData": "Geen gegevens beschikbaar",
+    "noResults": "Geen resultaten gevonden",
+    "confirmDelete": "Weet u zeker dat u dit item wilt verwijderen?",
+    "unsavedChanges": "U heeft niet-opgeslagen wijzigingen. Weet u zeker dat u wilt vertrekken?"
+  },
+  "validation": {
+    "required": "Dit veld is verplicht",
+    "email": "Voer een geldig e-mailadres in",
+    "phone": "Voer een geldig telefoonnummer in",
+    "minLength": "Moet minimaal {{count}} tekens bevatten",
+    "maxLength": "Mag niet meer dan {{count}} tekens bevatten",
+    "numeric": "Moet een nummer zijn",
+    "positive": "Moet een positief nummer zijn",
+    "date": "Voer een geldige datum in"
+  },
+  "pagination": {
+    "showing": "Toont {{from}} tot {{to}} van {{total}} resultaten",
+    "previous": "Vorige",
+    "next": "Volgende",
+    "first": "Eerste",
+    "last": "Laatste",
+    "page": "Pagina",
+    "of": "van"
+  },
+  "dateTime": {
+    "today": "Vandaag",
+    "yesterday": "Gisteren",
+    "tomorrow": "Morgen",
+    "thisWeek": "Deze week",
+    "lastWeek": "Vorige week",
+    "thisMonth": "Deze maand",
+    "lastMonth": "Vorige maand",
+    "thisYear": "Dit jaar",
+    "lastYear": "Vorig jaar",
+    "custom": "Aangepaste periode"
+  },
+  "currency": {
+    "symbol": "€",
+    "code": "EUR"
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "title": "Dashboard",
+  "subtitle": "Financial overview",
+  "welcome": "Welcome back, {{name}}",
+  "overview": {
+    "title": "Financial Overview",
+    "period": "This Month"
+  },
+  "stats": {
+    "totalRevenue": "Total Revenue",
+    "totalExpenses": "Total Expenses",
+    "netIncome": "Net Income",
+    "cashBalance": "Cash Balance",
+    "accountsReceivable": "Accounts Receivable",
+    "accountsPayable": "Accounts Payable",
+    "invoicesDue": "Invoices Due",
+    "billsDue": "Bills Due"
+  },
+  "charts": {
+    "revenueExpenses": "Revenue vs Expenses",
+    "cashFlow": "Cash Flow",
+    "incomeBreakdown": "Income Breakdown",
+    "expenseBreakdown": "Expense Breakdown",
+    "monthlyTrend": "Monthly Trend",
+    "topClients": "Top Clients",
+    "topVendors": "Top Vendors"
+  },
+  "recentActivity": {
+    "title": "Recent Activity",
+    "invoices": "Recent Invoices",
+    "bills": "Recent Bills",
+    "payments": "Recent Payments",
+    "viewAll": "View All"
+  },
+  "quickActions": {
+    "title": "Quick Actions",
+    "newInvoice": "Create Invoice",
+    "newBill": "Enter Bill",
+    "recordPayment": "Record Payment",
+    "newJournalEntry": "Journal Entry"
+  },
+  "alerts": {
+    "title": "Alerts",
+    "overdueInvoices": "{{count}} overdue invoice",
+    "overdueInvoices_plural": "{{count}} overdue invoices",
+    "overdueBills": "{{count}} overdue bill",
+    "overdueBills_plural": "{{count}} overdue bills",
+    "lowCashBalance": "Low cash balance",
+    "pendingApprovals": "{{count}} pending approval",
+    "pendingApprovals_plural": "{{count}} pending approvals"
+  },
+  "periods": {
+    "today": "Today",
+    "thisWeek": "This Week",
+    "thisMonth": "This Month",
+    "thisQuarter": "This Quarter",
+    "thisYear": "This Year",
+    "custom": "Custom Range"
+  }
+}

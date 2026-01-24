@@ -1,0 +1,42 @@
+{
+  "sidebar": {
+    "dashboard": "Dashboard",
+    "invoices": "Facturen",
+    "bills": "Rekeningen",
+    "vendors": "Leveranciers",
+    "payments": "Betalingen",
+    "ledger": "Grootboek",
+    "chartOfAccounts": "Rekeningschema",
+    "transactions": "Transacties",
+    "accounting": "Boekhouding",
+    "journalEntries": "Journaalposten",
+    "vouchers": "Bonnen",
+    "reports": "Rapporten",
+    "settings": "Instellingen",
+    "help": "Hulp",
+    "logout": "Uitloggen"
+  },
+  "header": {
+    "search": "Zoeken...",
+    "notifications": "Meldingen",
+    "profile": "Profiel",
+    "settings": "Instellingen",
+    "darkMode": "Donkere modus",
+    "lightMode": "Lichte modus",
+    "language": "Taal"
+  },
+  "breadcrumb": {
+    "home": "Home",
+    "new": "Nieuw",
+    "edit": "Bewerken",
+    "view": "Bekijken",
+    "list": "Lijst"
+  },
+  "onboarding": {
+    "title": "Onboarding",
+    "companyInfo": "Bedrijfsinformatie",
+    "directors": "Directeuren",
+    "documents": "Documenten",
+    "status": "KYC-status"
+  }
+}

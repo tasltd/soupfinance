@@ -1,0 +1,76 @@
+{
+  "title": "Facturen",
+  "subtitle": "Beheer uw facturen en volg betalingen",
+  "newInvoice": "Nieuwe factuur",
+  "editInvoice": "Factuur bewerken",
+  "invoiceDetails": "Factuurdetails",
+  "fields": {
+    "invoiceNumber": "Factuurnummer",
+    "client": "Klant",
+    "selectClient": "Selecteer een klant",
+    "issueDate": "Factuurdatum",
+    "dueDate": "Vervaldatum",
+    "status": "Status",
+    "subtotal": "Subtotaal",
+    "taxAmount": "BTW-bedrag",
+    "discountAmount": "Korting",
+    "totalAmount": "Totaalbedrag",
+    "amountPaid": "Betaald bedrag",
+    "amountDue": "Openstaand bedrag",
+    "notes": "Notities",
+    "notesPlaceholder": "Voeg notities of betalingsinstructies toe...",
+    "terms": "Algemene voorwaarden",
+    "termsPlaceholder": "Betalingsvoorwaarden..."
+  },
+  "lineItems": {
+    "title": "Factuurregels",
+    "description": "Omschrijving",
+    "quantity": "Aantal",
+    "unitPrice": "Stukprijs",
+    "taxRate": "BTW %",
+    "discount": "Korting %",
+    "amount": "Bedrag",
+    "addItem": "Regel toevoegen",
+    "removeItem": "Regel verwijderen",
+    "noItems": "Geen regels toegevoegd"
+  },
+  "actions": {
+    "send": "Factuur versturen",
+    "markPaid": "Markeren als betaald",
+    "recordPayment": "Betaling registreren",
+    "download": "PDF downloaden",
+    "duplicate": "Dupliceren",
+    "void": "Factuur annuleren"
+  },
+  "status": {
+    "draft": "Concept",
+    "sent": "Verzonden",
+    "viewed": "Bekeken",
+    "partial": "Gedeeltelijk betaald",
+    "paid": "Betaald",
+    "overdue": "Te laat",
+    "cancelled": "Geannuleerd"
+  },
+  "filters": {
+    "all": "Alle facturen",
+    "draft": "Concepten",
+    "sent": "Verzonden",
+    "paid": "Betaald",
+    "overdue": "Te laat",
+    "dateRange": "Periode"
+  },
+  "summary": {
+    "totalOutstanding": "Totaal openstaand",
+    "totalOverdue": "Totaal te laat",
+    "totalPaid": "Totaal betaald deze maand",
+    "invoiceCount": "{{count}} factuur",
+    "invoiceCount_plural": "{{count}} facturen"
+  },
+  "messages": {
+    "created": "Factuur succesvol aangemaakt",
+    "updated": "Factuur succesvol bijgewerkt",
+    "sent": "Factuur succesvol verzonden",
+    "deleted": "Factuur succesvol verwijderd",
+    "paymentRecorded": "Betaling succesvol geregistreerd"
+  }
+}

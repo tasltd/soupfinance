@@ -1,0 +1,76 @@
+{
+  "title": "Invoices",
+  "subtitle": "Manage your invoices and track payments",
+  "newInvoice": "New Invoice",
+  "editInvoice": "Edit Invoice",
+  "invoiceDetails": "Invoice Details",
+  "fields": {
+    "invoiceNumber": "Invoice Number",
+    "client": "Client",
+    "selectClient": "Select a client",
+    "issueDate": "Issue Date",
+    "dueDate": "Due Date",
+    "status": "Status",
+    "subtotal": "Subtotal",
+    "taxAmount": "Tax Amount",
+    "discountAmount": "Discount",
+    "totalAmount": "Total Amount",
+    "amountPaid": "Amount Paid",
+    "amountDue": "Amount Due",
+    "notes": "Notes",
+    "notesPlaceholder": "Add any notes or payment instructions...",
+    "terms": "Terms & Conditions",
+    "termsPlaceholder": "Payment terms and conditions..."
+  },
+  "lineItems": {
+    "title": "Line Items",
+    "description": "Description",
+    "quantity": "Qty",
+    "unitPrice": "Unit Price",
+    "taxRate": "Tax %",
+    "discount": "Discount %",
+    "amount": "Amount",
+    "addItem": "Add Item",
+    "removeItem": "Remove Item",
+    "noItems": "No items added yet"
+  },
+  "actions": {
+    "send": "Send Invoice",
+    "markPaid": "Mark as Paid",
+    "recordPayment": "Record Payment",
+    "download": "Download PDF",
+    "duplicate": "Duplicate",
+    "void": "Void Invoice"
+  },
+  "status": {
+    "draft": "Draft",
+    "sent": "Sent",
+    "viewed": "Viewed",
+    "partial": "Partially Paid",
+    "paid": "Paid",
+    "overdue": "Overdue",
+    "cancelled": "Cancelled"
+  },
+  "filters": {
+    "all": "All Invoices",
+    "draft": "Drafts",
+    "sent": "Sent",
+    "paid": "Paid",
+    "overdue": "Overdue",
+    "dateRange": "Date Range"
+  },
+  "summary": {
+    "totalOutstanding": "Total Outstanding",
+    "totalOverdue": "Total Overdue",
+    "totalPaid": "Total Paid This Month",
+    "invoiceCount": "{{count}} invoice",
+    "invoiceCount_plural": "{{count}} invoices"
+  },
+  "messages": {
+    "created": "Invoice created successfully",
+    "updated": "Invoice updated successfully",
+    "sent": "Invoice sent successfully",
+    "deleted": "Invoice deleted successfully",
+    "paymentRecorded": "Payment recorded successfully"
+  }
+}

@@ -1,0 +1,79 @@
+{
+  "title": "Grand livre",
+  "subtitle": "Plan comptable et transactions du grand livre",
+  "chartOfAccounts": {
+    "title": "Plan comptable",
+    "subtitle": "Gérer la structure de vos comptes",
+    "newAccount": "Nouveau compte",
+    "editAccount": "Modifier le compte",
+    "accountCode": "Code du compte",
+    "accountName": "Nom du compte",
+    "accountType": "Type de compte",
+    "parentAccount": "Compte parent",
+    "selectParent": "Sélectionner un compte parent (optionnel)",
+    "description": "Description",
+    "descriptionPlaceholder": "Décrivez l'objet de ce compte...",
+    "openingBalance": "Solde d'ouverture",
+    "currentBalance": "Solde actuel",
+    "isActive": "Actif",
+    "isSystemAccount": "Compte système",
+    "cannotDelete": "Les comptes système ne peuvent pas être supprimés"
+  },
+  "accountTypes": {
+    "asset": "Actif",
+    "liability": "Passif",
+    "equity": "Capitaux propres",
+    "revenue": "Produits",
+    "expense": "Charges"
+  },
+  "accountGroups": {
+    "currentAssets": "Actifs circulants",
+    "fixedAssets": "Immobilisations",
+    "currentLiabilities": "Dettes à court terme",
+    "longTermLiabilities": "Dettes à long terme",
+    "ownersEquity": "Capitaux propres",
+    "operatingRevenue": "Produits d'exploitation",
+    "otherRevenue": "Autres produits",
+    "operatingExpenses": "Charges d'exploitation",
+    "otherExpenses": "Autres charges"
+  },
+  "transactions": {
+    "title": "Transactions du grand livre",
+    "subtitle": "Voir l'activité des comptes",
+    "transactionDate": "Date",
+    "description": "Description",
+    "debit": "Débit",
+    "credit": "Crédit",
+    "balance": "Solde",
+    "reference": "Référence",
+    "source": "Source",
+    "noTransactions": "Aucune transaction trouvée"
+  },
+  "filters": {
+    "all": "Tous les comptes",
+    "active": "Actifs uniquement",
+    "inactive": "Inactifs uniquement",
+    "accountType": "Type de compte",
+    "search": "Rechercher des comptes..."
+  },
+  "actions": {
+    "viewTransactions": "Voir les transactions",
+    "deactivate": "Désactiver",
+    "activate": "Activer"
+  },
+  "summary": {
+    "totalAssets": "Total des actifs",
+    "totalLiabilities": "Total du passif",
+    "totalEquity": "Total des capitaux propres",
+    "accountCount": "{{count}} compte",
+    "accountCount_plural": "{{count}} comptes"
+  },
+  "messages": {
+    "accountCreated": "Compte créé avec succès",
+    "accountUpdated": "Compte mis à jour avec succès",
+    "accountDeleted": "Compte supprimé avec succès",
+    "accountDeactivated": "Compte désactivé",
+    "accountActivated": "Compte activé",
+    "hasTransactions": "Impossible de supprimer un compte avec des transactions existantes"
+  }
+}

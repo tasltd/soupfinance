@@ -1,0 +1,84 @@
+{
+  "title": "Rapports",
+  "subtitle": "Rapports financiers et analyses",
+  "types": {
+    "profitLoss": "Compte de résultat",
+    "balanceSheet": "Bilan",
+    "cashFlow": "Tableau des flux de trésorerie",
+    "trialBalance": "Balance comptable",
+    "aging": "Rapports d'ancienneté",
+    "arAging": "Ancienneté des créances",
+    "apAging": "Ancienneté des dettes"
+  },
+  "periods": {
+    "thisMonth": "Ce mois-ci",
+    "lastMonth": "Mois dernier",
+    "thisQuarter": "Ce trimestre",
+    "lastQuarter": "Trimestre dernier",
+    "thisYear": "Cette année",
+    "lastYear": "Année dernière",
+    "custom": "Période personnalisée"
+  },
+  "profitLoss": {
+    "title": "Compte de résultat",
+    "income": "Produits",
+    "totalIncome": "Total des produits",
+    "expenses": "Charges",
+    "totalExpenses": "Total des charges",
+    "grossProfit": "Marge brute",
+    "netProfit": "Résultat net",
+    "netLoss": "Perte nette"
+  },
+  "balanceSheet": {
+    "title": "Bilan",
+    "asOf": "Au {{date}}",
+    "assets": "Actif",
+    "currentAssets": "Actif circulant",
+    "fixedAssets": "Immobilisations",
+    "totalAssets": "Total actif",
+    "liabilities": "Passif",
+    "currentLiabilities": "Dettes à court terme",
+    "longTermLiabilities": "Dettes à long terme",
+    "totalLiabilities": "Total passif",
+    "equity": "Capitaux propres",
+    "totalEquity": "Total capitaux propres",
+    "liabilitiesAndEquity": "Total passif et capitaux propres"
+  },
+  "cashFlow": {
+    "title": "Tableau des flux de trésorerie",
+    "operatingActivities": "Activités opérationnelles",
+    "investingActivities": "Activités d'investissement",
+    "financingActivities": "Activités de financement",
+    "netCashFlow": "Flux net de trésorerie",
+    "beginningBalance": "Trésorerie de début",
+    "endingBalance": "Trésorerie de fin"
+  },
+  "trialBalance": {
+    "title": "Balance comptable",
+    "account": "Compte",
+    "debit": "Débit",
+    "credit": "Crédit",
+    "totalDebits": "Total débit",
+    "totalCredits": "Total crédit",
+    "balanced": "Équilibrée",
+    "unbalanced": "Non équilibrée"
+  },
+  "aging": {
+    "title": "Rapport d'ancienneté",
+    "current": "Courant",
+    "days30": "1-30 jours",
+    "days60": "31-60 jours",
+    "days90": "61-90 jours",
+    "over90": "Plus de 90 jours",
+    "total": "Total"
+  },
+  "actions": {
+    "generate": "Générer le rapport",
+    "export": "Exporter",
+    "exportPdf": "Exporter en PDF",
+    "exportExcel": "Exporter en Excel",
+    "exportCsv": "Exporter en CSV",
+    "print": "Imprimer",
+    "refresh": "Actualiser les données"
+  }
+}

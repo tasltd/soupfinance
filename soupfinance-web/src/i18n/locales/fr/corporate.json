@@ -1,0 +1,144 @@
+{
+  "title": "Inscription entreprise",
+  "subtitle": "Complétez l'inscription de votre société",
+  "registration": {
+    "title": "Enregistrer votre entreprise",
+    "subtitle": "Créez un compte pour votre entreprise",
+    "companyName": "Nom de l'entreprise",
+    "companyNamePlaceholder": "Saisissez le nom de votre entreprise",
+    "registrationNumber": "Numéro SIRET",
+    "registrationNumberPlaceholder": "Numéro d'immatriculation de l'entreprise",
+    "email": "E-mail professionnel",
+    "emailPlaceholder": "entreprise@exemple.fr",
+    "phone": "Téléphone professionnel",
+    "phonePlaceholder": "+33 1 23 45 67 89",
+    "password": "Mot de passe",
+    "confirmPassword": "Confirmer le mot de passe",
+    "agreeTerms": "J'accepte les",
+    "termsOfService": "Conditions d'utilisation",
+    "and": "et la",
+    "privacyPolicy": "Politique de confidentialité",
+    "register": "S'inscrire",
+    "registering": "Inscription en cours...",
+    "haveAccount": "Vous avez déjà un compte ?",
+    "signIn": "Se connecter"
+  },
+  "companyInfo": {
+    "title": "Informations sur l'entreprise",
+    "subtitle": "Parlez-nous de votre entreprise",
+    "legalName": "Dénomination sociale",
+    "tradingName": "Nom commercial",
+    "businessType": "Forme juridique",
+    "industry": "Secteur d'activité",
+    "dateOfIncorporation": "Date de création",
+    "taxId": "Numéro de TVA / SIRET",
+    "website": "Site web",
+    "description": "Description de l'activité",
+    "descriptionPlaceholder": "Décrivez les activités de votre entreprise...",
+    "businessTypes": {
+      "soleProprietorship": "Entreprise individuelle",
+      "partnership": "Société de personnes",
+      "llc": "SARL",
+      "corporation": "SA / SAS",
+      "nonprofit": "Association à but non lucratif"
+    }
+  },
+  "address": {
+    "title": "Adresse de l'entreprise",
+    "registered": "Siège social",
+    "operating": "Adresse d'exploitation",
+    "sameAsRegistered": "Identique au siège social",
+    "street": "Adresse",
+    "city": "Ville",
+    "state": "Région",
+    "postalCode": "Code postal",
+    "country": "Pays"
+  },
+  "directors": {
+    "title": "Dirigeants et mandataires",
+    "subtitle": "Ajoutez les dirigeants et mandataires de l'entreprise",
+    "addDirector": "Ajouter un dirigeant",
+    "editDirector": "Modifier le dirigeant",
+    "removeDirector": "Supprimer le dirigeant",
+    "firstName": "Prénom",
+    "lastName": "Nom",
+    "email": "E-mail",
+    "phone": "Téléphone",
+    "position": "Fonction",
+    "dateOfBirth": "Date de naissance",
+    "nationality": "Nationalité",
+    "idNumber": "Numéro de pièce d'identité",
+    "idType": "Type de pièce d'identité",
+    "ownershipPercent": "Part de capital %",
+    "isPrimaryContact": "Contact principal",
+    "positions": {
+      "director": "Gérant / Directeur",
+      "ceo": "Président-directeur général",
+      "cfo": "Directeur financier",
+      "secretary": "Secrétaire général",
+      "shareholder": "Actionnaire",
+      "beneficialOwner": "Bénéficiaire effectif"
+    },
+    "idTypes": {
+      "passport": "Passeport",
+      "nationalId": "Carte nationale d'identité",
+      "driversLicense": "Permis de conduire"
+    }
+  },
+  "documents": {
+    "title": "Documents",
+    "subtitle": "Téléchargez les documents de vérification requis",
+    "required": "Documents obligatoires",
+    "optional": "Documents facultatifs",
+    "upload": "Télécharger le document",
+    "replace": "Remplacer",
+    "remove": "Supprimer",
+    "uploaded": "Téléchargé",
+    "pending": "En attente de téléchargement",
+    "verified": "Vérifié",
+    "rejected": "Rejeté",
+    "maxSize": "Taille maximale : {{size}} Mo",
+    "allowedTypes": "Types autorisés : {{types}}",
+    "types": {
+      "certificateOfIncorporation": "Extrait Kbis",
+      "articlesOfAssociation": "Statuts de la société",
+      "proofOfAddress": "Justificatif de domicile",
+      "taxCertificate": "Attestation fiscale",
+      "bankStatement": "Relevé bancaire",
+      "directorId": "Pièce d'identité du dirigeant",
+      "shareholderRegister": "Registre des actionnaires"
+    }
+  },
+  "status": {
+    "title": "Statut de la demande",
+    "subtitle": "Suivez l'avancement de votre inscription",
+    "steps": {
+      "registration": "Inscription",
+      "companyInfo": "Informations sur l'entreprise",
+      "directors": "Dirigeants",
+      "documents": "Documents",
+      "review": "En cours d'examen",
+      "approved": "Approuvé"
+    },
+    "statuses": {
+      "notStarted": "Non commencé",
+      "inProgress": "En cours",
+      "completed": "Terminé",
+      "pendingReview": "En attente d'examen",
+      "approved": "Approuvé",
+      "rejected": "Rejeté",
+      "requiresInfo": "Informations complémentaires requises"
+    },
+    "estimatedTime": "Délai d'examen estimé : {{days}} jours ouvrés",
+    "contactSupport": "Contacter le support"
+  },
+  "messages": {
+    "saved": "Informations enregistrées avec succès",
+    "submitted": "Demande soumise pour examen",
+    "documentUploaded": "Document téléchargé avec succès",
+    "documentRemoved": "Document supprimé",
+    "directorAdded": "Dirigeant ajouté avec succès",
+    "directorUpdated": "Dirigeant mis à jour avec succès",
+    "directorRemoved": "Dirigeant supprimé"
+  }
+}

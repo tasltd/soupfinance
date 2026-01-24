@@ -1,0 +1,71 @@
+{
+  "title": "Leveranciers",
+  "subtitle": "Beheer uw leveranciers en toeleveranciers",
+  "newVendor": "Nieuwe leverancier",
+  "editVendor": "Leverancier bewerken",
+  "vendorDetails": "Leveranciersdetails",
+  "fields": {
+    "vendorCode": "Leverancierscode",
+    "companyName": "Bedrijfsnaam",
+    "contactName": "Contactpersoon",
+    "email": "E-mail",
+    "emailPlaceholder": "leverancier@bedrijf.nl",
+    "phone": "Telefoon",
+    "phonePlaceholder": "+31 (0)20 123 4567",
+    "website": "Website",
+    "websitePlaceholder": "https://www.voorbeeld.nl",
+    "taxId": "BTW-nummer / KvK-nummer",
+    "paymentTerms": "Betalingsvoorwaarden",
+    "currency": "Valuta",
+    "notes": "Notities",
+    "notesPlaceholder": "Aanvullende notities over deze leverancier..."
+  },
+  "address": {
+    "title": "Adres",
+    "street": "Straatnaam",
+    "streetPlaceholder": "Hoofdstraat 123",
+    "city": "Stad",
+    "state": "Provincie",
+    "postalCode": "Postcode",
+    "country": "Land"
+  },
+  "banking": {
+    "title": "Bankgegevens",
+    "bankName": "Banknaam",
+    "accountNumber": "Rekeningnummer",
+    "routingNumber": "Bankcode",
+    "iban": "IBAN",
+    "swift": "SWIFT / BIC-code"
+  },
+  "status": {
+    "active": "Actief",
+    "inactive": "Inactief",
+    "blocked": "Geblokkeerd"
+  },
+  "filters": {
+    "all": "Alle leveranciers",
+    "active": "Actief",
+    "inactive": "Inactief",
+    "search": "Leveranciers zoeken..."
+  },
+  "tabs": {
+    "details": "Details",
+    "bills": "Facturen",
+    "payments": "Betalingen",
+    "history": "Geschiedenis"
+  },
+  "summary": {
+    "totalBills": "Totaal facturen",
+    "outstandingAmount": "Openstaand",
+    "paidAmount": "Betaald",
+    "vendorCount": "{{count}} leverancier",
+    "vendorCount_plural": "{{count}} leveranciers"
+  },
+  "messages": {
+    "created": "Leverancier succesvol aangemaakt",
+    "updated": "Leverancier succesvol bijgewerkt",
+    "deleted": "Leverancier succesvol verwijderd",
+    "deactivated": "Leverancier gedeactiveerd",
+    "activated": "Leverancier geactiveerd"
+  }
+}

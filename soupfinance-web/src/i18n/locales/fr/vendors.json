@@ -1,0 +1,71 @@
+{
+  "title": "Fournisseurs",
+  "subtitle": "Gérer vos fournisseurs et prestataires",
+  "newVendor": "Nouveau fournisseur",
+  "editVendor": "Modifier le fournisseur",
+  "vendorDetails": "Détails du fournisseur",
+  "fields": {
+    "vendorCode": "Code fournisseur",
+    "companyName": "Raison sociale",
+    "contactName": "Nom du contact",
+    "email": "E-mail",
+    "emailPlaceholder": "fournisseur@entreprise.fr",
+    "phone": "Téléphone",
+    "phonePlaceholder": "+33 1 23 45 67 89",
+    "website": "Site web",
+    "websitePlaceholder": "https://www.exemple.fr",
+    "taxId": "Numéro de TVA / SIRET",
+    "paymentTerms": "Conditions de paiement",
+    "currency": "Devise",
+    "notes": "Notes",
+    "notesPlaceholder": "Notes supplémentaires sur ce fournisseur..."
+  },
+  "address": {
+    "title": "Adresse",
+    "street": "Adresse",
+    "streetPlaceholder": "123 Rue Principale",
+    "city": "Ville",
+    "state": "Région",
+    "postalCode": "Code postal",
+    "country": "Pays"
+  },
+  "banking": {
+    "title": "Informations bancaires",
+    "bankName": "Nom de la banque",
+    "accountNumber": "Numéro de compte",
+    "routingNumber": "Code banque",
+    "iban": "IBAN",
+    "swift": "Code SWIFT / BIC"
+  },
+  "status": {
+    "active": "Actif",
+    "inactive": "Inactif",
+    "blocked": "Bloqué"
+  },
+  "filters": {
+    "all": "Tous les fournisseurs",
+    "active": "Actifs",
+    "inactive": "Inactifs",
+    "search": "Rechercher des fournisseurs..."
+  },
+  "tabs": {
+    "details": "Détails",
+    "bills": "Factures",
+    "payments": "Paiements",
+    "history": "Historique"
+  },
+  "summary": {
+    "totalBills": "Total des factures",
+    "outstandingAmount": "En cours",
+    "paidAmount": "Payé",
+    "vendorCount": "{{count}} fournisseur",
+    "vendorCount_plural": "{{count}} fournisseurs"
+  },
+  "messages": {
+    "created": "Fournisseur créé avec succès",
+    "updated": "Fournisseur mis à jour avec succès",
+    "deleted": "Fournisseur supprimé avec succès",
+    "deactivated": "Fournisseur désactivé",
+    "activated": "Fournisseur activé"
+  }
+}

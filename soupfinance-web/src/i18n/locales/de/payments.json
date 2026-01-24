@@ -1,0 +1,81 @@
+{
+  "title": "Zahlungen",
+  "subtitle": "Ein- und Ausgangszahlungen verfolgen",
+  "newPayment": "Neue Zahlung",
+  "editPayment": "Zahlung bearbeiten",
+  "paymentDetails": "Zahlungsdetails",
+  "incoming": {
+    "title": "Eingangszahlungen",
+    "subtitle": "Von Kunden erhaltene Zahlungen"
+  },
+  "outgoing": {
+    "title": "Ausgangszahlungen",
+    "subtitle": "An Lieferanten geleistete Zahlungen"
+  },
+  "fields": {
+    "paymentNumber": "Zahlungsnummer",
+    "paymentDate": "Zahlungsdatum",
+    "paymentMethod": "Zahlungsmethode",
+    "reference": "Referenznummer",
+    "referencePlaceholder": "Schecknummer, Transaktions-ID usw.",
+    "amount": "Betrag",
+    "client": "Kunde",
+    "vendor": "Lieferant",
+    "selectClient": "Kunde auswählen",
+    "selectVendor": "Lieferant auswählen",
+    "invoice": "Rechnung",
+    "bill": "Eingangsrechnung",
+    "selectInvoice": "Rechnung auswählen",
+    "selectBill": "Eingangsrechnung auswählen",
+    "bankAccount": "Bankkonto",
+    "selectBankAccount": "Bankkonto auswählen",
+    "notes": "Notizen",
+    "notesPlaceholder": "Zusätzliche Zahlungshinweise..."
+  },
+  "methods": {
+    "cash": "Bargeld",
+    "check": "Scheck",
+    "bankTransfer": "Überweisung",
+    "creditCard": "Kreditkarte",
+    "debitCard": "Debitkarte",
+    "wire": "Banküberweisung",
+    "ach": "Lastschrift",
+    "other": "Sonstige"
+  },
+  "status": {
+    "pending": "Ausstehend",
+    "completed": "Abgeschlossen",
+    "failed": "Fehlgeschlagen",
+    "cancelled": "Storniert",
+    "refunded": "Erstattet"
+  },
+  "allocation": {
+    "title": "Zahlungszuordnung",
+    "allocateTo": "Zuordnen zu",
+    "amountToAllocate": "Zuzuordnender Betrag",
+    "remainingAmount": "Restbetrag",
+    "fullyAllocated": "Vollständig zugeordnet",
+    "partiallyAllocated": "Teilweise zugeordnet",
+    "unallocated": "Nicht zugeordnet"
+  },
+  "filters": {
+    "all": "Alle Zahlungen",
+    "incoming": "Eingang",
+    "outgoing": "Ausgang",
+    "dateRange": "Zeitraum",
+    "method": "Zahlungsmethode",
+    "status": "Status"
+  },
+  "summary": {
+    "totalReceived": "Gesamt erhalten",
+    "totalPaid": "Gesamt bezahlt",
+    "netCashFlow": "Netto-Cashflow",
+    "pendingPayments": "Ausstehende Zahlungen"
+  },
+  "messages": {
+    "created": "Zahlung erfolgreich erfasst",
+    "updated": "Zahlung erfolgreich aktualisiert",
+    "deleted": "Zahlung erfolgreich gelöscht",
+    "allocated": "Zahlung erfolgreich zugeordnet"
+  }
+}

@@ -1,0 +1,103 @@
+{
+  "title": "Comptabilité",
+  "subtitle": "Gérer les écritures comptables, bons et transactions",
+  "journalEntry": {
+    "title": "Écriture comptable",
+    "newEntry": "Nouvelle écriture",
+    "editEntry": "Modifier l'écriture",
+    "entryNumber": "Numéro d'écriture",
+    "entryDate": "Date de l'écriture",
+    "reference": "Référence",
+    "description": "Description",
+    "descriptionPlaceholder": "Décrivez l'objet de cette écriture...",
+    "memo": "Mémo",
+    "memoPlaceholder": "Notes supplémentaires...",
+    "debitAccount": "Compte débit",
+    "creditAccount": "Compte crédit",
+    "amount": "Montant",
+    "selectAccount": "Sélectionner un compte",
+    "addLine": "Ajouter une ligne",
+    "removeLine": "Supprimer la ligne",
+    "totalDebits": "Total des débits",
+    "totalCredits": "Total des crédits",
+    "difference": "Différence",
+    "balanced": "Équilibré",
+    "unbalanced": "Non équilibré",
+    "postEntry": "Comptabiliser",
+    "saveDraft": "Enregistrer comme brouillon"
+  },
+  "voucher": {
+    "title": "Bon",
+    "newVoucher": "Nouveau bon",
+    "editVoucher": "Modifier le bon",
+    "voucherNumber": "Numéro de bon",
+    "voucherDate": "Date du bon",
+    "voucherType": "Type de bon",
+    "payee": "Bénéficiaire",
+    "payeePlaceholder": "Saisir le nom du bénéficiaire",
+    "amount": "Montant",
+    "description": "Description",
+    "attachments": "Pièces jointes",
+    "addAttachment": "Ajouter une pièce jointe",
+    "approvedBy": "Approuvé par",
+    "approvalDate": "Date d'approbation",
+    "types": {
+      "payment": "Bon de paiement",
+      "receipt": "Bon de réception",
+      "journal": "Bon de journal",
+      "contra": "Bon de contre-passation",
+      "debitNote": "Note de débit",
+      "creditNote": "Note de crédit"
+    },
+    "status": {
+      "draft": "Brouillon",
+      "pending": "En attente d'approbation",
+      "approved": "Approuvé",
+      "rejected": "Rejeté",
+      "posted": "Comptabilisé",
+      "cancelled": "Annulé"
+    }
+  },
+  "transactions": {
+    "title": "Registre des transactions",
+    "subtitle": "Voir toutes les transactions comptables",
+    "transactionId": "ID de transaction",
+    "date": "Date",
+    "type": "Type",
+    "account": "Compte",
+    "debit": "Débit",
+    "credit": "Crédit",
+    "balance": "Solde",
+    "reference": "Référence",
+    "description": "Description",
+    "postedBy": "Comptabilisé par",
+    "filters": {
+      "all": "Toutes les transactions",
+      "dateRange": "Période",
+      "account": "Compte",
+      "type": "Type de transaction",
+      "minAmount": "Montant min",
+      "maxAmount": "Montant max"
+    },
+    "types": {
+      "invoice": "Facture",
+      "bill": "Facture fournisseur",
+      "payment": "Paiement",
+      "receipt": "Encaissement",
+      "journal": "Écriture comptable",
+      "adjustment": "Ajustement"
+    }
+  },
+  "messages": {
+    "entryCreated": "Écriture comptable créée avec succès",
+    "entryUpdated": "Écriture comptable mise à jour avec succès",
+    "entryPosted": "Écriture comptable comptabilisée avec succès",
+    "entryDeleted": "Écriture comptable supprimée avec succès",
+    "voucherCreated": "Bon créé avec succès",
+    "voucherUpdated": "Bon mis à jour avec succès",
+    "voucherApproved": "Bon approuvé avec succès",
+    "voucherRejected": "Bon rejeté",
+    "mustBalance": "Les débits et crédits doivent être égaux",
+    "atLeastTwoLines": "L'écriture comptable doit avoir au moins deux lignes"
+  }
+}

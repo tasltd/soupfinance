@@ -1,0 +1,76 @@
+{
+  "title": "Rechnungen",
+  "subtitle": "Verwalten Sie Ihre Rechnungen und verfolgen Sie Zahlungen",
+  "newInvoice": "Neue Rechnung",
+  "editInvoice": "Rechnung bearbeiten",
+  "invoiceDetails": "Rechnungsdetails",
+  "fields": {
+    "invoiceNumber": "Rechnungsnummer",
+    "client": "Kunde",
+    "selectClient": "Kunde auswählen",
+    "issueDate": "Rechnungsdatum",
+    "dueDate": "Fälligkeitsdatum",
+    "status": "Status",
+    "subtotal": "Zwischensumme",
+    "taxAmount": "Steuerbetrag",
+    "discountAmount": "Rabatt",
+    "totalAmount": "Gesamtbetrag",
+    "amountPaid": "Bezahlter Betrag",
+    "amountDue": "Offener Betrag",
+    "notes": "Notizen",
+    "notesPlaceholder": "Notizen oder Zahlungshinweise hinzufügen...",
+    "terms": "AGB",
+    "termsPlaceholder": "Zahlungsbedingungen..."
+  },
+  "lineItems": {
+    "title": "Positionen",
+    "description": "Beschreibung",
+    "quantity": "Menge",
+    "unitPrice": "Einzelpreis",
+    "taxRate": "MwSt %",
+    "discount": "Rabatt %",
+    "amount": "Betrag",
+    "addItem": "Position hinzufügen",
+    "removeItem": "Position entfernen",
+    "noItems": "Noch keine Positionen hinzugefügt"
+  },
+  "actions": {
+    "send": "Rechnung senden",
+    "markPaid": "Als bezahlt markieren",
+    "recordPayment": "Zahlung erfassen",
+    "download": "PDF herunterladen",
+    "duplicate": "Duplizieren",
+    "void": "Rechnung stornieren"
+  },
+  "status": {
+    "draft": "Entwurf",
+    "sent": "Gesendet",
+    "viewed": "Angesehen",
+    "partial": "Teilweise bezahlt",
+    "paid": "Bezahlt",
+    "overdue": "Überfällig",
+    "cancelled": "Storniert"
+  },
+  "filters": {
+    "all": "Alle Rechnungen",
+    "draft": "Entwürfe",
+    "sent": "Gesendet",
+    "paid": "Bezahlt",
+    "overdue": "Überfällig",
+    "dateRange": "Zeitraum"
+  },
+  "summary": {
+    "totalOutstanding": "Gesamt ausstehend",
+    "totalOverdue": "Gesamt überfällig",
+    "totalPaid": "Diesen Monat bezahlt",
+    "invoiceCount": "{{count}} Rechnung",
+    "invoiceCount_plural": "{{count}} Rechnungen"
+  },
+  "messages": {
+    "created": "Rechnung erfolgreich erstellt",
+    "updated": "Rechnung erfolgreich aktualisiert",
+    "sent": "Rechnung erfolgreich gesendet",
+    "deleted": "Rechnung erfolgreich gelöscht",
+    "paymentRecorded": "Zahlung erfolgreich erfasst"
+  }
+}

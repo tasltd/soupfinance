@@ -1,0 +1,42 @@
+{
+  "sidebar": {
+    "dashboard": "Dashboard",
+    "invoices": "Rechnungen",
+    "bills": "Ausgaben",
+    "vendors": "Lieferanten",
+    "payments": "Zahlungen",
+    "ledger": "Hauptbuch",
+    "chartOfAccounts": "Kontenplan",
+    "transactions": "Transaktionen",
+    "accounting": "Buchhaltung",
+    "journalEntries": "Buchungssätze",
+    "vouchers": "Belege",
+    "reports": "Berichte",
+    "settings": "Einstellungen",
+    "help": "Hilfe",
+    "logout": "Abmelden"
+  },
+  "header": {
+    "search": "Suchen...",
+    "notifications": "Benachrichtigungen",
+    "profile": "Profil",
+    "settings": "Einstellungen",
+    "darkMode": "Dunkelmodus",
+    "lightMode": "Hellmodus",
+    "language": "Sprache"
+  },
+  "breadcrumb": {
+    "home": "Startseite",
+    "new": "Neu",
+    "edit": "Bearbeiten",
+    "view": "Ansehen",
+    "list": "Liste"
+  },
+  "onboarding": {
+    "title": "Einrichtung",
+    "companyInfo": "Unternehmensinformationen",
+    "directors": "Geschäftsführer",
+    "documents": "Dokumente",
+    "status": "KYC-Status"
+  }
+}

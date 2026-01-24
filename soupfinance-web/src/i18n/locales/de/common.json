@@ -1,0 +1,85 @@
+{
+  "actions": {
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "delete": "Löschen",
+    "edit": "Bearbeiten",
+    "create": "Erstellen",
+    "submit": "Absenden",
+    "confirm": "Bestätigen",
+    "back": "Zurück",
+    "next": "Weiter",
+    "close": "Schließen",
+    "search": "Suchen",
+    "filter": "Filtern",
+    "export": "Exportieren",
+    "import": "Importieren",
+    "download": "Herunterladen",
+    "upload": "Hochladen",
+    "refresh": "Aktualisieren",
+    "view": "Ansehen",
+    "print": "Drucken",
+    "send": "Senden",
+    "approve": "Genehmigen",
+    "reject": "Ablehnen"
+  },
+  "status": {
+    "active": "Aktiv",
+    "inactive": "Inaktiv",
+    "pending": "Ausstehend",
+    "approved": "Genehmigt",
+    "rejected": "Abgelehnt",
+    "draft": "Entwurf",
+    "sent": "Gesendet",
+    "paid": "Bezahlt",
+    "overdue": "Überfällig",
+    "cancelled": "Storniert",
+    "partial": "Teilweise"
+  },
+  "messages": {
+    "loading": "Wird geladen...",
+    "saving": "Wird gespeichert...",
+    "saved": "Erfolgreich gespeichert",
+    "deleted": "Erfolgreich gelöscht",
+    "error": "Ein Fehler ist aufgetreten",
+    "noData": "Keine Daten verfügbar",
+    "noResults": "Keine Ergebnisse gefunden",
+    "confirmDelete": "Sind Sie sicher, dass Sie diesen Eintrag löschen möchten?",
+    "unsavedChanges": "Sie haben nicht gespeicherte Änderungen. Sind Sie sicher, dass Sie die Seite verlassen möchten?"
+  },
+  "validation": {
+    "required": "Dieses Feld ist erforderlich",
+    "email": "Bitte geben Sie eine gültige E-Mail-Adresse ein",
+    "phone": "Bitte geben Sie eine gültige Telefonnummer ein",
+    "minLength": "Muss mindestens {{count}} Zeichen haben",
+    "maxLength": "Darf nicht mehr als {{count}} Zeichen haben",
+    "numeric": "Muss eine Zahl sein",
+    "positive": "Muss eine positive Zahl sein",
+    "date": "Bitte geben Sie ein gültiges Datum ein"
+  },
+  "pagination": {
+    "showing": "Zeige {{from}} bis {{to}} von {{total}} Ergebnissen",
+    "previous": "Zurück",
+    "next": "Weiter",
+    "first": "Erste",
+    "last": "Letzte",
+    "page": "Seite",
+    "of": "von"
+  },
+  "dateTime": {
+    "today": "Heute",
+    "yesterday": "Gestern",
+    "tomorrow": "Morgen",
+    "thisWeek": "Diese Woche",
+    "lastWeek": "Letzte Woche",
+    "thisMonth": "Dieser Monat",
+    "lastMonth": "Letzter Monat",
+    "thisYear": "Dieses Jahr",
+    "lastYear": "Letztes Jahr",
+    "custom": "Benutzerdefiniert"
+  },
+  "currency": {
+    "symbol": "€",
+    "code": "EUR"
+  }
+}

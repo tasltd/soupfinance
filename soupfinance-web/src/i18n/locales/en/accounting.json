@@ -1,0 +1,103 @@
+{
+  "title": "Accounting",
+  "subtitle": "Manage journal entries, vouchers, and transactions",
+  "journalEntry": {
+    "title": "Journal Entry",
+    "newEntry": "New Journal Entry",
+    "editEntry": "Edit Journal Entry",
+    "entryNumber": "Entry Number",
+    "entryDate": "Entry Date",
+    "reference": "Reference",
+    "description": "Description",
+    "descriptionPlaceholder": "Describe the purpose of this entry...",
+    "memo": "Memo",
+    "memoPlaceholder": "Additional notes...",
+    "debitAccount": "Debit Account",
+    "creditAccount": "Credit Account",
+    "amount": "Amount",
+    "selectAccount": "Select an account",
+    "addLine": "Add Line",
+    "removeLine": "Remove Line",
+    "totalDebits": "Total Debits",
+    "totalCredits": "Total Credits",
+    "difference": "Difference",
+    "balanced": "Balanced",
+    "unbalanced": "Unbalanced",
+    "postEntry": "Post Entry",
+    "saveDraft": "Save as Draft"
+  },
+  "voucher": {
+    "title": "Voucher",
+    "newVoucher": "New Voucher",
+    "editVoucher": "Edit Voucher",
+    "voucherNumber": "Voucher Number",
+    "voucherDate": "Voucher Date",
+    "voucherType": "Voucher Type",
+    "payee": "Payee",
+    "payeePlaceholder": "Enter payee name",
+    "amount": "Amount",
+    "description": "Description",
+    "attachments": "Attachments",
+    "addAttachment": "Add Attachment",
+    "approvedBy": "Approved By",
+    "approvalDate": "Approval Date",
+    "types": {
+      "payment": "Payment Voucher",
+      "receipt": "Receipt Voucher",
+      "journal": "Journal Voucher",
+      "contra": "Contra Voucher",
+      "debitNote": "Debit Note",
+      "creditNote": "Credit Note"
+    },
+    "status": {
+      "draft": "Draft",
+      "pending": "Pending Approval",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "posted": "Posted",
+      "cancelled": "Cancelled"
+    }
+  },
+  "transactions": {
+    "title": "Transaction Register",
+    "subtitle": "View all accounting transactions",
+    "transactionId": "Transaction ID",
+    "date": "Date",
+    "type": "Type",
+    "account": "Account",
+    "debit": "Debit",
+    "credit": "Credit",
+    "balance": "Balance",
+    "reference": "Reference",
+    "description": "Description",
+    "postedBy": "Posted By",
+    "filters": {
+      "all": "All Transactions",
+      "dateRange": "Date Range",
+      "account": "Account",
+      "type": "Transaction Type",
+      "minAmount": "Min Amount",
+      "maxAmount": "Max Amount"
+    },
+    "types": {
+      "invoice": "Invoice",
+      "bill": "Bill",
+      "payment": "Payment",
+      "receipt": "Receipt",
+      "journal": "Journal Entry",
+      "adjustment": "Adjustment"
+    }
+  },
+  "messages": {
+    "entryCreated": "Journal entry created successfully",
+    "entryUpdated": "Journal entry updated successfully",
+    "entryPosted": "Journal entry posted successfully",
+    "entryDeleted": "Journal entry deleted successfully",
+    "voucherCreated": "Voucher created successfully",
+    "voucherUpdated": "Voucher updated successfully",
+    "voucherApproved": "Voucher approved successfully",
+    "voucherRejected": "Voucher rejected",
+    "mustBalance": "Debits and credits must be equal",
+    "atLeastTwoLines": "Journal entry must have at least two lines"
+  }
+}

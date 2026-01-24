@@ -1,0 +1,42 @@
+{
+  "sidebar": {
+    "dashboard": "Tableau de bord",
+    "invoices": "Factures",
+    "bills": "Factures fournisseurs",
+    "vendors": "Fournisseurs",
+    "payments": "Paiements",
+    "ledger": "Grand livre",
+    "chartOfAccounts": "Plan comptable",
+    "transactions": "Transactions",
+    "accounting": "Comptabilité",
+    "journalEntries": "Écritures comptables",
+    "vouchers": "Pièces comptables",
+    "reports": "Rapports",
+    "settings": "Paramètres",
+    "help": "Aide",
+    "logout": "Déconnexion"
+  },
+  "header": {
+    "search": "Rechercher...",
+    "notifications": "Notifications",
+    "profile": "Profil",
+    "settings": "Paramètres",
+    "darkMode": "Mode sombre",
+    "lightMode": "Mode clair",
+    "language": "Langue"
+  },
+  "breadcrumb": {
+    "home": "Accueil",
+    "new": "Nouveau",
+    "edit": "Modifier",
+    "view": "Voir",
+    "list": "Liste"
+  },
+  "onboarding": {
+    "title": "Intégration",
+    "companyInfo": "Informations sur l'entreprise",
+    "directors": "Dirigeants",
+    "documents": "Documents",
+    "status": "Statut KYC"
+  }
+}

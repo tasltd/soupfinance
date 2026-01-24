@@ -1,0 +1,144 @@
+{
+  "title": "Corporate Onboarding",
+  "subtitle": "Complete your company registration",
+  "registration": {
+    "title": "Register Your Company",
+    "subtitle": "Create an account for your business",
+    "companyName": "Company Name",
+    "companyNamePlaceholder": "Enter your company name",
+    "registrationNumber": "Registration Number",
+    "registrationNumberPlaceholder": "Company registration number",
+    "email": "Business Email",
+    "emailPlaceholder": "company@example.com",
+    "phone": "Business Phone",
+    "phonePlaceholder": "+1 (555) 123-4567",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "agreeTerms": "I agree to the",
+    "termsOfService": "Terms of Service",
+    "and": "and",
+    "privacyPolicy": "Privacy Policy",
+    "register": "Register",
+    "registering": "Registering...",
+    "haveAccount": "Already have an account?",
+    "signIn": "Sign In"
+  },
+  "companyInfo": {
+    "title": "Company Information",
+    "subtitle": "Tell us about your business",
+    "legalName": "Legal Name",
+    "tradingName": "Trading Name",
+    "businessType": "Business Type",
+    "industry": "Industry",
+    "dateOfIncorporation": "Date of Incorporation",
+    "taxId": "Tax ID / VAT Number",
+    "website": "Website",
+    "description": "Business Description",
+    "descriptionPlaceholder": "Describe your business activities...",
+    "businessTypes": {
+      "soleProprietorship": "Sole Proprietorship",
+      "partnership": "Partnership",
+      "llc": "Limited Liability Company (LLC)",
+      "corporation": "Corporation",
+      "nonprofit": "Non-Profit Organization"
+    }
+  },
+  "address": {
+    "title": "Business Address",
+    "registered": "Registered Address",
+    "operating": "Operating Address",
+    "sameAsRegistered": "Same as registered address",
+    "street": "Street Address",
+    "city": "City",
+    "state": "State / Province",
+    "postalCode": "Postal Code",
+    "country": "Country"
+  },
+  "directors": {
+    "title": "Directors & Officers",
+    "subtitle": "Add company directors and officers",
+    "addDirector": "Add Director",
+    "editDirector": "Edit Director",
+    "removeDirector": "Remove Director",
+    "firstName": "First Name",
+    "lastName": "Last Name",
+    "email": "Email",
+    "phone": "Phone",
+    "position": "Position",
+    "dateOfBirth": "Date of Birth",
+    "nationality": "Nationality",
+    "idNumber": "ID Number",
+    "idType": "ID Type",
+    "ownershipPercent": "Ownership %",
+    "isPrimaryContact": "Primary Contact",
+    "positions": {
+      "director": "Director",
+      "ceo": "CEO",
+      "cfo": "CFO",
+      "secretary": "Company Secretary",
+      "shareholder": "Shareholder",
+      "beneficialOwner": "Beneficial Owner"
+    },
+    "idTypes": {
+      "passport": "Passport",
+      "nationalId": "National ID",
+      "driversLicense": "Driver's License"
+    }
+  },
+  "documents": {
+    "title": "Documents",
+    "subtitle": "Upload required verification documents",
+    "required": "Required Documents",
+    "optional": "Optional Documents",
+    "upload": "Upload Document",
+    "replace": "Replace",
+    "remove": "Remove",
+    "uploaded": "Uploaded",
+    "pending": "Pending Upload",
+    "verified": "Verified",
+    "rejected": "Rejected",
+    "maxSize": "Maximum file size: {{size}}MB",
+    "allowedTypes": "Allowed types: {{types}}",
+    "types": {
+      "certificateOfIncorporation": "Certificate of Incorporation",
+      "articlesOfAssociation": "Articles of Association",
+      "proofOfAddress": "Proof of Address",
+      "taxCertificate": "Tax Certificate",
+      "bankStatement": "Bank Statement",
+      "directorId": "Director ID",
+      "shareholderRegister": "Shareholder Register"
+    }
+  },
+  "status": {
+    "title": "Application Status",
+    "subtitle": "Track your onboarding progress",
+    "steps": {
+      "registration": "Registration",
+      "companyInfo": "Company Information",
+      "directors": "Directors",
+      "documents": "Documents",
+      "review": "Under Review",
+      "approved": "Approved"
+    },
+    "statuses": {
+      "notStarted": "Not Started",
+      "inProgress": "In Progress",
+      "completed": "Completed",
+      "pendingReview": "Pending Review",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "requiresInfo": "Additional Information Required"
+    },
+    "estimatedTime": "Estimated review time: {{days}} business days",
+    "contactSupport": "Contact Support"
+  },
+  "messages": {
+    "saved": "Information saved successfully",
+    "submitted": "Application submitted for review",
+    "documentUploaded": "Document uploaded successfully",
+    "documentRemoved": "Document removed",
+    "directorAdded": "Director added successfully",
+    "directorUpdated": "Director updated successfully",
+    "directorRemoved": "Director removed"
+  }
+}

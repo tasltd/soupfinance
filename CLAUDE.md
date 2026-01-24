@@ -26,6 +26,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Current Status**: Landing page is in **beta testing mode**. The pricing section is hidden (preserved in HTML comments for later reactivation) and replaced with a beta testing notice.
 
+## Gradle Concurrent Task Rule (HARD RULE)
+
+**NEVER run Gradle tasks if another process is already running a Gradle task in the same project folder.**
+
+Before running any `./gradlew` command in `soupmarkets-web`:
+1. **Check first**: `pgrep -af "gradlew\|GradleDaemon" | grep soupmarkets`
+2. **If process found**: WAIT for it to complete before running yours
+3. **Reason**: Gradle uses file locks - concurrent tasks cause hangs and build failures
+
+This applies to:
+- Host machine running `./gradlew bootRun`
+- LXC containers running `./gradlew bootRun` on mounted `/app`
+- Any CI/CD pipelines
+
 ## Quick Commands
 
 **IMPORTANT**: Most development requires the soupmarkets-web backend running on port 9090:
@@ -70,6 +84,79 @@ cd soupfinance-landing
 ./deploy-landing.sh              # Deploy to production (www.soupfinance.com)
 ./deploy-landing.sh --skip-ssl   # Deploy without SSL setup
 python3 -m http.server 8000      # Preview locally
+```
+
+## Local Development Backend (LXC)
+
+For local development and endpoint verification, use the LXC backend instead of running Grails directly:
+
+```bash
+cd backend
+
+# Start the backend (starts containers if needed)
+./tomcat-control.sh start
+
+# Check status and get container IP
+./tomcat-control.sh status
+
+# View logs
+./tomcat-control.sh logs
+```
+
+### Run React app against LXC backend
+
+```bash
+cd soupfinance-web
+npm run dev -- --mode lxc
+```
+
+### Deploy new WAR from soupmarkets-web
+
+```bash
+# Option 1: From soupmarkets-web (recommended)
+cd ../soupmarkets-web
+source env-variables.sh
+./gradlew assembleDeployToSoupfinance
+
+# Option 2: Manual deploy (if WAR already built)
+cd backend
+./deploy-war.sh --restart
+```
+
+### Architecture
+
+| Component | IP/Port | Description |
+|-----------|---------|-------------|
+| `soupfinance-backend` LXC | `10.115.213.183:9090` | Java 21 + Spring Boot embedded Tomcat |
+| `soupmarkets-mariadb` LXC | `10.115.213.114:3306` | Database: `soupbroker_soupfinance` |
+
+See `backend/README.md` for full documentation.
+
+### Test Credentials (LXC Backend)
+
+Test users for integration and E2E testing against the LXC backend:
+
+| Username | Password | Roles | Use Case |
+|----------|----------|-------|----------|
+| `test.admin` | `secret` | ROLE_ADMIN, ROLE_USER | Full admin access |
+| `test.user` | `secret` | ROLE_USER | Minimal user access |
+| `test.finance` | `secret` | ROLE_USER + Finance roles | Finance CRUD testing |
+| `soup.support` | `secret` | ROLE_ADMIN, ROLE_USER | Legacy admin (seed data) |
+
+**Finance roles for `test.finance`**: ROLE_INVOICE, ROLE_BILL, ROLE_LEDGER_TRANSACTION, ROLE_VENDOR, ROLE_FINANCE_REPORTS, ROLE_LEDGER_ACCOUNT, ROLE_VOUCHER
+
+**Environment files**:
+- `.env.test` - Test credentials as environment variables
+- `.env.lxc` - API URL for LXC backend
+
+**E2E usage** (see `e2e/fixtures.ts`):
+```typescript
+import { backendTestUsers, authenticateWithBackend } from './fixtures';
+
+test('integration test', async ({ page }) => {
+  await authenticateWithBackend(page, backendTestUsers.admin);
+  // ... test against real API
+});
 ```
 
 ## Deployment

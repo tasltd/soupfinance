@@ -1,0 +1,73 @@
+{
+  "title": "Eingangsrechnungen",
+  "subtitle": "Lieferantenrechnungen verwalten und Zahlungen verfolgen",
+  "newBill": "Neue Rechnung",
+  "editBill": "Rechnung bearbeiten",
+  "billDetails": "Rechnungsdetails",
+  "fields": {
+    "billNumber": "Rechnungsnummer",
+    "vendor": "Lieferant",
+    "selectVendor": "Lieferant auswählen",
+    "billDate": "Rechnungsdatum",
+    "dueDate": "Fälligkeitsdatum",
+    "status": "Status",
+    "subtotal": "Zwischensumme",
+    "taxAmount": "Steuerbetrag",
+    "discountAmount": "Rabatt",
+    "totalAmount": "Gesamtbetrag",
+    "amountPaid": "Bezahlter Betrag",
+    "amountDue": "Offener Betrag",
+    "notes": "Notizen",
+    "notesPlaceholder": "Notizen zu dieser Rechnung hinzufügen...",
+    "terms": "Zahlungsbedingungen",
+    "termsPlaceholder": "Zahlungsbedingungen..."
+  },
+  "lineItems": {
+    "title": "Positionen",
+    "description": "Beschreibung",
+    "quantity": "Menge",
+    "unitPrice": "Stückpreis",
+    "taxRate": "MwSt. %",
+    "discount": "Rabatt %",
+    "amount": "Betrag",
+    "addItem": "Position hinzufügen",
+    "removeItem": "Position entfernen",
+    "noItems": "Keine Positionen hinzugefügt"
+  },
+  "actions": {
+    "markPaid": "Als bezahlt markieren",
+    "recordPayment": "Zahlung erfassen",
+    "download": "PDF herunterladen",
+    "duplicate": "Duplizieren",
+    "void": "Rechnung stornieren"
+  },
+  "status": {
+    "draft": "Entwurf",
+    "received": "Eingegangen",
+    "partial": "Teilweise bezahlt",
+    "paid": "Bezahlt",
+    "overdue": "Überfällig",
+    "cancelled": "Storniert"
+  },
+  "filters": {
+    "all": "Alle Rechnungen",
+    "draft": "Entwürfe",
+    "received": "Eingegangen",
+    "paid": "Bezahlt",
+    "overdue": "Überfällig",
+    "dateRange": "Zeitraum"
+  },
+  "summary": {
+    "totalOutstanding": "Offen gesamt",
+    "totalOverdue": "Überfällig gesamt",
+    "totalPaidThisMonth": "Diesen Monat bezahlt",
+    "billCount": "{{count}} Rechnung",
+    "billCount_plural": "{{count}} Rechnungen"
+  },
+  "messages": {
+    "created": "Rechnung erfolgreich erstellt",
+    "updated": "Rechnung erfolgreich aktualisiert",
+    "deleted": "Rechnung erfolgreich gelöscht",
+    "paymentRecorded": "Zahlung erfolgreich erfasst"
+  }
+}

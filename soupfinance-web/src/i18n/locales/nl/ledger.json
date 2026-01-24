@@ -1,0 +1,79 @@
+{
+  "title": "Grootboek",
+  "subtitle": "Rekeningschema en grootboektransacties",
+  "chartOfAccounts": {
+    "title": "Rekeningschema",
+    "subtitle": "Beheer uw rekeningstructuur",
+    "newAccount": "Nieuwe rekening",
+    "editAccount": "Rekening bewerken",
+    "accountCode": "Rekeningcode",
+    "accountName": "Rekeningnaam",
+    "accountType": "Rekeningtype",
+    "parentAccount": "Bovenliggende rekening",
+    "selectParent": "Selecteer bovenliggende rekening (optioneel)",
+    "description": "Omschrijving",
+    "descriptionPlaceholder": "Beschrijf het doel van deze rekening...",
+    "openingBalance": "Beginsaldo",
+    "currentBalance": "Huidig saldo",
+    "isActive": "Actief",
+    "isSystemAccount": "Systeemrekening",
+    "cannotDelete": "Systeemrekeningen kunnen niet worden verwijderd"
+  },
+  "accountTypes": {
+    "asset": "Activa",
+    "liability": "Passiva",
+    "equity": "Eigen vermogen",
+    "revenue": "Opbrengsten",
+    "expense": "Kosten"
+  },
+  "accountGroups": {
+    "currentAssets": "Vlottende activa",
+    "fixedAssets": "Vaste activa",
+    "currentLiabilities": "Kortlopende schulden",
+    "longTermLiabilities": "Langlopende schulden",
+    "ownersEquity": "Eigen vermogen",
+    "operatingRevenue": "Bedrijfsopbrengsten",
+    "otherRevenue": "Overige opbrengsten",
+    "operatingExpenses": "Bedrijfskosten",
+    "otherExpenses": "Overige kosten"
+  },
+  "transactions": {
+    "title": "Grootboektransacties",
+    "subtitle": "Bekijk rekeningactiviteit",
+    "transactionDate": "Datum",
+    "description": "Omschrijving",
+    "debit": "Debet",
+    "credit": "Credit",
+    "balance": "Saldo",
+    "reference": "Referentie",
+    "source": "Bron",
+    "noTransactions": "Geen transacties gevonden"
+  },
+  "filters": {
+    "all": "Alle rekeningen",
+    "active": "Alleen actief",
+    "inactive": "Alleen inactief",
+    "accountType": "Rekeningtype",
+    "search": "Rekeningen zoeken..."
+  },
+  "actions": {
+    "viewTransactions": "Transacties bekijken",
+    "deactivate": "Deactiveren",
+    "activate": "Activeren"
+  },
+  "summary": {
+    "totalAssets": "Totale activa",
+    "totalLiabilities": "Totale passiva",
+    "totalEquity": "Totaal eigen vermogen",
+    "accountCount": "{{count}} rekening",
+    "accountCount_plural": "{{count}} rekeningen"
+  },
+  "messages": {
+    "accountCreated": "Rekening succesvol aangemaakt",
+    "accountUpdated": "Rekening succesvol bijgewerkt",
+    "accountDeleted": "Rekening succesvol verwijderd",
+    "accountDeactivated": "Rekening gedeactiveerd",
+    "accountActivated": "Rekening geactiveerd",
+    "hasTransactions": "Rekening met bestaande transacties kan niet worden verwijderd"
+  }
+}

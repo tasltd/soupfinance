@@ -1,0 +1,84 @@
+{
+  "title": "Berichte",
+  "subtitle": "Finanzberichte und Analysen",
+  "types": {
+    "profitLoss": "Gewinn & Verlust",
+    "balanceSheet": "Bilanz",
+    "cashFlow": "Kapitalflussrechnung",
+    "trialBalance": "Saldenbilanz",
+    "aging": "Fälligkeitsberichte",
+    "arAging": "Forderungen nach Alter",
+    "apAging": "Verbindlichkeiten nach Alter"
+  },
+  "periods": {
+    "thisMonth": "Dieser Monat",
+    "lastMonth": "Letzter Monat",
+    "thisQuarter": "Dieses Quartal",
+    "lastQuarter": "Letztes Quartal",
+    "thisYear": "Dieses Jahr",
+    "lastYear": "Letztes Jahr",
+    "custom": "Benutzerdefiniert"
+  },
+  "profitLoss": {
+    "title": "Gewinn- und Verlustrechnung",
+    "income": "Einnahmen",
+    "totalIncome": "Gesamteinnahmen",
+    "expenses": "Ausgaben",
+    "totalExpenses": "Gesamtausgaben",
+    "grossProfit": "Bruttogewinn",
+    "netProfit": "Nettogewinn",
+    "netLoss": "Nettoverlust"
+  },
+  "balanceSheet": {
+    "title": "Bilanz",
+    "asOf": "Stand {{date}}",
+    "assets": "Aktiva",
+    "currentAssets": "Umlaufvermögen",
+    "fixedAssets": "Anlagevermögen",
+    "totalAssets": "Gesamtvermögen",
+    "liabilities": "Passiva",
+    "currentLiabilities": "Kurzfristige Verbindlichkeiten",
+    "longTermLiabilities": "Langfristige Verbindlichkeiten",
+    "totalLiabilities": "Gesamtverbindlichkeiten",
+    "equity": "Eigenkapital",
+    "totalEquity": "Gesamtes Eigenkapital",
+    "liabilitiesAndEquity": "Passiva & Eigenkapital"
+  },
+  "cashFlow": {
+    "title": "Kapitalflussrechnung",
+    "operatingActivities": "Betriebliche Tätigkeit",
+    "investingActivities": "Investitionstätigkeit",
+    "financingActivities": "Finanzierungstätigkeit",
+    "netCashFlow": "Netto-Cashflow",
+    "beginningBalance": "Anfangsbestand Kasse",
+    "endingBalance": "Endbestand Kasse"
+  },
+  "trialBalance": {
+    "title": "Saldenbilanz",
+    "account": "Konto",
+    "debit": "Soll",
+    "credit": "Haben",
+    "totalDebits": "Summe Soll",
+    "totalCredits": "Summe Haben",
+    "balanced": "Ausgeglichen",
+    "unbalanced": "Nicht ausgeglichen"
+  },
+  "aging": {
+    "title": "Fälligkeitsbericht",
+    "current": "Aktuell",
+    "days30": "1-30 Tage",
+    "days60": "31-60 Tage",
+    "days90": "61-90 Tage",
+    "over90": "Über 90 Tage",
+    "total": "Gesamt"
+  },
+  "actions": {
+    "generate": "Bericht erstellen",
+    "export": "Exportieren",
+    "exportPdf": "Als PDF exportieren",
+    "exportExcel": "Als Excel exportieren",
+    "exportCsv": "Als CSV exportieren",
+    "print": "Drucken",
+    "refresh": "Daten aktualisieren"
+  }
+}

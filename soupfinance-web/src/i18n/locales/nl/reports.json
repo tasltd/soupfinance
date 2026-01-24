@@ -1,0 +1,84 @@
+{
+  "title": "Rapporten",
+  "subtitle": "Financiële rapporten en analyses",
+  "types": {
+    "profitLoss": "Winst- en verliesrekening",
+    "balanceSheet": "Balans",
+    "cashFlow": "Kasstroomoverzicht",
+    "trialBalance": "Proefbalans",
+    "aging": "Ouderdomsrapporten",
+    "arAging": "Ouderdom debiteuren",
+    "apAging": "Ouderdom crediteuren"
+  },
+  "periods": {
+    "thisMonth": "Deze maand",
+    "lastMonth": "Vorige maand",
+    "thisQuarter": "Dit kwartaal",
+    "lastQuarter": "Vorig kwartaal",
+    "thisYear": "Dit jaar",
+    "lastYear": "Vorig jaar",
+    "custom": "Aangepaste periode"
+  },
+  "profitLoss": {
+    "title": "Winst- en verliesrekening",
+    "income": "Inkomsten",
+    "totalIncome": "Totale inkomsten",
+    "expenses": "Uitgaven",
+    "totalExpenses": "Totale uitgaven",
+    "grossProfit": "Brutowinst",
+    "netProfit": "Nettowinst",
+    "netLoss": "Nettoverlies"
+  },
+  "balanceSheet": {
+    "title": "Balans",
+    "asOf": "Per {{date}}",
+    "assets": "Activa",
+    "currentAssets": "Vlottende activa",
+    "fixedAssets": "Vaste activa",
+    "totalAssets": "Totaal activa",
+    "liabilities": "Passiva",
+    "currentLiabilities": "Kortlopende schulden",
+    "longTermLiabilities": "Langlopende schulden",
+    "totalLiabilities": "Totaal passiva",
+    "equity": "Eigen vermogen",
+    "totalEquity": "Totaal eigen vermogen",
+    "liabilitiesAndEquity": "Totaal passiva en eigen vermogen"
+  },
+  "cashFlow": {
+    "title": "Kasstroomoverzicht",
+    "operatingActivities": "Operationele activiteiten",
+    "investingActivities": "Investeringsactiviteiten",
+    "financingActivities": "Financieringsactiviteiten",
+    "netCashFlow": "Netto kasstroom",
+    "beginningBalance": "Beginsaldo",
+    "endingBalance": "Eindsaldo"
+  },
+  "trialBalance": {
+    "title": "Proefbalans",
+    "account": "Rekening",
+    "debit": "Debet",
+    "credit": "Credit",
+    "totalDebits": "Totaal debet",
+    "totalCredits": "Totaal credit",
+    "balanced": "In balans",
+    "unbalanced": "Niet in balans"
+  },
+  "aging": {
+    "title": "Ouderdomsrapport",
+    "current": "Lopend",
+    "days30": "1-30 dagen",
+    "days60": "31-60 dagen",
+    "days90": "61-90 dagen",
+    "over90": "Meer dan 90 dagen",
+    "total": "Totaal"
+  },
+  "actions": {
+    "generate": "Rapport genereren",
+    "export": "Exporteren",
+    "exportPdf": "Exporteren naar PDF",
+    "exportExcel": "Exporteren naar Excel",
+    "exportCsv": "Exporteren naar CSV",
+    "print": "Afdrukken",
+    "refresh": "Gegevens vernieuwen"
+  }
+}

@@ -1,0 +1,76 @@
+{
+  "title": "Factures",
+  "subtitle": "Gérez vos factures et suivez les paiements",
+  "newInvoice": "Nouvelle facture",
+  "editInvoice": "Modifier la facture",
+  "invoiceDetails": "Détails de la facture",
+  "fields": {
+    "invoiceNumber": "Numéro de facture",
+    "client": "Client",
+    "selectClient": "Sélectionner un client",
+    "issueDate": "Date d'émission",
+    "dueDate": "Date d'échéance",
+    "status": "Statut",
+    "subtotal": "Sous-total",
+    "taxAmount": "Montant TVA",
+    "discountAmount": "Remise",
+    "totalAmount": "Montant total",
+    "amountPaid": "Montant payé",
+    "amountDue": "Montant dû",
+    "notes": "Notes",
+    "notesPlaceholder": "Ajouter des notes ou des instructions de paiement...",
+    "terms": "Conditions générales",
+    "termsPlaceholder": "Conditions de paiement..."
+  },
+  "lineItems": {
+    "title": "Lignes de facture",
+    "description": "Description",
+    "quantity": "Qté",
+    "unitPrice": "Prix unitaire",
+    "taxRate": "TVA %",
+    "discount": "Remise %",
+    "amount": "Montant",
+    "addItem": "Ajouter une ligne",
+    "removeItem": "Supprimer la ligne",
+    "noItems": "Aucune ligne ajoutée"
+  },
+  "actions": {
+    "send": "Envoyer la facture",
+    "markPaid": "Marquer comme payée",
+    "recordPayment": "Enregistrer un paiement",
+    "download": "Télécharger le PDF",
+    "duplicate": "Dupliquer",
+    "void": "Annuler la facture"
+  },
+  "status": {
+    "draft": "Brouillon",
+    "sent": "Envoyée",
+    "viewed": "Vue",
+    "partial": "Partiellement payée",
+    "paid": "Payée",
+    "overdue": "En retard",
+    "cancelled": "Annulée"
+  },
+  "filters": {
+    "all": "Toutes les factures",
+    "draft": "Brouillons",
+    "sent": "Envoyées",
+    "paid": "Payées",
+    "overdue": "En retard",
+    "dateRange": "Période"
+  },
+  "summary": {
+    "totalOutstanding": "Total en cours",
+    "totalOverdue": "Total en retard",
+    "totalPaid": "Total payé ce mois",
+    "invoiceCount": "{{count}} facture",
+    "invoiceCount_plural": "{{count}} factures"
+  },
+  "messages": {
+    "created": "Facture créée avec succès",
+    "updated": "Facture mise à jour avec succès",
+    "sent": "Facture envoyée avec succès",
+    "deleted": "Facture supprimée avec succès",
+    "paymentRecorded": "Paiement enregistré avec succès"
+  }
+}

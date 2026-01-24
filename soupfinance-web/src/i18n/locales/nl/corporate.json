@@ -1,0 +1,144 @@
+{
+  "title": "Bedrijfsregistratie",
+  "subtitle": "Voltooi de registratie van uw bedrijf",
+  "registration": {
+    "title": "Registreer uw bedrijf",
+    "subtitle": "Maak een account aan voor uw bedrijf",
+    "companyName": "Bedrijfsnaam",
+    "companyNamePlaceholder": "Voer uw bedrijfsnaam in",
+    "registrationNumber": "KvK-nummer",
+    "registrationNumberPlaceholder": "Kamer van Koophandel-nummer",
+    "email": "Zakelijk e-mailadres",
+    "emailPlaceholder": "bedrijf@voorbeeld.nl",
+    "phone": "Zakelijk telefoonnummer",
+    "phonePlaceholder": "+31 (0)20 123 4567",
+    "password": "Wachtwoord",
+    "confirmPassword": "Wachtwoord bevestigen",
+    "agreeTerms": "Ik ga akkoord met de",
+    "termsOfService": "Algemene voorwaarden",
+    "and": "en het",
+    "privacyPolicy": "Privacybeleid",
+    "register": "Registreren",
+    "registering": "Bezig met registreren...",
+    "haveAccount": "Heeft u al een account?",
+    "signIn": "Inloggen"
+  },
+  "companyInfo": {
+    "title": "Bedrijfsinformatie",
+    "subtitle": "Vertel ons over uw bedrijf",
+    "legalName": "Statutaire naam",
+    "tradingName": "Handelsnaam",
+    "businessType": "Bedrijfsvorm",
+    "industry": "Branche",
+    "dateOfIncorporation": "Oprichtingsdatum",
+    "taxId": "BTW-nummer",
+    "website": "Website",
+    "description": "Bedrijfsomschrijving",
+    "descriptionPlaceholder": "Beschrijf uw bedrijfsactiviteiten...",
+    "businessTypes": {
+      "soleProprietorship": "Eenmanszaak",
+      "partnership": "Vennootschap onder firma (VOF)",
+      "llc": "Besloten vennootschap (BV)",
+      "corporation": "Naamloze vennootschap (NV)",
+      "nonprofit": "Stichting / Vereniging"
+    }
+  },
+  "address": {
+    "title": "Bedrijfsadres",
+    "registered": "Statutair adres",
+    "operating": "Vestigingsadres",
+    "sameAsRegistered": "Zelfde als statutair adres",
+    "street": "Straatnaam",
+    "city": "Stad",
+    "state": "Provincie",
+    "postalCode": "Postcode",
+    "country": "Land"
+  },
+  "directors": {
+    "title": "Bestuurders en functionarissen",
+    "subtitle": "Voeg bestuurders en functionarissen van het bedrijf toe",
+    "addDirector": "Bestuurder toevoegen",
+    "editDirector": "Bestuurder bewerken",
+    "removeDirector": "Bestuurder verwijderen",
+    "firstName": "Voornaam",
+    "lastName": "Achternaam",
+    "email": "E-mail",
+    "phone": "Telefoon",
+    "position": "Functie",
+    "dateOfBirth": "Geboortedatum",
+    "nationality": "Nationaliteit",
+    "idNumber": "Identiteitsnummer",
+    "idType": "Type identiteitsbewijs",
+    "ownershipPercent": "Eigendom %",
+    "isPrimaryContact": "Primaire contactpersoon",
+    "positions": {
+      "director": "Directeur",
+      "ceo": "Algemeen directeur",
+      "cfo": "Financieel directeur",
+      "secretary": "Secretaris",
+      "shareholder": "Aandeelhouder",
+      "beneficialOwner": "Uiteindelijk belanghebbende (UBO)"
+    },
+    "idTypes": {
+      "passport": "Paspoort",
+      "nationalId": "Identiteitskaart",
+      "driversLicense": "Rijbewijs"
+    }
+  },
+  "documents": {
+    "title": "Documenten",
+    "subtitle": "Upload de vereiste verificatiedocumenten",
+    "required": "Vereiste documenten",
+    "optional": "Optionele documenten",
+    "upload": "Document uploaden",
+    "replace": "Vervangen",
+    "remove": "Verwijderen",
+    "uploaded": "Geüpload",
+    "pending": "Wacht op upload",
+    "verified": "Geverifieerd",
+    "rejected": "Afgewezen",
+    "maxSize": "Maximale bestandsgrootte: {{size}}MB",
+    "allowedTypes": "Toegestane types: {{types}}",
+    "types": {
+      "certificateOfIncorporation": "Uittreksel KvK",
+      "articlesOfAssociation": "Statuten",
+      "proofOfAddress": "Adresbewijs",
+      "taxCertificate": "BTW-verklaring",
+      "bankStatement": "Bankafschrift",
+      "directorId": "Legitimatiebewijs bestuurder",
+      "shareholderRegister": "Aandeelhoudersregister"
+    }
+  },
+  "status": {
+    "title": "Aanvraagstatus",
+    "subtitle": "Volg de voortgang van uw registratie",
+    "steps": {
+      "registration": "Registratie",
+      "companyInfo": "Bedrijfsinformatie",
+      "directors": "Bestuurders",
+      "documents": "Documenten",
+      "review": "In behandeling",
+      "approved": "Goedgekeurd"
+    },
+    "statuses": {
+      "notStarted": "Niet gestart",
+      "inProgress": "Bezig",
+      "completed": "Voltooid",
+      "pendingReview": "In behandeling",
+      "approved": "Goedgekeurd",
+      "rejected": "Afgewezen",
+      "requiresInfo": "Aanvullende informatie vereist"
+    },
+    "estimatedTime": "Geschatte behandeltijd: {{days}} werkdagen",
+    "contactSupport": "Contact opnemen met support"
+  },
+  "messages": {
+    "saved": "Informatie succesvol opgeslagen",
+    "submitted": "Aanvraag ingediend ter beoordeling",
+    "documentUploaded": "Document succesvol geüpload",
+    "documentRemoved": "Document verwijderd",
+    "directorAdded": "Bestuurder succesvol toegevoegd",
+    "directorUpdated": "Bestuurder succesvol bijgewerkt",
+    "directorRemoved": "Bestuurder verwijderd"
+  }
+}

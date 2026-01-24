@@ -1,0 +1,73 @@
+{
+  "title": "Inkoopfacturen",
+  "subtitle": "Beheer leveranciersfacturen en volg betalingen",
+  "newBill": "Nieuwe factuur",
+  "editBill": "Factuur bewerken",
+  "billDetails": "Factuurdetails",
+  "fields": {
+    "billNumber": "Factuurnummer",
+    "vendor": "Leverancier",
+    "selectVendor": "Selecteer een leverancier",
+    "billDate": "Factuurdatum",
+    "dueDate": "Vervaldatum",
+    "status": "Status",
+    "subtotal": "Subtotaal",
+    "taxAmount": "BTW-bedrag",
+    "discountAmount": "Korting",
+    "totalAmount": "Totaalbedrag",
+    "amountPaid": "Betaald bedrag",
+    "amountDue": "Openstaand bedrag",
+    "notes": "Notities",
+    "notesPlaceholder": "Notities over deze factuur toevoegen...",
+    "terms": "Betalingsvoorwaarden",
+    "termsPlaceholder": "Betalingsvoorwaarden..."
+  },
+  "lineItems": {
+    "title": "Factuurregels",
+    "description": "Omschrijving",
+    "quantity": "Aantal",
+    "unitPrice": "Eenheidsprijs",
+    "taxRate": "BTW %",
+    "discount": "Korting %",
+    "amount": "Bedrag",
+    "addItem": "Regel toevoegen",
+    "removeItem": "Regel verwijderen",
+    "noItems": "Geen regels toegevoegd"
+  },
+  "actions": {
+    "markPaid": "Markeren als betaald",
+    "recordPayment": "Betaling registreren",
+    "download": "PDF downloaden",
+    "duplicate": "Dupliceren",
+    "void": "Factuur annuleren"
+  },
+  "status": {
+    "draft": "Concept",
+    "received": "Ontvangen",
+    "partial": "Gedeeltelijk betaald",
+    "paid": "Betaald",
+    "overdue": "Achterstallig",
+    "cancelled": "Geannuleerd"
+  },
+  "filters": {
+    "all": "Alle facturen",
+    "draft": "Concepten",
+    "received": "Ontvangen",
+    "paid": "Betaald",
+    "overdue": "Achterstallig",
+    "dateRange": "Datumbereik"
+  },
+  "summary": {
+    "totalOutstanding": "Totaal openstaand",
+    "totalOverdue": "Totaal achterstallig",
+    "totalPaidThisMonth": "Deze maand betaald",
+    "billCount": "{{count}} factuur",
+    "billCount_plural": "{{count}} facturen"
+  },
+  "messages": {
+    "created": "Factuur succesvol aangemaakt",
+    "updated": "Factuur succesvol bijgewerkt",
+    "deleted": "Factuur succesvol verwijderd",
+    "paymentRecorded": "Betaling succesvol geregistreerd"
+  }
+}

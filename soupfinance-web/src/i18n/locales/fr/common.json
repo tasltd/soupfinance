@@ -1,0 +1,85 @@
+{
+  "actions": {
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "create": "Créer",
+    "submit": "Soumettre",
+    "confirm": "Confirmer",
+    "back": "Retour",
+    "next": "Suivant",
+    "close": "Fermer",
+    "search": "Rechercher",
+    "filter": "Filtrer",
+    "export": "Exporter",
+    "import": "Importer",
+    "download": "Télécharger",
+    "upload": "Téléverser",
+    "refresh": "Actualiser",
+    "view": "Voir",
+    "print": "Imprimer",
+    "send": "Envoyer",
+    "approve": "Approuver",
+    "reject": "Rejeter"
+  },
+  "status": {
+    "active": "Actif",
+    "inactive": "Inactif",
+    "pending": "En attente",
+    "approved": "Approuvé",
+    "rejected": "Rejeté",
+    "draft": "Brouillon",
+    "sent": "Envoyé",
+    "paid": "Payé",
+    "overdue": "En retard",
+    "cancelled": "Annulé",
+    "partial": "Partiel"
+  },
+  "messages": {
+    "loading": "Chargement...",
+    "saving": "Enregistrement...",
+    "saved": "Enregistré avec succès",
+    "deleted": "Supprimé avec succès",
+    "error": "Une erreur s'est produite",
+    "noData": "Aucune donnée disponible",
+    "noResults": "Aucun résultat trouvé",
+    "confirmDelete": "Êtes-vous sûr de vouloir supprimer cet élément ?",
+    "unsavedChanges": "Vous avez des modifications non enregistrées. Êtes-vous sûr de vouloir quitter ?"
+  },
+  "validation": {
+    "required": "Ce champ est obligatoire",
+    "email": "Veuillez entrer une adresse e-mail valide",
+    "phone": "Veuillez entrer un numéro de téléphone valide",
+    "minLength": "Doit contenir au moins {{count}} caractères",
+    "maxLength": "Ne doit pas dépasser {{count}} caractères",
+    "numeric": "Doit être un nombre",
+    "positive": "Doit être un nombre positif",
+    "date": "Veuillez entrer une date valide"
+  },
+  "pagination": {
+    "showing": "Affichage de {{from}} à {{to}} sur {{total}} résultats",
+    "previous": "Précédent",
+    "next": "Suivant",
+    "first": "Premier",
+    "last": "Dernier",
+    "page": "Page",
+    "of": "sur"
+  },
+  "dateTime": {
+    "today": "Aujourd'hui",
+    "yesterday": "Hier",
+    "tomorrow": "Demain",
+    "thisWeek": "Cette semaine",
+    "lastWeek": "Semaine dernière",
+    "thisMonth": "Ce mois-ci",
+    "lastMonth": "Mois dernier",
+    "thisYear": "Cette année",
+    "lastYear": "Année dernière",
+    "custom": "Période personnalisée"
+  },
+  "currency": {
+    "symbol": "€",
+    "code": "EUR"
+  }
+}

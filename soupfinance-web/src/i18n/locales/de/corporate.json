@@ -1,0 +1,144 @@
+{
+  "title": "Unternehmensregistrierung",
+  "subtitle": "Vervollständigen Sie Ihre Firmenregistrierung",
+  "registration": {
+    "title": "Firma registrieren",
+    "subtitle": "Erstellen Sie ein Konto für Ihr Unternehmen",
+    "companyName": "Firmenname",
+    "companyNamePlaceholder": "Geben Sie Ihren Firmennamen ein",
+    "registrationNumber": "Handelsregisternummer",
+    "registrationNumberPlaceholder": "Firmenregistrierungsnummer",
+    "email": "Geschäftliche E-Mail",
+    "emailPlaceholder": "firma@beispiel.de",
+    "phone": "Geschäftstelefon",
+    "phonePlaceholder": "+49 (0) 123 456789",
+    "password": "Passwort",
+    "confirmPassword": "Passwort bestätigen",
+    "agreeTerms": "Ich stimme den",
+    "termsOfService": "Nutzungsbedingungen",
+    "and": "und der",
+    "privacyPolicy": "Datenschutzerklärung",
+    "register": "Registrieren",
+    "registering": "Wird registriert...",
+    "haveAccount": "Bereits ein Konto?",
+    "signIn": "Anmelden"
+  },
+  "companyInfo": {
+    "title": "Unternehmensinformationen",
+    "subtitle": "Erzählen Sie uns von Ihrem Unternehmen",
+    "legalName": "Rechtlicher Name",
+    "tradingName": "Handelsname",
+    "businessType": "Unternehmensform",
+    "industry": "Branche",
+    "dateOfIncorporation": "Gründungsdatum",
+    "taxId": "Steuernummer / USt-IdNr.",
+    "website": "Website",
+    "description": "Geschäftsbeschreibung",
+    "descriptionPlaceholder": "Beschreiben Sie Ihre Geschäftstätigkeit...",
+    "businessTypes": {
+      "soleProprietorship": "Einzelunternehmen",
+      "partnership": "Personengesellschaft",
+      "llc": "GmbH",
+      "corporation": "Aktiengesellschaft",
+      "nonprofit": "Gemeinnützige Organisation"
+    }
+  },
+  "address": {
+    "title": "Geschäftsadresse",
+    "registered": "Sitz",
+    "operating": "Betriebsadresse",
+    "sameAsRegistered": "Gleich wie Sitz",
+    "street": "Straße",
+    "city": "Stadt",
+    "state": "Bundesland",
+    "postalCode": "Postleitzahl",
+    "country": "Land"
+  },
+  "directors": {
+    "title": "Geschäftsführer & Organe",
+    "subtitle": "Fügen Sie Geschäftsführer und Organe hinzu",
+    "addDirector": "Geschäftsführer hinzufügen",
+    "editDirector": "Geschäftsführer bearbeiten",
+    "removeDirector": "Geschäftsführer entfernen",
+    "firstName": "Vorname",
+    "lastName": "Nachname",
+    "email": "E-Mail",
+    "phone": "Telefon",
+    "position": "Position",
+    "dateOfBirth": "Geburtsdatum",
+    "nationality": "Staatsangehörigkeit",
+    "idNumber": "Ausweisnummer",
+    "idType": "Ausweisart",
+    "ownershipPercent": "Anteil %",
+    "isPrimaryContact": "Hauptansprechpartner",
+    "positions": {
+      "director": "Geschäftsführer",
+      "ceo": "Vorstandsvorsitzender",
+      "cfo": "Finanzvorstand",
+      "secretary": "Sekretär",
+      "shareholder": "Gesellschafter",
+      "beneficialOwner": "Wirtschaftlich Berechtigter"
+    },
+    "idTypes": {
+      "passport": "Reisepass",
+      "nationalId": "Personalausweis",
+      "driversLicense": "Führerschein"
+    }
+  },
+  "documents": {
+    "title": "Dokumente",
+    "subtitle": "Laden Sie erforderliche Verifizierungsdokumente hoch",
+    "required": "Erforderliche Dokumente",
+    "optional": "Optionale Dokumente",
+    "upload": "Dokument hochladen",
+    "replace": "Ersetzen",
+    "remove": "Entfernen",
+    "uploaded": "Hochgeladen",
+    "pending": "Hochladen ausstehend",
+    "verified": "Verifiziert",
+    "rejected": "Abgelehnt",
+    "maxSize": "Maximale Dateigröße: {{size}}MB",
+    "allowedTypes": "Erlaubte Typen: {{types}}",
+    "types": {
+      "certificateOfIncorporation": "Handelsregisterauszug",
+      "articlesOfAssociation": "Gesellschaftsvertrag",
+      "proofOfAddress": "Adressnachweis",
+      "taxCertificate": "Steuerbescheinigung",
+      "bankStatement": "Kontoauszug",
+      "directorId": "Geschäftsführer-Ausweis",
+      "shareholderRegister": "Gesellschafterverzeichnis"
+    }
+  },
+  "status": {
+    "title": "Antragsstatus",
+    "subtitle": "Verfolgen Sie Ihren Registrierungsfortschritt",
+    "steps": {
+      "registration": "Registrierung",
+      "companyInfo": "Unternehmensinformationen",
+      "directors": "Geschäftsführer",
+      "documents": "Dokumente",
+      "review": "In Prüfung",
+      "approved": "Genehmigt"
+    },
+    "statuses": {
+      "notStarted": "Nicht begonnen",
+      "inProgress": "In Bearbeitung",
+      "completed": "Abgeschlossen",
+      "pendingReview": "Prüfung ausstehend",
+      "approved": "Genehmigt",
+      "rejected": "Abgelehnt",
+      "requiresInfo": "Zusätzliche Informationen erforderlich"
+    },
+    "estimatedTime": "Geschätzte Prüfungszeit: {{days}} Werktage",
+    "contactSupport": "Support kontaktieren"
+  },
+  "messages": {
+    "saved": "Informationen erfolgreich gespeichert",
+    "submitted": "Antrag zur Prüfung eingereicht",
+    "documentUploaded": "Dokument erfolgreich hochgeladen",
+    "documentRemoved": "Dokument entfernt",
+    "directorAdded": "Geschäftsführer erfolgreich hinzugefügt",
+    "directorUpdated": "Geschäftsführer erfolgreich aktualisiert",
+    "directorRemoved": "Geschäftsführer entfernt"
+  }
+}

@@ -1,0 +1,81 @@
+{
+  "title": "Payments",
+  "subtitle": "Track incoming and outgoing payments",
+  "newPayment": "New Payment",
+  "editPayment": "Edit Payment",
+  "paymentDetails": "Payment Details",
+  "incoming": {
+    "title": "Incoming Payments",
+    "subtitle": "Payments received from clients"
+  },
+  "outgoing": {
+    "title": "Outgoing Payments",
+    "subtitle": "Payments made to vendors"
+  },
+  "fields": {
+    "paymentNumber": "Payment Number",
+    "paymentDate": "Payment Date",
+    "paymentMethod": "Payment Method",
+    "reference": "Reference Number",
+    "referencePlaceholder": "Check number, transaction ID, etc.",
+    "amount": "Amount",
+    "client": "Client",
+    "vendor": "Vendor",
+    "selectClient": "Select a client",
+    "selectVendor": "Select a vendor",
+    "invoice": "Invoice",
+    "bill": "Bill",
+    "selectInvoice": "Select an invoice",
+    "selectBill": "Select a bill",
+    "bankAccount": "Bank Account",
+    "selectBankAccount": "Select bank account",
+    "notes": "Notes",
+    "notesPlaceholder": "Additional payment notes..."
+  },
+  "methods": {
+    "cash": "Cash",
+    "check": "Check",
+    "bankTransfer": "Bank Transfer",
+    "creditCard": "Credit Card",
+    "debitCard": "Debit Card",
+    "wire": "Wire Transfer",
+    "ach": "ACH Transfer",
+    "other": "Other"
+  },
+  "status": {
+    "pending": "Pending",
+    "completed": "Completed",
+    "failed": "Failed",
+    "cancelled": "Cancelled",
+    "refunded": "Refunded"
+  },
+  "allocation": {
+    "title": "Payment Allocation",
+    "allocateTo": "Allocate To",
+    "amountToAllocate": "Amount to Allocate",
+    "remainingAmount": "Remaining Amount",
+    "fullyAllocated": "Fully Allocated",
+    "partiallyAllocated": "Partially Allocated",
+    "unallocated": "Unallocated"
+  },
+  "filters": {
+    "all": "All Payments",
+    "incoming": "Incoming",
+    "outgoing": "Outgoing",
+    "dateRange": "Date Range",
+    "method": "Payment Method",
+    "status": "Status"
+  },
+  "summary": {
+    "totalReceived": "Total Received",
+    "totalPaid": "Total Paid",
+    "netCashFlow": "Net Cash Flow",
+    "pendingPayments": "Pending Payments"
+  },
+  "messages": {
+    "created": "Payment recorded successfully",
+    "updated": "Payment updated successfully",
+    "deleted": "Payment deleted successfully",
+    "allocated": "Payment allocated successfully"
+  }
+}

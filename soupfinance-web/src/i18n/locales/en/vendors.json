@@ -1,0 +1,71 @@
+{
+  "title": "Vendors",
+  "subtitle": "Manage your vendors and suppliers",
+  "newVendor": "New Vendor",
+  "editVendor": "Edit Vendor",
+  "vendorDetails": "Vendor Details",
+  "fields": {
+    "vendorCode": "Vendor Code",
+    "companyName": "Company Name",
+    "contactName": "Contact Name",
+    "email": "Email",
+    "emailPlaceholder": "vendor@company.com",
+    "phone": "Phone",
+    "phonePlaceholder": "+1 (555) 123-4567",
+    "website": "Website",
+    "websitePlaceholder": "https://www.example.com",
+    "taxId": "Tax ID / VAT Number",
+    "paymentTerms": "Payment Terms",
+    "currency": "Currency",
+    "notes": "Notes",
+    "notesPlaceholder": "Additional notes about this vendor..."
+  },
+  "address": {
+    "title": "Address",
+    "street": "Street Address",
+    "streetPlaceholder": "123 Main Street",
+    "city": "City",
+    "state": "State / Province",
+    "postalCode": "Postal Code",
+    "country": "Country"
+  },
+  "banking": {
+    "title": "Banking Information",
+    "bankName": "Bank Name",
+    "accountNumber": "Account Number",
+    "routingNumber": "Routing Number",
+    "iban": "IBAN",
+    "swift": "SWIFT / BIC Code"
+  },
+  "status": {
+    "active": "Active",
+    "inactive": "Inactive",
+    "blocked": "Blocked"
+  },
+  "filters": {
+    "all": "All Vendors",
+    "active": "Active",
+    "inactive": "Inactive",
+    "search": "Search vendors..."
+  },
+  "tabs": {
+    "details": "Details",
+    "bills": "Bills",
+    "payments": "Payments",
+    "history": "History"
+  },
+  "summary": {
+    "totalBills": "Total Bills",
+    "outstandingAmount": "Outstanding",
+    "paidAmount": "Paid",
+    "vendorCount": "{{count}} vendor",
+    "vendorCount_plural": "{{count}} vendors"
+  },
+  "messages": {
+    "created": "Vendor created successfully",
+    "updated": "Vendor updated successfully",
+    "deleted": "Vendor deleted successfully",
+    "deactivated": "Vendor deactivated",
+    "activated": "Vendor activated"
+  }
+}

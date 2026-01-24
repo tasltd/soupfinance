@@ -1,0 +1,85 @@
+{
+  "actions": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "submit": "Submit",
+    "confirm": "Confirm",
+    "back": "Back",
+    "next": "Next",
+    "close": "Close",
+    "search": "Search",
+    "filter": "Filter",
+    "export": "Export",
+    "import": "Import",
+    "download": "Download",
+    "upload": "Upload",
+    "refresh": "Refresh",
+    "view": "View",
+    "print": "Print",
+    "send": "Send",
+    "approve": "Approve",
+    "reject": "Reject"
+  },
+  "status": {
+    "active": "Active",
+    "inactive": "Inactive",
+    "pending": "Pending",
+    "approved": "Approved",
+    "rejected": "Rejected",
+    "draft": "Draft",
+    "sent": "Sent",
+    "paid": "Paid",
+    "overdue": "Overdue",
+    "cancelled": "Cancelled",
+    "partial": "Partial"
+  },
+  "messages": {
+    "loading": "Loading...",
+    "saving": "Saving...",
+    "saved": "Saved successfully",
+    "deleted": "Deleted successfully",
+    "error": "An error occurred",
+    "noData": "No data available",
+    "noResults": "No results found",
+    "confirmDelete": "Are you sure you want to delete this item?",
+    "unsavedChanges": "You have unsaved changes. Are you sure you want to leave?"
+  },
+  "validation": {
+    "required": "This field is required",
+    "email": "Please enter a valid email address",
+    "phone": "Please enter a valid phone number",
+    "minLength": "Must be at least {{count}} characters",
+    "maxLength": "Must be no more than {{count}} characters",
+    "numeric": "Must be a number",
+    "positive": "Must be a positive number",
+    "date": "Please enter a valid date"
+  },
+  "pagination": {
+    "showing": "Showing {{from}} to {{to}} of {{total}} results",
+    "previous": "Previous",
+    "next": "Next",
+    "first": "First",
+    "last": "Last",
+    "page": "Page",
+    "of": "of"
+  },
+  "dateTime": {
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "tomorrow": "Tomorrow",
+    "thisWeek": "This week",
+    "lastWeek": "Last week",
+    "thisMonth": "This month",
+    "lastMonth": "Last month",
+    "thisYear": "This year",
+    "lastYear": "Last year",
+    "custom": "Custom range"
+  },
+  "currency": {
+    "symbol": "$",
+    "code": "USD"
+  }
+}

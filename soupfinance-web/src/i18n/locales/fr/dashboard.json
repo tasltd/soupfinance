@@ -1,0 +1,60 @@
+{
+  "title": "Tableau de bord",
+  "subtitle": "Aperçu financier",
+  "welcome": "Bon retour, {{name}}",
+  "overview": {
+    "title": "Aperçu financier",
+    "period": "Ce mois-ci"
+  },
+  "stats": {
+    "totalRevenue": "Chiffre d'affaires total",
+    "totalExpenses": "Dépenses totales",
+    "netIncome": "Résultat net",
+    "cashBalance": "Solde de trésorerie",
+    "accountsReceivable": "Créances clients",
+    "accountsPayable": "Dettes fournisseurs",
+    "invoicesDue": "Factures à échéance",
+    "billsDue": "Factures fournisseurs à échéance"
+  },
+  "charts": {
+    "revenueExpenses": "Revenus vs Dépenses",
+    "cashFlow": "Flux de trésorerie",
+    "incomeBreakdown": "Répartition des revenus",
+    "expenseBreakdown": "Répartition des dépenses",
+    "monthlyTrend": "Tendance mensuelle",
+    "topClients": "Meilleurs clients",
+    "topVendors": "Principaux fournisseurs"
+  },
+  "recentActivity": {
+    "title": "Activité récente",
+    "invoices": "Factures récentes",
+    "bills": "Factures fournisseurs récentes",
+    "payments": "Paiements récents",
+    "viewAll": "Voir tout"
+  },
+  "quickActions": {
+    "title": "Actions rapides",
+    "newInvoice": "Créer une facture",
+    "newBill": "Saisir une facture fournisseur",
+    "recordPayment": "Enregistrer un paiement",
+    "newJournalEntry": "Écriture comptable"
+  },
+  "alerts": {
+    "title": "Alertes",
+    "overdueInvoices": "{{count}} facture en retard",
+    "overdueInvoices_plural": "{{count}} factures en retard",
+    "overdueBills": "{{count}} facture fournisseur en retard",
+    "overdueBills_plural": "{{count}} factures fournisseurs en retard",
+    "lowCashBalance": "Solde de trésorerie faible",
+    "pendingApprovals": "{{count}} approbation en attente",
+    "pendingApprovals_plural": "{{count}} approbations en attente"
+  },
+  "periods": {
+    "today": "Aujourd'hui",
+    "thisWeek": "Cette semaine",
+    "thisMonth": "Ce mois-ci",
+    "thisQuarter": "Ce trimestre",
+    "thisYear": "Cette année",
+    "custom": "Période personnalisée"
+  }
+}

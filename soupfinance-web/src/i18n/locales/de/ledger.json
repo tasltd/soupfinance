@@ -1,0 +1,79 @@
+{
+  "title": "Hauptbuch",
+  "subtitle": "Kontenplan und Hauptbuchtransaktionen",
+  "chartOfAccounts": {
+    "title": "Kontenplan",
+    "subtitle": "Kontostruktur verwalten",
+    "newAccount": "Neues Konto",
+    "editAccount": "Konto bearbeiten",
+    "accountCode": "Kontonummer",
+    "accountName": "Kontobezeichnung",
+    "accountType": "Kontotyp",
+    "parentAccount": "Übergeordnetes Konto",
+    "selectParent": "Übergeordnetes Konto auswählen (optional)",
+    "description": "Beschreibung",
+    "descriptionPlaceholder": "Beschreiben Sie den Zweck dieses Kontos...",
+    "openingBalance": "Anfangssaldo",
+    "currentBalance": "Aktueller Saldo",
+    "isActive": "Aktiv",
+    "isSystemAccount": "Systemkonto",
+    "cannotDelete": "Systemkonten können nicht gelöscht werden"
+  },
+  "accountTypes": {
+    "asset": "Aktiva",
+    "liability": "Passiva",
+    "equity": "Eigenkapital",
+    "revenue": "Erträge",
+    "expense": "Aufwendungen"
+  },
+  "accountGroups": {
+    "currentAssets": "Umlaufvermögen",
+    "fixedAssets": "Anlagevermögen",
+    "currentLiabilities": "Kurzfristige Verbindlichkeiten",
+    "longTermLiabilities": "Langfristige Verbindlichkeiten",
+    "ownersEquity": "Eigenkapital",
+    "operatingRevenue": "Betriebsertrag",
+    "otherRevenue": "Sonstiger Ertrag",
+    "operatingExpenses": "Betriebsaufwand",
+    "otherExpenses": "Sonstiger Aufwand"
+  },
+  "transactions": {
+    "title": "Hauptbuchtransaktionen",
+    "subtitle": "Kontobewegungen anzeigen",
+    "transactionDate": "Datum",
+    "description": "Beschreibung",
+    "debit": "Soll",
+    "credit": "Haben",
+    "balance": "Saldo",
+    "reference": "Referenz",
+    "source": "Quelle",
+    "noTransactions": "Keine Transaktionen gefunden"
+  },
+  "filters": {
+    "all": "Alle Konten",
+    "active": "Nur aktive",
+    "inactive": "Nur inaktive",
+    "accountType": "Kontotyp",
+    "search": "Konten suchen..."
+  },
+  "actions": {
+    "viewTransactions": "Transaktionen anzeigen",
+    "deactivate": "Deaktivieren",
+    "activate": "Aktivieren"
+  },
+  "summary": {
+    "totalAssets": "Aktiva gesamt",
+    "totalLiabilities": "Passiva gesamt",
+    "totalEquity": "Eigenkapital gesamt",
+    "accountCount": "{{count}} Konto",
+    "accountCount_plural": "{{count}} Konten"
+  },
+  "messages": {
+    "accountCreated": "Konto erfolgreich erstellt",
+    "accountUpdated": "Konto erfolgreich aktualisiert",
+    "accountDeleted": "Konto erfolgreich gelöscht",
+    "accountDeactivated": "Konto deaktiviert",
+    "accountActivated": "Konto aktiviert",
+    "hasTransactions": "Konto mit Transaktionen kann nicht gelöscht werden"
+  }
+}

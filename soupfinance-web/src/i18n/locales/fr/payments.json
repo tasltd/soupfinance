@@ -1,0 +1,81 @@
+{
+  "title": "Paiements",
+  "subtitle": "Suivre les paiements entrants et sortants",
+  "newPayment": "Nouveau paiement",
+  "editPayment": "Modifier le paiement",
+  "paymentDetails": "Détails du paiement",
+  "incoming": {
+    "title": "Paiements entrants",
+    "subtitle": "Paiements reçus des clients"
+  },
+  "outgoing": {
+    "title": "Paiements sortants",
+    "subtitle": "Paiements effectués aux fournisseurs"
+  },
+  "fields": {
+    "paymentNumber": "Numéro de paiement",
+    "paymentDate": "Date de paiement",
+    "paymentMethod": "Mode de paiement",
+    "reference": "Numéro de référence",
+    "referencePlaceholder": "Numéro de chèque, ID de transaction, etc.",
+    "amount": "Montant",
+    "client": "Client",
+    "vendor": "Fournisseur",
+    "selectClient": "Sélectionner un client",
+    "selectVendor": "Sélectionner un fournisseur",
+    "invoice": "Facture",
+    "bill": "Facture fournisseur",
+    "selectInvoice": "Sélectionner une facture",
+    "selectBill": "Sélectionner une facture fournisseur",
+    "bankAccount": "Compte bancaire",
+    "selectBankAccount": "Sélectionner un compte bancaire",
+    "notes": "Notes",
+    "notesPlaceholder": "Notes de paiement supplémentaires..."
+  },
+  "methods": {
+    "cash": "Espèces",
+    "check": "Chèque",
+    "bankTransfer": "Virement bancaire",
+    "creditCard": "Carte de crédit",
+    "debitCard": "Carte de débit",
+    "wire": "Virement international",
+    "ach": "Prélèvement automatique",
+    "other": "Autre"
+  },
+  "status": {
+    "pending": "En attente",
+    "completed": "Effectué",
+    "failed": "Échoué",
+    "cancelled": "Annulé",
+    "refunded": "Remboursé"
+  },
+  "allocation": {
+    "title": "Affectation du paiement",
+    "allocateTo": "Affecter à",
+    "amountToAllocate": "Montant à affecter",
+    "remainingAmount": "Montant restant",
+    "fullyAllocated": "Entièrement affecté",
+    "partiallyAllocated": "Partiellement affecté",
+    "unallocated": "Non affecté"
+  },
+  "filters": {
+    "all": "Tous les paiements",
+    "incoming": "Entrants",
+    "outgoing": "Sortants",
+    "dateRange": "Période",
+    "method": "Mode de paiement",
+    "status": "Statut"
+  },
+  "summary": {
+    "totalReceived": "Total reçu",
+    "totalPaid": "Total payé",
+    "netCashFlow": "Flux de trésorerie net",
+    "pendingPayments": "Paiements en attente"
+  },
+  "messages": {
+    "created": "Paiement enregistré avec succès",
+    "updated": "Paiement mis à jour avec succès",
+    "deleted": "Paiement supprimé avec succès",
+    "allocated": "Paiement affecté avec succès"
+  }
+}

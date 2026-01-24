@@ -1,0 +1,71 @@
+{
+  "title": "Lieferanten",
+  "subtitle": "Lieferanten und Zulieferer verwalten",
+  "newVendor": "Neuer Lieferant",
+  "editVendor": "Lieferant bearbeiten",
+  "vendorDetails": "Lieferantendetails",
+  "fields": {
+    "vendorCode": "Lieferantennummer",
+    "companyName": "Firmenname",
+    "contactName": "Kontaktperson",
+    "email": "E-Mail",
+    "emailPlaceholder": "lieferant@firma.de",
+    "phone": "Telefon",
+    "phonePlaceholder": "+49 (0) 123 456789",
+    "website": "Website",
+    "websitePlaceholder": "https://www.beispiel.de",
+    "taxId": "Steuernummer / USt-IdNr.",
+    "paymentTerms": "Zahlungsbedingungen",
+    "currency": "Währung",
+    "notes": "Notizen",
+    "notesPlaceholder": "Zusätzliche Notizen zu diesem Lieferanten..."
+  },
+  "address": {
+    "title": "Adresse",
+    "street": "Straße",
+    "streetPlaceholder": "Musterstraße 123",
+    "city": "Stadt",
+    "state": "Bundesland",
+    "postalCode": "Postleitzahl",
+    "country": "Land"
+  },
+  "banking": {
+    "title": "Bankverbindung",
+    "bankName": "Bankname",
+    "accountNumber": "Kontonummer",
+    "routingNumber": "Bankleitzahl",
+    "iban": "IBAN",
+    "swift": "SWIFT / BIC"
+  },
+  "status": {
+    "active": "Aktiv",
+    "inactive": "Inaktiv",
+    "blocked": "Gesperrt"
+  },
+  "filters": {
+    "all": "Alle Lieferanten",
+    "active": "Aktiv",
+    "inactive": "Inaktiv",
+    "search": "Lieferanten suchen..."
+  },
+  "tabs": {
+    "details": "Details",
+    "bills": "Rechnungen",
+    "payments": "Zahlungen",
+    "history": "Verlauf"
+  },
+  "summary": {
+    "totalBills": "Rechnungen gesamt",
+    "outstandingAmount": "Offen",
+    "paidAmount": "Bezahlt",
+    "vendorCount": "{{count}} Lieferant",
+    "vendorCount_plural": "{{count}} Lieferanten"
+  },
+  "messages": {
+    "created": "Lieferant erfolgreich erstellt",
+    "updated": "Lieferant erfolgreich aktualisiert",
+    "deleted": "Lieferant erfolgreich gelöscht",
+    "deactivated": "Lieferant deaktiviert",
+    "activated": "Lieferant aktiviert"
+  }
+}

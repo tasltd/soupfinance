@@ -1,0 +1,79 @@
+{
+  "title": "General Ledger",
+  "subtitle": "Chart of accounts and ledger transactions",
+  "chartOfAccounts": {
+    "title": "Chart of Accounts",
+    "subtitle": "Manage your account structure",
+    "newAccount": "New Account",
+    "editAccount": "Edit Account",
+    "accountCode": "Account Code",
+    "accountName": "Account Name",
+    "accountType": "Account Type",
+    "parentAccount": "Parent Account",
+    "selectParent": "Select parent account (optional)",
+    "description": "Description",
+    "descriptionPlaceholder": "Describe the purpose of this account...",
+    "openingBalance": "Opening Balance",
+    "currentBalance": "Current Balance",
+    "isActive": "Active",
+    "isSystemAccount": "System Account",
+    "cannotDelete": "System accounts cannot be deleted"
+  },
+  "accountTypes": {
+    "asset": "Asset",
+    "liability": "Liability",
+    "equity": "Equity",
+    "revenue": "Revenue",
+    "expense": "Expense"
+  },
+  "accountGroups": {
+    "currentAssets": "Current Assets",
+    "fixedAssets": "Fixed Assets",
+    "currentLiabilities": "Current Liabilities",
+    "longTermLiabilities": "Long-term Liabilities",
+    "ownersEquity": "Owner's Equity",
+    "operatingRevenue": "Operating Revenue",
+    "otherRevenue": "Other Revenue",
+    "operatingExpenses": "Operating Expenses",
+    "otherExpenses": "Other Expenses"
+  },
+  "transactions": {
+    "title": "Ledger Transactions",
+    "subtitle": "View account activity",
+    "transactionDate": "Date",
+    "description": "Description",
+    "debit": "Debit",
+    "credit": "Credit",
+    "balance": "Balance",
+    "reference": "Reference",
+    "source": "Source",
+    "noTransactions": "No transactions found"
+  },
+  "filters": {
+    "all": "All Accounts",
+    "active": "Active Only",
+    "inactive": "Inactive Only",
+    "accountType": "Account Type",
+    "search": "Search accounts..."
+  },
+  "actions": {
+    "viewTransactions": "View Transactions",
+    "deactivate": "Deactivate",
+    "activate": "Activate"
+  },
+  "summary": {
+    "totalAssets": "Total Assets",
+    "totalLiabilities": "Total Liabilities",
+    "totalEquity": "Total Equity",
+    "accountCount": "{{count}} account",
+    "accountCount_plural": "{{count}} accounts"
+  },
+  "messages": {
+    "accountCreated": "Account created successfully",
+    "accountUpdated": "Account updated successfully",
+    "accountDeleted": "Account deleted successfully",
+    "accountDeactivated": "Account deactivated",
+    "accountActivated": "Account activated",
+    "hasTransactions": "Cannot delete account with existing transactions"
+  }
+}

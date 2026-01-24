@@ -1,0 +1,103 @@
+{
+  "title": "Buchhaltung",
+  "subtitle": "Buchungen, Belege und Transaktionen verwalten",
+  "journalEntry": {
+    "title": "Buchungssatz",
+    "newEntry": "Neuer Buchungssatz",
+    "editEntry": "Buchungssatz bearbeiten",
+    "entryNumber": "Buchungsnummer",
+    "entryDate": "Buchungsdatum",
+    "reference": "Referenz",
+    "description": "Beschreibung",
+    "descriptionPlaceholder": "Beschreiben Sie den Zweck dieser Buchung...",
+    "memo": "Notiz",
+    "memoPlaceholder": "Zusätzliche Hinweise...",
+    "debitAccount": "Sollkonto",
+    "creditAccount": "Habenkonto",
+    "amount": "Betrag",
+    "selectAccount": "Konto auswählen",
+    "addLine": "Zeile hinzufügen",
+    "removeLine": "Zeile entfernen",
+    "totalDebits": "Summe Soll",
+    "totalCredits": "Summe Haben",
+    "difference": "Differenz",
+    "balanced": "Ausgeglichen",
+    "unbalanced": "Nicht ausgeglichen",
+    "postEntry": "Buchung buchen",
+    "saveDraft": "Als Entwurf speichern"
+  },
+  "voucher": {
+    "title": "Beleg",
+    "newVoucher": "Neuer Beleg",
+    "editVoucher": "Beleg bearbeiten",
+    "voucherNumber": "Belegnummer",
+    "voucherDate": "Belegdatum",
+    "voucherType": "Belegart",
+    "payee": "Zahlungsempfänger",
+    "payeePlaceholder": "Name des Empfängers eingeben",
+    "amount": "Betrag",
+    "description": "Beschreibung",
+    "attachments": "Anhänge",
+    "addAttachment": "Anhang hinzufügen",
+    "approvedBy": "Genehmigt von",
+    "approvalDate": "Genehmigungsdatum",
+    "types": {
+      "payment": "Zahlungsbeleg",
+      "receipt": "Eingangsbeleg",
+      "journal": "Buchungsbeleg",
+      "contra": "Gegenbeleg",
+      "debitNote": "Lastschrift",
+      "creditNote": "Gutschrift"
+    },
+    "status": {
+      "draft": "Entwurf",
+      "pending": "Genehmigung ausstehend",
+      "approved": "Genehmigt",
+      "rejected": "Abgelehnt",
+      "posted": "Gebucht",
+      "cancelled": "Storniert"
+    }
+  },
+  "transactions": {
+    "title": "Transaktionsregister",
+    "subtitle": "Alle Buchhaltungstransaktionen anzeigen",
+    "transactionId": "Transaktions-ID",
+    "date": "Datum",
+    "type": "Typ",
+    "account": "Konto",
+    "debit": "Soll",
+    "credit": "Haben",
+    "balance": "Saldo",
+    "reference": "Referenz",
+    "description": "Beschreibung",
+    "postedBy": "Gebucht von",
+    "filters": {
+      "all": "Alle Transaktionen",
+      "dateRange": "Zeitraum",
+      "account": "Konto",
+      "type": "Transaktionstyp",
+      "minAmount": "Mindestbetrag",
+      "maxAmount": "Höchstbetrag"
+    },
+    "types": {
+      "invoice": "Rechnung",
+      "bill": "Eingangsrechnung",
+      "payment": "Zahlung",
+      "receipt": "Eingang",
+      "journal": "Buchungssatz",
+      "adjustment": "Anpassung"
+    }
+  },
+  "messages": {
+    "entryCreated": "Buchungssatz erfolgreich erstellt",
+    "entryUpdated": "Buchungssatz erfolgreich aktualisiert",
+    "entryPosted": "Buchungssatz erfolgreich gebucht",
+    "entryDeleted": "Buchungssatz erfolgreich gelöscht",
+    "voucherCreated": "Beleg erfolgreich erstellt",
+    "voucherUpdated": "Beleg erfolgreich aktualisiert",
+    "voucherApproved": "Beleg erfolgreich genehmigt",
+    "voucherRejected": "Beleg abgelehnt",
+    "mustBalance": "Soll und Haben müssen ausgeglichen sein",
+    "atLeastTwoLines": "Buchungssatz muss mindestens zwei Zeilen haben"
+  }
+}

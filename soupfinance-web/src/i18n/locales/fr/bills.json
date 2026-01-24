@@ -1,0 +1,73 @@
+{
+  "title": "Factures fournisseurs",
+  "subtitle": "Gérer les factures fournisseurs et suivre les paiements",
+  "newBill": "Nouvelle facture",
+  "editBill": "Modifier la facture",
+  "billDetails": "Détails de la facture",
+  "fields": {
+    "billNumber": "Numéro de facture",
+    "vendor": "Fournisseur",
+    "selectVendor": "Sélectionner un fournisseur",
+    "billDate": "Date de facture",
+    "dueDate": "Date d'échéance",
+    "status": "Statut",
+    "subtotal": "Sous-total",
+    "taxAmount": "Montant de la TVA",
+    "discountAmount": "Remise",
+    "totalAmount": "Montant total",
+    "amountPaid": "Montant payé",
+    "amountDue": "Montant dû",
+    "notes": "Notes",
+    "notesPlaceholder": "Ajouter des notes sur cette facture...",
+    "terms": "Conditions de paiement",
+    "termsPlaceholder": "Conditions de paiement..."
+  },
+  "lineItems": {
+    "title": "Lignes de facturation",
+    "description": "Description",
+    "quantity": "Qté",
+    "unitPrice": "Prix unitaire",
+    "taxRate": "TVA %",
+    "discount": "Remise %",
+    "amount": "Montant",
+    "addItem": "Ajouter une ligne",
+    "removeItem": "Supprimer la ligne",
+    "noItems": "Aucune ligne ajoutée"
+  },
+  "actions": {
+    "markPaid": "Marquer comme payée",
+    "recordPayment": "Enregistrer un paiement",
+    "download": "Télécharger en PDF",
+    "duplicate": "Dupliquer",
+    "void": "Annuler la facture"
+  },
+  "status": {
+    "draft": "Brouillon",
+    "received": "Reçue",
+    "partial": "Partiellement payée",
+    "paid": "Payée",
+    "overdue": "En retard",
+    "cancelled": "Annulée"
+  },
+  "filters": {
+    "all": "Toutes les factures",
+    "draft": "Brouillons",
+    "received": "Reçues",
+    "paid": "Payées",
+    "overdue": "En retard",
+    "dateRange": "Période"
+  },
+  "summary": {
+    "totalOutstanding": "Total en cours",
+    "totalOverdue": "Total en retard",
+    "totalPaidThisMonth": "Payé ce mois",
+    "billCount": "{{count}} facture",
+    "billCount_plural": "{{count}} factures"
+  },
+  "messages": {
+    "created": "Facture créée avec succès",
+    "updated": "Facture mise à jour avec succès",
+    "deleted": "Facture supprimée avec succès",
+    "paymentRecorded": "Paiement enregistré avec succès"
+  }
+}

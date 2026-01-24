@@ -1,0 +1,60 @@
+{
+  "title": "Dashboard",
+  "subtitle": "Finanzübersicht",
+  "welcome": "Willkommen zurück, {{name}}",
+  "overview": {
+    "title": "Finanzübersicht",
+    "period": "Diesen Monat"
+  },
+  "stats": {
+    "totalRevenue": "Gesamtumsatz",
+    "totalExpenses": "Gesamtausgaben",
+    "netIncome": "Nettoeinkommen",
+    "cashBalance": "Kassenbestand",
+    "accountsReceivable": "Forderungen",
+    "accountsPayable": "Verbindlichkeiten",
+    "invoicesDue": "Fällige Rechnungen",
+    "billsDue": "Fällige Eingangsrechnungen"
+  },
+  "charts": {
+    "revenueExpenses": "Einnahmen vs. Ausgaben",
+    "cashFlow": "Cashflow",
+    "incomeBreakdown": "Einnahmenaufschlüsselung",
+    "expenseBreakdown": "Ausgabenaufschlüsselung",
+    "monthlyTrend": "Monatlicher Trend",
+    "topClients": "Top-Kunden",
+    "topVendors": "Top-Lieferanten"
+  },
+  "recentActivity": {
+    "title": "Letzte Aktivitäten",
+    "invoices": "Letzte Rechnungen",
+    "bills": "Letzte Eingangsrechnungen",
+    "payments": "Letzte Zahlungen",
+    "viewAll": "Alle anzeigen"
+  },
+  "quickActions": {
+    "title": "Schnellaktionen",
+    "newInvoice": "Rechnung erstellen",
+    "newBill": "Rechnung eingeben",
+    "recordPayment": "Zahlung erfassen",
+    "newJournalEntry": "Buchungssatz"
+  },
+  "alerts": {
+    "title": "Warnungen",
+    "overdueInvoices": "{{count}} überfällige Rechnung",
+    "overdueInvoices_plural": "{{count}} überfällige Rechnungen",
+    "overdueBills": "{{count}} überfällige Eingangsrechnung",
+    "overdueBills_plural": "{{count}} überfällige Eingangsrechnungen",
+    "lowCashBalance": "Niedriger Kassenbestand",
+    "pendingApprovals": "{{count}} ausstehende Genehmigung",
+    "pendingApprovals_plural": "{{count}} ausstehende Genehmigungen"
+  },
+  "periods": {
+    "today": "Heute",
+    "thisWeek": "Diese Woche",
+    "thisMonth": "Diesen Monat",
+    "thisQuarter": "Dieses Quartal",
+    "thisYear": "Dieses Jahr",
+    "custom": "Benutzerdefiniert"
+  }
+}
