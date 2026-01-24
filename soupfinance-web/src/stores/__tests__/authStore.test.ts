@@ -5,7 +5,7 @@
  * Changed: Added apiClient mock for token validation tests
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { act, waitFor } from '@testing-library/react'
+import { act } from '@testing-library/react'
 import { useAuthStore } from '../authStore'
 
 // Mock the auth API module
