@@ -11,7 +11,7 @@
  * Changed: Now fetches ledger accounts from API via useLedgerAccounts hook
  */
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema';
@@ -93,6 +93,7 @@ const BENEFICIARY_TYPE_OPTIONS: RadioOption[] = [
  */
 export function VoucherFormPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -101,8 +102,28 @@ export function VoucherFormPage() {
   // Changed: Renamed to _accountsLoading to suppress unused variable warning (can be used for loading state)
   const { data: accounts, isLoading: _accountsLoading } = useLedgerAccounts();
 
-  // Added: Get initial voucher type from URL param (defaults to PAYMENT)
-  const initialVoucherType = (searchParams.get('type')?.toUpperCase() || 'PAYMENT') as VoucherType;
+  // Changed: Get initial voucher type from URL path or query param
+  // Supports both /accounting/voucher/payment and /accounting/voucher?type=payment
+  const getInitialVoucherType = (): VoucherType => {
+    // First check URL path (e.g., /accounting/voucher/payment)
+    const pathParts = location.pathname.split('/');
+    const lastPart = pathParts[pathParts.length - 1]?.toUpperCase();
+    if (['PAYMENT', 'RECEIPT', 'DEPOSIT'].includes(lastPart)) {
+      return lastPart as VoucherType;
+    }
+    // Fallback to query param (e.g., ?type=payment)
+    const typeParam = searchParams.get('type')?.toUpperCase();
+    if (typeParam && ['PAYMENT', 'RECEIPT', 'DEPOSIT'].includes(typeParam)) {
+      return typeParam as VoucherType;
+    }
+    return 'PAYMENT';
+  };
+  const initialVoucherType = getInitialVoucherType();
+
+  // Changed: Set default voucherTo based on voucher type
+  // PAYMENT vouchers are typically paid TO vendors
+  // RECEIPT/DEPOSIT vouchers are typically received FROM clients
+  const initialVoucherTo: VoucherTo = initialVoucherType === 'PAYMENT' ? 'VENDOR' : 'CLIENT';
 
   // Added: Initialize form with react-hook-form and Zod validation
   const {
@@ -119,7 +140,7 @@ export function VoucherFormPage() {
       voucherDate: format(new Date(), 'yyyy-MM-dd'),
       reference: '',
       description: '',
-      voucherTo: 'VENDOR',
+      voucherTo: initialVoucherTo,
       beneficiaryName: '',
       clientId: '',
       vendorId: '',

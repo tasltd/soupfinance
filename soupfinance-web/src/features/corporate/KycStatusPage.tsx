@@ -140,7 +140,7 @@ export function KycStatusPage() {
   const isRejected = corporate?.kycStatus === 'REJECTED';
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6" data-testid="kyc-status-page">
       {/* Page Header */}
       <div className="flex flex-wrap justify-between items-center gap-4 pb-6 border-b border-border-light dark:border-border-dark">
         <div>

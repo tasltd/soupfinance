@@ -1,10 +1,16 @@
 /**
  * Playwright E2E Test Configuration
- * Base URL: http://localhost:5173 (Vite dev server)
+ * Base URL: http://localhost:5180 (dedicated E2E test port to avoid conflicts)
  * Browser: Chromium headless
  * Screenshots on failure enabled
+ *
+ * NOTE: Uses port 5180 instead of 5173 to avoid conflicts with other services
+ * that may be running on the default Vite port.
  */
 import { defineConfig, devices } from '@playwright/test';
+
+// Dedicated port for E2E tests to avoid conflicts with other dev servers
+const E2E_TEST_PORT = 5180;
 
 export default defineConfig({
   // Test directory
@@ -42,7 +48,7 @@ export default defineConfig({
   // Shared settings for all the projects below
   use: {
     // Base URL to use in actions like `await page.goto('/')`
-    baseURL: 'http://localhost:5173',
+    baseURL: `http://localhost:${E2E_TEST_PORT}`,
 
     // Collect trace when retrying the failed test
     trace: 'on-first-retry',
@@ -68,10 +74,10 @@ export default defineConfig({
   // Output folder for test artifacts (screenshots, videos, traces)
   outputDir: 'test-results/',
 
-  // Run local dev server before starting the tests
+  // Run local dev server before starting the tests on dedicated port
   webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:5173',
+    command: `npm run dev -- --port ${E2E_TEST_PORT}`,
+    url: `http://localhost:${E2E_TEST_PORT}`,
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
   },

@@ -12,11 +12,12 @@ const reports = [
   { title: 'Trial Balance', description: 'Debit and credit balances for all accounts', icon: 'balance', path: '/reports/trial-balance' },
 ];
 
+// Added: data-testid attributes for E2E testing
 export function ReportsPage() {
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6" data-testid="reports-page">
       <div>
-        <h1 className="text-3xl font-black tracking-tight text-text-light dark:text-text-dark">Reports</h1>
+        <h1 className="text-3xl font-black tracking-tight text-text-light dark:text-text-dark" data-testid="reports-heading">Reports</h1>
         <p className="text-subtle-text">Financial reports and analytics</p>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

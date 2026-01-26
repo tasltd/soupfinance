@@ -12,7 +12,8 @@
  * export functionality, and responsive layout.
  */
 import { test, expect } from '@playwright/test';
-import { takeScreenshot } from './fixtures';
+// Changed: Import mockTokenValidationApi to mock /rest/user/current.json during auth initialization
+import { takeScreenshot, mockTokenValidationApi } from './fixtures';
 
 // =============================================================================
 // Mock Data
@@ -152,6 +153,8 @@ function getFirstDayOfMonth(): string {
 test.describe('Trial Balance Report', () => {
   test.beforeEach(async ({ page }) => {
     await setupAuth(page);
+    // Added: Mock token validation endpoint to prevent redirect to login
+    await mockTokenValidationApi(page, true);
   });
 
   test('navigates to trial balance page', async ({ page }) => {
@@ -333,6 +336,8 @@ test.describe('Trial Balance Report', () => {
 test.describe('Profit & Loss Report', () => {
   test.beforeEach(async ({ page }) => {
     await setupAuth(page);
+    // Added: Mock token validation endpoint to prevent redirect to login
+    await mockTokenValidationApi(page, true);
   });
 
   test('navigates to profit & loss page', async ({ page }) => {
@@ -496,6 +501,8 @@ test.describe('Profit & Loss Report', () => {
 test.describe('Balance Sheet Report', () => {
   test.beforeEach(async ({ page }) => {
     await setupAuth(page);
+    // Added: Mock token validation endpoint to prevent redirect to login
+    await mockTokenValidationApi(page, true);
   });
 
   test('navigates to balance sheet page', async ({ page }) => {
@@ -660,6 +667,8 @@ test.describe('Balance Sheet Report', () => {
 test.describe('Cash Flow Statement Report', () => {
   test.beforeEach(async ({ page }) => {
     await setupAuth(page);
+    // Added: Mock token validation endpoint to prevent redirect to login
+    await mockTokenValidationApi(page, true);
   });
 
   test('navigates to cash flow page', async ({ page }) => {
@@ -830,6 +839,8 @@ test.describe('Cash Flow Statement Report', () => {
 test.describe('Aging Reports', () => {
   test.beforeEach(async ({ page }) => {
     await setupAuth(page);
+    // Added: Mock token validation endpoint to prevent redirect to login
+    await mockTokenValidationApi(page, true);
   });
 
   test('navigates to aging reports page', async ({ page }) => {
@@ -1119,6 +1130,8 @@ test.describe('Aging Reports', () => {
 test.describe('Report Navigation', () => {
   test.beforeEach(async ({ page }) => {
     await setupAuth(page);
+    // Added: Mock token validation endpoint to prevent redirect to login
+    await mockTokenValidationApi(page, true);
   });
 
   test('navigates between different report pages', async ({ page }) => {
@@ -1180,6 +1193,8 @@ test.describe('Report Navigation', () => {
 test.describe('Report Loading States', () => {
   test.beforeEach(async ({ page }) => {
     await setupAuth(page);
+    // Added: Mock token validation endpoint to prevent redirect to login
+    await mockTokenValidationApi(page, true);
   });
 
   test('shows loading state for trial balance', async ({ page }) => {

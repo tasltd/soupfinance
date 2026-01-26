@@ -176,6 +176,7 @@ export function SideNav() {
             </button>
             <button
               onClick={logout}
+              data-testid="logout-button"
               className="flex items-center gap-3 px-3 py-2 rounded-lg text-subtle-text hover:bg-danger/10 hover:text-danger transition-colors"
             >
               <span className="material-symbols-outlined text-xl">logout</span>

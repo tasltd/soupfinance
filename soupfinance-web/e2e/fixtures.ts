@@ -13,32 +13,39 @@ import { test as base, expect } from '@playwright/test';
 // ===========================================================================
 
 export const backendTestUsers = {
-  // Full admin access (ROLE_ADMIN + ROLE_USER)
+  // Primary admin account (from soupmarkets-web seed data)
+  // This user must have an Agent record for the target tenant
   admin: {
-    username: 'test.admin',
-    password: 'secret',
-    email: 'test.admin@soupfinance.test',
+    username: 'soup.support',
+    password: 'Soup@Enscript2023',
+    email: 'soup.support@soupmarkets.com',
     roles: ['ROLE_ADMIN', 'ROLE_USER'],
   },
-  // Regular user (ROLE_USER only)
-  user: {
-    username: 'test.user',
-    password: 'secret',
-    email: 'test.user@soupfinance.test',
+  // Demo user (for demo tenant)
+  demo: {
+    username: 'fui.nusenu',
+    password: 'fui.nusenu',
+    email: 'fui.nusenu@demo.com',
     roles: ['ROLE_USER'],
   },
-  // Finance-focused user (invoice, bill, ledger, voucher access)
-  finance: {
-    username: 'test.finance',
-    password: 'secret',
-    email: 'test.finance@soupfinance.test',
-    roles: ['ROLE_USER', 'ROLE_INVOICE', 'ROLE_BILL', 'ROLE_LEDGER_TRANSACTION',
-            'ROLE_VENDOR', 'ROLE_FINANCE_REPORTS', 'ROLE_LEDGER_ACCOUNT', 'ROLE_VOUCHER'],
+  // Test agent user (if configured)
+  testAgent: {
+    username: 'test.agent',
+    password: 'TestAgent123',
+    email: 'test.agent@soupfinance.test',
+    roles: ['ROLE_USER'],
   },
-  // Legacy admin (from seed data)
+  // Finance-focused user (requires Agent record in database)
+  finance: {
+    username: 'soup.support', // Use same as admin until separate finance user created
+    password: 'Soup@Enscript2023',
+    email: 'soup.support@soupmarkets.com',
+    roles: ['ROLE_ADMIN', 'ROLE_USER', 'ROLE_FINANCE_REPORTS'],
+  },
+  // Legacy reference (same as admin)
   legacyAdmin: {
     username: 'soup.support',
-    password: 'secret',
+    password: 'Soup@Enscript2023',
     email: 'soup.support@soupmarkets.com',
     roles: ['ROLE_ADMIN', 'ROLE_USER'],
   },
@@ -299,11 +306,12 @@ export async function mockOtpRequestApi(
 // ===========================================================================
 
 // Helper to mock invoices list API
+// Changed: Use **/rest/invoice/** pattern to match /rest/invoice/index.json (glob * doesn't match /)
 export async function mockInvoicesApi(
   page: Awaited<ReturnType<typeof base.page>>,
   invoices = mockInvoices
 ) {
-  await page.route('**/rest/invoice*', (route) => {
+  await page.route('**/rest/invoice/**', (route) => {
     route.fulfill({
       status: 200,
       contentType: 'application/json',

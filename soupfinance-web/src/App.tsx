@@ -33,7 +33,7 @@ import { BillFormPage } from './features/bills/BillFormPage';
 import { BillDetailPage } from './features/bills/BillDetailPage';
 
 // Added: Vendors
-import { VendorListPage, VendorFormPage } from './features/vendors';
+import { VendorListPage, VendorFormPage, VendorDetailPage } from './features/vendors';
 
 // Payments
 import { PaymentListPage } from './features/payments/PaymentListPage';
@@ -194,7 +194,8 @@ export default function App() {
             {/* Added: Vendors */}
             <Route path="/vendors" element={<VendorListPage />} />
             <Route path="/vendors/new" element={<VendorFormPage />} />
-            <Route path="/vendors/:id" element={<VendorFormPage />} />
+            {/* Changed: Use VendorDetailPage for viewing, VendorFormPage for editing */}
+            <Route path="/vendors/:id" element={<VendorDetailPage />} />
             <Route path="/vendors/:id/edit" element={<VendorFormPage />} />
 
             {/* Payments */}
@@ -207,8 +208,14 @@ export default function App() {
 
             {/* Added: Accounting Transactions */}
             <Route path="/accounting/transactions" element={<TransactionRegisterPage />} />
+            {/* Changed: Added route for /accounting/journal-entry without /new to match navigation handler */}
+            <Route path="/accounting/journal-entry" element={<JournalEntryPage />} />
             <Route path="/accounting/journal-entry/new" element={<JournalEntryPage />} />
             <Route path="/accounting/journal-entry/:id" element={<JournalEntryPage />} />
+            {/* Changed: Added routes for voucher type URLs to match navigation handlers */}
+            <Route path="/accounting/voucher/payment" element={<VoucherFormPage />} />
+            <Route path="/accounting/voucher/receipt" element={<VoucherFormPage />} />
+            <Route path="/accounting/vouchers" element={<VoucherFormPage />} />
             <Route path="/accounting/vouchers/new" element={<VoucherFormPage />} />
             <Route path="/accounting/vouchers/:id" element={<VoucherFormPage />} />
 

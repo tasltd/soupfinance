@@ -214,7 +214,7 @@ export function VendorListPage() {
       {deleteState.isOpen && (
         <div
           className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50"
-          data-testid="vendor-delete-modal"
+          data-testid="delete-confirmation-modal"
         >
           <div className="relative w-full max-w-md rounded-xl bg-surface-light dark:bg-surface-dark shadow-2xl overflow-hidden">
             {/* Modal Header */}
@@ -253,7 +253,7 @@ export function VendorListPage() {
               <button
                 onClick={handleCancelDelete}
                 className="h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm hover:bg-primary/5"
-                data-testid="vendor-delete-modal-cancel"
+                data-testid="delete-cancel-button"
               >
                 Cancel
               </button>
@@ -261,7 +261,7 @@ export function VendorListPage() {
                 onClick={handleConfirmDelete}
                 disabled={deleteMutation.isPending}
                 className="h-10 px-4 rounded-lg bg-danger text-white font-bold text-sm hover:bg-danger/90 disabled:opacity-50"
-                data-testid="vendor-delete-modal-confirm"
+                data-testid="delete-confirm-button"
               >
                 {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
               </button>

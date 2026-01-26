@@ -53,6 +53,7 @@ cd soupfinance-web
 # Development
 npm install                    # Install dependencies
 npm run dev                    # Start dev server (port 5173)
+npm run dev:lxc                # Dev server against LXC backend
 npm run build                  # Production build (runs tsc -b first)
 npm run lint                   # ESLint
 npm run preview                # Preview production build
@@ -64,13 +65,21 @@ npm run test:coverage          # With V8 coverage report
 npx vitest run src/api/__tests__/client.test.ts           # Single test file
 npx vitest run -t "should attach Bearer token"            # Single test by name
 
-# E2E Tests (Playwright) - requires dev server running
-npm run test:e2e               # Run all E2E tests (headless)
+# E2E Tests (Playwright) - uses dedicated port 5180 to avoid conflicts
+npm run test:e2e               # Run all E2E tests (headless, port 5180)
 npm run test:e2e:headed        # Run with browser visible
 npm run test:e2e:ui            # Interactive Playwright UI
 npm run test:e2e:report        # Open HTML report in browser
 npx playwright test e2e/auth.spec.ts                      # Single E2E file
 npx playwright test --grep "login flow"                   # By test name
+
+# E2E Tests against LXC Backend (real backend, not mocked)
+npm run test:e2e:lxc           # Run all E2E tests against LXC backend
+npm run test:e2e:lxc:headed    # With browser visible
+npm run test:e2e:lxc:report    # Open LXC test report
+
+# Integration E2E Tests (port 5181, sequential execution)
+npx playwright test --config=playwright.integration.config.ts
 
 # Storybook (component documentation)
 npm run storybook              # Start Storybook dev server (port 6006)
@@ -88,7 +97,16 @@ python3 -m http.server 8000      # Preview locally
 
 ## Local Development Backend (LXC)
 
-For local development and endpoint verification, use the LXC backend instead of running Grails directly:
+For local development and endpoint verification, use the LXC backend instead of running Grails directly.
+
+**Two backend options exist** (use ONE, not both):
+
+| Option | Location | Use Case |
+|--------|----------|----------|
+| `backend/tomcat-control.sh` | `backend/` | **Recommended** - Spring Boot embedded Tomcat from pre-built WAR |
+| `soupfinance-lxc/setup-backend.sh` | `soupfinance-lxc/` | Alternative - Grails bootRun (slower startup, requires source mount) |
+
+### Option 1: Spring Boot WAR (Recommended)
 
 ```bash
 cd backend
@@ -101,13 +119,16 @@ cd backend
 
 # View logs
 ./tomcat-control.sh logs
+
+# Stop when done
+./tomcat-control.sh stop
 ```
 
 ### Run React app against LXC backend
 
 ```bash
 cd soupfinance-web
-npm run dev -- --mode lxc
+npm run dev:lxc
 ```
 
 ### Deploy new WAR from soupmarkets-web
@@ -127,8 +148,10 @@ cd backend
 
 | Component | IP/Port | Description |
 |-----------|---------|-------------|
-| `soupfinance-backend` LXC | `10.115.213.183:9090` | Java 21 + Spring Boot embedded Tomcat |
-| `soupmarkets-mariadb` LXC | `10.115.213.114:3306` | Database: `soupbroker_soupfinance` |
+| `soupfinance-backend` LXC | Dynamic (check with `status`) | Java 21 + Spring Boot embedded Tomcat |
+| `soupmarkets-mariadb` LXC | Dynamic (check with `status`) | Database: `soupbroker_soupfinance` |
+
+**Note**: Container IPs are assigned dynamically by LXC. Run `./tomcat-control.sh status` to get current IPs and update `.env.lxc` if needed.
 
 See `backend/README.md` for full documentation.
 
@@ -268,9 +291,14 @@ See `src/App.tsx` for complete route definitions. Key routes:
 
 ### Backend Proxy
 
-Vite proxies to `http://localhost:9090` (Soupmarkets Grails backend):
-- `/rest/*` → Authenticated admin API endpoints
-- `/client/*` → Public/unauthenticated client endpoints (registration, etc.)
+Vite proxies API calls to the backend (default `http://localhost:9090`, or `VITE_API_URL` from `.env.lxc`):
+
+| Prefix | Target | Auth Required | Usage |
+|--------|--------|---------------|-------|
+| `/rest/*` | Backend `/rest/*` | Yes (X-Auth-Token) | Admin API endpoints |
+| `/client/*` | Backend `/client/*` | No | Public endpoints (registration, 2FA) |
+
+**Note**: API endpoint modules in `src/api/endpoints/` use paths like `/invoice/index.json` which become `/rest/invoice/index.json` via the Axios base URL configured in `client.ts`.
 
 ### API Client Patterns
 

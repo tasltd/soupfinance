@@ -134,7 +134,7 @@ export function DirectorsPage() {
   const isPending = addMutation.isPending || updateMutation.isPending;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6" data-testid="directors-page">
       {/* Page Header */}
       <div className="flex flex-wrap justify-between items-center gap-4">
         <div>
