@@ -26,6 +26,35 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Current Status**: Landing page is in **beta testing mode**. The pricing section is hidden (preserved in HTML comments for later reactivation) and replaced with a beta testing notice.
 
+## Backend Tenant (CRITICAL)
+
+**See [.claude/rules/soupfinance-backend-tenant.md](.claude/rules/soupfinance-backend-tenant.md) for full rules.**
+
+SoupFinance uses the **Tech At Scale (TAS)** tenant in soupmarkets-web.
+
+| Property | Value |
+|----------|-------|
+| **Backend URL** | https://tas.soupmarkets.com |
+| **Tenant** | Tech At Scale |
+| **API Proxy** | app.soupfinance.com → tas.soupmarkets.com |
+
+### API Endpoints
+
+| Type | Path Prefix | Auth Required | Example |
+|------|-------------|---------------|---------|
+| **Public** | `/client/*` | No | `/client/register.json` (registration) |
+| **Authenticated** | `/rest/*` | X-Auth-Token | `/rest/invoice/index.json` |
+
+**IMPORTANT**: Corporate registration uses `/client/register.json` (public), NOT `/rest/corporate/save.json` (requires admin).
+
+### Production Logs (140.82.32.141)
+
+| Log | Path |
+|-----|------|
+| Apache (SoupFinance) | `/var/log/apache2/app.soupfinance.com-*.log` |
+| Tomcat (Backend) | `/root/tomcat9078/logs/catalina.out` |
+| API Access | `/root/tomcat9078/logs/localhost_access_log.*.txt` |
+
 ## Gradle Concurrent Task Rule (HARD RULE)
 
 **NEVER run Gradle tasks if another process is already running a Gradle task in the same project folder.**
