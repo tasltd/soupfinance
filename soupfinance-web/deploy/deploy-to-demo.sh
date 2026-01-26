@@ -1,6 +1,12 @@
 #!/bin/bash
-# Deploy SoupFinance to Demo server (140.82.32.141) for testing
-# Note: Production deployment is at app.soupfinance.com (65.20.112.224)
+# Deploy SoupFinance to Demo/Staging server (140.82.32.141)
+#
+# IMPORTANT: Site is ONLY accessible via domain name (app.soupfinance.com)
+# Direct IP access is NOT supported.
+#
+# Architecture:
+#   Cloudflare -> Apache (vhost) -> Static files + API proxy to tas.soupmarkets.com
+#
 # Usage: ./deploy/deploy-to-demo.sh
 
 set -e
@@ -10,11 +16,17 @@ SERVER="140.82.32.141"
 SERVER_USER="root"
 DEPLOY_DIR="/var/www/soupfinance"
 APACHE_CONF="/etc/apache2/sites-available/soupfinance-demo.conf"
+DOMAIN="app.soupfinance.com"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
-echo "=== SoupFinance Deployment to Demo Server ==="
+echo "╔══════════════════════════════════════════════════════════════╗"
+echo "║         SoupFinance Deployment to Demo Server                ║"
+echo "╚══════════════════════════════════════════════════════════════╝"
+echo ""
 echo "Server: $SERVER"
+echo "Domain: $DOMAIN"
+echo "Backend: tas.soupmarkets.com (API proxy)"
 echo "Deploy directory: $DEPLOY_DIR"
 echo ""
 
@@ -39,12 +51,20 @@ echo ""
 # Step 4: Deploy Apache configuration
 echo "[4/4] Configuring Apache..."
 scp "$SCRIPT_DIR/apache-soupfinance.conf" ${SERVER_USER}@${SERVER}:${APACHE_CONF}
-ssh ${SERVER_USER}@${SERVER} "a2ensite soupfinance-demo.conf && apache2ctl configtest && systemctl reload apache2"
+ssh ${SERVER_USER}@${SERVER} "a2enmod ssl proxy_ssl rewrite headers 2>/dev/null; a2ensite soupfinance-demo.conf 2>/dev/null || true; apache2ctl configtest && systemctl reload apache2"
 echo "Apache configured!"
 echo ""
 
-echo "=== Deployment Complete ==="
+echo "╔══════════════════════════════════════════════════════════════╗"
+echo "║         Deployment Complete!                                 ║"
+echo "╚══════════════════════════════════════════════════════════════╝"
 echo ""
-echo "Demo site available at: http://$SERVER/soupfinance"
+echo "Site available at: https://$DOMAIN"
 echo ""
-echo "Note: For production deployment, use ./deploy/deploy-to-production.sh"
+echo "IMPORTANT: Access via domain name only (NOT via IP)"
+echo "  - Frontend: https://$DOMAIN"
+echo "  - Backend:  tas.soupmarkets.com (proxied via /rest/*)"
+echo ""
+echo "To verify deployment:"
+echo "  curl -I -H 'Host: $DOMAIN' http://$SERVER/"
+echo ""

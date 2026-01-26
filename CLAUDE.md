@@ -184,51 +184,84 @@ test('integration test', async ({ page }) => {
 
 ## Deployment
 
+### CRITICAL: Domain-Only Access (HARD RULE)
+
+**Sites are ONLY accessible via domain names, NEVER via direct IP.**
+
+| Domain | Purpose | Direct IP Access |
+|--------|---------|-----------------|
+| `app.soupfinance.com` | Application | **BLOCKED** - use domain only |
+| `www.soupfinance.com` | Landing page | **BLOCKED** - use domain only |
+
+Direct IP requests fall through to the server's default vhost (not SoupFinance).
+
+### Production Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  User Browser                                                       │
+│       │                                                             │
+│       ▼                                                             │
+│  ┌─────────────────┐                                               │
+│  │   Cloudflare    │  DNS + SSL + CDN                              │
+│  └────────┬────────┘                                               │
+│           │                                                         │
+│           ▼                                                         │
+│  ┌─────────────────────────────────────────────────────────────┐   │
+│  │  Origin: 140.82.32.141                                       │   │
+│  │  ┌─────────────────────────────────────────────────────────┐│   │
+│  │  │ Apache VHost: app.soupfinance.com                       ││   │
+│  │  │  ├── Static files: /var/www/soupfinance (React SPA)     ││   │
+│  │  │  └── API proxy: /rest/* → tas.soupmarkets.com          ││   │
+│  │  └─────────────────────────────────────────────────────────┘│   │
+│  │  ┌─────────────────────────────────────────────────────────┐│   │
+│  │  │ Apache VHost: tas.soupmarkets.com (Backend API)         ││   │
+│  │  │  └── Varnish (6081) → Tomcat (8080) → soupmarkets-web   ││   │
+│  │  └─────────────────────────────────────────────────────────┘│   │
+│  └─────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
 ### Production (app.soupfinance.com)
 
 | Property | Value |
 |----------|-------|
 | URL | https://app.soupfinance.com |
-| Origin Server | 65.20.112.224 |
+| Origin Server | 140.82.32.141 |
+| Backend API | tas.soupmarkets.com (proxied via Apache) |
 | Deploy Directory | /var/www/soupfinance |
 | CDN | Cloudflare |
 | SSL | Cloudflare (flexible) |
 
-**Architecture**: Cloudflare CDN → Apache (port 80) → Static SPA files → Varnish (port 6081) → Tomcat (Grails API)
-
 ```bash
 # Deploy to production
 cd soupfinance-web
-./deploy/deploy-to-production.sh
+./deploy/deploy-to-demo.sh   # Currently both demo/prod use same server
 ```
 
-### Demo Server (for testing)
+### API Proxy Configuration
 
-| Property | Value |
-|----------|-------|
-| Server | 140.82.32.141 |
-| Deploy Directory | /var/www/soupfinance |
+API calls from the frontend (`/rest/*`, `/application/*`, `/client/*`) are proxied by Apache to `tas.soupmarkets.com`:
 
-```bash
-# Deploy to demo
-cd soupfinance-web
-./deploy/deploy-to-demo.sh
+```
+Frontend: app.soupfinance.com/rest/invoice → Apache proxy → tas.soupmarkets.com/rest/invoice
 ```
 
 ### Deploy Scripts
 
 | Script | Target | Description |
 |--------|--------|-------------|
-| `deploy/deploy-to-production.sh` | 65.20.112.224 | Production (app.soupfinance.com) |
-| `deploy/deploy-to-demo.sh` | 140.82.32.141 | Demo server for testing |
+| `deploy/deploy-to-demo.sh` | 140.82.32.141 | Deploy frontend + Apache config |
+| `deploy/deploy-to-production.sh` | 65.20.112.224 | Production (SSH key required) |
 
-### Apache Configuration Files
+### Apache Configuration
 
 | File | Purpose |
 |------|---------|
-| `deploy/apache-soupfinance-production.conf` | Production Apache vhost |
-| `deploy/apache-soupfinance.conf` | Demo Apache vhost |
-| `deploy/nginx-soupfinance.conf` | Alternative Nginx config (demo) |
+| `deploy/apache-soupfinance.conf` | VHost config for app.soupfinance.com |
+| `deploy/README.md` | Full deployment documentation |
+
+See `soupfinance-web/deploy/README.md` for complete deployment guide.
 
 ## Architecture
 
