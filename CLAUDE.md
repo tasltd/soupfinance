@@ -381,6 +381,31 @@ The API client (`src/api/client.ts`) handles:
 | **Token Validation** | On app mount, validates token with GET `/rest/user/current.json` |
 | **2FA (Corporate)** | POST `/client/authenticate.json` then `/client/verifyCode.json` |
 
+### Corporate Registration Flow
+
+The `/client/register.json` endpoint supports both Individual and Corporate registration with smart type detection:
+
+| Parameter Pattern | Detected Type | Fields Required |
+|-------------------|---------------|-----------------|
+| `firstName`, `lastName` | INDIVIDUAL | firstName, lastName, phone OR email |
+| `contactFirstName`, `contactLastName` | CORPORATE | name, contactFirstName, contactLastName, phone OR email |
+| Explicit `type=CORPORATE` | CORPORATE | Same as above |
+
+**Smart Type Detection**: If `type` is not provided, the backend infers it:
+- Has `contactFirstName` or `contactLastName` → CORPORATE
+- Otherwise → INDIVIDUAL (default, backward compatible)
+
+**Corporate Registration creates**:
+1. `Corporate` entity with company `name`
+2. `CorporateAccountPerson` as key contact (marked `keyContact=true`)
+3. Phone/Email contacts linked to the corporate
+4. Pending `ClientAccountApproval` for admin review
+
+**Optional Corporate Fields** (can be added during onboarding):
+- `certificateOfIncorporationNumber` - Company registration number
+- `businessCategory` - SOLE_PROPRIERTORSHIP, PARTNERSHIP, LIMITED_LIABILITY, etc.
+- `contactPosition` - Key contact's job title
+
 ### Backend API Endpoints (Verified 2026-01-22)
 
 **Finance Controllers** (in `soupmarkets-web/grails-app/controllers/soupbroker/finance/`):
@@ -397,6 +422,12 @@ The API client (`src/api/client.ts`) handles:
 | `LedgerTransactionGroupController` | `/rest/ledgerTransactionGroup/*` | Standard CRUD (journal entries) |
 | `VoucherController` | `/rest/voucher/*` | CRUD + PDF + email |
 | `FinanceReportsController` | `/rest/financeReports/*` | P&L, Balance Sheet, Trial Balance, Aging |
+
+**Public Controllers** (in `soupmarkets-web/grails-app/controllers/soupbroker/kyc/`):
+
+| Controller | Endpoints | Notes |
+|------------|-----------|-------|
+| `ClientController` | `/client/*` | **Public** - registration (`register.json`), 2FA (`authenticate.json`, `verifyCode.json`) |
 
 **Approval Workflows**:
 
