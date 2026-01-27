@@ -47,12 +47,18 @@ SoupFinance uses the **Tech At Scale (TAS)** tenant in soupmarkets-web.
 
 **IMPORTANT**: Corporate registration uses `/client/register.json` (public), NOT `/rest/corporate/save.json` (requires admin).
 
-### Production Logs (140.82.32.141)
+### Production Logs
 
+**Frontend (65.20.112.224)**:
 | Log | Path |
 |-----|------|
-| Apache (SoupFinance) | `/var/log/apache2/app.soupfinance.com-*.log` |
-| Tomcat (Backend) | `/root/tomcat9078/logs/catalina.out` |
+| Apache (app.soupfinance.com) | `/var/log/apache2/error.log`, `/var/log/apache2/access.log` |
+| Apache (www.soupfinance.com) | `/var/log/apache2/www-soupfinance-*.log` |
+
+**Backend API (140.82.32.141 - tas.soupmarkets.com)**:
+| Log | Path |
+|-----|------|
+| Tomcat | `/root/tomcat9078/logs/catalina.out` |
 | API Access | `/root/tomcat9078/logs/localhost_access_log.*.txt` |
 
 ## Gradle Concurrent Task Rule (HARD RULE)
@@ -68,6 +74,17 @@ This applies to:
 - Host machine running `./gradlew bootRun`
 - LXC containers running `./gradlew bootRun` on mounted `/app`
 - Any CI/CD pipelines
+
+## Port Configuration
+
+| Service | Port | Notes |
+|---------|------|-------|
+| Vite dev server | 5173 | Default development |
+| E2E tests | 5180 | Playwright (avoids conflicts) |
+| Integration E2E | 5181 | Sequential tests |
+| Storybook | 6006 | Component documentation |
+| LXC Backend | 9090 | Spring Boot / Grails |
+| MariaDB | 3306 | LXC container |
 
 ## Quick Commands
 
@@ -237,15 +254,15 @@ Direct IP requests fall through to the server's default vhost (not SoupFinance).
 │           │                                                         │
 │           ▼                                                         │
 │  ┌─────────────────────────────────────────────────────────────┐   │
-│  │  Origin: 140.82.32.141                                       │   │
+│  │  Origin: 65.20.112.224                                       │   │
 │  │  ┌─────────────────────────────────────────────────────────┐│   │
 │  │  │ Apache VHost: app.soupfinance.com                       ││   │
 │  │  │  ├── Static files: /var/www/soupfinance (React SPA)     ││   │
 │  │  │  └── API proxy: /rest/* → tas.soupmarkets.com          ││   │
 │  │  └─────────────────────────────────────────────────────────┘│   │
 │  │  ┌─────────────────────────────────────────────────────────┐│   │
-│  │  │ Apache VHost: tas.soupmarkets.com (Backend API)         ││   │
-│  │  │  └── Varnish (6081) → Tomcat (8080) → soupmarkets-web   ││   │
+│  │  │ Apache VHost: www.soupfinance.com (Landing Page)        ││   │
+│  │  │  └── Static files: /var/www/soupfinance-landing         ││   │
 │  │  └─────────────────────────────────────────────────────────┘│   │
 │  └─────────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────────┘
@@ -256,21 +273,21 @@ Direct IP requests fall through to the server's default vhost (not SoupFinance).
 | Property | Value |
 |----------|-------|
 | URL | https://app.soupfinance.com |
-| Origin Server | 140.82.32.141 |
+| Origin Server | 65.20.112.224 |
 | Backend API | tas.soupmarkets.com (proxied via Apache) |
 | Deploy Directory | /var/www/soupfinance |
 | CDN | Cloudflare |
-| SSL | Cloudflare (flexible) |
+| SSL | Let's Encrypt (on origin) + Cloudflare |
 
 ```bash
 # Deploy to production
 cd soupfinance-web
-./deploy/deploy-to-demo.sh   # Currently both demo/prod use same server
+./deploy/deploy-to-demo.sh
 ```
 
 ### API Proxy Configuration
 
-API calls from the frontend (`/rest/*`, `/application/*`, `/client/*`) are proxied by Apache to `tas.soupmarkets.com`:
+API calls from the frontend (`/rest/*`, `/client/*`) are proxied by Apache to `tas.soupmarkets.com` with `Api-Authorization` header:
 
 ```
 Frontend: app.soupfinance.com/rest/invoice → Apache proxy → tas.soupmarkets.com/rest/invoice
@@ -280,15 +297,11 @@ Frontend: app.soupfinance.com/rest/invoice → Apache proxy → tas.soupmarkets.
 
 | Script | Target | Description |
 |--------|--------|-------------|
-| `deploy/deploy-to-demo.sh` | 140.82.32.141 | Deploy frontend + Apache config |
-| `deploy/deploy-to-production.sh` | 65.20.112.224 | Production (SSH key required) |
+| `deploy/deploy-to-demo.sh` | 65.20.112.224 | Deploy frontend to production |
 
 ### Apache Configuration
 
-| File | Purpose |
-|------|---------|
-| `deploy/apache-soupfinance.conf` | VHost config for app.soupfinance.com |
-| `deploy/README.md` | Full deployment documentation |
+Vhost config on server: `/etc/apache2/sites-available/app-soupfinance-com.conf`
 
 See `soupfinance-web/deploy/README.md` for complete deployment guide.
 
