@@ -51,19 +51,19 @@ describe('LoginPage', () => {
 
       // Assert
       expect(screen.getByText('Welcome back')).toBeInTheDocument()
-      expect(screen.getByPlaceholderText('you@company.com')).toBeInTheDocument()
+      expect(screen.getByPlaceholderText('Enter your username')).toBeInTheDocument()
       expect(screen.getByPlaceholderText('Enter your password')).toBeInTheDocument()
       expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument()
     })
 
-    it('renders email input with correct attributes', () => {
+    it('renders username input with correct attributes', () => {
       // Act
       renderLoginPage()
-      const emailInput = screen.getByPlaceholderText('you@company.com')
+      const usernameInput = screen.getByPlaceholderText('Enter your username')
 
       // Assert
-      expect(emailInput).toHaveAttribute('type', 'email')
-      expect(emailInput).toHaveAttribute('required')
+      expect(usernameInput).toHaveAttribute('type', 'text')
+      expect(usernameInput).toHaveAttribute('required')
     })
 
     it('renders password input with correct attributes', () => {
@@ -108,7 +108,7 @@ describe('LoginPage', () => {
       // Arrange
       const user = userEvent.setup()
       renderLoginPage()
-      const emailInput = screen.getByPlaceholderText('you@company.com')
+      const emailInput = screen.getByPlaceholderText('Enter your username')
 
       // Act
       await user.type(emailInput, 'test@example.com')
@@ -139,7 +139,7 @@ describe('LoginPage', () => {
       renderLoginPage()
 
       // Act
-      await user.type(screen.getByPlaceholderText('you@company.com'), 'user@test.com')
+      await user.type(screen.getByPlaceholderText('Enter your username'), 'user@test.com')
       await user.type(screen.getByPlaceholderText('Enter your password'), 'password123')
       await user.click(screen.getByRole('button', { name: /sign in/i }))
 
@@ -158,7 +158,7 @@ describe('LoginPage', () => {
       renderLoginPage()
 
       // Act
-      await user.type(screen.getByPlaceholderText('you@company.com'), 'user@test.com')
+      await user.type(screen.getByPlaceholderText('Enter your username'), 'user@test.com')
       await user.type(screen.getByPlaceholderText('Enter your password'), 'password123')
       await user.click(screen.getByRole('button', { name: /sign in/i }))
 
@@ -177,7 +177,7 @@ describe('LoginPage', () => {
       renderLoginPage()
 
       // Act
-      await user.type(screen.getByPlaceholderText('you@company.com'), 'user@test.com')
+      await user.type(screen.getByPlaceholderText('Enter your username'), 'user@test.com')
       await user.type(screen.getByPlaceholderText('Enter your password'), 'wrongpassword')
       await user.click(screen.getByRole('button', { name: /sign in/i }))
 
@@ -202,7 +202,7 @@ describe('LoginPage', () => {
       renderLoginPage()
 
       // Act
-      await user.type(screen.getByPlaceholderText('you@company.com'), 'user@test.com')
+      await user.type(screen.getByPlaceholderText('Enter your username'), 'user@test.com')
       await user.type(screen.getByPlaceholderText('Enter your password'), 'password123')
       await user.click(screen.getByRole('button', { name: /sign in/i }))
 
@@ -297,13 +297,13 @@ describe('LoginPage', () => {
   })
 
   describe('form validation (browser native)', () => {
-    it('email input has required attribute', () => {
+    it('username input has required attribute', () => {
       // Act
       renderLoginPage()
 
       // Assert
-      const emailInput = screen.getByPlaceholderText('you@company.com')
-      expect(emailInput).toBeRequired()
+      const usernameInput = screen.getByPlaceholderText('Enter your username')
+      expect(usernameInput).toBeRequired()
     })
 
     it('password input has required attribute', () => {
@@ -315,13 +315,13 @@ describe('LoginPage', () => {
       expect(passwordInput).toBeRequired()
     })
 
-    it('email input has type=email for validation', () => {
+    it('username input has type=text', () => {
       // Act
       renderLoginPage()
 
       // Assert
-      const emailInput = screen.getByPlaceholderText('you@company.com')
-      expect(emailInput).toHaveAttribute('type', 'email')
+      const usernameInput = screen.getByPlaceholderText('Enter your username')
+      expect(usernameInput).toHaveAttribute('type', 'text')
     })
   })
 })
