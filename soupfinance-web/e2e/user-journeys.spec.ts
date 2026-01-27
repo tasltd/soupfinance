@@ -12,6 +12,10 @@
  * 4. Financial Reporting Journey - Generate and view all reports
  * 5. KYC Onboarding Journey - Complete registration flow
  * 6. Accounting Workflow Journey - Journal entries and vouchers
+ *
+ * DUAL-MODE: These tests work with both mock and real backend:
+ * - Mock mode: Uses mock API helpers for fast, isolated tests
+ * - LXC mode: Mocks are skipped, hits real backend with real credentials
  */
 import { test, expect } from '@playwright/test';
 import {
@@ -33,7 +37,12 @@ import {
   mockTokenValidationApi,
   mockUsers,
   takeScreenshot,
+  getTestUsers,
+  isLxcMode,
 } from './fixtures';
+
+// Get appropriate test users based on mode (mock or LXC)
+const testUsers = getTestUsers();
 
 // ===========================================================================
 // Additional Mock Data for User Journeys

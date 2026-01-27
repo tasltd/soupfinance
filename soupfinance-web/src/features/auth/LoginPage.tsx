@@ -58,13 +58,13 @@ export function LoginPage() {
       <form onSubmit={handleSubmit} className="flex flex-col gap-6" data-testid="login-form">
         <label className="flex flex-col gap-2">
           <span className="text-sm font-medium text-text-light dark:text-text-dark">
-            Email Address
+            Username
           </span>
           <input
-            type="email"
+            type="text"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@company.com"
+            placeholder="Enter your username"
             required
             data-testid="login-email-input"
             className="h-12 px-4 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark placeholder:text-subtle-text focus:border-primary focus:ring-2 focus:ring-primary/20"

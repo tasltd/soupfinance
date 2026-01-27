@@ -2,13 +2,16 @@
  * Registration API endpoints for SoupFinance
  * Maps to soupmarkets-web /client/register.json endpoint
  * Handles corporate registration/onboarding for new clients
- * 
+ *
  * NOTE: This endpoint uses /client/* path (public, unauthenticated)
  * unlike /rest/* endpoints which require authentication
+ *
+ * DESIGN: Minimal registration - collect only essential info for account creation.
+ * Full KYC details are collected in post-registration onboarding steps.
  */
 import axios from 'axios';
 
-// Added: Separate axios instance for /client/ endpoints (unauthenticated)
+// Separate axios instance for /client/ endpoints (unauthenticated)
 const clientApiClient = axios.create({
   baseURL: import.meta.env.VITE_API_URL?.replace('/rest', '') || '',
   headers: {
@@ -22,28 +25,45 @@ const clientApiClient = axios.create({
 // =============================================================================
 
 /**
- * Corporate registration data structure
- * Maps to soupmarkets-web Corporate domain fields
+ * Business category types supported by the backend
+ */
+export type BusinessCategory =
+  | 'LIMITED_LIABILITY'
+  | 'PUBLIC_LIMITED'
+  | 'PARTNERSHIP'
+  | 'SOLE_PROPRIETORSHIP'
+  | 'NON_PROFIT'
+  | 'OTHER';
+
+/**
+ * Corporate registration data structure.
+ * Collects MINIMAL information for quick account creation.
+ * Full KYC details are collected in post-registration onboarding.
+ *
+ * Required: name + contactFirstName + contactLastName + (phoneNumber OR email)
  */
 export interface CorporateRegistration {
-  /** Primary phone number for the corporate entity */
-  phoneNumber?: string;
-  /** Primary email for the corporate entity */
-  email?: string;
+  // ===== REQUIRED =====
   /** Legal company name */
-  companyName: string;
-  /** Company registration number (certificate of incorporation) */
-  registrationNumber?: string;
-  /** Tax Identification Number (TIN) */
-  taxIdentificationNumber?: string;
-  /** Country of incorporation (ISO country code or full name) */
-  countryOfIncorporation: string;
-  /** First name of primary contact person */
+  name: string;
+  /** Key contact first name */
   contactFirstName: string;
-  /** Last name of primary contact person */
+  /** Key contact last name */
   contactLastName: string;
-  /** Position/title of primary contact person */
-  contactPosition: string;
+
+  // At least one contact method required
+  /** Primary contact phone (required if no email) */
+  phoneNumber?: string;
+  /** Primary contact email (required if no phone) */
+  email?: string;
+
+  // ===== OPTIONAL (commonly known at registration) =====
+  /** Key contact title/position */
+  contactPosition?: string;
+  /** Company registration number (if known) */
+  certificateOfIncorporationNumber?: string;
+  /** Business type (if known) */
+  businessCategory?: BusinessCategory;
 }
 
 /**
@@ -54,17 +74,23 @@ export interface RegistrationResponse {
   /** Created client entity */
   client?: {
     id: string;
+    name?: string;
     phoneNumber?: string;
     email?: string;
-  };
-  /** Created corporate entity */
-  corporate?: {
-    id: string;
-    name: string;
-    status?: string;
+    phoneContacts?: Array<{ phone: string; priority: string }>;
+    emailContacts?: Array<{ email: string; priority: string }>;
+    accountServicesList?: Array<{ id: string; quickReference: string }>;
+    signatoriesAndDirectorsList?: Array<{
+      firstName: string;
+      lastName: string;
+      position: string;
+      keyContact: boolean;
+    }>;
   };
   /** Success message from backend */
   message?: string;
+  /** Error code from backend (if error) */
+  error?: number;
 }
 
 // =============================================================================
@@ -72,15 +98,21 @@ export interface RegistrationResponse {
 // =============================================================================
 
 /**
- * Convert CorporateRegistration to FormData with Grails-compatible field names
- * Uses dot notation for nested domain objects (corporate.fieldName)
- * 
- * Added: Custom toFormData for registration-specific field mapping
+ * Convert CorporateRegistration to URLSearchParams for backend.
+ * Uses flat field names matching CorporateRegisterCommand in backend.
  */
 function toRegistrationFormData(data: CorporateRegistration): URLSearchParams {
   const params = new URLSearchParams();
 
-  // Client-level fields (flat)
+  // Type - always CORPORATE for SoupFinance
+  params.append('type', 'CORPORATE');
+
+  // Required fields
+  params.append('name', data.name);
+  params.append('contactFirstName', data.contactFirstName);
+  params.append('contactLastName', data.contactLastName);
+
+  // Contact methods (at least one required)
   if (data.phoneNumber) {
     params.append('phoneNumber', data.phoneNumber);
   }
@@ -88,22 +120,16 @@ function toRegistrationFormData(data: CorporateRegistration): URLSearchParams {
     params.append('email', data.email);
   }
 
-  // Corporate-level fields (nested with corporate. prefix)
-  // Changed: Using Grails nested binding syntax for corporate domain
-  params.append('corporate.name', data.companyName);
-  
-  if (data.registrationNumber) {
-    params.append('corporate.certificateOfIncorporationNumber', data.registrationNumber);
+  // Optional fields (only include if provided)
+  if (data.contactPosition) {
+    params.append('contactPosition', data.contactPosition);
   }
-  if (data.taxIdentificationNumber) {
-    params.append('corporate.taxIdentificationNumber', data.taxIdentificationNumber);
+  if (data.certificateOfIncorporationNumber) {
+    params.append('certificateOfIncorporationNumber', data.certificateOfIncorporationNumber);
   }
-  params.append('corporate.countryOfIncorporation', data.countryOfIncorporation);
-
-  // Contact person fields (nested with corporate. prefix)
-  params.append('corporate.contactFirstName', data.contactFirstName);
-  params.append('corporate.contactLastName', data.contactLastName);
-  params.append('corporate.contactPosition', data.contactPosition);
+  if (data.businessCategory) {
+    params.append('businessCategory', data.businessCategory);
+  }
 
   return params;
 }
@@ -115,45 +141,43 @@ function toRegistrationFormData(data: CorporateRegistration): URLSearchParams {
 /**
  * Register a new corporate entity
  * POST /client/register.json
- * 
+ *
  * This is a public endpoint that does not require authentication.
- * Creates both a Client and Corporate entity in the soupmarkets backend.
- * 
- * @param data - Corporate registration data
- * @returns Created client and corporate entities
+ * Creates a Corporate entity with minimal info for quick account creation.
+ * Full KYC details can be added later via /rest/corporate/update/:id.json
+ *
+ * @param data - Corporate registration data (minimal fields)
+ * @returns Created client/corporate entity
  * @throws AxiosError on validation or server errors
- * 
+ *
  * @example
  * ```ts
  * const result = await registerCorporate({
- *   companyName: 'Acme Corp',
- *   countryOfIncorporation: 'Kenya',
+ *   name: 'Acme Corp',
  *   contactFirstName: 'John',
  *   contactLastName: 'Doe',
- *   contactPosition: 'CFO',
  *   email: 'john@acme.com',
- *   phoneNumber: '+254700123456',
+ *   phoneNumber: '+233244123456',
  * });
  * ```
  */
 export async function registerCorporate(
   data: CorporateRegistration
 ): Promise<RegistrationResponse> {
-  // Added: Convert registration data to FormData with proper field mapping
   const formData = toRegistrationFormData(data);
-  
+
   const response = await clientApiClient.post<RegistrationResponse>(
     '/client/register.json',
     formData
   );
-  
+
   return response.data;
 }
 
 /**
  * Check if a phone number is already registered
  * GET /client/checkPhone.json?phoneNumber=xxx
- * 
+ *
  * @param phoneNumber - Phone number to check
  * @returns true if phone number exists, false otherwise
  */
@@ -172,7 +196,7 @@ export async function checkPhoneExists(phoneNumber: string): Promise<boolean> {
 /**
  * Check if an email is already registered
  * GET /client/checkEmail.json?email=xxx
- * 
+ *
  * @param email - Email to check
  * @returns true if email exists, false otherwise
  */

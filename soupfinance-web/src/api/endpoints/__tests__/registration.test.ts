@@ -1,6 +1,6 @@
 /**
  * Unit tests for registration API module
- * Tests corporate registration with Grails nested field names (FormData)
+ * Tests corporate registration with minimal fields (simplified registration flow)
  *
  * Note: axios is mocked globally in test/setup.ts
  */
@@ -36,24 +36,27 @@ describe('Registration API', () => {
   });
 
   describe('registerCorporate', () => {
-    it('sends correct FormData with Grails nested field names', async () => {
-      // Arrange
+    it('sends correct FormData with minimal required fields', async () => {
+      // Arrange - minimal registration with all fields
       const registration: CorporateRegistration = {
-        phoneNumber: '+254700123456',
-        email: 'john@acme.com',
-        companyName: 'Acme Corporation',
-        registrationNumber: 'REG-12345',
-        taxIdentificationNumber: 'TIN-67890',
-        countryOfIncorporation: 'Kenya',
+        name: 'Acme Corporation',
         contactFirstName: 'John',
         contactLastName: 'Doe',
+        phoneNumber: '+254700123456',
+        email: 'john@acme.com',
         contactPosition: 'CFO',
+        certificateOfIncorporationNumber: 'REG-12345',
+        businessCategory: 'LIMITED_LIABILITY',
       };
 
       const mockResponse = {
         data: {
-          client: { id: 'client-uuid-123', email: 'john@acme.com' },
-          corporate: { id: 'corp-uuid-456', name: 'Acme Corporation' },
+          client: {
+            id: 'client-uuid-123',
+            name: 'Acme Corporation',
+            phoneContacts: [{ phone: '+254700123456', priority: 'PRIMARY' }],
+            emailContacts: [{ email: 'john@acme.com', priority: 'PRIMARY' }],
+          },
           message: 'Registration successful',
         },
       };
@@ -77,45 +80,45 @@ describe('Registration API', () => {
       const result = await freshRegister(registration);
 
       // Assert - verify POST was called
-      expect(mockPost).toHaveBeenCalledWith(
-        '/client/register.json',
-        expect.any(URLSearchParams)
-      );
+      expect(mockPost).toHaveBeenCalledWith('/client/register.json', expect.any(URLSearchParams));
 
-      // Assert - verify FormData contains correct Grails nested fields
+      // Assert - verify FormData contains correct flat field names
       const formData = mockPost.mock.calls[0][1] as URLSearchParams;
 
-      // Client-level fields (flat)
+      // Type field
+      expect(formData.get('type')).toBe('CORPORATE');
+
+      // Required fields
+      expect(formData.get('name')).toBe('Acme Corporation');
+      expect(formData.get('contactFirstName')).toBe('John');
+      expect(formData.get('contactLastName')).toBe('Doe');
+
+      // Contact methods
       expect(formData.get('phoneNumber')).toBe('+254700123456');
       expect(formData.get('email')).toBe('john@acme.com');
 
-      // Corporate-level fields (nested with corporate. prefix)
-      expect(formData.get('corporate.name')).toBe('Acme Corporation');
-      expect(formData.get('corporate.certificateOfIncorporationNumber')).toBe('REG-12345');
-      expect(formData.get('corporate.taxIdentificationNumber')).toBe('TIN-67890');
-      expect(formData.get('corporate.countryOfIncorporation')).toBe('Kenya');
-      expect(formData.get('corporate.contactFirstName')).toBe('John');
-      expect(formData.get('corporate.contactLastName')).toBe('Doe');
-      expect(formData.get('corporate.contactPosition')).toBe('CFO');
+      // Optional fields
+      expect(formData.get('contactPosition')).toBe('CFO');
+      expect(formData.get('certificateOfIncorporationNumber')).toBe('REG-12345');
+      expect(formData.get('businessCategory')).toBe('LIMITED_LIABILITY');
 
       // Assert - verify response
       expect(result.client?.id).toBe('client-uuid-123');
-      expect(result.corporate?.id).toBe('corp-uuid-456');
+      expect(result.client?.name).toBe('Acme Corporation');
     });
 
     it('omits optional fields when not provided', async () => {
       // Arrange - minimal required fields only
       const registration: CorporateRegistration = {
-        companyName: 'Minimal Corp',
-        countryOfIncorporation: 'Tanzania',
+        name: 'Minimal Corp',
         contactFirstName: 'Jane',
         contactLastName: 'Smith',
-        contactPosition: 'CEO',
+        email: 'jane@minimal.com',
       };
 
       const mockResponse = {
         data: {
-          corporate: { id: 'corp-uuid-789', name: 'Minimal Corp' },
+          client: { id: 'corp-uuid-789', name: 'Minimal Corp' },
         },
       };
 
@@ -138,30 +141,70 @@ describe('Registration API', () => {
       // Assert - verify optional fields are not included
       const formData = mockPost.mock.calls[0][1] as URLSearchParams;
 
+      // Optional fields should NOT be present
       expect(formData.has('phoneNumber')).toBe(false);
-      expect(formData.has('email')).toBe(false);
-      expect(formData.has('corporate.certificateOfIncorporationNumber')).toBe(false);
-      expect(formData.has('corporate.taxIdentificationNumber')).toBe(false);
+      expect(formData.has('contactPosition')).toBe(false);
+      expect(formData.has('certificateOfIncorporationNumber')).toBe(false);
+      expect(formData.has('businessCategory')).toBe(false);
 
       // Required fields should still be present
-      expect(formData.get('corporate.name')).toBe('Minimal Corp');
-      expect(formData.get('corporate.countryOfIncorporation')).toBe('Tanzania');
+      expect(formData.get('type')).toBe('CORPORATE');
+      expect(formData.get('name')).toBe('Minimal Corp');
+      expect(formData.get('contactFirstName')).toBe('Jane');
+      expect(formData.get('contactLastName')).toBe('Smith');
+      expect(formData.get('email')).toBe('jane@minimal.com');
+    });
+
+    it('works with phone number only (no email)', async () => {
+      // Arrange
+      const registration: CorporateRegistration = {
+        name: 'Phone Only Corp',
+        contactFirstName: 'Phone',
+        contactLastName: 'User',
+        phoneNumber: '+233244123456',
+      };
+
+      const mockResponse = {
+        data: {
+          client: { id: 'corp-phone-only', name: 'Phone Only Corp' },
+        },
+      };
+
+      const mockPost = vi.fn().mockResolvedValue(mockResponse);
+      (axios.create as ReturnType<typeof vi.fn>).mockReturnValue({
+        interceptors: {
+          request: { use: vi.fn() },
+          response: { use: vi.fn() },
+        },
+        post: mockPost,
+        get: vi.fn(),
+      });
+
+      vi.resetModules();
+      const { registerCorporate: freshRegister } = await import('../registration');
+
+      // Act
+      await freshRegister(registration);
+
+      // Assert
+      const formData = mockPost.mock.calls[0][1] as URLSearchParams;
+      expect(formData.get('phoneNumber')).toBe('+233244123456');
+      expect(formData.has('email')).toBe(false);
     });
 
     it('throws error on registration failure', async () => {
       // Arrange
       const registration: CorporateRegistration = {
-        companyName: 'Fail Corp',
-        countryOfIncorporation: 'Uganda',
+        name: 'Fail Corp',
         contactFirstName: 'Test',
         contactLastName: 'User',
-        contactPosition: 'Manager',
+        email: 'test@fail.com',
       };
 
       const mockError = {
         response: {
           status: 422,
-          data: { message: 'Company name already exists' },
+          data: { message: 'Company name already exists', error: 1006 },
         },
       };
 
@@ -185,11 +228,10 @@ describe('Registration API', () => {
     it('handles network errors gracefully', async () => {
       // Arrange
       const registration: CorporateRegistration = {
-        companyName: 'Network Error Corp',
-        countryOfIncorporation: 'Rwanda',
+        name: 'Network Error Corp',
         contactFirstName: 'Network',
         contactLastName: 'Test',
-        contactPosition: 'Admin',
+        email: 'network@test.com',
       };
 
       const networkError = new Error('Network Error');
@@ -232,9 +274,7 @@ describe('Registration API', () => {
 
       // Assert
       expect(result).toBe(true);
-      expect(mockGet).toHaveBeenCalledWith(
-        '/client/checkPhone.json?phoneNumber=%2B254700000000'
-      );
+      expect(mockGet).toHaveBeenCalledWith('/client/checkPhone.json?phoneNumber=%2B254700000000');
     });
 
     it('returns false when phone number does not exist', async () => {
@@ -303,9 +343,7 @@ describe('Registration API', () => {
 
       // Assert
       expect(result).toBe(true);
-      expect(mockGet).toHaveBeenCalledWith(
-        '/client/checkEmail.json?email=existing%40example.com'
-      );
+      expect(mockGet).toHaveBeenCalledWith('/client/checkEmail.json?email=existing%40example.com');
     });
 
     it('returns false when email does not exist', async () => {

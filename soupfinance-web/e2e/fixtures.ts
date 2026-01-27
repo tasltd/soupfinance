@@ -4,8 +4,45 @@
  *
  * Added: Mock helpers for corporate onboarding flow (directors, documents)
  * Changed: Added real backend test credentials for integration tests against LXC backend
+ * Changed: Added dual-mode support - tests can run with mocks OR against real backend
+ *
+ * DUAL-MODE TESTING:
+ * - Mock mode (default): Uses route mocking for fast, isolated tests
+ * - LXC mode: Runs against real soupfinance-backend for integration testing
+ *
+ * Usage:
+ *   npm run test:e2e          # Run with mocks (default)
+ *   npm run test:e2e:lxc      # Run against real LXC backend
+ *   npm run test:e2e:lxc:all  # Run ALL tests against LXC backend (including mock tests)
  */
 import { test as base, expect } from '@playwright/test';
+
+// ===========================================================================
+// Test Mode Detection
+// ===========================================================================
+
+/**
+ * Check if tests are running against real LXC backend
+ * Set by TEST_MODE=lxc environment variable (configured in playwright.lxc.config.ts)
+ */
+export function isLxcMode(): boolean {
+  return process.env.TEST_MODE === 'lxc';
+}
+
+/**
+ * Get test users based on current mode
+ * Returns backendTestUsers for LXC mode, mockUsers for mock mode
+ */
+export function getTestUsers() {
+  return isLxcMode() ? backendTestUsers : mockUsers;
+}
+
+/**
+ * Log test mode for debugging
+ */
+export function logTestMode() {
+  console.log(`[E2E] Running in ${isLxcMode() ? 'LXC BACKEND' : 'MOCK'} mode`);
+}
 
 // ===========================================================================
 // Real Backend Test Credentials (LXC Backend: soupfinance-backend)
@@ -15,38 +52,39 @@ import { test as base, expect } from '@playwright/test';
 export const backendTestUsers = {
   // Primary admin account (from soupmarkets-web seed data)
   // This user must have an Agent record for the target tenant
+  // NOTE: Backend expects username, not email for login
   admin: {
     username: 'soup.support',
-    password: 'Soup@Enscript2023',
-    email: 'soup.support@soupmarkets.com',
+    password: 'secret',
+    email: 'soup.support', // Use username - backend doesn't accept email format
     roles: ['ROLE_ADMIN', 'ROLE_USER'],
   },
   // Demo user (for demo tenant)
   demo: {
     username: 'fui.nusenu',
-    password: 'fui.nusenu',
-    email: 'fui.nusenu@demo.com',
+    password: 'secret',
+    email: 'fui.nusenu', // Use username
     roles: ['ROLE_USER'],
   },
   // Test agent user (if configured)
   testAgent: {
     username: 'test.agent',
-    password: 'TestAgent123',
-    email: 'test.agent@soupfinance.test',
+    password: 'secret',
+    email: 'test.agent', // Use username
     roles: ['ROLE_USER'],
   },
   // Finance-focused user (requires Agent record in database)
   finance: {
     username: 'soup.support', // Use same as admin until separate finance user created
-    password: 'Soup@Enscript2023',
-    email: 'soup.support@soupmarkets.com',
+    password: 'secret',
+    email: 'soup.support', // Use username
     roles: ['ROLE_ADMIN', 'ROLE_USER', 'ROLE_FINANCE_REPORTS'],
   },
   // Legacy reference (same as admin)
   legacyAdmin: {
     username: 'soup.support',
-    password: 'Soup@Enscript2023',
-    email: 'soup.support@soupmarkets.com',
+    password: 'secret',
+    email: 'soup.support', // Use username
     roles: ['ROLE_ADMIN', 'ROLE_USER'],
   },
 };
@@ -182,13 +220,19 @@ export const test = base.extend<{
 // Generic API Mock Helpers
 // ===========================================================================
 
-// Helper to mock API responses
+/**
+ * Helper to mock API responses
+ * CONDITIONAL: Skips mocking in LXC mode (requests go to real backend)
+ */
 export async function mockApiResponse(
   page: Awaited<ReturnType<typeof base.page>>,
   urlPattern: string | RegExp,
   response: object,
   status = 200
 ) {
+  // Skip mocking in LXC mode - let requests go to real backend
+  if (isLxcMode()) return;
+
   await page.route(urlPattern, (route) => {
     route.fulfill({
       status,
@@ -211,15 +255,22 @@ export async function takeScreenshot(
 
 // ===========================================================================
 // Authentication API Mocks
+// CONDITIONAL: All mock functions skip mocking in LXC mode
 // ===========================================================================
 
-// Helper to mock login API
-// Changed: Use /rest/api/login pattern to match actual endpoint
+/**
+ * Helper to mock login API
+ * CONDITIONAL: Skips mocking in LXC mode
+ * Changed: Use /rest/api/login pattern to match actual endpoint
+ */
 export async function mockLoginApi(
   page: Awaited<ReturnType<typeof base.page>>,
   success = true,
   user = mockUsers.admin
 ) {
+  // Skip mocking in LXC mode - use real backend authentication
+  if (isLxcMode()) return;
+
   await page.route('**/rest/api/login', (route) => {
     if (success) {
       route.fulfill({
@@ -245,12 +296,17 @@ export async function mockLoginApi(
   });
 }
 
-// Added: Helper to mock token validation endpoint
-// Used by authStore.validateToken() on page load
+/**
+ * Helper to mock token validation endpoint
+ * CONDITIONAL: Skips mocking in LXC mode
+ * Used by authStore.validateToken() on page load
+ */
 export async function mockTokenValidationApi(
   page: Awaited<ReturnType<typeof base.page>>,
   success = true
 ) {
+  if (isLxcMode()) return;
+
   await page.route('**/rest/user/current.json*', (route) => {
     if (success) {
       route.fulfill({
@@ -275,11 +331,16 @@ export async function mockTokenValidationApi(
   });
 }
 
-// Helper to mock OTP request API
+/**
+ * Helper to mock OTP request API
+ * CONDITIONAL: Skips mocking in LXC mode
+ */
 export async function mockOtpRequestApi(
   page: Awaited<ReturnType<typeof base.page>>,
   success = true
 ) {
+  if (isLxcMode()) return;
+
   await page.route('**/client/authenticate.json', (route) => {
     if (success) {
       route.fulfill({
@@ -303,14 +364,20 @@ export async function mockOtpRequestApi(
 
 // ===========================================================================
 // Invoice API Mocks
+// CONDITIONAL: All mock functions skip mocking in LXC mode
 // ===========================================================================
 
-// Helper to mock invoices list API
-// Changed: Use **/rest/invoice/** pattern to match /rest/invoice/index.json (glob * doesn't match /)
+/**
+ * Helper to mock invoices list API
+ * CONDITIONAL: Skips mocking in LXC mode
+ * Changed: Use glob pattern to match /rest/invoice/index.json
+ */
 export async function mockInvoicesApi(
   page: Awaited<ReturnType<typeof base.page>>,
   invoices = mockInvoices
 ) {
+  if (isLxcMode()) return;
+
   await page.route('**/rest/invoice/**', (route) => {
     route.fulfill({
       status: 200,
@@ -322,14 +389,20 @@ export async function mockInvoicesApi(
 
 // ===========================================================================
 // Corporate Registration API Mocks
+// CONDITIONAL: All mock functions skip mocking in LXC mode
 // ===========================================================================
 
-// Helper to mock corporate registration API
+/**
+ * Helper to mock corporate registration API
+ * CONDITIONAL: Skips mocking in LXC mode
+ */
 export async function mockCorporateRegistrationApi(
   page: Awaited<ReturnType<typeof base.page>>,
   success = true,
   corporate = mockCorporate
 ) {
+  if (isLxcMode()) return;
+
   await page.route('**/rest/corporate/save*', (route) => {
     if (success) {
       route.fulfill({
@@ -352,11 +425,13 @@ export async function mockCorporateRegistrationApi(
 
 // ===========================================================================
 // Corporate Onboarding API Mocks
+// CONDITIONAL: All mock functions skip mocking in LXC mode
 // Added: Mock helpers for complete onboarding flow
 // ===========================================================================
 
 /**
  * Mock corporate show/update API for onboarding pages
+ * CONDITIONAL: Skips mocking in LXC mode
  * Added: Supports GET /rest/corporate/show/:id and PUT /rest/corporate/update/:id
  */
 export async function mockCorporateApi(
@@ -364,6 +439,8 @@ export async function mockCorporateApi(
   corporateId: string,
   corporate: Partial<typeof mockCorporate> = mockCorporate
 ) {
+  if (isLxcMode()) return;
+
   // Mock GET /rest/corporate/show/:id.json
   await page.route(`**/rest/corporate/show/${corporateId}*`, (route) => {
     route.fulfill({
@@ -385,6 +462,7 @@ export async function mockCorporateApi(
 
 /**
  * Mock directors list/CRUD API for onboarding
+ * CONDITIONAL: Skips mocking in LXC mode
  * Added: Supports GET /rest/corporateAccountPerson/index and CRUD operations
  */
 export async function mockDirectorsApi(
@@ -392,6 +470,8 @@ export async function mockDirectorsApi(
   corporateId: string,
   directors: Array<Partial<typeof mockDirector>> = []
 ) {
+  if (isLxcMode()) return;
+
   // Mock GET /rest/corporateAccountPerson/index.json
   await page.route('**/rest/corporateAccountPerson/index*', (route) => {
     // Verify the corporate.id param matches if present in URL
@@ -420,6 +500,7 @@ export async function mockDirectorsApi(
 
 /**
  * Mock documents list/upload API for onboarding
+ * CONDITIONAL: Skips mocking in LXC mode
  * Added: Supports GET /rest/corporateDocuments/index and upload
  */
 export async function mockDocumentsApi(
@@ -427,6 +508,8 @@ export async function mockDocumentsApi(
   corporateId: string,
   documents: Array<Partial<typeof mockDocument>> = []
 ) {
+  if (isLxcMode()) return;
+
   // Mock GET /rest/corporateDocuments/index.json
   await page.route('**/rest/corporateDocuments/index*', (route) => {
     // Verify the corporate.id param matches if present in URL
@@ -455,6 +538,7 @@ export async function mockDocumentsApi(
 
 // ===========================================================================
 // Dashboard API Mocks
+// CONDITIONAL: All mock functions skip mocking in LXC mode
 // Added: Mock helpers for dashboard E2E tests
 // ===========================================================================
 
@@ -472,6 +556,7 @@ export const mockDashboardStats = {
 
 /**
  * Mock all dashboard APIs (invoices + bills for stats calculation)
+ * CONDITIONAL: Skips mocking in LXC mode
  * Added: Comprehensive mock for dashboard page tests
  */
 export async function mockDashboardApi(
@@ -479,6 +564,8 @@ export async function mockDashboardApi(
   invoices = mockInvoices,
   bills = mockBills
 ) {
+  if (isLxcMode()) return;
+
   // Mock invoices list
   await page.route('**/rest/invoice/index.json*', (route) => {
     route.fulfill({
@@ -595,17 +682,21 @@ export const mockBillPayments = [
 
 // ===========================================================================
 // Bill API Mocks
+// CONDITIONAL: All mock functions skip mocking in LXC mode
 // Added: Mock helpers for bill CRUD E2E tests
 // ===========================================================================
 
 /**
  * Mock bills list API
+ * CONDITIONAL: Skips mocking in LXC mode
  * GET /rest/bill/index.json
  */
 export async function mockBillsApi(
   page: Awaited<ReturnType<typeof base.page>>,
   bills = mockBills
 ) {
+  if (isLxcMode()) return;
+
   await page.route('**/rest/bill/index.json*', (route) => {
     route.fulfill({
       status: 200,
@@ -617,12 +708,15 @@ export async function mockBillsApi(
 
 /**
  * Mock single bill detail API
+ * CONDITIONAL: Skips mocking in LXC mode
  * GET /rest/bill/show/:id.json
  */
 export async function mockBillDetailApi(
   page: Awaited<ReturnType<typeof base.page>>,
   bill: typeof mockBills[0]
 ) {
+  if (isLxcMode()) return;
+
   await page.route(`**/rest/bill/show/${bill.id}.json*`, (route) => {
     route.fulfill({
       status: 200,
@@ -634,12 +728,15 @@ export async function mockBillDetailApi(
 
 /**
  * Mock vendors list API
+ * CONDITIONAL: Skips mocking in LXC mode
  * GET /rest/vendor/index.json
  */
 export async function mockVendorsApi(
   page: Awaited<ReturnType<typeof base.page>>,
   vendors = mockVendors
 ) {
+  if (isLxcMode()) return;
+
   await page.route('**/rest/vendor/index.json*', (route) => {
     route.fulfill({
       status: 200,
@@ -651,6 +748,7 @@ export async function mockVendorsApi(
 
 /**
  * Mock bill payments list API
+ * CONDITIONAL: Skips mocking in LXC mode
  * GET /rest/billPayment/index.json?bill.id=:id
  */
 export async function mockBillPaymentsApi(
@@ -658,6 +756,8 @@ export async function mockBillPaymentsApi(
   billId: string,
   payments: typeof mockBillPayments = []
 ) {
+  if (isLxcMode()) return;
+
   await page.route(`**/rest/billPayment/index.json*bill.id=${billId}*`, (route) => {
     const billPayments = payments.filter((p) => p.bill.id === billId);
     route.fulfill({

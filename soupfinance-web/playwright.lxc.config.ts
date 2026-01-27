@@ -5,9 +5,15 @@
  * soupmarkets-web backend running in an LXC container.
  *
  * Key differences from playwright.config.ts:
+ * - Sets TEST_MODE=lxc to disable mock helpers (fixtures use real API)
  * - Longer timeouts (real API calls are slower than mocks)
  * - Uses dev:lxc mode which loads .env.lxc
  * - Retries disabled to see real failures
+ *
+ * DUAL-MODE TESTING:
+ * - npm run test:e2e           → Mock mode (default config)
+ * - npm run test:e2e:lxc       → Integration tests against real backend
+ * - npm run test:e2e:lxc:all   → ALL tests against real backend
  *
  * Usage:
  *   npm run test:e2e:lxc
@@ -15,6 +21,9 @@
  *   npx playwright test --config=playwright.lxc.config.ts
  */
 import { defineConfig, devices } from '@playwright/test';
+
+// Set TEST_MODE for fixtures to detect LXC backend mode
+process.env.TEST_MODE = 'lxc';
 
 export default defineConfig({
   // Test directory
@@ -52,7 +61,8 @@ export default defineConfig({
   // Shared settings for all the projects below
   use: {
     // Base URL to use in actions like `await page.goto('/')`
-    baseURL: 'http://localhost:5173',
+    // Changed: Use port 5180 to avoid conflicts with other dev servers
+    baseURL: 'http://localhost:5180',
 
     // Collect trace when retrying the failed test
     trace: 'on-first-retry',
@@ -86,8 +96,8 @@ export default defineConfig({
 
   // Changed: Run dev server in LXC mode
   webServer: {
-    command: 'npm run dev:lxc',
-    url: 'http://localhost:5173',
+    command: 'npm run dev:lxc -- --port 5180',
+    url: 'http://localhost:5180',
     reuseExistingServer: !process.env.CI,
     // Changed: Longer timeout for backend startup
     timeout: 180 * 1000,

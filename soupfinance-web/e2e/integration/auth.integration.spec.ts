@@ -8,15 +8,31 @@ import { test, expect } from '@playwright/test';
 import { backendTestUsers, takeScreenshot } from '../fixtures';
 
 test.describe('Authentication Integration Tests', () => {
+  // Clear localStorage before each test to ensure clean state
+  test.beforeEach(async ({ page }) => {
+    // Navigate to the app first to establish the origin for localStorage
+    await page.goto('/login');
+    // Clear any stale auth state
+    await page.evaluate(() => {
+      localStorage.clear();
+      sessionStorage.clear();
+    });
+    // Reload to apply cleared state
+    await page.reload();
+    // Wait for page to be ready
+    await page.waitForLoadState('networkidle');
+  });
+
   test.describe('Login with Real Backend', () => {
     test('can login with test.admin credentials', async ({ page }) => {
-      await page.goto('/login');
+      // Page already at /login from beforeEach
 
-      // Fill login form - use email format since frontend validates email
+      // Wait for form to be ready
+      await page.getByTestId('login-email-input').waitFor({ state: 'visible' });
+
+      // Fill login form and submit
       await page.getByTestId('login-email-input').fill(backendTestUsers.admin.email);
       await page.getByTestId('login-password-input').fill(backendTestUsers.admin.password);
-
-      // Submit
       await page.getByTestId('login-submit-button').click();
 
       // Should redirect to dashboard
@@ -27,8 +43,7 @@ test.describe('Authentication Integration Tests', () => {
     });
 
     test('can login with test.finance credentials', async ({ page }) => {
-      await page.goto('/login');
-
+      // Page already at /login from beforeEach
       await page.getByTestId('login-email-input').fill(backendTestUsers.finance.email);
       await page.getByTestId('login-password-input').fill(backendTestUsers.finance.password);
       await page.getByTestId('login-submit-button').click();
@@ -38,9 +53,8 @@ test.describe('Authentication Integration Tests', () => {
     });
 
     test('shows error for invalid credentials', async ({ page }) => {
-      await page.goto('/login');
-
-      await page.getByTestId('login-email-input').fill('invalid@user.com');
+      // Page already at /login from beforeEach
+      await page.getByTestId('login-email-input').fill('invalid');
       await page.getByTestId('login-password-input').fill('wrongpassword');
       await page.getByTestId('login-submit-button').click();
 
@@ -50,8 +64,7 @@ test.describe('Authentication Integration Tests', () => {
     });
 
     test('legacy admin (soup.support) can login', async ({ page }) => {
-      await page.goto('/login');
-
+      // Page already at /login from beforeEach
       await page.getByTestId('login-email-input').fill(backendTestUsers.legacyAdmin.email);
       await page.getByTestId('login-password-input').fill(backendTestUsers.legacyAdmin.password);
       await page.getByTestId('login-submit-button').click();
@@ -63,8 +76,7 @@ test.describe('Authentication Integration Tests', () => {
 
   test.describe('Logout', () => {
     test('can logout after login', async ({ page }) => {
-      // Login first
-      await page.goto('/login');
+      // Login first (page already at /login from beforeEach)
       await page.getByTestId('login-email-input').fill(backendTestUsers.admin.email);
       await page.getByTestId('login-password-input').fill(backendTestUsers.admin.password);
       await page.getByTestId('login-submit-button').click();

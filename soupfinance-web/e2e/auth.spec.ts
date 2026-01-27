@@ -1,6 +1,10 @@
 /**
  * Authentication E2E Tests
  * Tests login page rendering, login flows, and logout functionality
+ *
+ * DUAL-MODE: These tests work with both mock and real backend:
+ * - Mock mode: Uses mockLoginApi, mockDashboardApi, etc.
+ * - LXC mode: Mocks are skipped, hits real backend with real credentials
  */
 import { test, expect } from '@playwright/test';
 import {
@@ -11,7 +15,12 @@ import {
   mockTokenValidationApi,
   mockUsers,
   takeScreenshot,
+  getTestUsers,
+  isLxcMode,
 } from './fixtures';
+
+// Get appropriate test users based on mode (mock or LXC)
+const testUsers = getTestUsers();
 
 test.describe('Authentication', () => {
   test.beforeEach(async ({ page }) => {
@@ -43,10 +52,10 @@ test.describe('Authentication', () => {
     test('login page has correct form placeholders', async ({ page }) => {
       await page.goto('/login');
 
-      // Verify input placeholders
+      // Verify input placeholders (backend expects username, not email)
       await expect(page.getByTestId('login-email-input')).toHaveAttribute(
         'placeholder',
-        'you@company.com'
+        'Enter your username'
       );
       await expect(page.getByTestId('login-password-input')).toHaveAttribute(
         'placeholder',
@@ -71,25 +80,24 @@ test.describe('Authentication', () => {
 
   test.describe('Login with valid credentials', () => {
     test('successful login redirects to dashboard', async ({ page }) => {
-      // Set up API mocks
-      await mockLoginApi(page, true, mockUsers.admin);
-      // Changed: Use mockDashboardApi for comprehensive dashboard mocking
+      // Set up API mocks (skipped automatically in LXC mode)
+      await mockLoginApi(page, true, testUsers.admin);
       await mockDashboardApi(page);
 
       // Navigate to login
       await page.goto('/login');
       await takeScreenshot(page, 'auth-login-before-fill');
 
-      // Fill in credentials
-      await page.getByTestId('login-email-input').fill(mockUsers.admin.email);
-      await page.getByTestId('login-password-input').fill(mockUsers.admin.password);
+      // Fill in credentials (uses testUsers which adapts to mode)
+      await page.getByTestId('login-email-input').fill(testUsers.admin.email);
+      await page.getByTestId('login-password-input').fill(testUsers.admin.password);
       await takeScreenshot(page, 'auth-login-form-filled');
 
       // Submit form
       await page.getByTestId('login-submit-button').click();
 
       // Wait for navigation to dashboard
-      await page.waitForURL('**/dashboard');
+      await page.waitForURL('**/dashboard', { timeout: 15000 });
       await takeScreenshot(page, 'auth-login-success-dashboard');
 
       // Verify we're on the dashboard
@@ -114,8 +122,8 @@ test.describe('Authentication', () => {
           body: JSON.stringify({
             access_token: 'mock-jwt-token',
             token_type: 'Bearer',
-            username: mockUsers.admin.username,
-            roles: mockUsers.admin.roles,
+            username: testUsers.admin.username,
+            roles: testUsers.admin.roles,
           }),
         });
       });
@@ -127,8 +135,8 @@ test.describe('Authentication', () => {
       // Wait for the login form to be fully loaded
       await expect(page.getByTestId('login-form')).toBeVisible();
 
-      await page.getByTestId('login-email-input').fill(mockUsers.admin.email);
-      await page.getByTestId('login-password-input').fill(mockUsers.admin.password);
+      await page.getByTestId('login-email-input').fill(testUsers.admin.email);
+      await page.getByTestId('login-password-input').fill(testUsers.admin.password);
 
       // Click submit
       const submitButton = page.getByTestId('login-submit-button');
@@ -191,11 +199,11 @@ test.describe('Authentication', () => {
 
       // Start typing in email field (simulates user retry)
       await page.getByTestId('login-email-input').clear();
-      await page.getByTestId('login-email-input').fill(mockUsers.admin.email);
+      await page.getByTestId('login-email-input').fill(testUsers.admin.email);
 
       // Fill correct password and submit
       await page.getByTestId('login-password-input').clear();
-      await page.getByTestId('login-password-input').fill(mockUsers.admin.password);
+      await page.getByTestId('login-password-input').fill(testUsers.admin.password);
       await page.getByTestId('login-submit-button').click();
 
       // Should navigate to dashboard
@@ -204,6 +212,9 @@ test.describe('Authentication', () => {
   });
 
   test.describe('OTP Request Flow', () => {
+    // Skip in LXC mode - this test verifies mock behavior, not real backend
+    test.skip(isLxcMode(), 'Mock-only test: skipped in LXC mode');
+
     test('can request OTP for corporate client', async ({ page }) => {
       // Note: OTP flow typically happens on a separate page or modal
       // This test verifies the API mock works correctly

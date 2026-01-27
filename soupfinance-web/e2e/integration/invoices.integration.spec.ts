@@ -19,10 +19,16 @@ test.describe('Invoice Integration Tests', () => {
   });
 
   test('invoice list page loads with real data', async ({ page }) => {
-    await page.goto('/invoices');
+    // Wait for dashboard to fully load before navigating
+    await page.waitForLoadState('networkidle');
 
-    // Wait for page to load
-    await expect(page.getByTestId('invoices-page').or(page.getByRole('heading', { name: /invoice/i }))).toBeVisible({ timeout: 15000 });
+    // Use sidebar navigation (React Router) instead of page.goto() to avoid full page reload
+    // Full page reload can cause race conditions with auth store rehydration
+    await page.getByRole('link', { name: /invoices/i }).first().click();
+    await expect(page).toHaveURL(/\/invoices/, { timeout: 10000 });
+
+    // Wait for page to load - use heading that exists in the invoices page
+    await expect(page.getByRole('heading', { name: /invoice/i })).toBeVisible({ timeout: 15000 });
     await takeScreenshot(page, 'integration-invoices-list');
   });
 
