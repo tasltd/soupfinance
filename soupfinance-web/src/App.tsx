@@ -39,6 +39,9 @@ import { BillDetailPage } from './features/bills/BillDetailPage';
 // Added: Vendors
 import { VendorListPage, VendorFormPage, VendorDetailPage } from './features/vendors';
 
+// Added (2026-01-30): Invoice Clients for tenant billing
+import { ClientListPage, ClientFormPage, ClientDetailPage } from './features/clients';
+
 // Payments
 import { PaymentListPage } from './features/payments/PaymentListPage';
 import { PaymentFormPage } from './features/payments/PaymentFormPage';
@@ -205,6 +208,12 @@ export default function App() {
             {/* Changed: Use VendorDetailPage for viewing, VendorFormPage for editing */}
             <Route path="/vendors/:id" element={<VendorDetailPage />} />
             <Route path="/vendors/:id/edit" element={<VendorFormPage />} />
+
+            {/* Added (2026-01-30): Invoice Clients */}
+            <Route path="/clients" element={<ClientListPage />} />
+            <Route path="/clients/new" element={<ClientFormPage />} />
+            <Route path="/clients/:id" element={<ClientDetailPage />} />
+            <Route path="/clients/:id/edit" element={<ClientFormPage />} />
 
             {/* Payments */}
             <Route path="/payments" element={<PaymentListPage />} />

@@ -14,6 +14,7 @@ export * from './endpoints/invoices';
 export * from './endpoints/bills';
 export * from './endpoints/ledger';
 export * from './endpoints/vendors';
+export * from './endpoints/clients';
 export * from './endpoints/corporate';
 export * from './endpoints/registration';
 export * from './endpoints/reports';
