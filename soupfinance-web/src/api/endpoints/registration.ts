@@ -1,21 +1,25 @@
 /**
  * Registration API endpoints for SoupFinance
- * Maps to soupmarkets-web /client/register.json endpoint
- * Handles corporate registration/onboarding for new clients
+ * Maps to soupmarkets-web /account/* endpoints for tenant registration
  *
- * NOTE: This endpoint uses /client/* path (public, unauthenticated)
- * unlike /rest/* endpoints which require authentication
+ * ARCHITECTURE (2026-01-30):
+ * Registration creates a NEW TENANT (Account) with isolated data.
+ * - No password during registration - set during email confirmation
+ * - Email verification required before login
+ * - Business type determines initial Chart of Accounts
  *
- * DESIGN: Minimal registration - collect only essential info for account creation.
- * Full KYC details are collected in post-registration onboarding steps.
+ * Endpoints:
+ * - POST /account/register.json - Create tenant + admin user
+ * - POST /account/confirmEmail.json - Verify email + set password
+ * - POST /account/resendConfirmation.json - Resend confirmation email
  */
 import axios from 'axios';
 
-// Separate axios instance for /client/ endpoints (unauthenticated)
-const clientApiClient = axios.create({
+// Axios instance for /account/ endpoints (public, unauthenticated)
+const accountApiClient = axios.create({
   baseURL: import.meta.env.VITE_API_URL?.replace('/rest', '') || '',
   headers: {
-    'Content-Type': 'application/x-www-form-urlencoded',
+    'Content-Type': 'application/json',
   },
   timeout: 30000,
 });
@@ -25,7 +29,170 @@ const clientApiClient = axios.create({
 // =============================================================================
 
 /**
- * Business category types supported by the backend
+ * Business type - determines Chart of Accounts structure
+ * - TRADING: Inventory-based, has COGS accounts
+ * - SERVICES: No inventory, labor/operating expenses focus
+ */
+export type BusinessType = 'TRADING' | 'SERVICES';
+
+/**
+ * Tenant registration data
+ * Password is NOT collected here - set during email confirmation
+ */
+export interface TenantRegistration {
+  /** Company/business name - becomes tenant name */
+  companyName: string;
+  /** Business type - determines initial COA */
+  businessType: BusinessType;
+  /** Admin user first name */
+  adminFirstName: string;
+  /** Admin user last name */
+  adminLastName: string;
+  /** Admin email - used for login and confirmation */
+  email: string;
+  /** Base currency for the tenant (optional, defaults to USD) */
+  currency?: string;
+}
+
+/**
+ * Email confirmation data
+ * Sets password after email verification
+ */
+export interface EmailConfirmation {
+  /** Token from confirmation email */
+  token: string;
+  /** New password */
+  password: string;
+  /** Password confirmation */
+  confirmPassword: string;
+}
+
+/**
+ * Resend confirmation request
+ */
+export interface ResendConfirmation {
+  /** Email to resend confirmation to */
+  email: string;
+}
+
+/**
+ * Response from registration endpoint
+ */
+export interface RegistrationResponse {
+  success: boolean;
+  message: string;
+  accountId?: string;
+  agentId?: string;
+  email?: string;
+  error?: string;
+  errors?: Record<string, string>;
+}
+
+/**
+ * Response from email confirmation endpoint
+ */
+export interface ConfirmationResponse {
+  success: boolean;
+  message: string;
+  error?: string;
+  errors?: Record<string, string>;
+}
+
+// =============================================================================
+// API Functions
+// =============================================================================
+
+/**
+ * Register a new tenant (Account)
+ * POST /account/register.json
+ *
+ * Creates a new Account (tenant) with an admin user.
+ * No password required - user sets password during email confirmation.
+ *
+ * @param data - Tenant registration data
+ * @returns Registration response with account info
+ * @throws AxiosError on validation or server errors
+ *
+ * @example
+ * ```ts
+ * const result = await registerTenant({
+ *   companyName: 'Acme Trading Ltd',
+ *   businessType: 'TRADING',
+ *   adminFirstName: 'John',
+ *   adminLastName: 'Doe',
+ *   email: 'john@acmetrading.com',
+ * });
+ * ```
+ */
+export async function registerTenant(data: TenantRegistration): Promise<RegistrationResponse> {
+  const response = await accountApiClient.post<RegistrationResponse>(
+    '/account/register.json',
+    data
+  );
+
+  return response.data;
+}
+
+/**
+ * Confirm email and set password
+ * POST /account/confirmEmail.json
+ *
+ * Verifies the user's email using the token from the confirmation link,
+ * and sets their password for future logins.
+ *
+ * @param data - Token and new password
+ * @returns Confirmation response
+ * @throws AxiosError on invalid token or validation errors
+ *
+ * @example
+ * ```ts
+ * const result = await confirmEmail({
+ *   token: 'abc123...',
+ *   password: 'securePassword123',
+ *   confirmPassword: 'securePassword123',
+ * });
+ * ```
+ */
+export async function confirmEmail(data: EmailConfirmation): Promise<ConfirmationResponse> {
+  const response = await accountApiClient.post<ConfirmationResponse>(
+    '/account/confirmEmail.json',
+    data
+  );
+
+  return response.data;
+}
+
+/**
+ * Resend confirmation email
+ * POST /account/resendConfirmation.json
+ *
+ * Resends the confirmation email with a new token.
+ *
+ * @param email - Email address to resend to
+ * @returns Confirmation response
+ * @throws AxiosError if email not found or already confirmed
+ *
+ * @example
+ * ```ts
+ * const result = await resendConfirmation('john@acmetrading.com');
+ * ```
+ */
+export async function resendConfirmation(email: string): Promise<ConfirmationResponse> {
+  const response = await accountApiClient.post<ConfirmationResponse>(
+    '/account/resendConfirmation.json',
+    { email }
+  );
+
+  return response.data;
+}
+
+// =============================================================================
+// Legacy Exports (Deprecated)
+// =============================================================================
+
+/**
+ * @deprecated Use TenantRegistration instead
+ * Kept for backwards compatibility during migration
  */
 export type BusinessCategory =
   | 'LIMITED_LIABILITY'
@@ -36,178 +203,47 @@ export type BusinessCategory =
   | 'OTHER';
 
 /**
- * Corporate registration data structure.
- * Collects MINIMAL information for quick account creation.
- * Full KYC details are collected in post-registration onboarding.
- *
- * Required: name + contactFirstName + contactLastName + (phoneNumber OR email)
+ * @deprecated Use TenantRegistration instead
+ * Old corporate registration structure
  */
 export interface CorporateRegistration {
-  // ===== REQUIRED =====
-  /** Legal company name */
   name: string;
-  /** Key contact first name */
   contactFirstName: string;
-  /** Key contact last name */
   contactLastName: string;
-
-  // At least one contact method required
-  /** Primary contact phone (required if no email) */
   phoneNumber?: string;
-  /** Primary contact email (required if no phone) */
   email?: string;
-
-  // ===== OPTIONAL (commonly known at registration) =====
-  /** Key contact title/position */
   contactPosition?: string;
-  /** Company registration number (if known) */
   certificateOfIncorporationNumber?: string;
-  /** Business type (if known) */
   businessCategory?: BusinessCategory;
 }
 
 /**
- * Response from registration endpoint
- * Contains created client and corporate entities
+ * @deprecated Use registerTenant instead
+ * Old registration function - maps to new API
  */
-export interface RegistrationResponse {
-  /** Created client entity */
-  client?: {
-    id: string;
-    name?: string;
-    phoneNumber?: string;
-    email?: string;
-    phoneContacts?: Array<{ phone: string; priority: string }>;
-    emailContacts?: Array<{ email: string; priority: string }>;
-    accountServicesList?: Array<{ id: string; quickReference: string }>;
-    signatoriesAndDirectorsList?: Array<{
-      firstName: string;
-      lastName: string;
-      position: string;
-      keyContact: boolean;
-    }>;
+export async function registerCorporate(data: CorporateRegistration): Promise<RegistrationResponse> {
+  // Map old format to new format
+  const tenantData: TenantRegistration = {
+    companyName: data.name,
+    businessType: 'SERVICES', // Default for legacy calls
+    adminFirstName: data.contactFirstName,
+    adminLastName: data.contactLastName,
+    email: data.email || '',
   };
-  /** Success message from backend */
-  message?: string;
-  /** Error code from backend (if error) */
-  error?: number;
-}
 
-// =============================================================================
-// Helper Functions
-// =============================================================================
-
-/**
- * Convert CorporateRegistration to URLSearchParams for backend.
- * Uses flat field names matching CorporateRegisterCommand in backend.
- */
-function toRegistrationFormData(data: CorporateRegistration): URLSearchParams {
-  const params = new URLSearchParams();
-
-  // Type - always CORPORATE for SoupFinance
-  params.append('type', 'CORPORATE');
-
-  // Required fields
-  params.append('name', data.name);
-  params.append('contactFirstName', data.contactFirstName);
-  params.append('contactLastName', data.contactLastName);
-
-  // Contact methods (at least one required)
-  if (data.phoneNumber) {
-    params.append('phoneNumber', data.phoneNumber);
-  }
-  if (data.email) {
-    params.append('email', data.email);
-  }
-
-  // Optional fields (only include if provided)
-  if (data.contactPosition) {
-    params.append('contactPosition', data.contactPosition);
-  }
-  if (data.certificateOfIncorporationNumber) {
-    params.append('certificateOfIncorporationNumber', data.certificateOfIncorporationNumber);
-  }
-  if (data.businessCategory) {
-    params.append('businessCategory', data.businessCategory);
-  }
-
-  return params;
-}
-
-// =============================================================================
-// API Functions
-// =============================================================================
-
-/**
- * Register a new corporate entity
- * POST /client/register.json
- *
- * This is a public endpoint that does not require authentication.
- * Creates a Corporate entity with minimal info for quick account creation.
- * Full KYC details can be added later via /rest/corporate/update/:id.json
- *
- * @param data - Corporate registration data (minimal fields)
- * @returns Created client/corporate entity
- * @throws AxiosError on validation or server errors
- *
- * @example
- * ```ts
- * const result = await registerCorporate({
- *   name: 'Acme Corp',
- *   contactFirstName: 'John',
- *   contactLastName: 'Doe',
- *   email: 'john@acme.com',
- *   phoneNumber: '+233244123456',
- * });
- * ```
- */
-export async function registerCorporate(
-  data: CorporateRegistration
-): Promise<RegistrationResponse> {
-  const formData = toRegistrationFormData(data);
-
-  const response = await clientApiClient.post<RegistrationResponse>(
-    '/client/register.json',
-    formData
-  );
-
-  return response.data;
+  return registerTenant(tenantData);
 }
 
 /**
- * Check if a phone number is already registered
- * GET /client/checkPhone.json?phoneNumber=xxx
- *
- * @param phoneNumber - Phone number to check
- * @returns true if phone number exists, false otherwise
+ * @deprecated These endpoints are not part of the new tenant flow
  */
-export async function checkPhoneExists(phoneNumber: string): Promise<boolean> {
-  try {
-    const response = await clientApiClient.get<{ exists: boolean }>(
-      '/client/checkPhone.json?phoneNumber=' + encodeURIComponent(phoneNumber)
-    );
-    return response.data.exists;
-  } catch {
-    // NOTE: Endpoint may not exist - return false to allow registration attempt
-    return false;
-  }
+export async function checkPhoneExists(_phoneNumber: string): Promise<boolean> {
+  return false;
 }
 
 /**
- * Check if an email is already registered
- * GET /client/checkEmail.json?email=xxx
- *
- * @param email - Email to check
- * @returns true if email exists, false otherwise
+ * @deprecated Use resendConfirmation instead for email-related checks
  */
-export async function checkEmailExists(email: string): Promise<boolean> {
-  try {
-    const response = await clientApiClient.get<{ exists: boolean }>(
-      '/client/checkEmail.json?email=' + encodeURIComponent(email)
-    );
-    return response.data.exists;
-  } catch {
-    // NOTE: Endpoint may not exist - return false to allow registration attempt
-    return false;
-  }
+export async function checkEmailExists(_email: string): Promise<boolean> {
+  return false;
 }

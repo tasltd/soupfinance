@@ -18,6 +18,10 @@ import { AuthLayout } from './components/layout/AuthLayout';
 
 // Auth Pages
 import { LoginPage } from './features/auth/LoginPage';
+// Added: OTP verification page for registration flow
+import { VerifyPage } from './features/auth/VerifyPage';
+// Added (2026-01-30): Email confirmation page for tenant registration
+import { ConfirmEmailPage } from './features/auth/ConfirmEmailPage';
 
 // Dashboard
 import { DashboardPage } from './features/dashboard/DashboardPage';
@@ -165,6 +169,10 @@ export default function App() {
             />
             {/* Added: Corporate Registration (public) */}
             <Route path="/register" element={<RegistrationPage />} />
+            {/* Added: OTP Verification (public - for registration flow) */}
+            <Route path="/verify" element={<VerifyPage />} />
+            {/* Added (2026-01-30): Email Confirmation (public - for tenant registration) */}
+            <Route path="/confirm-email" element={<ConfirmEmailPage />} />
           </Route>
 
           {/* Protected routes */}
