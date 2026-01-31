@@ -2,11 +2,12 @@
  * SoupFinance Logo Component
  *
  * A versatile logo component with multiple variants:
- * - mark: Icon only (S symbol)
+ * - mark: Icon only (SF infinite ledger symbol)
  * - full: Icon + "SoupFinance" wordmark
  * - wordmark: Text only
  *
  * Supports light/dark modes and custom sizing.
+ * Logo designed with Google Stitch - "Infinite Ledger" SF monogram
  */
 
 interface LogoProps {
@@ -21,40 +22,19 @@ interface LogoProps {
 }
 
 /**
- * The logo mark (S icon) as an inline SVG
- * Designed with Gemini 3 - Modern "Growth S" Monogram
+ * The logo mark (SF infinite ledger icon) as an image
+ * Designed with Google Stitch - "Infinite Ledger" SF monogram
  */
 function LogoMark({ size = 48, className = '' }: { size?: number; className?: string }) {
   return (
-    <svg
+    <img
+      src="/logo.png"
+      alt="SoupFinance Logo"
       width={size}
       height={size}
-      viewBox="0 0 48 48"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={className}
-      aria-label="SoupFinance logo"
-    >
-      <defs>
-        <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#f24a0d" />
-          <stop offset="100%" stopColor="#e03d05" />
-        </linearGradient>
-      </defs>
-
-      {/* Rounded square background */}
-      <rect x="0" y="0" width="48" height="48" rx="12" fill="url(#logoGradient)" />
-
-      {/* The S mark - bold geometric path with arcs */}
-      <path
-        d="M 34 15 L 20 15 A 6 6 0 0 0 20 27 L 28 27 A 6 6 0 0 1 28 39 L 14 39"
-        stroke="white"
-        strokeWidth="7"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="none"
-      />
-    </svg>
+      className={`rounded-lg ${className}`}
+      style={{ width: size, height: size }}
+    />
   );
 }
 
@@ -92,36 +72,24 @@ export function Logo({ variant = 'full', size = 40, className = '', darkMode = f
 
 /**
  * Simplified logo mark for use in tight spaces (nav icons, favicons)
- * Uses just the S curve without the background for flexibility
+ * Uses the PNG logo image
  */
 export function LogoMarkSimple({
   size = 24,
-  color = '#f24a0d',
   className = '',
 }: {
   size?: number;
-  color?: string;
   className?: string;
 }) {
   return (
-    <svg
+    <img
+      src="/logo.png"
+      alt="SoupFinance"
       width={size}
       height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={className}
-      aria-label="SoupFinance"
-    >
-      <path
-        d="M6 9C6 9 8 6 12 6C16 6 18 8 18 10C18 12 16 13 12 13C8 13 6 14 6 16C6 18 8 20 12 20C16 20 18 18 18 18"
-        stroke={color}
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        fill="none"
-      />
-      <circle cx="19" cy="5" r="2" fill={color} />
-    </svg>
+      className={`rounded ${className}`}
+      style={{ width: size, height: size }}
+    />
   );
 }
 
