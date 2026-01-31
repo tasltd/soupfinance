@@ -31,6 +31,7 @@
     "autoprefixer": "^10.4.23",
     "axios": "^1.13.2",
     "date-fns": "^4.1.0",
+    "html2pdf.js": "^0.14.0",
     "i18next": "^25.8.0",
     "i18next-browser-languagedetector": "^8.2.0",
     "postcss": "^8.5.6",

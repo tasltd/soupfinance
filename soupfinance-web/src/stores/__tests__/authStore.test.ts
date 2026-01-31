@@ -104,7 +104,8 @@ describe('authStore', () => {
       expect(state.error).toBeNull()
     })
 
-    it('calls API with correct email and password', async () => {
+    // Changed (2026-01-28): Login now takes 3rd rememberMe parameter (defaults to false)
+    it('calls API with correct email, password, and rememberMe', async () => {
       // Arrange
       vi.mocked(authApi.login).mockResolvedValue(mockUser)
       const testEmail = 'specific@test.com'
@@ -115,9 +116,23 @@ describe('authStore', () => {
         await useAuthStore.getState().login(testEmail, testPassword)
       })
 
-      // Assert
-      expect(authApi.login).toHaveBeenCalledWith(testEmail, testPassword)
+      // Assert - rememberMe defaults to false when not provided
+      expect(authApi.login).toHaveBeenCalledWith(testEmail, testPassword, false)
       expect(authApi.login).toHaveBeenCalledTimes(1)
+    })
+
+    // Added (2026-01-28): Test rememberMe=true is passed correctly
+    it('passes rememberMe=true when specified', async () => {
+      // Arrange
+      vi.mocked(authApi.login).mockResolvedValue(mockUser)
+
+      // Act
+      await act(async () => {
+        await useAuthStore.getState().login('user@test.com', 'password', true)
+      })
+
+      // Assert
+      expect(authApi.login).toHaveBeenCalledWith('user@test.com', 'password', true)
     })
 
     it('sets error and clears user on login failure', async () => {

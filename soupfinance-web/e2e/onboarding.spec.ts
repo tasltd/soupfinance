@@ -16,6 +16,7 @@ import {
   mockCorporate,
   mockDirector,
   mockDocument,
+  mockTokenValidationApi,
   takeScreenshot,
 } from './fixtures';
 
@@ -45,6 +46,8 @@ test.describe('Corporate Onboarding Flow', () => {
         })
       );
     });
+    // Mock token validation API - required for authenticated pages
+    await mockTokenValidationApi(page, true);
   });
 
   // ===========================================================================

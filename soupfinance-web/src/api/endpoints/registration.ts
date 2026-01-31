@@ -237,6 +237,7 @@ export async function registerCorporate(data: CorporateRegistration): Promise<Re
 /**
  * @deprecated These endpoints are not part of the new tenant flow
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function checkPhoneExists(_phoneNumber: string): Promise<boolean> {
   return false;
 }
@@ -244,6 +245,7 @@ export async function checkPhoneExists(_phoneNumber: string): Promise<boolean> {
 /**
  * @deprecated Use resendConfirmation instead for email-related checks
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function checkEmailExists(_email: string): Promise<boolean> {
   return false;
 }

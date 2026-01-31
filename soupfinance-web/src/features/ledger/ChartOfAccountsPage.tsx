@@ -10,6 +10,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { listLedgerAccounts } from '../../api/endpoints/ledger';
+import { useFormatCurrency } from '../../stores';
 import type { LedgerAccount, LedgerGroup } from '../../types';
 
 // Added: Group configuration with colors and icons
@@ -26,6 +27,8 @@ const GROUP_CONFIG: Record<LedgerGroup, { label: string; icon: string; colorClas
 const GROUP_ORDER: LedgerGroup[] = ['ASSET', 'LIABILITY', 'EQUITY', 'INCOME', 'REVENUE', 'EXPENSE'];
 
 export function ChartOfAccountsPage() {
+  const formatCurrency = useFormatCurrency();
+
   // Added: Track expanded groups
   const [expandedGroups, setExpandedGroups] = useState<Set<LedgerGroup>>(new Set(GROUP_ORDER));
 
@@ -154,7 +157,7 @@ export function ChartOfAccountsPage() {
                               <td className="px-6 py-4 font-mono text-text-light dark:text-text-dark">{account.code}</td>
                               <td className="px-6 py-4 text-text-light dark:text-text-dark">{account.name}</td>
                               <td className="px-6 py-4 text-right font-medium text-text-light dark:text-text-dark">
-                                ${(account.balance || 0).toFixed(2)}
+                                {formatCurrency(account.balance)}
                               </td>
                               <td className="px-6 py-4 text-center">
                                 <span className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${account.isActive ? 'bg-success/10 text-success' : 'bg-subtle-text/10 text-subtle-text'}`}>

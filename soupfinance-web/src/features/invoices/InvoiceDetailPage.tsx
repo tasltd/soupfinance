@@ -8,23 +8,32 @@
  * Added: Delete, Send, and Cancel invoice actions
  * Added: Loading, error, and content states
  * Added: data-testid attributes for E2E testing
+ * Updated: Frontend PDF generation and email sending
  */
+import { useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   getInvoice,
   deleteInvoice,
   listInvoicePayments,
-  sendInvoice,
   cancelInvoice,
 } from '../../api/endpoints/invoices';
 import { useFormatCurrency } from '../../stores';
+import { usePdf, useEmailSend } from '../../hooks';
 
 export function InvoiceDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const formatCurrency = useFormatCurrency();
+  const { generateInvoice, isGenerating: isPdfGenerating } = usePdf();
+  const { sendInvoice: sendInvoiceEmail, isSending: isEmailSending, error: emailError, success: emailSuccess, reset: resetEmailState } = useEmailSend();
+
+  // State for send email dialog
+  const [showSendDialog, setShowSendDialog] = useState(false);
+  const [recipientEmail, setRecipientEmail] = useState('');
+  const [recipientName, setRecipientName] = useState('');
 
   // Added: Fetch invoice details from API
   const { data: invoice, isLoading, error } = useQuery({
@@ -49,15 +58,6 @@ export function InvoiceDetailPage() {
     },
   });
 
-  // Added: Send invoice mutation
-  const sendMutation = useMutation({
-    mutationFn: () => sendInvoice(id!),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['invoice', id] });
-      queryClient.invalidateQueries({ queryKey: ['invoices'] });
-    },
-  });
-
   // Added: Cancel invoice mutation
   const cancelMutation = useMutation({
     mutationFn: () => cancelInvoice(id!),
@@ -74,10 +74,23 @@ export function InvoiceDetailPage() {
     }
   };
 
-  // Added: Handle send with confirmation
-  const handleSend = () => {
-    if (window.confirm('Send this invoice to the client?')) {
-      sendMutation.mutate();
+  // Updated: Open send dialog instead of direct confirmation
+  const handleOpenSendDialog = () => {
+    resetEmailState();
+    setRecipientEmail('');
+    setRecipientName(invoice?.client?.name || '');
+    setShowSendDialog(true);
+  };
+
+  // Updated: Send invoice with frontend-generated PDF via email
+  const handleSendInvoice = async () => {
+    if (!invoice || !recipientEmail) return;
+
+    const success = await sendInvoiceEmail(invoice, recipientEmail, recipientName || undefined);
+    if (success) {
+      setShowSendDialog(false);
+      queryClient.invalidateQueries({ queryKey: ['invoice', id] });
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
     }
   };
 
@@ -143,15 +156,23 @@ export function InvoiceDetailPage() {
           <Link to="/invoices" className="h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm flex items-center hover:bg-primary/5">
             Back
           </Link>
+          <button
+            onClick={() => generateInvoice(invoice)}
+            disabled={isPdfGenerating}
+            className="h-10 px-4 rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400 font-bold text-sm flex items-center hover:bg-purple-500/20 disabled:opacity-50"
+            data-testid="invoice-download-pdf-button"
+          >
+            <span className="material-symbols-outlined text-lg mr-2">download</span>
+            {isPdfGenerating ? 'Generating...' : 'Download PDF'}
+          </button>
           {canSend && (
             <button
-              onClick={handleSend}
-              disabled={sendMutation.isPending}
-              className="h-10 px-4 rounded-lg bg-info/10 text-info font-bold text-sm flex items-center hover:bg-info/20 disabled:opacity-50"
+              onClick={handleOpenSendDialog}
+              className="h-10 px-4 rounded-lg bg-info/10 text-info font-bold text-sm flex items-center hover:bg-info/20"
               data-testid="invoice-send-button"
             >
               <span className="material-symbols-outlined text-lg mr-2">send</span>
-              {sendMutation.isPending ? 'Sending...' : 'Send'}
+              Send
             </button>
           )}
           {canEdit && (
@@ -351,6 +372,95 @@ export function InvoiceDetailPage() {
           </div>
         )}
       </div>
+
+      {/* Send Invoice Email Dialog */}
+      {showSendDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" data-testid="send-invoice-dialog">
+          <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark w-full max-w-md mx-4 shadow-xl">
+            <div className="px-6 py-4 border-b border-border-light dark:border-border-dark flex justify-between items-center">
+              <h3 className="text-lg font-bold text-text-light dark:text-text-dark">Send Invoice</h3>
+              <button
+                onClick={() => setShowSendDialog(false)}
+                className="text-subtle-text hover:text-text-light dark:hover:text-text-dark"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-subtle-text">
+                Send invoice <strong>{invoice?.invoiceNumber}</strong> with a frontend-generated PDF attachment.
+              </p>
+
+              <div>
+                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
+                  Recipient Name
+                </label>
+                <input
+                  type="text"
+                  value={recipientName}
+                  onChange={(e) => setRecipientName(e.target.value)}
+                  placeholder="Client Name"
+                  className="w-full h-10 px-3 rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark"
+                  data-testid="send-recipient-name"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
+                  Recipient Email <span className="text-danger">*</span>
+                </label>
+                <input
+                  type="email"
+                  value={recipientEmail}
+                  onChange={(e) => setRecipientEmail(e.target.value)}
+                  placeholder="client@example.com"
+                  required
+                  className="w-full h-10 px-3 rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark"
+                  data-testid="send-recipient-email"
+                />
+              </div>
+
+              {emailError && (
+                <div className="p-3 rounded-lg bg-danger/10 text-danger text-sm" data-testid="send-error">
+                  {emailError}
+                </div>
+              )}
+
+              {emailSuccess && (
+                <div className="p-3 rounded-lg bg-success/10 text-success text-sm" data-testid="send-success">
+                  Invoice sent successfully!
+                </div>
+              )}
+            </div>
+            <div className="px-6 py-4 border-t border-border-light dark:border-border-dark flex justify-end gap-3">
+              <button
+                onClick={() => setShowSendDialog(false)}
+                className="h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSendInvoice}
+                disabled={!recipientEmail || isEmailSending}
+                className="h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm flex items-center disabled:opacity-50"
+                data-testid="send-confirm-button"
+              >
+                {isEmailSending ? (
+                  <>
+                    <span className="material-symbols-outlined text-lg mr-2 animate-spin">progress_activity</span>
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <span className="material-symbols-outlined text-lg mr-2">send</span>
+                    Send Invoice
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

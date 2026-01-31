@@ -15,7 +15,6 @@ vi.mock('../../../api/endpoints/invoices', () => ({
   getInvoice: vi.fn(),
   deleteInvoice: vi.fn(),
   listInvoicePayments: vi.fn(),
-  sendInvoice: vi.fn(),
   cancelInvoice: vi.fn(),
 }));
 
@@ -27,11 +26,25 @@ vi.mock('../../../stores', () => ({
   },
 }));
 
+// Mock the hooks
+vi.mock('../../../hooks', () => ({
+  usePdf: () => ({
+    generateInvoice: vi.fn(),
+    isGenerating: false,
+  }),
+  useEmailSend: () => ({
+    sendInvoice: vi.fn().mockResolvedValue(true),
+    isSending: false,
+    error: null,
+    success: false,
+    reset: vi.fn(),
+  }),
+}));
+
 import {
   getInvoice,
   deleteInvoice,
   listInvoicePayments,
-  sendInvoice,
   cancelInvoice,
 } from '../../../api/endpoints/invoices';
 
@@ -639,58 +652,72 @@ describe('InvoiceDetailPage', () => {
     });
   });
 
-  describe('send mutation', () => {
-    it('calls sendInvoice when send button clicked and confirmed', async () => {
+  describe('send invoice dialog', () => {
+    it('opens send dialog when send button is clicked', async () => {
       const user = userEvent.setup();
       const mockInvoice = createMockInvoice({ id: 'inv-to-send', status: 'DRAFT' });
-      const sentInvoice = createMockInvoice({ id: 'inv-to-send', status: 'SENT' });
       vi.mocked(getInvoice).mockResolvedValue(mockInvoice);
       vi.mocked(listInvoicePayments).mockResolvedValue([]);
-      vi.mocked(sendInvoice).mockResolvedValue(sentInvoice);
-      vi.spyOn(window, 'confirm').mockReturnValue(true);
 
       renderInvoiceDetailPage('inv-to-send');
 
       const sendButton = await screen.findByTestId('invoice-send-button');
       await user.click(sendButton);
 
-      expect(window.confirm).toHaveBeenCalledWith('Send this invoice to the client?');
-      await waitFor(() => {
-        expect(sendInvoice).toHaveBeenCalledWith('inv-to-send');
-      });
+      // Dialog should open
+      expect(await screen.findByTestId('send-invoice-dialog')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /Send Invoice/i })).toBeInTheDocument();
     });
 
-    it('does not call sendInvoice when send is cancelled', async () => {
+    it('closes dialog when cancel is clicked', async () => {
       const user = userEvent.setup();
       const mockInvoice = createMockInvoice({ status: 'DRAFT' });
       vi.mocked(getInvoice).mockResolvedValue(mockInvoice);
       vi.mocked(listInvoicePayments).mockResolvedValue([]);
-      vi.spyOn(window, 'confirm').mockReturnValue(false);
 
       renderInvoiceDetailPage();
 
       const sendButton = await screen.findByTestId('invoice-send-button');
       await user.click(sendButton);
 
-      expect(sendInvoice).not.toHaveBeenCalled();
+      // Dialog should be open
+      expect(await screen.findByTestId('send-invoice-dialog')).toBeInTheDocument();
+
+      // Click cancel
+      const cancelButton = screen.getByRole('button', { name: 'Cancel' });
+      await user.click(cancelButton);
+
+      // Dialog should close
+      expect(screen.queryByTestId('send-invoice-dialog')).not.toBeInTheDocument();
     });
 
-    it('shows loading state while sending', async () => {
+    it('has recipient email input field', async () => {
       const user = userEvent.setup();
       const mockInvoice = createMockInvoice({ status: 'DRAFT' });
       vi.mocked(getInvoice).mockResolvedValue(mockInvoice);
       vi.mocked(listInvoicePayments).mockResolvedValue([]);
-      vi.mocked(sendInvoice).mockImplementation(() => new Promise(() => {})); // Never resolves
-      vi.spyOn(window, 'confirm').mockReturnValue(true);
 
       renderInvoiceDetailPage();
 
       const sendButton = await screen.findByTestId('invoice-send-button');
       await user.click(sendButton);
 
-      await waitFor(() => {
-        expect(screen.getByText('Sending...')).toBeInTheDocument();
-      });
+      expect(await screen.findByTestId('send-recipient-email')).toBeInTheDocument();
+    });
+
+    it('disables send button when email is empty', async () => {
+      const user = userEvent.setup();
+      const mockInvoice = createMockInvoice({ status: 'DRAFT' });
+      vi.mocked(getInvoice).mockResolvedValue(mockInvoice);
+      vi.mocked(listInvoicePayments).mockResolvedValue([]);
+
+      renderInvoiceDetailPage();
+
+      const sendButton = await screen.findByTestId('invoice-send-button');
+      await user.click(sendButton);
+
+      const confirmButton = await screen.findByTestId('send-confirm-button');
+      expect(confirmButton).toBeDisabled();
     });
   });
 

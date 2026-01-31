@@ -11,12 +11,15 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { listLedgerTransactions, listLedgerAccounts } from '../../api/endpoints/ledger';
+import { useFormatCurrency } from '../../stores';
 import type { LedgerTransaction, LedgerAccount, LedgerState } from '../../types';
 
 // Added: Transaction status type for filtering
 type TransactionStatus = 'DRAFT' | 'PENDING' | 'POSTED' | 'REVERSED' | '';
 
 export function LedgerTransactionsPage() {
+  const formatCurrency = useFormatCurrency();
+
   // Added: Filter state
   const [accountId, setAccountId] = useState('');
   const [startDate, setStartDate] = useState('');
@@ -61,9 +64,9 @@ export function LedgerTransactionsPage() {
   // Added: Get transaction state display (debit/credit)
   const getStateDisplay = (state?: LedgerState, amount?: number): { text: string; class: string } => {
     if (state === 'DEBIT') {
-      return { text: `$${(amount || 0).toFixed(2)}`, class: 'text-text-light dark:text-text-dark' };
+      return { text: formatCurrency(amount), class: 'text-text-light dark:text-text-dark' };
     } else if (state === 'CREDIT') {
-      return { text: `$${(amount || 0).toFixed(2)}`, class: 'text-info' };
+      return { text: formatCurrency(amount), class: 'text-info' };
     }
     return { text: '-', class: 'text-subtle-text' };
   };
@@ -298,19 +301,17 @@ export function LedgerTransactionsPage() {
             <span>
               Total Debits:{' '}
               <span className="font-medium text-text-light dark:text-text-dark">
-                ${filteredTransactions
+                {formatCurrency(filteredTransactions
                   .filter((tx: LedgerTransaction) => tx.transactionState === 'DEBIT')
-                  .reduce((sum: number, tx: LedgerTransaction) => sum + (tx.amount || 0), 0)
-                  .toFixed(2)}
+                  .reduce((sum: number, tx: LedgerTransaction) => sum + (tx.amount || 0), 0))}
               </span>
             </span>
             <span>
               Total Credits:{' '}
               <span className="font-medium text-info">
-                ${filteredTransactions
+                {formatCurrency(filteredTransactions
                   .filter((tx: LedgerTransaction) => tx.transactionState === 'CREDIT')
-                  .reduce((sum: number, tx: LedgerTransaction) => sum + (tx.amount || 0), 0)
-                  .toFixed(2)}
+                  .reduce((sum: number, tx: LedgerTransaction) => sum + (tx.amount || 0), 0))}
               </span>
             </span>
           </div>

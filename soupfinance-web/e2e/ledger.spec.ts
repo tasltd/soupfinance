@@ -190,6 +190,8 @@ test.describe('Ledger Management', () => {
         })
       );
     });
+    // Mock token validation API - required for authenticated pages
+    await mockTokenValidationApi(page, true);
   });
 
   // Helper to mock ledger APIs

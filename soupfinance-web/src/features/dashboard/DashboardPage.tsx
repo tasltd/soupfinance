@@ -8,16 +8,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { listInvoices } from '../../api';
 import { useDashboardStats } from '../../hooks/useDashboardStats';
-
-// Added: Format currency for display
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount);
-}
+import { useFormatCurrency } from '../../stores';
 
 // Added: Format percentage change for display
 function formatChange(change: number): string {
@@ -26,6 +17,8 @@ function formatChange(change: number): string {
 }
 
 export function DashboardPage() {
+  const formatCurrency = useFormatCurrency();
+
   // Changed: Added error state handling for API failures
   const { data: stats, isLoading: statsLoading, error: statsError } = useDashboardStats();
 
@@ -147,7 +140,7 @@ export function DashboardPage() {
                       {invoice.client?.name || 'N/A'}
                     </td>
                     <td className="px-6 py-4 text-right text-text-light dark:text-text-dark">
-                      ${invoice.totalAmount?.toFixed(2)}
+                      {formatCurrency(invoice.totalAmount)}
                     </td>
                     <td className="px-6 py-4 text-center">
                       <StatusBadge status={invoice.status} />

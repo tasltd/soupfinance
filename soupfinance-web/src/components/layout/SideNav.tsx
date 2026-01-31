@@ -12,10 +12,13 @@ interface NavItem {
   children?: { label: string; path: string }[];
 }
 
+// Changed (2026-01-28): Added Vendors, Accounting section, Trial Balance to Reports
 const navItems: NavItem[] = [
   { label: 'Dashboard', icon: 'dashboard', path: '/dashboard' },
   { label: 'Invoices', icon: 'receipt_long', path: '/invoices' },
   { label: 'Bills', icon: 'receipt', path: '/bills' },
+  // Added: Vendors navigation item
+  { label: 'Vendors', icon: 'storefront', path: '/vendors' },
   { label: 'Payments', icon: 'payments', path: '/payments' },
   {
     label: 'Ledger',
@@ -24,6 +27,18 @@ const navItems: NavItem[] = [
     children: [
       { label: 'Chart of Accounts', path: '/ledger/accounts' },
       { label: 'Transactions', path: '/ledger/transactions' },
+    ],
+  },
+  // Added: Accounting section for journal entries, vouchers
+  {
+    label: 'Accounting',
+    icon: 'calculate',
+    path: '/accounting',
+    children: [
+      { label: 'Transaction Register', path: '/accounting/transactions' },
+      { label: 'Journal Entry', path: '/accounting/journal-entry' },
+      { label: 'Payment Voucher', path: '/accounting/voucher/payment' },
+      { label: 'Receipt Voucher', path: '/accounting/voucher/receipt' },
     ],
   },
   {
@@ -36,6 +51,19 @@ const navItems: NavItem[] = [
       { label: 'Balance Sheet', path: '/reports/balance-sheet' },
       { label: 'Cash Flow', path: '/reports/cash-flow' },
       { label: 'Aging Reports', path: '/reports/aging' },
+      // Added: Trial Balance report
+      { label: 'Trial Balance', path: '/reports/trial-balance' },
+    ],
+  },
+  // Added (2026-01-30): Settings section
+  {
+    label: 'Settings',
+    icon: 'settings',
+    path: '/settings',
+    children: [
+      { label: 'Users', path: '/settings/users' },
+      { label: 'Bank Accounts', path: '/settings/bank-accounts' },
+      { label: 'Account Settings', path: '/settings/account' },
     ],
   },
 ];

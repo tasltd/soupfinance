@@ -5,17 +5,27 @@
  * Added: Full API integration with getBill endpoint
  * Added: Loading, error, and content states
  * Added: data-testid attributes for E2E testing
+ * Updated: Frontend PDF generation and email sending
  */
+import { useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getBill, deleteBill, listBillPayments } from '../../api/endpoints/bills';
 import { useFormatCurrency } from '../../stores';
+import { usePdf, useEmailSend } from '../../hooks';
 
 export function BillDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const formatCurrency = useFormatCurrency();
+  const { generateBill, isGenerating: isPdfGenerating } = usePdf();
+  const { sendBill: sendBillEmail, isSending: isEmailSending, error: emailError, success: emailSuccess, reset: resetEmailState } = useEmailSend();
+
+  // State for send email dialog
+  const [showSendDialog, setShowSendDialog] = useState(false);
+  const [recipientEmail, setRecipientEmail] = useState('');
+  const [recipientName, setRecipientName] = useState('');
 
   // Added: Fetch bill details from API
   const { data: bill, isLoading, error } = useQuery({
@@ -44,6 +54,24 @@ export function BillDetailPage() {
   const handleDelete = () => {
     if (window.confirm('Are you sure you want to delete this bill? This action cannot be undone.')) {
       deleteMutation.mutate();
+    }
+  };
+
+  // Open send dialog
+  const handleOpenSendDialog = () => {
+    resetEmailState();
+    setRecipientEmail('');
+    setRecipientName(bill?.vendor?.name || '');
+    setShowSendDialog(true);
+  };
+
+  // Send bill with frontend-generated PDF via email
+  const handleSendBill = async () => {
+    if (!bill || !recipientEmail) return;
+
+    const success = await sendBillEmail(bill, recipientEmail, recipientName || undefined);
+    if (success) {
+      setShowSendDialog(false);
     }
   };
 
@@ -96,6 +124,23 @@ export function BillDetailPage() {
           <Link to="/bills" className="h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm flex items-center hover:bg-primary/5">
             Back
           </Link>
+          <button
+            onClick={() => generateBill(bill)}
+            disabled={isPdfGenerating}
+            className="h-10 px-4 rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400 font-bold text-sm flex items-center hover:bg-purple-500/20 disabled:opacity-50"
+            data-testid="bill-download-pdf-button"
+          >
+            <span className="material-symbols-outlined text-lg mr-2">download</span>
+            {isPdfGenerating ? 'Generating...' : 'Download PDF'}
+          </button>
+          <button
+            onClick={handleOpenSendDialog}
+            className="h-10 px-4 rounded-lg bg-info/10 text-info font-bold text-sm flex items-center hover:bg-info/20"
+            data-testid="bill-send-button"
+          >
+            <span className="material-symbols-outlined text-lg mr-2">send</span>
+            Send
+          </button>
           <Link
             to={`/bills/${id}/edit`}
             className="h-10 px-4 rounded-lg bg-primary/20 text-primary font-bold text-sm flex items-center hover:bg-primary/30"
@@ -260,6 +305,95 @@ export function BillDetailPage() {
           </div>
         )}
       </div>
+
+      {/* Send Bill Email Dialog */}
+      {showSendDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" data-testid="send-bill-dialog">
+          <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark w-full max-w-md mx-4 shadow-xl">
+            <div className="px-6 py-4 border-b border-border-light dark:border-border-dark flex justify-between items-center">
+              <h3 className="text-lg font-bold text-text-light dark:text-text-dark">Send Bill</h3>
+              <button
+                onClick={() => setShowSendDialog(false)}
+                className="text-subtle-text hover:text-text-light dark:hover:text-text-dark"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-subtle-text">
+                Send bill <strong>{bill?.billNumber}</strong> with a frontend-generated PDF attachment.
+              </p>
+
+              <div>
+                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
+                  Recipient Name
+                </label>
+                <input
+                  type="text"
+                  value={recipientName}
+                  onChange={(e) => setRecipientName(e.target.value)}
+                  placeholder="Vendor Name"
+                  className="w-full h-10 px-3 rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark"
+                  data-testid="send-recipient-name"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
+                  Recipient Email <span className="text-danger">*</span>
+                </label>
+                <input
+                  type="email"
+                  value={recipientEmail}
+                  onChange={(e) => setRecipientEmail(e.target.value)}
+                  placeholder="recipient@example.com"
+                  required
+                  className="w-full h-10 px-3 rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark"
+                  data-testid="send-recipient-email"
+                />
+              </div>
+
+              {emailError && (
+                <div className="p-3 rounded-lg bg-danger/10 text-danger text-sm" data-testid="send-error">
+                  {emailError}
+                </div>
+              )}
+
+              {emailSuccess && (
+                <div className="p-3 rounded-lg bg-success/10 text-success text-sm" data-testid="send-success">
+                  Bill sent successfully!
+                </div>
+              )}
+            </div>
+            <div className="px-6 py-4 border-t border-border-light dark:border-border-dark flex justify-end gap-3">
+              <button
+                onClick={() => setShowSendDialog(false)}
+                className="h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSendBill}
+                disabled={!recipientEmail || isEmailSending}
+                className="h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm flex items-center disabled:opacity-50"
+                data-testid="send-confirm-button"
+              >
+                {isEmailSending ? (
+                  <>
+                    <span className="material-symbols-outlined text-lg mr-2 animate-spin">progress_activity</span>
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <span className="material-symbols-outlined text-lg mr-2">send</span>
+                    Send Bill
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

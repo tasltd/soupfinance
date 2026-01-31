@@ -18,3 +18,5 @@ export * from './endpoints/clients';
 export * from './endpoints/corporate';
 export * from './endpoints/registration';
 export * from './endpoints/reports';
+export * from './endpoints/settings';
+export * from './endpoints/email';

@@ -40,8 +40,8 @@ export default defineConfig({
     timeout: 15000,
   },
 
-  // Run tests in parallel
-  fullyParallel: true,
+  // Run tests serially - parallel execution causes auth conflicts with real backend
+  fullyParallel: false,
 
   // Fail the build on CI if you accidentally left test.only in the source code
   forbidOnly: !!process.env.CI,
@@ -49,8 +49,9 @@ export default defineConfig({
   // Changed: No retries - we want to see real failures
   retries: 0,
 
-  // Changed: Limit workers to reduce backend load
-  workers: process.env.CI ? 1 : 2,
+  // Changed: Single worker to avoid auth conflicts with real backend
+  // Multiple concurrent logins can cause session conflicts
+  workers: 1,
 
   // Reporter to use
   reporter: [

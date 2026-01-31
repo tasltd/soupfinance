@@ -112,6 +112,7 @@ export function ToastProvider({ children, maxToasts = 5 }: ToastProviderProps) {
  * Hook to access toast functions from any component
  * Must be used within ToastProvider
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export function useToast(): ToastContextValue {
   const context = useContext(ToastContext);
 

@@ -1,9 +1,12 @@
 /**
  * Invoice CRUD E2E Tests
  * Tests invoice listing, creation, editing, and viewing flows
+ *
+ * Fixed: Added mockTokenValidationApi to mock /rest/user/current.json
+ * This is required because the app validates the auth token on page load
  */
 import { test, expect } from '@playwright/test';
-import { mockInvoicesApi, mockInvoices, takeScreenshot } from './fixtures';
+import { mockInvoicesApi, mockInvoices, takeScreenshot, mockTokenValidationApi } from './fixtures';
 
 // Helper to set up authenticated state
 async function setupAuth(page: any) {
@@ -23,6 +26,8 @@ async function setupAuth(page: any) {
       })
     );
   });
+  // Mock token validation API - required for authenticated pages
+  await mockTokenValidationApi(page, true);
 }
 
 test.describe('Invoice Management', () => {
@@ -63,9 +68,12 @@ test.describe('Invoice Management', () => {
     });
 
     test('shows loading state while fetching invoices', async ({ page }) => {
-      // Set up delayed API response
-      await page.route('**/rest/invoice*', async (route) => {
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Must mock token validation FIRST before setting up delayed invoice route
+      await mockTokenValidationApi(page, true);
+
+      // Set up delayed API response for invoice list only - use longer delay to ensure we catch loading state
+      await page.route('**/rest/invoice/index.json*', async (route) => {
+        await new Promise((resolve) => setTimeout(resolve, 2000));
         route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -73,18 +81,20 @@ test.describe('Invoice Management', () => {
         });
       });
 
-      await page.goto('/invoices');
+      // Start navigation but don't wait for full load
+      await page.goto('/invoices', { waitUntil: 'commit' });
 
-      // Should show loading state
-      await expect(page.getByTestId('invoice-list-loading')).toBeVisible();
+      // Should show loading state - use short timeout since it should be visible immediately
+      await expect(page.getByTestId('invoice-list-loading')).toBeVisible({ timeout: 3000 });
       await takeScreenshot(page, 'invoices-list-loading');
 
-      // Wait for table to appear
+      // Wait for table to appear after delay resolves
       await expect(page.getByTestId('invoice-list-table')).toBeVisible({ timeout: 5000 });
     });
 
     test('shows empty state when no invoices exist', async ({ page }) => {
-      await page.route('**/rest/invoice*', (route) => {
+      // Mock invoice list endpoint specifically
+      await page.route('**/rest/invoice/index.json*', (route) => {
         route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -168,11 +178,21 @@ test.describe('Invoice Management', () => {
     });
 
     test('empty state create button opens new invoice form', async ({ page }) => {
-      await page.route('**/rest/invoice*', (route) => {
+      // Mock empty invoice list
+      await page.route('**/rest/invoice/index.json*', (route) => {
         route.fulfill({
           status: 200,
           contentType: 'application/json',
           body: JSON.stringify([]),
+        });
+      });
+
+      // Mock clients list for the form
+      await page.route('**/rest/invoiceClient/index.json*', (route) => {
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify([{ id: 'client-1', name: 'Test Client' }]),
         });
       });
 
@@ -211,6 +231,24 @@ test.describe('Invoice Management', () => {
     });
 
     test('edit form shows correct heading', async ({ page }) => {
+      // Mock single invoice for edit page
+      await page.route('**/rest/invoice/show/inv-001*', (route) => {
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(mockInvoices[0]),
+        });
+      });
+
+      // Mock clients list for the form
+      await page.route('**/rest/invoiceClient/index.json*', (route) => {
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify([{ id: 'client-1', name: 'Acme Corp' }]),
+        });
+      });
+
       await page.goto('/invoices/inv-001/edit');
 
       await expect(page.getByTestId('invoice-form-heading')).toHaveText('Edit Invoice');
@@ -268,10 +306,10 @@ test.describe('Invoice Management', () => {
       // Wait for table
       await expect(page.getByTestId('invoice-list-loading')).not.toBeVisible({ timeout: 5000 });
 
-      // Check amount formatting (should have $ and 2 decimal places)
-      await expect(page.locator('text=$2500.00')).toBeVisible();
-      await expect(page.locator('text=$4750.50')).toBeVisible();
-      await expect(page.locator('text=$1200.00')).toBeVisible();
+      // Check amount formatting (should have $ and 2 decimal places with thousands separator)
+      await expect(page.locator('text=$2,500.00')).toBeVisible();
+      await expect(page.locator('text=$4,750.50')).toBeVisible();
+      await expect(page.locator('text=$1,200.00')).toBeVisible();
     });
   });
 
@@ -334,8 +372,8 @@ test.describe('Invoice Management', () => {
 
   test.describe('Invoice API Error Handling', () => {
     test('handles API error gracefully', async ({ page }) => {
-      // Mock API error
-      await page.route('**/rest/invoice*', (route) => {
+      // Mock API error for invoice list only
+      await page.route('**/rest/invoice/index.json*', (route) => {
         route.fulfill({
           status: 500,
           contentType: 'application/json',
@@ -352,8 +390,8 @@ test.describe('Invoice Management', () => {
     });
 
     test('handles network timeout gracefully', async ({ page }) => {
-      // Mock slow API that will timeout
-      await page.route('**/rest/invoice*', async (route) => {
+      // Mock slow API that will timeout (invoice list only)
+      await page.route('**/rest/invoice/index.json*', async (route) => {
         await new Promise((resolve) => setTimeout(resolve, 35000)); // Longer than test timeout
         route.abort();
       });

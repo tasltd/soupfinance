@@ -25,6 +25,21 @@ vi.mock('../../../stores', () => ({
   },
 }));
 
+// Mock the hooks
+vi.mock('../../../hooks', () => ({
+  usePdf: () => ({
+    generateBill: vi.fn(),
+    isGenerating: false,
+  }),
+  useEmailSend: () => ({
+    sendBill: vi.fn().mockResolvedValue(true),
+    isSending: false,
+    error: null,
+    success: false,
+    reset: vi.fn(),
+  }),
+}));
+
 // Mock useNavigate
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async () => {

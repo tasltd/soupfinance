@@ -10,7 +10,7 @@ import { useEffect } from 'react';
 import './i18n';
 
 // Stores
-import { useAuthStore, useUIStore } from './stores';
+import { useAuthStore, useUIStore, useAccountStore } from './stores';
 
 // Layouts
 import { MainLayout } from './components/layout/MainLayout';
@@ -72,6 +72,16 @@ import {
   DocumentsPage,
   KycStatusPage,
 } from './features/corporate';
+
+// Added (2026-01-30): Settings pages
+import {
+  SettingsLayout,
+  UserListPage,
+  UserFormPage,
+  BankAccountListPage,
+  BankAccountFormPage,
+  AccountSettingsPage,
+} from './features/settings';
 
 // Added: Toast notifications provider
 import { ToastProvider } from './components/feedback/ToastProvider';
@@ -140,7 +150,10 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   const initialize = useAuthStore((state) => state.initialize);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const darkMode = useUIStore((state) => state.darkMode);
+  const fetchAccountSettings = useAccountStore((state) => state.fetchSettings);
+  const accountInitialized = useAccountStore((state) => state.isInitialized);
 
   // Initialize auth state on mount
   // Changed: Now async - validates token with server
@@ -149,6 +162,16 @@ export default function App() {
       console.error('[App] Auth initialization failed:', error);
     });
   }, [initialize]);
+
+  // Added: Fetch account settings when authenticated
+  // This loads the tenant's currency and other settings
+  useEffect(() => {
+    if (isAuthenticated && !accountInitialized) {
+      fetchAccountSettings().catch((error) => {
+        console.error('[App] Failed to fetch account settings:', error);
+      });
+    }
+  }, [isAuthenticated, accountInitialized, fetchAccountSettings]);
 
   // Apply dark mode class
   useEffect(() => {
@@ -250,6 +273,21 @@ export default function App() {
             <Route path="/onboarding/directors" element={<DirectorsPage />} />
             <Route path="/onboarding/documents" element={<DocumentsPage />} />
             <Route path="/onboarding/status" element={<KycStatusPage />} />
+
+            {/* Added (2026-01-30): Settings */}
+            <Route path="/settings" element={<SettingsLayout />}>
+              <Route index element={null} />
+              {/* User Management (agents with director/signatory managed inline) */}
+              <Route path="users" element={<UserListPage />} />
+              <Route path="users/new" element={<UserFormPage />} />
+              <Route path="users/:id" element={<UserFormPage />} />
+              {/* Bank Accounts */}
+              <Route path="bank-accounts" element={<BankAccountListPage />} />
+              <Route path="bank-accounts/new" element={<BankAccountFormPage />} />
+              <Route path="bank-accounts/:id" element={<BankAccountFormPage />} />
+              {/* Account Settings */}
+              <Route path="account" element={<AccountSettingsPage />} />
+            </Route>
           </Route>
 
           {/* Catch all */}

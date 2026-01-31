@@ -18,11 +18,14 @@ interface AuthState {
   error: string | null;
 
   // Actions
-  login: (email: string, password: string) => Promise<void>;
+  // Changed (2026-01-28): Added rememberMe parameter to login
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
   logout: () => void;
   clearError: () => void;
   initialize: () => Promise<void>;
   validateToken: () => Promise<boolean>;
+  // Added: Direct setter for OTP verification flow
+  setAuthenticated: (isAuthenticated: boolean, user: AuthUser | null) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -34,11 +37,12 @@ export const useAuthStore = create<AuthState>()(
       isInitialized: false,
       error: null,
 
-      login: async (email: string, password: string) => {
+      // Changed (2026-01-28): Added rememberMe parameter - pass to apiLogin for dual-storage strategy
+      login: async (email: string, password: string, rememberMe: boolean = false) => {
         set({ isLoading: true, error: null });
 
         try {
-          const user = await apiLogin(email, password);
+          const user = await apiLogin(email, password, rememberMe);
           set({
             user,
             isAuthenticated: true,
@@ -60,10 +64,13 @@ export const useAuthStore = create<AuthState>()(
       },
 
       logout: () => {
-        // Added: Clear localStorage first to prevent stale state
+        // Changed (2026-01-28): Clear both storages to handle dual-storage strategy
         localStorage.removeItem('access_token');
         localStorage.removeItem('user');
         localStorage.removeItem('auth-storage');
+        localStorage.removeItem('auth_storage_type');
+        sessionStorage.removeItem('access_token');
+        sessionStorage.removeItem('user');
         set({
           user: null,
           isAuthenticated: false,
@@ -75,9 +82,22 @@ export const useAuthStore = create<AuthState>()(
 
       clearError: () => set({ error: null }),
 
-      // Added: Validate token with the server by making a test API call
+      // Added: Direct setter for OTP verification flow
+      // Used when verifying OTP - token is already stored by verifyOTP()
+      setAuthenticated: (isAuthenticated: boolean, user: AuthUser | null) => {
+        set({
+          user,
+          isAuthenticated,
+          isLoading: false,
+          isInitialized: true,
+          error: null,
+        });
+      },
+
+      // Changed (2026-01-28): Validate token - check both storages for dual-storage strategy
       validateToken: async () => {
-        const token = localStorage.getItem('access_token');
+        // Check both storages for token
+        const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token');
         if (!token) {
           return false;
         }
@@ -94,10 +114,11 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      // Changed: Initialize now validates token with server
+      // Changed (2026-01-28): Initialize now validates token with server - check both storages
       initialize: async () => {
         const user = getCurrentUser();
-        const token = localStorage.getItem('access_token');
+        // Check both storages for token (dual-storage strategy)
+        const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token');
 
         // Added: No token or user, definitely not authenticated
         if (!token || !user) {
@@ -121,10 +142,13 @@ export const useAuthStore = create<AuthState>()(
             isInitialized: true,
           });
         } else {
-          // Added: Token invalid, clear everything
+          // Changed (2026-01-28): Token invalid, clear both storages (dual-storage strategy)
           localStorage.removeItem('access_token');
           localStorage.removeItem('user');
           localStorage.removeItem('auth-storage');
+          localStorage.removeItem('auth_storage_type');
+          sessionStorage.removeItem('access_token');
+          sessionStorage.removeItem('user');
           set({
             user: null,
             isAuthenticated: false,

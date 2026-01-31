@@ -13,13 +13,16 @@ export function LoginPage() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  // Added (2026-01-28): Remember Me state - uses localStorage (persistent) when true, sessionStorage (session-only) when false
+  const [rememberMe, setRememberMe] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     clearError();
 
     try {
-      await login(email, password);
+      // Changed (2026-01-28): Pass rememberMe to login for dual-storage strategy
+      await login(email, password, rememberMe);
       navigate('/dashboard');
     } catch {
       // Error is handled by store
@@ -86,18 +89,18 @@ export function LoginPage() {
           />
         </label>
 
-        <div className="flex items-center justify-between">
-          <label className="flex items-center gap-2">
+        {/* Changed (2026-01-28): Wired up Remember Me checkbox, removed non-functional Forgot Password link */}
+        <div className="flex items-center">
+          <label className="flex items-center gap-2 cursor-pointer">
             <input
               type="checkbox"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
               data-testid="login-remember-checkbox"
-              className="size-4 rounded border-border-light text-primary focus:ring-primary"
+              className="size-4 rounded border-border-light text-primary focus:ring-primary cursor-pointer"
             />
             <span className="text-sm text-subtle-text">Remember me</span>
           </label>
-          <a href="#" className="text-sm text-primary hover:underline" data-testid="login-forgot-password-link">
-            Forgot password?
-          </a>
         </div>
 
         <button

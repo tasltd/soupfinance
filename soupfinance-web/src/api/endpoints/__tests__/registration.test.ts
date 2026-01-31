@@ -1,8 +1,14 @@
 /**
  * Unit tests for registration API module
- * Tests corporate registration with minimal fields (simplified registration flow)
+ * Tests tenant registration with the new /account/register.json endpoint
  *
- * Note: axios is mocked globally in test/setup.ts
+ * API ARCHITECTURE (2026-01-30):
+ * - Registration creates a NEW TENANT (Account) with isolated data
+ * - Uses JSON format (not FormData)
+ * - Endpoint: POST /account/register.json
+ * - No password during registration - set during email confirmation
+ *
+ * Note: axios is mocked globally
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import axios from 'axios';
@@ -23,45 +29,36 @@ vi.mock('axios', () => ({
   },
 }));
 
-// Import after mocking
-// Note: Functions are re-imported via vi.resetModules() in each test for fresh mocks
-import { type CorporateRegistration } from '../registration';
+// Import types
+import type { TenantRegistration, CorporateRegistration } from '../registration';
 
 describe('Registration API', () => {
-  // Note: Individual tests create fresh mocks via vi.resetModules() and re-import
-
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
   });
 
-  describe('registerCorporate', () => {
-    it('sends correct FormData with minimal required fields', async () => {
-      // Arrange - minimal registration with all fields
-      const registration: CorporateRegistration = {
-        name: 'Acme Corporation',
-        contactFirstName: 'John',
-        contactLastName: 'Doe',
-        phoneNumber: '+254700123456',
-        email: 'john@acme.com',
-        contactPosition: 'CFO',
-        certificateOfIncorporationNumber: 'REG-12345',
-        businessCategory: 'LIMITED_LIABILITY',
+  describe('registerTenant (new API)', () => {
+    it('sends correct JSON body to /account/register.json', async () => {
+      // Arrange
+      const registration: TenantRegistration = {
+        companyName: 'Acme Trading Ltd',
+        businessType: 'TRADING',
+        adminFirstName: 'John',
+        adminLastName: 'Doe',
+        email: 'john@acmetrading.com',
       };
 
       const mockResponse = {
         data: {
-          client: {
-            id: 'client-uuid-123',
-            name: 'Acme Corporation',
-            phoneContacts: [{ phone: '+254700123456', priority: 'PRIMARY' }],
-            emailContacts: [{ email: 'john@acme.com', priority: 'PRIMARY' }],
-          },
+          success: true,
           message: 'Registration successful',
+          accountId: 'account-uuid-123',
+          agentId: 'agent-uuid-456',
+          email: 'john@acmetrading.com',
         },
       };
 
-      // Re-create mock for this test
       const mockPost = vi.fn().mockResolvedValue(mockResponse);
       (axios.create as ReturnType<typeof vi.fn>).mockReturnValue({
         interceptors: {
@@ -72,53 +69,35 @@ describe('Registration API', () => {
         get: vi.fn(),
       });
 
-      // Re-import to get fresh module with new mock
       vi.resetModules();
-      const { registerCorporate: freshRegister } = await import('../registration');
+      const { registerTenant: freshRegister } = await import('../registration');
 
       // Act
       const result = await freshRegister(registration);
 
-      // Assert - verify POST was called
-      expect(mockPost).toHaveBeenCalledWith('/client/register.json', expect.any(URLSearchParams));
-
-      // Assert - verify FormData contains correct flat field names
-      const formData = mockPost.mock.calls[0][1] as URLSearchParams;
-
-      // Type field
-      expect(formData.get('type')).toBe('CORPORATE');
-
-      // Required fields
-      expect(formData.get('name')).toBe('Acme Corporation');
-      expect(formData.get('contactFirstName')).toBe('John');
-      expect(formData.get('contactLastName')).toBe('Doe');
-
-      // Contact methods
-      expect(formData.get('phoneNumber')).toBe('+254700123456');
-      expect(formData.get('email')).toBe('john@acme.com');
-
-      // Optional fields
-      expect(formData.get('contactPosition')).toBe('CFO');
-      expect(formData.get('certificateOfIncorporationNumber')).toBe('REG-12345');
-      expect(formData.get('businessCategory')).toBe('LIMITED_LIABILITY');
+      // Assert - verify POST was called with JSON body
+      expect(mockPost).toHaveBeenCalledWith('/account/register.json', registration);
 
       // Assert - verify response
-      expect(result.client?.id).toBe('client-uuid-123');
-      expect(result.client?.name).toBe('Acme Corporation');
+      expect(result.success).toBe(true);
+      expect(result.accountId).toBe('account-uuid-123');
+      expect(result.email).toBe('john@acmetrading.com');
     });
 
-    it('omits optional fields when not provided', async () => {
-      // Arrange - minimal required fields only
-      const registration: CorporateRegistration = {
-        name: 'Minimal Corp',
-        contactFirstName: 'Jane',
-        contactLastName: 'Smith',
-        email: 'jane@minimal.com',
+    it('supports SERVICES business type', async () => {
+      const registration: TenantRegistration = {
+        companyName: 'Consulting Services Ltd',
+        businessType: 'SERVICES',
+        adminFirstName: 'Jane',
+        adminLastName: 'Smith',
+        email: 'jane@consulting.com',
       };
 
       const mockResponse = {
         data: {
-          client: { id: 'corp-uuid-789', name: 'Minimal Corp' },
+          success: true,
+          message: 'Registration successful',
+          accountId: 'services-account-123',
         },
       };
 
@@ -133,44 +112,29 @@ describe('Registration API', () => {
       });
 
       vi.resetModules();
-      const { registerCorporate: freshRegister } = await import('../registration');
+      const { registerTenant: freshRegister } = await import('../registration');
 
       // Act
-      await freshRegister(registration);
+      const result = await freshRegister(registration);
 
-      // Assert - verify optional fields are not included
-      const formData = mockPost.mock.calls[0][1] as URLSearchParams;
-
-      // Optional fields should NOT be present
-      expect(formData.has('phoneNumber')).toBe(false);
-      expect(formData.has('contactPosition')).toBe(false);
-      expect(formData.has('certificateOfIncorporationNumber')).toBe(false);
-      expect(formData.has('businessCategory')).toBe(false);
-
-      // Required fields should still be present
-      expect(formData.get('type')).toBe('CORPORATE');
-      expect(formData.get('name')).toBe('Minimal Corp');
-      expect(formData.get('contactFirstName')).toBe('Jane');
-      expect(formData.get('contactLastName')).toBe('Smith');
-      expect(formData.get('email')).toBe('jane@minimal.com');
+      // Assert
+      expect(mockPost).toHaveBeenCalledWith('/account/register.json', expect.objectContaining({
+        businessType: 'SERVICES',
+      }));
+      expect(result.success).toBe(true);
     });
 
-    it('works with phone number only (no email)', async () => {
-      // Arrange
-      const registration: CorporateRegistration = {
-        name: 'Phone Only Corp',
-        contactFirstName: 'Phone',
-        contactLastName: 'User',
-        phoneNumber: '+233244123456',
+    it('includes optional currency field when provided', async () => {
+      const registration: TenantRegistration = {
+        companyName: 'Ghana Trading Co',
+        businessType: 'TRADING',
+        adminFirstName: 'Kofi',
+        adminLastName: 'Asante',
+        email: 'kofi@ghantrading.com',
+        currency: 'GHS',
       };
 
-      const mockResponse = {
-        data: {
-          client: { id: 'corp-phone-only', name: 'Phone Only Corp' },
-        },
-      };
-
-      const mockPost = vi.fn().mockResolvedValue(mockResponse);
+      const mockPost = vi.fn().mockResolvedValue({ data: { success: true } });
       (axios.create as ReturnType<typeof vi.fn>).mockReturnValue({
         interceptors: {
           request: { use: vi.fn() },
@@ -181,30 +145,34 @@ describe('Registration API', () => {
       });
 
       vi.resetModules();
-      const { registerCorporate: freshRegister } = await import('../registration');
+      const { registerTenant: freshRegister } = await import('../registration');
 
       // Act
       await freshRegister(registration);
 
       // Assert
-      const formData = mockPost.mock.calls[0][1] as URLSearchParams;
-      expect(formData.get('phoneNumber')).toBe('+233244123456');
-      expect(formData.has('email')).toBe(false);
+      expect(mockPost).toHaveBeenCalledWith('/account/register.json', expect.objectContaining({
+        currency: 'GHS',
+      }));
     });
 
     it('throws error on registration failure', async () => {
-      // Arrange
-      const registration: CorporateRegistration = {
-        name: 'Fail Corp',
-        contactFirstName: 'Test',
-        contactLastName: 'User',
+      const registration: TenantRegistration = {
+        companyName: 'Fail Corp',
+        businessType: 'SERVICES',
+        adminFirstName: 'Test',
+        adminLastName: 'User',
         email: 'test@fail.com',
       };
 
       const mockError = {
         response: {
           status: 422,
-          data: { message: 'Company name already exists', error: 1006 },
+          data: {
+            success: false,
+            message: 'Email already registered',
+            error: 'email_exists',
+          },
         },
       };
 
@@ -219,18 +187,18 @@ describe('Registration API', () => {
       });
 
       vi.resetModules();
-      const { registerCorporate: freshRegister } = await import('../registration');
+      const { registerTenant: freshRegister } = await import('../registration');
 
       // Act & Assert
       await expect(freshRegister(registration)).rejects.toEqual(mockError);
     });
 
     it('handles network errors gracefully', async () => {
-      // Arrange
-      const registration: CorporateRegistration = {
-        name: 'Network Error Corp',
-        contactFirstName: 'Network',
-        contactLastName: 'Test',
+      const registration: TenantRegistration = {
+        companyName: 'Network Error Corp',
+        businessType: 'TRADING',
+        adminFirstName: 'Network',
+        adminLastName: 'Test',
         email: 'network@test.com',
       };
 
@@ -246,147 +214,153 @@ describe('Registration API', () => {
       });
 
       vi.resetModules();
-      const { registerCorporate: freshRegister } = await import('../registration');
+      const { registerTenant: freshRegister } = await import('../registration');
 
       // Act & Assert
       await expect(freshRegister(registration)).rejects.toThrow('Network Error');
     });
   });
 
-  describe('checkPhoneExists', () => {
-    it('returns true when phone number exists', async () => {
-      // Arrange
-      const mockGet = vi.fn().mockResolvedValue({ data: { exists: true } });
+  describe('registerCorporate (legacy wrapper)', () => {
+    it('maps legacy format to new tenant format', async () => {
+      // The legacy registerCorporate maps to registerTenant internally
+      const legacyRegistration: CorporateRegistration = {
+        name: 'Legacy Corp',
+        contactFirstName: 'John',
+        contactLastName: 'Doe',
+        email: 'john@legacy.com',
+      };
+
+      const mockResponse = {
+        data: {
+          success: true,
+          message: 'Registration successful',
+          accountId: 'legacy-account-123',
+        },
+      };
+
+      const mockPost = vi.fn().mockResolvedValue(mockResponse);
       (axios.create as ReturnType<typeof vi.fn>).mockReturnValue({
         interceptors: {
           request: { use: vi.fn() },
           response: { use: vi.fn() },
         },
-        post: vi.fn(),
-        get: mockGet,
+        post: mockPost,
+        get: vi.fn(),
       });
 
+      vi.resetModules();
+      const { registerCorporate: freshRegister } = await import('../registration');
+
+      // Act
+      const result = await freshRegister(legacyRegistration);
+
+      // Assert - should map to new format
+      expect(mockPost).toHaveBeenCalledWith('/account/register.json', expect.objectContaining({
+        companyName: 'Legacy Corp',
+        adminFirstName: 'John',
+        adminLastName: 'Doe',
+        email: 'john@legacy.com',
+        businessType: 'SERVICES', // Default for legacy calls
+      }));
+      expect(result.success).toBe(true);
+    });
+  });
+
+  describe('confirmEmail', () => {
+    it('sends token and password to /account/confirmEmail.json', async () => {
+      const confirmData = {
+        token: 'confirmation-token-abc123',
+        password: 'SecurePass123!',
+        confirmPassword: 'SecurePass123!',
+      };
+
+      const mockResponse = {
+        data: {
+          success: true,
+          message: 'Email confirmed successfully',
+        },
+      };
+
+      const mockPost = vi.fn().mockResolvedValue(mockResponse);
+      (axios.create as ReturnType<typeof vi.fn>).mockReturnValue({
+        interceptors: {
+          request: { use: vi.fn() },
+          response: { use: vi.fn() },
+        },
+        post: mockPost,
+        get: vi.fn(),
+      });
+
+      vi.resetModules();
+      const { confirmEmail: freshConfirm } = await import('../registration');
+
+      // Act
+      const result = await freshConfirm(confirmData);
+
+      // Assert
+      expect(mockPost).toHaveBeenCalledWith('/account/confirmEmail.json', confirmData);
+      expect(result.success).toBe(true);
+    });
+  });
+
+  describe('resendConfirmation', () => {
+    it('sends email to /account/resendConfirmation.json', async () => {
+      const mockResponse = {
+        data: {
+          success: true,
+          message: 'Confirmation email resent',
+        },
+      };
+
+      const mockPost = vi.fn().mockResolvedValue(mockResponse);
+      (axios.create as ReturnType<typeof vi.fn>).mockReturnValue({
+        interceptors: {
+          request: { use: vi.fn() },
+          response: { use: vi.fn() },
+        },
+        post: mockPost,
+        get: vi.fn(),
+      });
+
+      vi.resetModules();
+      const { resendConfirmation: freshResend } = await import('../registration');
+
+      // Act
+      const result = await freshResend('user@example.com');
+
+      // Assert
+      expect(mockPost).toHaveBeenCalledWith('/account/resendConfirmation.json', {
+        email: 'user@example.com',
+      });
+      expect(result.success).toBe(true);
+    });
+  });
+
+  describe('checkPhoneExists (deprecated)', () => {
+    it('always returns false (deprecated function)', async () => {
+      // These functions are deprecated and no longer call the API
       vi.resetModules();
       const { checkPhoneExists: freshCheck } = await import('../registration');
 
       // Act
       const result = await freshCheck('+254700000000');
 
-      // Assert
-      expect(result).toBe(true);
-      expect(mockGet).toHaveBeenCalledWith('/client/checkPhone.json?phoneNumber=%2B254700000000');
-    });
-
-    it('returns false when phone number does not exist', async () => {
-      // Arrange
-      const mockGet = vi.fn().mockResolvedValue({ data: { exists: false } });
-      (axios.create as ReturnType<typeof vi.fn>).mockReturnValue({
-        interceptors: {
-          request: { use: vi.fn() },
-          response: { use: vi.fn() },
-        },
-        post: vi.fn(),
-        get: mockGet,
-      });
-
-      vi.resetModules();
-      const { checkPhoneExists: freshCheck } = await import('../registration');
-
-      // Act
-      const result = await freshCheck('+254700000001');
-
-      // Assert
-      expect(result).toBe(false);
-    });
-
-    it('returns false on API error (allows registration attempt)', async () => {
-      // Arrange
-      const mockGet = vi.fn().mockRejectedValue(new Error('404 Not Found'));
-      (axios.create as ReturnType<typeof vi.fn>).mockReturnValue({
-        interceptors: {
-          request: { use: vi.fn() },
-          response: { use: vi.fn() },
-        },
-        post: vi.fn(),
-        get: mockGet,
-      });
-
-      vi.resetModules();
-      const { checkPhoneExists: freshCheck } = await import('../registration');
-
-      // Act
-      const result = await freshCheck('+254700000002');
-
-      // Assert - should return false on error to allow registration attempt
+      // Assert - always returns false as function is deprecated
       expect(result).toBe(false);
     });
   });
 
-  describe('checkEmailExists', () => {
-    it('returns true when email exists', async () => {
-      // Arrange
-      const mockGet = vi.fn().mockResolvedValue({ data: { exists: true } });
-      (axios.create as ReturnType<typeof vi.fn>).mockReturnValue({
-        interceptors: {
-          request: { use: vi.fn() },
-          response: { use: vi.fn() },
-        },
-        post: vi.fn(),
-        get: mockGet,
-      });
-
+  describe('checkEmailExists (deprecated)', () => {
+    it('always returns false (deprecated function)', async () => {
+      // These functions are deprecated and no longer call the API
       vi.resetModules();
       const { checkEmailExists: freshCheck } = await import('../registration');
 
       // Act
       const result = await freshCheck('existing@example.com');
 
-      // Assert
-      expect(result).toBe(true);
-      expect(mockGet).toHaveBeenCalledWith('/client/checkEmail.json?email=existing%40example.com');
-    });
-
-    it('returns false when email does not exist', async () => {
-      // Arrange
-      const mockGet = vi.fn().mockResolvedValue({ data: { exists: false } });
-      (axios.create as ReturnType<typeof vi.fn>).mockReturnValue({
-        interceptors: {
-          request: { use: vi.fn() },
-          response: { use: vi.fn() },
-        },
-        post: vi.fn(),
-        get: mockGet,
-      });
-
-      vi.resetModules();
-      const { checkEmailExists: freshCheck } = await import('../registration');
-
-      // Act
-      const result = await freshCheck('new@example.com');
-
-      // Assert
-      expect(result).toBe(false);
-    });
-
-    it('returns false on API error (allows registration attempt)', async () => {
-      // Arrange
-      const mockGet = vi.fn().mockRejectedValue(new Error('Server Error'));
-      (axios.create as ReturnType<typeof vi.fn>).mockReturnValue({
-        interceptors: {
-          request: { use: vi.fn() },
-          response: { use: vi.fn() },
-        },
-        post: vi.fn(),
-        get: mockGet,
-      });
-
-      vi.resetModules();
-      const { checkEmailExists: freshCheck } = await import('../registration');
-
-      // Act
-      const result = await freshCheck('error@example.com');
-
-      // Assert - should return false on error to allow registration attempt
+      // Assert - always returns false as function is deprecated
       expect(result).toBe(false);
     });
   });
