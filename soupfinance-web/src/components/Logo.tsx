@@ -22,6 +22,7 @@ interface LogoProps {
 
 /**
  * The logo mark (S icon) as an inline SVG
+ * Designed with Gemini 3 - Modern "Growth S" Monogram
  */
 function LogoMark({ size = 48, className = '' }: { size?: number; className?: string }) {
   return (
@@ -44,24 +45,15 @@ function LogoMark({ size = 48, className = '' }: { size?: number; className?: st
       {/* Rounded square background */}
       <rect x="0" y="0" width="48" height="48" rx="12" fill="url(#logoGradient)" />
 
-      {/* The S mark - two flowing curves */}
+      {/* The S mark - bold geometric path with arcs */}
       <path
-        d="M12 18C12 18 16 12 24 12C32 12 36 16 36 20C36 24 32 26 24 26"
+        d="M 34 15 L 20 15 A 6 6 0 0 0 20 27 L 28 27 A 6 6 0 0 1 28 39 L 14 39"
         stroke="white"
-        strokeWidth="4.5"
+        strokeWidth="7"
         strokeLinecap="round"
+        strokeLinejoin="round"
         fill="none"
       />
-      <path
-        d="M24 26C16 26 12 28 12 32C12 36 16 40 24 40C32 40 36 36 36 36"
-        stroke="white"
-        strokeWidth="4.5"
-        strokeLinecap="round"
-        fill="none"
-      />
-
-      {/* Accent bar */}
-      <rect x="34" y="8" width="4" height="8" rx="2" fill="white" opacity="0.9" />
     </svg>
   );
 }

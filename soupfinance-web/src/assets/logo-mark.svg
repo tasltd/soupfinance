@@ -1,38 +1,35 @@
-<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <!-- SoupFinance Logo Mark -->
-  <!-- Concept: Abstract "S" formed by two interlocking crescents, evoking -->
-  <!-- financial flow, balance sheets (debit/credit), and upward momentum -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+  <!--
+    SoupFinance Logo Mark - Designed with Gemini 3
+    Design: Modern "Growth S" Monogram
+    Concept: A bold, continuous line forming an 'S' that evokes a ledger entry or financial flow.
+    The geometric structure represents stability and precision, while the rounded terminals
+    and gradient background suggest modern, accessible financial tech.
+  -->
 
   <defs>
-    <!-- Subtle gradient for depth -->
-    <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#f24a0d"/>
-      <stop offset="100%" stop-color="#e03d05"/>
+    <!-- Vibrant orange gradient for depth and energy -->
+    <linearGradient id="soupGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f24a0d" />
+      <stop offset="100%" stop-color="#e03d05" />
     </linearGradient>
   </defs>
 
-  <!-- Rounded square background -->
-  <rect x="0" y="0" width="48" height="48" rx="12" fill="url(#logoGradient)"/>
+  <!-- Container: Squircle with soft corners for a friendly yet professional app-icon feel -->
+  <rect x="0" y="0" width="48" height="48" rx="12" fill="url(#soupGradient)" />
 
-  <!-- The S mark - two flowing curves creating balance -->
-  <!-- Upper curve (ascending) -->
+  <!--
+    The Mark: A stylized "S" constructed from a single thick path.
+    - Stroke width of 7px ensures visibility at 16x16 favicon size.
+    - Geometric arcs (A 6 6) create a precise, engineered look (Financial Precision).
+    - Open counters ensure the shape doesn't plug up at small sizes.
+  -->
   <path
-    d="M12 18C12 18 16 12 24 12C32 12 36 16 36 20C36 24 32 26 24 26"
-    stroke="white"
-    stroke-width="4.5"
-    stroke-linecap="round"
+    d="M 34 15 L 20 15 A 6 6 0 0 0 20 27 L 28 27 A 6 6 0 0 1 28 39 L 14 39"
     fill="none"
-  />
-
-  <!-- Lower curve (descending to ascending - showing growth) -->
-  <path
-    d="M24 26C16 26 12 28 12 32C12 36 16 40 24 40C32 40 36 36 36 36"
-    stroke="white"
-    stroke-width="4.5"
+    stroke="#ffffff"
+    stroke-width="7"
     stroke-linecap="round"
-    fill="none"
+    stroke-linejoin="round"
   />
-
-  <!-- Accent element - small rising bar/chart motif -->
-  <rect x="34" y="8" width="4" height="8" rx="2" fill="white" opacity="0.9"/>
 </svg>

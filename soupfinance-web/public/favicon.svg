@@ -1,31 +1,18 @@
-<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <!-- SoupFinance Favicon - Optimized for small sizes -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- SoupFinance Favicon - Designed with Gemini 3 -->
   <defs>
     <linearGradient id="favGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#f24a0d"/>
-      <stop offset="100%" stop-color="#e03d05"/>
+      <stop offset="0%" stop-color="#f24a0d" />
+      <stop offset="100%" stop-color="#e03d05" />
     </linearGradient>
   </defs>
-
-  <!-- Rounded square background -->
-  <rect width="32" height="32" rx="8" fill="url(#favGradient)"/>
-
-  <!-- Simplified S mark for favicon clarity -->
+  <rect width="32" height="32" rx="8" fill="url(#favGradient)" />
   <path
-    d="M8 12C8 12 10.5 8 16 8C21.5 8 24 11 24 13.5C24 16 21.5 17.5 16 17.5"
-    stroke="white"
-    stroke-width="3"
-    stroke-linecap="round"
+    d="M 22.5 10 L 13.5 10 A 4 4 0 0 0 13.5 18 L 18.5 18 A 4 4 0 0 1 18.5 26 L 9.5 26"
     fill="none"
-  />
-  <path
-    d="M16 17.5C10.5 17.5 8 19 8 21.5C8 24 10.5 27 16 27C21.5 27 24 24 24 24"
-    stroke="white"
-    stroke-width="3"
+    stroke="#ffffff"
+    stroke-width="4.5"
     stroke-linecap="round"
-    fill="none"
+    stroke-linejoin="round"
   />
-
-  <!-- Small accent bar -->
-  <rect x="23" y="5" width="3" height="5" rx="1.5" fill="white" opacity="0.9"/>
 </svg>
