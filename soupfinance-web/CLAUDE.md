@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```bash
 # Development
 npm run dev              # Start dev server (localhost:5173)
-npm run dev:lxc          # Start with LXC backend proxy
+npm run dev:lxc          # Start with LXC backend proxy (port 9090)
 
 # Build & Lint
 npm run build            # TypeScript check + Vite build
@@ -19,14 +19,13 @@ npm run test:run         # Single run
 npm run test:run -- src/features/invoices/__tests__/InvoiceFormPage.test.tsx  # Single file
 
 # Testing - E2E (Playwright)
-npm run test:e2e         # Run with mocks (default)
+npm run test:e2e         # Run with mocks (port 5180)
 npm run test:e2e:headed  # Run with browser UI
 npm run test:e2e:lxc     # Run against real LXC backend
 npm run test:e2e:lxc:integration  # Integration tests only
 
-# Storybook
-npm run storybook        # Start Storybook dev server
-npm run build-storybook  # Build static Storybook
+# Deployment
+./deploy/deploy-to-production.sh   # Deploy to app.soupfinance.com
 ```
 
 ## Architecture Overview
@@ -48,6 +47,7 @@ Features: `accounting`, `auth`, `bills`, `clients`, `corporate`, `dashboard`, `i
 - **client.ts**: Axios instance with X-Auth-Token authentication, auto-401 redirect
 - **auth.ts**: Login/logout, token management, OTP verification
 - **endpoints/{domain}.ts**: Domain-specific API functions (invoices, bills, vendors, etc.)
+- **endpoints/email.ts**: Email service for sending invoices/bills/reports with PDF attachments
 
 Key patterns:
 - Backend uses `application/x-www-form-urlencoded` content type
@@ -59,6 +59,13 @@ Zustand stores with persistence:
 - **authStore**: Authentication state, token validation, remember-me support
 - **uiStore**: Dark mode, sidebar state
 - **accountStore**: Tenant settings (currency, company info)
+
+### Hooks (`src/hooks/`)
+- **usePdf**: Frontend PDF generation using html2pdf.js for invoices, bills, reports
+- **useEmailSend**: Combines PDF generation with email API sending
+- **useDashboardStats**: Dashboard metrics and data
+- **useLedgerAccounts**: Chart of accounts queries
+- **useTransactions**: Ledger transaction queries
 
 ### Type Definitions (`src/types/index.ts`)
 All domain types mirror soupmarkets-web Grails domain classes:
@@ -81,9 +88,11 @@ vi.mock('../../../api/endpoints/invoices', () => ({
   getInvoice: vi.fn(),
 }));
 
-// Setup mock returns per test
-const mockListInvoices = vi.mocked(listInvoices);
-mockListInvoices.mockResolvedValue([...]);
+// Mock hooks when needed
+vi.mock('../../../hooks', () => ({
+  usePdf: () => ({ generateInvoice: vi.fn(), isGenerating: false }),
+  useEmailSend: () => ({ sendInvoice: vi.fn(), isSending: false }),
+}));
 
 // Render with providers
 render(
@@ -128,11 +137,11 @@ const { register, handleSubmit, formState: { errors } } = useForm({
 ### API Endpoints
 Backend is soupmarkets-web (Grails). Endpoints follow pattern:
 ```
-/rest/{domain}/list.json
-/rest/{domain}/show/{id}.json
-/rest/{domain}/save.json
-/rest/{domain}/update/{id}.json
-/rest/{domain}/delete/{id}.json
+/rest/{domain}/index.json      # List (paginated)
+/rest/{domain}/show/{id}.json  # Read
+/rest/{domain}/save.json       # Create
+/rest/{domain}/update/{id}.json # Update
+/rest/{domain}/delete/{id}.json # Delete (soft)
 ```
 
 ### Styling
@@ -140,3 +149,46 @@ Tailwind CSS v4 with custom design tokens:
 - Colors: `primary`, `text-light/dark`, `surface-light/dark`, `border-light/dark`
 - Dark mode: `dark:` prefix classes
 - Icons: Material Symbols (`<span className="material-symbols-outlined">icon_name</span>`)
+
+## Deployment
+
+### Production Server
+- **Domain**: app.soupfinance.com (NOT www.soupfinance.com, that's the landing page)
+- **Server**: 65.20.112.224
+- **SSH Key**: `~/.ssh/crypttransact_rsa` (required, NOT id_rsa or daptordarattler_rsa)
+- **Deploy Dir**: /var/www/soupfinance
+
+### Deploy Commands
+```bash
+# Frontend deployment
+./deploy/deploy-to-production.sh
+
+# Manual SSH access
+ssh -i ~/.ssh/crypttransact_rsa root@65.20.112.224
+```
+
+### Architecture
+```
+Client -> Cloudflare (DNS/SSL) -> Apache (65.20.112.224) -> Static files
+                                                        -> /rest/* proxy to Tomcat (port 8080)
+```
+
+## Port Configuration
+
+| Service | Port | Notes |
+|---------|------|-------|
+| Vite dev server | 5173 | Default development |
+| E2E tests | 5180 | Dedicated for Playwright |
+| Storybook | 6006 | Component documentation |
+| LXC Backend | 9090 | Grails backend proxy |
+
+## Domain Architecture
+
+SoupFinance uses strict domain separation:
+
+| Domain | Purpose | Content |
+|--------|---------|---------|
+| `www.soupfinance.com` | Marketing | Static HTML landing page |
+| `app.soupfinance.com` | Application | React SPA (this project) |
+
+**Important**: The landing page (`soupfinance-landing/`) is a separate project. Never add login forms to the landing page.
