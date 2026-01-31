@@ -11,596 +11,216 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `soupfinance-web/` | React 19 + TypeScript + Vite 7 + TailwindCSS v4 | Active development |
 | `soupfinance-landing/` | Static HTML + TailwindCSS | Marketing site |
 | `soupfinance-designs/` | HTML mockups + screenshots (114 screens) | Design reference |
+| `backend/` | LXC container running Spring Boot WAR | Local development |
 
-## Domain Architecture (CRITICAL)
+## Tenant Architecture
 
-**See [.claude/rules/soupfinance-domain-architecture.md](.claude/rules/soupfinance-domain-architecture.md) for full rules.**
+**See [plans/soupfinance-tenant-architecture-refactor.md](plans/soupfinance-tenant-architecture-refactor.md) for current status and full details.**
 
-| Domain | Purpose | Content | Login? |
-|--------|---------|---------|--------|
-| `www.soupfinance.com` | Marketing | Static HTML landing page | **NO** |
-| `soupfinance.com` | Marketing | Static HTML landing page | **NO** |
-| `app.soupfinance.com` | Application | React SPA | **YES** |
+| Aspect | Description |
+|--------|-------------|
+| **Registration** | `POST /account/register.json` creates Account + Agent + SbUser (tenant-isolated) |
+| **Email Confirmation** | `POST /account/confirmEmail.json` sets password and enables user |
+| **Business Type** | TRADING (inventory-based, has COGS) or SERVICES (labor expenses, no inventory) |
+| **Invoice Clients** | Use `/rest/invoiceClient/*` (NOT `/rest/client/*` which is for investment clients) |
 
-**HARD RULE**: The landing page (`www.soupfinance.com`) MUST NOT contain login forms - only links to `app.soupfinance.com`.
+**Backend Branch**: `feature/soupfinance-tenant-registration` (worktree: `soupmarkets-web-soupfinance-tenant/`)
 
-**Current Status**: Landing page is in **beta testing mode**. The pricing section is hidden (preserved in HTML comments for later reactivation) and replaced with a beta testing notice.
+### Deprecated (DO NOT USE)
 
-## Backend Tenant (CRITICAL)
+- `/onboarding/company`, `/onboarding/directors`, `/onboarding/documents`, `/onboarding/status` - Old KYC flow
+- `POST /client/register.json` - Old Corporate registration
 
-**See [.claude/rules/soupfinance-backend-tenant.md](.claude/rules/soupfinance-backend-tenant.md) for full rules.**
+---
 
-SoupFinance uses the **Tech At Scale (TAS)** tenant in soupmarkets-web.
+## Critical Rules (MUST READ)
 
-| Property | Value |
-|----------|-------|
-| **Backend URL** | https://tas.soupmarkets.com |
-| **Tenant** | Tech At Scale |
-| **API Proxy** | app.soupfinance.com → tas.soupmarkets.com |
-
-### API Endpoints
-
-| Type | Path Prefix | Auth Required | Example |
-|------|-------------|---------------|---------|
-| **Public** | `/client/*` | No | `/client/register.json` (registration) |
-| **Authenticated** | `/rest/*` | X-Auth-Token | `/rest/invoice/index.json` |
-
-**IMPORTANT**: Corporate registration uses `/client/register.json` (public), NOT `/rest/corporate/save.json` (requires admin).
-
-### Production Logs
-
-**Frontend (65.20.112.224)**:
-| Log | Path |
-|-----|------|
-| Apache (app.soupfinance.com) | `/var/log/apache2/error.log`, `/var/log/apache2/access.log` |
-| Apache (www.soupfinance.com) | `/var/log/apache2/www-soupfinance-*.log` |
-
-**Backend API (140.82.32.141 - tas.soupmarkets.com)**:
-| Log | Path |
-|-----|------|
-| Tomcat | `/root/tomcat9078/logs/catalina.out` |
-| API Access | `/root/tomcat9078/logs/localhost_access_log.*.txt` |
-
-## Gradle Concurrent Task Rule (HARD RULE)
-
-**NEVER run Gradle tasks if another process is already running a Gradle task in the same project folder.**
-
-Before running any `./gradlew` command in `soupmarkets-web`:
-1. **Check first**: `pgrep -af "gradlew\|GradleDaemon" | grep soupmarkets`
-2. **If process found**: WAIT for it to complete before running yours
-3. **Reason**: Gradle uses file locks - concurrent tasks cause hangs and build failures
-
-This applies to:
-- Host machine running `./gradlew bootRun`
-- LXC containers running `./gradlew bootRun` on mounted `/app`
-- Any CI/CD pipelines
-
-## Port Configuration
-
-| Service | Port | Notes |
-|---------|------|-------|
-| Vite dev server | 5173 | Default development |
-| E2E tests | 5180 | Playwright (avoids conflicts) |
-| Integration E2E | 5181 | Sequential tests |
-| Storybook | 6006 | Component documentation |
-| LXC Backend | 9090 | Spring Boot / Grails |
-| MariaDB | 3306 | LXC container |
+| Rule | Location | Summary |
+|------|----------|---------|
+| **Tenant Architecture** | [plans/soupfinance-tenant-architecture-refactor.md](plans/soupfinance-tenant-architecture-refactor.md) | Tenant-per-Account: Registration creates new `Account`, NOT Corporate |
+| **Domain Architecture** | [.claude/rules/soupfinance-domain-architecture.md](.claude/rules/soupfinance-domain-architecture.md) | `www.soupfinance.com` = landing (NO login), `app.soupfinance.com` = React app |
+| **Backend Tenant** | [.claude/rules/soupfinance-backend-tenant.md](.claude/rules/soupfinance-backend-tenant.md) | Uses TAS tenant at `tas.soupmarkets.com`, public API at `/client/*` |
+| **Backend Changes** | [.claude/rules/backend-changes-workflow.md](.claude/rules/backend-changes-workflow.md) | Do NOT modify backend directly; create plans in `.claude/plans/` |
+| **Gradle Concurrency** | [.claude/rules/gradle-concurrent-tasks.md](.claude/rules/gradle-concurrent-tasks.md) | NEVER run concurrent Gradle tasks in same project |
+| **Port Configuration** | [.claude/rules/port-configuration.md](.claude/rules/port-configuration.md) | Vite 5173, E2E 5180, Storybook 6006, Backend 9090 |
+| **Design System** | [.claude/rules/soupfinance-design-system.md](.claude/rules/soupfinance-design-system.md) | Tailwind v4 tokens, Manrope font, Material Symbols icons |
 
 ## Quick Commands
 
-**IMPORTANT**: Most development requires the soupmarkets-web backend running on port 9090:
-```bash
-cd ../soupmarkets-web && source env-variables.sh && ./gradlew bootRun
-```
+### React App (soupfinance-web/)
 
 ```bash
 cd soupfinance-web
 
 # Development
-npm install                    # Install dependencies
-npm run dev                    # Start dev server (port 5173)
-npm run dev:lxc                # Dev server against LXC backend
-npm run build                  # Production build (runs tsc -b first)
-npm run lint                   # ESLint
-npm run preview                # Preview production build
+npm install && npm run dev              # Start dev server (port 5173, mock/no backend)
+npm run dev -- --mode lxc               # Dev against LXC backend (uses .env.lxc)
+npm run build                           # Production build (runs tsc -b first)
+npm run lint                            # ESLint
 
 # Unit/Integration Tests (Vitest)
-npm run test                   # Watch mode
-npm run test:run               # Run once (CI mode)
-npm run test:coverage          # With V8 coverage report
-npx vitest run src/api/__tests__/client.test.ts           # Single test file
-npx vitest run -t "should attach Bearer token"            # Single test by name
+npm run test                            # Watch mode
+npm run test:run                        # CI mode
+npm run test:coverage                   # With coverage report
+npx vitest run src/api/__tests__/client.test.ts    # Single file
+npx vitest run -t "should attach Bearer token"    # By name
 
-# E2E Tests (Playwright) - uses dedicated port 5180 to avoid conflicts
-npm run test:e2e               # Run all E2E tests (headless, port 5180)
-npm run test:e2e:headed        # Run with browser visible
-npm run test:e2e:ui            # Interactive Playwright UI
-npm run test:e2e:report        # Open HTML report in browser
-npx playwright test e2e/auth.spec.ts                      # Single E2E file
-npx playwright test --grep "login flow"                   # By test name
+# E2E Tests (Playwright) - port 5180
+npm run test:e2e                        # Headless with mocks
+npm run test:e2e:headed                 # With browser UI
+npm run test:e2e:ui                     # Interactive Playwright UI
+npm run test:e2e -- e2e/auth.spec.ts    # Single file
 
-# E2E Tests against LXC Backend (real backend, not mocked)
-npm run test:e2e:lxc           # Run all E2E tests against LXC backend
-npm run test:e2e:lxc:headed    # With browser visible
-npm run test:e2e:lxc:report    # Open LXC test report
+# E2E against LXC backend (real API, no mocks)
+npm run test:e2e:lxc                    # Headless
+npm run test:e2e:lxc:headed             # With browser UI
+npm run test:e2e:report                 # View last E2E report
 
-# Integration E2E Tests (port 5181, sequential execution)
-npx playwright test --config=playwright.integration.config.ts
+# Storybook (component docs)
+npm run storybook                       # Port 6006
+npm run build-storybook                 # Build static docs
+```
 
-# Storybook (component documentation)
-npm run storybook              # Start Storybook dev server (port 6006)
-npm run build-storybook        # Build static Storybook
+### Local Backend (LXC)
 
-# Design Mockups Preview
-cd ../soupfinance-designs && python3 -m http.server 8000
+```bash
+cd backend
+./tomcat-control.sh start               # Start backend (starts LXC containers if needed)
+./tomcat-control.sh status              # Check status, get container IP (10.115.213.183)
+./tomcat-control.sh logs                # View Tomcat logs
+./tomcat-control.sh stop                # Stop when done
+```
 
-# Landing Page
+**Deploy new WAR** (requires soupmarkets-web repo):
+```bash
+cd /path/to/soupmarkets-web
+source env-variables.sh && ./gradlew assembleDeployToSoupfinance
+```
+
+**Database** (LXC MariaDB): Host `soupmarkets-mariadb`, DB `soupbroker_soupfinance`, User `soupbroker`
+
+### Landing Page (soupfinance-landing/)
+
+```bash
 cd soupfinance-landing
-./deploy-landing.sh              # Deploy to production (www.soupfinance.com)
-./deploy-landing.sh --skip-ssl   # Deploy without SSL setup
-python3 -m http.server 8000      # Preview locally
+python3 -m http.server 8000             # Preview locally
+./deploy-landing.sh                     # Deploy to production
 ```
 
-## Local Development Backend (LXC)
+## Architecture
 
-For local development and endpoint verification, use the LXC backend instead of running Grails directly.
+### React App Structure
 
-**Two backend options exist** (use ONE, not both):
-
-| Option | Location | Use Case |
-|--------|----------|----------|
-| `backend/tomcat-control.sh` | `backend/` | **Recommended** - Spring Boot embedded Tomcat from pre-built WAR |
-| `soupfinance-lxc/setup-backend.sh` | `soupfinance-lxc/` | Alternative - Grails bootRun (slower startup, requires source mount) |
-
-### Option 1: Spring Boot WAR (Recommended)
-
-```bash
-cd backend
-
-# Start the backend (starts containers if needed)
-./tomcat-control.sh start
-
-# Check status and get container IP
-./tomcat-control.sh status
-
-# View logs
-./tomcat-control.sh logs
-
-# Stop when done
-./tomcat-control.sh stop
+```
+soupfinance-web/src/
+├── api/                    # Axios client + endpoint modules
+│   ├── client.ts          # Base instance + toFormData/toQueryString helpers
+│   └── endpoints/         # Feature-specific (invoices, bills, ledger, vendors, corporate, reports)
+├── components/
+│   ├── layout/            # MainLayout, AuthLayout, SideNav, TopNav
+│   ├── forms/             # Input, Select, Textarea, Checkbox, Radio, DatePicker
+│   ├── feedback/          # AlertBanner, Spinner, Toast, Tooltip
+│   └── tables/            # Data table components
+├── features/              # Page components by domain
+│   ├── auth/, dashboard/, invoices/, bills/, vendors/, payments/
+│   ├── ledger/, accounting/, reports/
+│   ├── clients/           # NEW: Individual/Corporate client management
+│   └── corporate/         # DEPRECATED: Full KYC onboarding (being removed)
+├── i18n/                  # 4 languages (en, de, fr, nl), 12 namespaces
+├── stores/                # Zustand (authStore, uiStore)
+├── types/                 # TypeScript interfaces (mirrors Grails domains)
+└── App.tsx                # Routes + providers
 ```
 
-### Run React app against LXC backend
+**Key Tech:** Zustand (state) · TanStack Query (data) · React Hook Form + Zod (forms) · Recharts (charts) · Axios (HTTP) · Vitest + Playwright (tests) · Storybook 10 (docs)
 
-```bash
-cd soupfinance-web
-npm run dev:lxc
-```
+### API Patterns (CRITICAL)
 
-### Deploy new WAR from soupmarkets-web
+| Pattern | Detail |
+|---------|--------|
+| **Auth Header** | `X-Auth-Token: {token}` (NOT Bearer) |
+| **Login** | POST `/rest/api/login` with JSON body |
+| **Data Content-Type** | `application/x-www-form-urlencoded` for POST/PUT |
+| **Token Validation** | GET `/rest/user/current.json` on app mount |
+| **Invoice Clients** | `/rest/invoiceClient/*` (NOT `/rest/client/*` which is for investment clients) |
 
-```bash
-# Option 1: From soupmarkets-web (recommended)
-cd ../soupmarkets-web
-source env-variables.sh
-./gradlew assembleDeployToSoupfinance
+**Proxy Configuration:** Vite proxies `/rest/*`, `/client/*`, and `/account/*` to backend (default `localhost:9090`, or `VITE_API_URL` from `.env.lxc`).
 
-# Option 2: Manual deploy (if WAR already built)
-cd backend
-./deploy-war.sh --restart
-```
-
-### Architecture
-
-| Component | IP/Port | Description |
-|-----------|---------|-------------|
-| `soupfinance-backend` LXC | Dynamic (check with `status`) | Java 21 + Spring Boot embedded Tomcat |
-| `soupmarkets-mariadb` LXC | Dynamic (check with `status`) | Database: `soupbroker_soupfinance` |
-
-**Note**: Container IPs are assigned dynamically by LXC. Run `./tomcat-control.sh status` to get current IPs and update `.env.lxc` if needed.
-
-See `backend/README.md` for full documentation.
+**API Quirks:**
+- `/rest/sbUser/index.json` requires `?sort=id` (default `dateCreated` sort not available for SbUser domain)
 
 ### Test Credentials (LXC Backend)
-
-Test users for integration and E2E testing against the LXC backend:
 
 | Username | Password | Roles | Use Case |
 |----------|----------|-------|----------|
 | `test.admin` | `secret` | ROLE_ADMIN, ROLE_USER | Full admin access |
 | `test.user` | `secret` | ROLE_USER | Minimal user access |
-| `test.finance` | `secret` | ROLE_USER + Finance roles | Finance CRUD testing |
+| `test.finance` | `secret` | ROLE_USER + Finance roles* | Finance CRUD testing |
 | `soup.support` | `secret` | ROLE_ADMIN, ROLE_USER | Legacy admin (seed data) |
+| `admin` | `secret` | ROLE_ADMIN, ROLE_USER | Legacy admin (seed data) |
 
-**Finance roles for `test.finance`**: ROLE_INVOICE, ROLE_BILL, ROLE_LEDGER_TRANSACTION, ROLE_VENDOR, ROLE_FINANCE_REPORTS, ROLE_LEDGER_ACCOUNT, ROLE_VOUCHER
-
-**Environment files**:
-- `.env.test` - Test credentials as environment variables
-- `.env.lxc` - API URL for LXC backend
-
-**E2E usage** (see `e2e/fixtures.ts`):
-```typescript
-import { backendTestUsers, authenticateWithBackend } from './fixtures';
-
-test('integration test', async ({ page }) => {
-  await authenticateWithBackend(page, backendTestUsers.admin);
-  // ... test against real API
-});
-```
-
-## Deployment
-
-### CRITICAL: Domain-Only Access (HARD RULE)
-
-**Sites are ONLY accessible via domain names, NEVER via direct IP.**
-
-| Domain | Purpose | Direct IP Access |
-|--------|---------|-----------------|
-| `app.soupfinance.com` | Application | **BLOCKED** - use domain only |
-| `www.soupfinance.com` | Landing page | **BLOCKED** - use domain only |
-
-Direct IP requests fall through to the server's default vhost (not SoupFinance).
-
-### Production Architecture
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│  User Browser                                                       │
-│       │                                                             │
-│       ▼                                                             │
-│  ┌─────────────────┐                                               │
-│  │   Cloudflare    │  DNS + SSL + CDN                              │
-│  └────────┬────────┘                                               │
-│           │                                                         │
-│           ▼                                                         │
-│  ┌─────────────────────────────────────────────────────────────┐   │
-│  │  Origin: 65.20.112.224                                       │   │
-│  │  ┌─────────────────────────────────────────────────────────┐│   │
-│  │  │ Apache VHost: app.soupfinance.com                       ││   │
-│  │  │  ├── Static files: /var/www/soupfinance (React SPA)     ││   │
-│  │  │  └── API proxy: /rest/* → tas.soupmarkets.com          ││   │
-│  │  └─────────────────────────────────────────────────────────┘│   │
-│  │  ┌─────────────────────────────────────────────────────────┐│   │
-│  │  │ Apache VHost: www.soupfinance.com (Landing Page)        ││   │
-│  │  │  └── Static files: /var/www/soupfinance-landing         ││   │
-│  │  └─────────────────────────────────────────────────────────┘│   │
-│  └─────────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────────┘
-```
-
-### Production (app.soupfinance.com)
-
-| Property | Value |
-|----------|-------|
-| URL | https://app.soupfinance.com |
-| Origin Server | 65.20.112.224 |
-| Backend API | tas.soupmarkets.com (proxied via Apache) |
-| Deploy Directory | /var/www/soupfinance |
-| CDN | Cloudflare |
-| SSL | Let's Encrypt (on origin) + Cloudflare |
-
-```bash
-# Deploy to production
-cd soupfinance-web
-./deploy/deploy-to-demo.sh
-```
-
-### API Proxy Configuration
-
-API calls from the frontend (`/rest/*`, `/client/*`) are proxied by Apache to `tas.soupmarkets.com` with `Api-Authorization` header:
-
-```
-Frontend: app.soupfinance.com/rest/invoice → Apache proxy → tas.soupmarkets.com/rest/invoice
-```
-
-### Deploy Scripts
-
-| Script | Target | Description |
-|--------|--------|-------------|
-| `deploy/deploy-to-demo.sh` | 65.20.112.224 | Deploy frontend to production |
-
-### Apache Configuration
-
-Vhost config on server: `/etc/apache2/sites-available/app-soupfinance-com.conf`
-
-See `soupfinance-web/deploy/README.md` for complete deployment guide.
-
-## Architecture
-
-### React App (`soupfinance-web/`)
-
-```
-src/
-├── api/                    # Axios client + endpoint modules
-│   ├── client.ts          # Base Axios instance + toFormData/toQueryString helpers
-│   ├── auth.ts            # Auth endpoints
-│   └── endpoints/         # Feature-specific endpoints (invoices, bills, ledger, vendors, corporate, reports)
-├── components/
-│   ├── layout/            # MainLayout, AuthLayout, SideNav, TopNav, LanguageSwitcher
-│   ├── forms/             # Input, Select, Textarea, Checkbox, Radio, DatePicker (with Storybook)
-│   ├── feedback/          # AlertBanner, Spinner, Toast, Tooltip (with Storybook)
-│   ├── tables/            # Data table components
-│   └── charts/            # Recharts wrapper components
-├── features/              # Feature modules (page components)
-│   ├── auth/              # LoginPage
-│   ├── dashboard/         # DashboardPage
-│   ├── invoices/          # List, Form, Detail pages
-│   ├── bills/             # List, Form, Detail pages
-│   ├── vendors/           # Vendor CRUD pages
-│   ├── payments/          # List, Form pages
-│   ├── ledger/            # ChartOfAccounts, LedgerTransactions
-│   ├── accounting/        # JournalEntry, Vouchers, TransactionRegister
-│   ├── reports/           # P&L, Balance Sheet, Cash Flow, Aging, Trial Balance
-│   └── corporate/         # KYC onboarding (Registration, CompanyInfo, Directors, Documents, Status)
-├── i18n/                  # Internationalization (4 languages: en, de, fr, nl)
-│   ├── index.ts           # i18n configuration
-│   ├── i18next.d.ts       # TypeScript types
-│   └── locales/           # Translation files by language/namespace
-├── stores/                # Zustand stores (authStore, uiStore)
-├── types/                 # TypeScript interfaces (mirrors Grails domain classes)
-├── hooks/                 # Custom React hooks
-├── test/                  # Test setup (Vitest + Testing Library)
-├── App.tsx                # Routes + providers
-└── index.css              # Tailwind + design system tokens
-```
-
-**Key Tech:**
-- State: Zustand (auth, UI) with localStorage persistence
-- Data Fetching: TanStack Query (React Query) - 5min stale time
-- Forms: React Hook Form + Zod validation
-- Routing: React Router v7
-- Charts: Recharts
-- HTTP: Axios (proxied to `/rest` → `localhost:9090`)
-- Testing: Vitest + Testing Library + Playwright (browser)
-- Component Docs: Storybook 10
-- i18n: react-i18next with browser language detection
-
-### Routes
-
-See `src/App.tsx` for complete route definitions. Key routes:
-- **Public**: `/login`, `/register`
-- **Finance**: `/invoices/*`, `/bills/*`, `/vendors/*`, `/payments/*`
-- **Accounting**: `/ledger/*`, `/accounting/*` (journal entries, vouchers)
-- **Reports**: `/reports/*` (pnl, balance-sheet, cash-flow, aging, trial-balance)
-- **Onboarding**: `/onboarding/*` (corporate KYC)
-
-### Backend Proxy
-
-Vite proxies API calls to the backend (default `http://localhost:9090`, or `VITE_API_URL` from `.env.lxc`):
-
-| Prefix | Target | Auth Required | Usage |
-|--------|--------|---------------|-------|
-| `/rest/*` | Backend `/rest/*` | Yes (X-Auth-Token) | Admin API endpoints |
-| `/client/*` | Backend `/client/*` | No | Public endpoints (registration, 2FA) |
-
-**Note**: API endpoint modules in `src/api/endpoints/` use paths like `/invoice/index.json` which become `/rest/invoice/index.json` via the Axios base URL configured in `client.ts`.
-
-### API Client Patterns
-
-The API client (`src/api/client.ts`) handles:
-- **X-Auth-Token header**: Stored in localStorage (`access_token`), auto-attached via `X-Auth-Token` header (NOT Bearer token)
-- **FormData serialization**: POST/PUT use `application/x-www-form-urlencoded`
-- **Foreign key references**: Nested objects serialize as `field.id` (e.g., `client.id: uuid`)
-- **401 handling**: Auto-redirects to `/login` and clears credentials
-
-### Critical API Notes (For Backend Integration)
-
-| Pattern | Detail |
-|---------|--------|
-| **Auth Header** | `X-Auth-Token: {token}` (NOT `Authorization: Bearer`) |
-| **Login Endpoint** | POST `/rest/api/login` with JSON body (`{"username": "...", "password": "..."}`) |
-| **Content-Type (Auth)** | `application/json` for login only |
-| **Content-Type (Data)** | `application/x-www-form-urlencoded` for all other POST/PUT |
-| **Token Validation** | On app mount, validates token with GET `/rest/user/current.json` |
-| **2FA (Corporate)** | POST `/client/authenticate.json` then `/client/verifyCode.json` |
-
-### Corporate Registration Flow
-
-The `/client/register.json` endpoint supports both Individual and Corporate registration with smart type detection:
-
-| Parameter Pattern | Detected Type | Fields Required |
-|-------------------|---------------|-----------------|
-| `firstName`, `lastName` | INDIVIDUAL | firstName, lastName, phone OR email |
-| `contactFirstName`, `contactLastName` | CORPORATE | name, contactFirstName, contactLastName, phone OR email |
-| Explicit `type=CORPORATE` | CORPORATE | Same as above |
-
-**Smart Type Detection**: If `type` is not provided, the backend infers it:
-- Has `contactFirstName` or `contactLastName` → CORPORATE
-- Otherwise → INDIVIDUAL (default, backward compatible)
-
-**Corporate Registration creates**:
-1. `Corporate` entity with company `name`
-2. `CorporateAccountPerson` as key contact (marked `keyContact=true`)
-3. Phone/Email contacts linked to the corporate
-4. Pending `ClientAccountApproval` for admin review
-
-**Optional Corporate Fields** (can be added during onboarding):
-- `certificateOfIncorporationNumber` - Company registration number
-- `businessCategory` - SOLE_PROPRIERTORSHIP, PARTNERSHIP, LIMITED_LIABILITY, etc.
-- `contactPosition` - Key contact's job title
-
-### Backend API Endpoints (Verified 2026-01-22)
-
-**Finance Controllers** (in `soupmarkets-web/grails-app/controllers/soupbroker/finance/`):
-
-| Controller | Endpoints | Notes |
-|------------|-----------|-------|
-| `InvoiceController` | `/rest/invoice/*` | CRUD + status actions, PDF, email |
-| `BillController` | `/rest/bill/*` | CRUD + status actions |
-| `InvoicePaymentController` | `/rest/invoicePayment/*` | Payment allocation |
-| `BillPaymentController` | `/rest/billPayment/*` | Payment allocation |
-| `VendorController` | `/rest/vendor/*` | CRUD |
-| `LedgerAccountController` | `/rest/ledgerAccount/*` | Chart of accounts |
-| `LedgerTransactionController` | `/rest/ledgerTransaction/*` | GL entries |
-| `LedgerTransactionGroupController` | `/rest/ledgerTransactionGroup/*` | Standard CRUD (journal entries) |
-| `VoucherController` | `/rest/voucher/*` | CRUD + PDF + email |
-| `FinanceReportsController` | `/rest/financeReports/*` | P&L, Balance Sheet, Trial Balance, Aging |
-
-**Public Controllers** (in `soupmarkets-web/grails-app/controllers/soupbroker/kyc/`):
-
-| Controller | Endpoints | Notes |
-|------------|-----------|-------|
-| `ClientController` | `/client/*` | **Public** - registration (`register.json`), 2FA (`authenticate.json`, `verifyCode.json`) |
-
-**Approval Workflows**:
-
-| Controller | Action | Endpoint | Description |
-|------------|--------|----------|-------------|
-| `VoucherApprovalController` | `save` | POST `/rest/voucherApproval/save` | Create approval record with ApprovalState |
-| `LedgerTransactionApprovalController` | `approve` | POST `/rest/ledgerTransactionApproval/approve/{id}` | Approve a transaction |
-
-**Note**: Voucher approval is managed by creating `VoucherApproval` records. Ledger transaction approval has explicit `approve` action.
-
-### Key Architectural Patterns
-
-**Authentication Flow** (spans: `authStore.ts`, `client.ts`, `App.tsx`, `LoginPage.tsx`):
-1. User submits credentials → `authStore.login()` → POST to `/rest/api/login` (JSON body)
-2. Success: Store token in localStorage + Zustand state → Redirect to `/dashboard`
-3. On app mount: `authStore.initialize()` checks localStorage for existing token
-4. Token validation: `validateToken()` calls GET `/rest/user/current.json` to verify token is valid
-5. Invalid token: Clears localStorage and shows "Session expired" message
-6. 401 response: `client.ts` interceptor clears credentials and redirects to `/login`
-
-**Data Fetching Pattern** (React Query + Axios):
-- TanStack Query with 5-minute stale time wraps API calls
-- API modules in `src/api/endpoints/` return typed promises
-- Components use `useQuery`/`useMutation` hooks for data operations
-
-**Form Pattern** (React Hook Form + Zod):
-- Forms use `useForm` with Zod schema validation via `@hookform/resolvers`
-- Submit handlers call API endpoint functions directly
-- Toast notifications for success/error feedback via `ToastProvider`
-
-### Internationalization (i18n)
-
-**Languages**: English (en), German (de), French (fr), Dutch (nl)
-
-**12 Namespaces**: `common`, `auth`, `navigation`, `invoices`, `reports`, `accounting` (★ core), `bills`, `payments`, `ledger`, `vendors`, `dashboard`, `corporate`
-
-**Usage**:
-```tsx
-import { useTranslation } from 'react-i18next';
-
-const { t } = useTranslation('invoices');       // Single namespace
-const { t } = useTranslation(['accounting', 'common']);  // Multiple
-
-t('title');                           // Simple key
-t('common:actions.save');             // Cross-namespace
-t('count', { count: 5 });             // Interpolation {{count}}
-```
-
-**Adding Translations**: Add to `en/*.json` first (source of truth), then to de/fr/nl. TypeScript validates via `i18next.d.ts`.
+*Finance roles: ROLE_INVOICE, ROLE_BILL, ROLE_LEDGER_TRANSACTION, ROLE_VENDOR, ROLE_FINANCE_REPORTS, ROLE_LEDGER_ACCOUNT, ROLE_VOUCHER
 
 ### Test Organization
 
 ```
 soupfinance-web/
-├── src/**/__tests__/           # Unit/integration tests (Vitest)
-│   ├── *.test.ts              # Co-located with source
-│   └── integration/*.test.ts  # API integration tests
-├── e2e/                        # E2E tests (Playwright) - create when needed
-│   └── *.spec.ts              # Browser automation tests
-├── test-results/               # Playwright artifacts (gitignored)
-└── playwright-report/          # HTML test report (gitignored)
+├── src/**/__tests__/           # Unit/integration (Vitest)
+├── e2e/                        # E2E tests (Playwright)
+│   └── fixtures.ts             # authenticatedPage, mockApiResponse(), domain mocks
 ```
 
-**Test Patterns:**
-- Arrange/Act/Assert structure in all tests
-- Axios is globally mocked in `src/test/setup.ts` (auto-clears before each test)
-- localStorage and window.location are mocked globally
-- Integration tests in `__tests__/integration/` test API modules against mock responses
+**Important:**
+- Axios is globally mocked in `src/test/setup.ts`
+- E2E tests auto-start Vite dev server (see `playwright.config.ts`)
+- Pages MUST fetch from API, never use mock data as fallback in production
 
-**IMPORTANT - Axios Mocking in Unit Tests:**
-```typescript
-// Axios is globally mocked - set up return values like this:
-import apiClient from '../api/client';
-import { vi } from 'vitest';
+## Deployment
 
-vi.mocked(apiClient.get).mockResolvedValue({ data: { ... } });
-vi.mocked(apiClient.post).mockResolvedValue({ data: { ... } });
-
-// For integration tests needing real HTTP, unmock at top of file:
-vi.unmock('axios');
-```
-
-**E2E Test Fixtures** (`e2e/fixtures.ts`):
-- `authenticatedPage` - Pre-authenticates via localStorage injection
-- `mockApiResponse()` - Generic route intercept helper
-- `mockLoginApi()`, `mockInvoicesApi()`, `mockBillsApi()`, etc. - Domain-specific mocks
-- E2E tests auto-start Vite dev server if not running (see `playwright.config.ts`)
-
-**IMPORTANT - No Fallback to Mock Data in Production**:
-- Pages MUST fetch from backend API, never use mock data as fallback
-- Show error state if API fails, empty state if data is empty
-- Mock data is ONLY for tests (`e2e/fixtures.ts`) and Storybook stories
-
-### Type System (`src/types/index.ts`)
-
-All types mirror the soupmarkets-web Grails domain classes:
-- **BaseEntity**: All entities have `id` (UUID string), `archived`, `dateCreated`, `lastUpdated`, `tenantId`
-- **Foreign keys**: Referenced as `{ id: string; name?: string }` objects
-- **Enums**: TypeScript union types matching Grails enums (e.g., `InvoiceStatus`, `LedgerGroup`, `VoucherType`)
-
-Key domain types:
-- **Finance**: `Invoice`, `Bill`, `Vendor`, `InvoicePayment`, `BillPayment`
-- **Ledger**: `LedgerAccount`, `LedgerTransaction`, `LedgerTransactionGroup`, `Voucher`, `JournalEntry`
-- **Reports**: `BalanceSheet`, `ProfitLoss`, `TrialBalance`, `CashFlowStatement`, `AgingReport`
-- **Corporate KYC**: `Corporate`, `CorporateAccountPerson`, `CorporateDocuments`
-
-## Storybook Components
-
-Components with Storybook stories (run `npm run storybook` to view):
-
-| Category | Components |
-|----------|------------|
-| Forms | Input, Select, Textarea, Checkbox, Radio, DatePicker |
-| Feedback | AlertBanner, Spinner, Tooltip, Toast |
-| Layout | SideNav, TopNav, MainLayout, AuthLayout |
-
-When adding new reusable components, create a `.stories.tsx` file alongside the component.
-
-## Design System
-
-**Full documentation: [.claude/rules/soupfinance-design-system.md](.claude/rules/soupfinance-design-system.md)**
+### Production (app.soupfinance.com)
 
 | Property | Value |
 |----------|-------|
-| CSS Framework | TailwindCSS v4 |
-| Primary Color | `#f24a0d` (orange) |
-| Background Light | `#f8f6f5` |
-| Background Dark | `#221510` |
-| Font | Manrope (Google Fonts) |
-| Icons | Material Symbols Outlined |
-| Dark Mode | `class` strategy on `<html>` |
+| Origin Server | 65.20.112.224 |
+| Backend API | tas.soupmarkets.com (proxied via Apache) |
+| Deploy Directory | /var/www/soupfinance |
+| CDN | Cloudflare |
 
-### CSS Tokens (Tailwind v4)
-
-Defined in `src/index.css` via `@theme`:
-
-```css
---color-primary: #f24a0d;
---color-background-light: #f8f6f5;
---color-background-dark: #221510;
---color-surface-light: #FFFFFF;
---color-surface-dark: #1f1715;
---color-text-light: #181311;
---color-subtle-text: #8a6b60;
---color-border-light: #e6dedb;
---color-danger: #EF4444;
---font-display: "Manrope", "Noto Sans", sans-serif;
+```bash
+cd soupfinance-web
+./deploy/deploy-to-demo.sh              # Deploy frontend to production
 ```
 
-## Design Mockups (114 screens)
+**CRITICAL:** Sites are ONLY accessible via domain names, NEVER via direct IP.
 
-Located in `soupfinance-designs/{screen-name}/` with `code.html` (TailwindCSS) + `screen.png`. See `.claude/rules/soupfinance-design-system.md` for full screen catalog.
+### Production Logs & Debugging
+
+| Log | Server | Path |
+|-----|--------|------|
+| Frontend Apache | 65.20.112.224 | `/var/log/apache2/app.soupfinance.com-*.log` |
+| Backend Tomcat | 140.82.32.141 | `/root/tomcat9078/logs/catalina.out` |
+
+**Quick SSH:** `ssh root@140.82.32.141` → `tail -f /root/tomcat9078/logs/catalina.out | grep -iE 'error|exception'`
 
 ## When Implementing Features
 
 1. Check `soupfinance-designs/` for the relevant mockup
-2. Reference `.claude/rules/soupfinance-design-system.md` for component patterns
+2. Reference [.claude/rules/soupfinance-design-system.md](.claude/rules/soupfinance-design-system.md) for component patterns
 3. Use existing feature modules as templates (e.g., copy invoice patterns for new entities)
-4. Use Tailwind v4 tokens from `index.css` (`text-primary`, `bg-background-light`, etc.)
+4. Use Tailwind v4 tokens from `src/index.css` (`text-primary`, `bg-background-light`, etc.)
 5. Include dark mode variants (`dark:bg-background-dark`)
+6. Add Storybook stories for new reusable components
+
+## Design System Quick Reference
+
+| Property | Value |
+|----------|-------|
+| Primary Color | `#f24a0d` (orange) |
+| Font | Manrope (Google Fonts) |
+| Icons | Material Symbols Outlined |
+| Dark Mode | `class` strategy on `<html>` |
+
+See [.claude/rules/soupfinance-design-system.md](.claude/rules/soupfinance-design-system.md) for full component catalog (114 screens).
 
 ## Git Remotes
 
