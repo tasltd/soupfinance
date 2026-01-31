@@ -4,6 +4,7 @@
  */
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuthStore, useUIStore } from '../../stores';
+import { Logo } from '../Logo';
 
 interface NavItem {
   label: string;
@@ -107,17 +108,20 @@ export function SideNav() {
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-3 px-3">
               {/* Logo */}
-              <div className="size-10 rounded-full bg-primary flex items-center justify-center text-white font-bold text-lg">
-                SF
-              </div>
-              {!sidebarCollapsed && (
-                <div className="flex flex-col">
-                  <h1 className="text-base font-medium text-text-light dark:text-text-dark">
-                    SoupFinance
-                  </h1>
-                  <p className="text-sm text-subtle-text dark:text-subtle-text-dark">
-                    {user?.email || 'Corporate'}
-                  </p>
+              {sidebarCollapsed ? (
+                <Logo variant="mark" size={40} />
+              ) : (
+                <div className="flex items-center gap-3">
+                  <Logo variant="mark" size={40} />
+                  <div className="flex flex-col">
+                    <h1 className="text-base font-bold text-text-light dark:text-text-dark">
+                      <span>Soup</span>
+                      <span className="text-primary">Finance</span>
+                    </h1>
+                    <p className="text-sm text-subtle-text dark:text-subtle-text-dark">
+                      {user?.email || 'Corporate'}
+                    </p>
+                  </div>
                 </div>
               )}
             </div>

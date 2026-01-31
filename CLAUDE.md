@@ -54,7 +54,7 @@ cd soupfinance-web
 
 # Development
 npm install && npm run dev              # Start dev server (port 5173, mock/no backend)
-npm run dev -- --mode lxc               # Dev against LXC backend (uses .env.lxc)
+npm run dev:lxc                         # Dev against LXC backend (uses .env.lxc)
 npm run build                           # Production build (runs tsc -b first)
 npm run lint                            # ESLint
 
@@ -74,7 +74,9 @@ npm run test:e2e -- e2e/auth.spec.ts    # Single file
 # E2E against LXC backend (real API, no mocks)
 npm run test:e2e:lxc                    # Headless
 npm run test:e2e:lxc:headed             # With browser UI
-npm run test:e2e:report                 # View last E2E report
+npm run test:e2e:lxc:integration        # Integration tests only
+npm run test:e2e:report                 # View last mock E2E report
+npm run test:e2e:lxc:report             # View last LXC E2E report
 
 # Storybook (component docs)
 npm run storybook                       # Port 6006
@@ -188,7 +190,8 @@ soupfinance-web/
 
 ```bash
 cd soupfinance-web
-./deploy/deploy-to-demo.sh              # Deploy frontend to production
+./deploy/deploy-to-production.sh        # Deploy frontend to app.soupfinance.com
+./deploy/deploy-to-demo.sh              # Deploy frontend (alternate)
 ```
 
 **CRITICAL:** Sites are ONLY accessible via domain names, NEVER via direct IP.

@@ -6,8 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 # Development
-npm run dev              # Start dev server (localhost:5173)
-npm run dev:lxc          # Start with LXC backend proxy (port 9090)
+npm run dev              # Start dev server (localhost:5173, mock/no backend)
+npm run dev:lxc          # Start with LXC backend (uses .env.lxc, port 9090)
 
 # Build & Lint
 npm run build            # TypeScript check + Vite build

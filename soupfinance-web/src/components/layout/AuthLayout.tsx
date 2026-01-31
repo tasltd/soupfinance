@@ -5,6 +5,7 @@
  * Reference: soupfinance-designs/login-authentication/
  */
 import { Outlet } from 'react-router-dom';
+import { Logo } from '../Logo';
 
 export function AuthLayout() {
   return (
@@ -25,10 +26,11 @@ export function AuthLayout() {
         <div className="relative z-10 flex flex-col justify-between h-full p-12 text-white">
           {/* Logo */}
           <div className="flex items-center gap-3">
-            <div className="size-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-white font-bold text-xl">
-              SF
-            </div>
-            <h1 className="text-2xl font-bold text-white">SoupFinance</h1>
+            <Logo variant="mark" size={48} />
+            <h1 className="text-2xl font-bold text-white">
+              <span>Soup</span>
+              <span className="text-white/90">Finance</span>
+            </h1>
           </div>
 
           {/* Main Message */}
