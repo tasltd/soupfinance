@@ -133,15 +133,17 @@ async function setupAuth(page: any) {
 
 /**
  * Get today's date in YYYY-MM-DD format
+ * @internal Reserved for date filter tests
  */
-function getTodayISO(): string {
+function _getTodayISO(): string {
   return new Date().toISOString().split('T')[0];
 }
 
 /**
  * Get first day of current month in YYYY-MM-DD format
+ * @internal Reserved for date filter tests
  */
-function getFirstDayOfMonth(): string {
+function _getFirstDayOfMonth(): string {
   const now = new Date();
   return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
 }

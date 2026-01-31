@@ -85,13 +85,7 @@ describe('LoginPage', () => {
       expect(screen.getByRole('checkbox')).toBeInTheDocument()
     })
 
-    it('renders forgot password link', () => {
-      // Act
-      renderLoginPage()
-
-      // Assert
-      expect(screen.getByText('Forgot password?')).toBeInTheDocument()
-    })
+    // Removed (2026-01-28): Forgot password link test removed - link was non-functional and removed from UI
 
     it('renders register link', () => {
       // Act
@@ -144,8 +138,30 @@ describe('LoginPage', () => {
       await user.click(screen.getByRole('button', { name: /sign in/i }))
 
       // Assert
+      // Changed (2026-01-28): Login now takes 3rd rememberMe parameter (defaults to false)
       await waitFor(() => {
-        expect(mockLogin).toHaveBeenCalledWith('user@test.com', 'password123')
+        expect(mockLogin).toHaveBeenCalledWith('user@test.com', 'password123', false)
+      })
+    })
+
+    // Added (2026-01-28): Test remember me checkbox functionality
+    it('submits form with rememberMe=true when checkbox is checked', async () => {
+      // Arrange
+      const user = userEvent.setup()
+      const mockLogin = vi.fn().mockResolvedValue(undefined)
+      useAuthStore.setState({ login: mockLogin })
+
+      renderLoginPage()
+
+      // Act
+      await user.type(screen.getByPlaceholderText('Enter your username'), 'user@test.com')
+      await user.type(screen.getByPlaceholderText('Enter your password'), 'password123')
+      await user.click(screen.getByRole('checkbox')) // Check the Remember Me checkbox
+      await user.click(screen.getByRole('button', { name: /sign in/i }))
+
+      // Assert
+      await waitFor(() => {
+        expect(mockLogin).toHaveBeenCalledWith('user@test.com', 'password123', true)
       })
     })
 

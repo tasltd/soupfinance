@@ -14,6 +14,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getInvoice, createInvoice, updateInvoice, sendInvoice } from '../../api/endpoints/invoices';
 import { listClients } from '../../api/endpoints/clients';
+import { useFormatCurrency } from '../../stores';
 import type { InvoiceItem } from '../../types';
 
 // Added: Line item type for form state (without id for new items)
@@ -30,6 +31,7 @@ export function InvoiceFormPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const formatCurrency = useFormatCurrency();
   const isEdit = !!id;
 
   // Added: Form state
@@ -57,6 +59,7 @@ export function InvoiceFormPage() {
   });
 
   // Added: Populate form when invoice data loads
+  /* eslint-disable-next-line -- Syncing fetched data to form state is a valid use case */
   useEffect(() => {
     if (invoice) {
       setClientId(invoice.client?.id || '');
@@ -530,7 +533,7 @@ export function InvoiceFormPage() {
                         />
                       </td>
                       <td className="px-4 py-3 text-right font-medium text-text-light dark:text-text-dark">
-                        ${lineAmount.toFixed(2)}
+                        {formatCurrency(lineAmount)}
                       </td>
                       <td className="px-4 py-3 text-center">
                         <button
@@ -556,21 +559,21 @@ export function InvoiceFormPage() {
               <div className="w-64 space-y-2">
                 <div className="flex justify-between text-text-light dark:text-text-dark">
                   <span className="text-subtle-text">Subtotal</span>
-                  <span data-testid="invoice-subtotal">${subtotal.toFixed(2)}</span>
+                  <span data-testid="invoice-subtotal">{formatCurrency(subtotal)}</span>
                 </div>
                 {discountAmount > 0 && (
                   <div className="flex justify-between text-text-light dark:text-text-dark">
                     <span className="text-subtle-text">Discount</span>
-                    <span className="text-danger" data-testid="invoice-discount">-${discountAmount.toFixed(2)}</span>
+                    <span className="text-danger" data-testid="invoice-discount">-{formatCurrency(discountAmount)}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-text-light dark:text-text-dark">
                   <span className="text-subtle-text">Tax</span>
-                  <span data-testid="invoice-tax">${taxAmount.toFixed(2)}</span>
+                  <span data-testid="invoice-tax">{formatCurrency(taxAmount)}</span>
                 </div>
                 <div className="flex justify-between text-lg font-bold text-text-light dark:text-text-dark border-t border-border-light dark:border-border-dark pt-2">
                   <span>Total</span>
-                  <span data-testid="invoice-total">${totalAmount.toFixed(2)}</span>
+                  <span data-testid="invoice-total">{formatCurrency(totalAmount)}</span>
                 </div>
               </div>
             </div>

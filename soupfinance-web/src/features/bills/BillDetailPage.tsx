@@ -9,11 +9,13 @@
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getBill, deleteBill, listBillPayments } from '../../api/endpoints/bills';
+import { useFormatCurrency } from '../../stores';
 
 export function BillDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const formatCurrency = useFormatCurrency();
 
   // Added: Fetch bill details from API
   const { data: bill, isLoading, error } = useQuery({
@@ -155,23 +157,23 @@ export function BillDetailPage() {
           <div className="p-6 space-y-3">
             <div className="flex justify-between">
               <p className="text-subtle-text">Subtotal</p>
-              <p className="font-medium text-text-light dark:text-text-dark">${bill.subtotal?.toFixed(2)}</p>
+              <p className="font-medium text-text-light dark:text-text-dark">{formatCurrency(bill.subtotal)}</p>
             </div>
             <div className="flex justify-between">
               <p className="text-subtle-text">Tax</p>
-              <p className="font-medium text-text-light dark:text-text-dark">${bill.taxAmount?.toFixed(2)}</p>
+              <p className="font-medium text-text-light dark:text-text-dark">{formatCurrency(bill.taxAmount)}</p>
             </div>
             <div className="flex justify-between border-t border-border-light dark:border-border-dark pt-3">
               <p className="font-bold text-text-light dark:text-text-dark">Total</p>
-              <p className="font-bold text-text-light dark:text-text-dark">${bill.totalAmount?.toFixed(2)}</p>
+              <p className="font-bold text-text-light dark:text-text-dark">{formatCurrency(bill.totalAmount)}</p>
             </div>
             <div className="flex justify-between">
               <p className="text-subtle-text">Amount Paid</p>
-              <p className="font-medium text-success">${bill.amountPaid?.toFixed(2)}</p>
+              <p className="font-medium text-success">{formatCurrency(bill.amountPaid)}</p>
             </div>
             <div className="flex justify-between bg-primary/10 -mx-6 px-6 py-3 mt-3">
               <p className="font-bold text-primary">Balance Due</p>
-              <p className="font-bold text-primary">${bill.amountDue?.toFixed(2)}</p>
+              <p className="font-bold text-primary">{formatCurrency(bill.amountDue)}</p>
             </div>
           </div>
         </div>
@@ -199,9 +201,9 @@ export function BillDetailPage() {
                   <tr key={item.id || index} className="border-b border-border-light dark:border-border-dark">
                     <td className="px-6 py-4 text-text-light dark:text-text-dark">{item.description}</td>
                     <td className="px-6 py-4 text-right text-text-light dark:text-text-dark">{item.quantity}</td>
-                    <td className="px-6 py-4 text-right text-text-light dark:text-text-dark">${item.unitPrice?.toFixed(2)}</td>
+                    <td className="px-6 py-4 text-right text-text-light dark:text-text-dark">{formatCurrency(item.unitPrice)}</td>
                     <td className="px-6 py-4 text-right text-subtle-text">{item.taxRate}%</td>
-                    <td className="px-6 py-4 text-right font-medium text-text-light dark:text-text-dark">${item.amount?.toFixed(2)}</td>
+                    <td className="px-6 py-4 text-right font-medium text-text-light dark:text-text-dark">{formatCurrency(item.amount)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -246,7 +248,7 @@ export function BillDetailPage() {
                     <td className="px-6 py-4 text-text-light dark:text-text-dark">{payment.paymentDate}</td>
                     <td className="px-6 py-4 text-text-light dark:text-text-dark">{payment.paymentMethod}</td>
                     <td className="px-6 py-4 text-subtle-text">{payment.reference || '-'}</td>
-                    <td className="px-6 py-4 text-right font-medium text-success">${payment.amount?.toFixed(2)}</td>
+                    <td className="px-6 py-4 text-right font-medium text-success">{formatCurrency(payment.amount)}</td>
                   </tr>
                 ))}
               </tbody>

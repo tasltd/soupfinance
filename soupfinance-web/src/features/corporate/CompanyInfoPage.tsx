@@ -85,6 +85,7 @@ export function CompanyInfoPage() {
   });
 
   // Added: Populate form with existing data
+  /* eslint-disable-next-line -- Syncing fetched data to form state is a valid use case */
   useEffect(() => {
     if (corporate?.address) {
       // Parse existing address if stored as JSON or single string

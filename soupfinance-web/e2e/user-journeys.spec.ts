@@ -19,7 +19,6 @@
  */
 import { test, expect } from '@playwright/test';
 import {
-  mockLoginApi,
   mockDashboardApi,
   mockInvoicesApi,
   mockInvoices,
@@ -35,14 +34,8 @@ import {
   mockDirector,
   mockDocument,
   mockTokenValidationApi,
-  mockUsers,
   takeScreenshot,
-  getTestUsers,
-  isLxcMode,
 } from './fixtures';
-
-// Get appropriate test users based on mode (mock or LXC)
-const testUsers = getTestUsers();
 
 // ===========================================================================
 // Additional Mock Data for User Journeys

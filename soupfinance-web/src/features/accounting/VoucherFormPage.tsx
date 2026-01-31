@@ -99,7 +99,7 @@ export function VoucherFormPage() {
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   // Changed: Fetch accounts from API via useLedgerAccounts hook
-  // Changed: Renamed to _accountsLoading to suppress unused variable warning (can be used for loading state)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { data: accounts, isLoading: _accountsLoading } = useLedgerAccounts();
 
   // Changed: Get initial voucher type from URL path or query param
@@ -222,6 +222,7 @@ export function VoucherFormPage() {
   );
 
   // Added: Clear conditional fields when voucher type changes
+  /* eslint-disable-next-line -- Clearing form fields on type change is required */
   useEffect(() => {
     if (isPaymentType) {
       setValue('incomeAccountId', '');
@@ -231,6 +232,7 @@ export function VoucherFormPage() {
   }, [isPaymentType, setValue]);
 
   // Added: Clear party-specific fields when beneficiary type changes
+  /* eslint-disable-next-line -- Clearing form fields on type change is required */
   useEffect(() => {
     setValue('clientId', '');
     setValue('vendorId', '');

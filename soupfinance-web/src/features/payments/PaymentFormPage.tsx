@@ -12,6 +12,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { listInvoices, recordInvoicePayment } from '../../api/endpoints/invoices';
 import { listBills, recordBillPayment } from '../../api/endpoints/bills';
+import { useFormatCurrency, useCurrencySymbol } from '../../stores';
 import type { Invoice, Bill, InvoicePayment, BillPayment } from '../../types';
 
 // Added: Payment type for form toggle
@@ -21,6 +22,8 @@ type PaymentMethod = 'CASH' | 'BANK_TRANSFER' | 'CHEQUE' | 'CARD' | 'OTHER';
 export function PaymentFormPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const formatCurrency = useFormatCurrency();
+  const currencySymbol = useCurrencySymbol();
   const [searchParams] = useSearchParams();
 
   // Added: Detect if coming from invoice or bill page
@@ -71,6 +74,7 @@ export function PaymentFormPage() {
     : selectedBill?.amountDue;
 
   // Added: Update selected ID when switching payment type
+  /* eslint-disable-next-line -- Resetting state on payment type change is required */
   useEffect(() => {
     if (paymentType === 'invoice' && !preselectedInvoiceId) {
       setSelectedId('');
@@ -125,7 +129,7 @@ export function PaymentFormPage() {
     }
 
     if (maxAmount && paymentAmount > maxAmount) {
-      setFormError(`Payment amount cannot exceed balance due ($${maxAmount.toFixed(2)})`);
+      setFormError(`Payment amount cannot exceed balance due (${formatCurrency(maxAmount)})`);
       return;
     }
 
@@ -253,21 +257,19 @@ export function PaymentFormPage() {
                   {paymentType === 'invoice'
                     ? unpaidInvoices?.map((invoice: Invoice) => (
                         <option key={invoice.id} value={invoice.id}>
-                          {invoice.invoiceNumber} - {invoice.client?.name || 'Unknown'} - Due: $
-                          {invoice.amountDue?.toFixed(2)}
+                          {invoice.invoiceNumber} - {invoice.client?.name || 'Unknown'} - Due: {formatCurrency(invoice.amountDue)}
                         </option>
                       ))
                     : unpaidBills?.map((bill: Bill) => (
                         <option key={bill.id} value={bill.id}>
-                          {bill.billNumber} - {bill.vendor?.name || 'Unknown'} - Due: $
-                          {bill.amountDue?.toFixed(2)}
+                          {bill.billNumber} - {bill.vendor?.name || 'Unknown'} - Due: {formatCurrency(bill.amountDue)}
                         </option>
                       ))}
                 </select>
               )}
               {maxAmount !== undefined && (
                 <p className="text-sm text-subtle-text">
-                  Balance due: <span className="font-medium text-text-light dark:text-text-dark">${maxAmount.toFixed(2)}</span>
+                  Balance due: <span className="font-medium text-text-light dark:text-text-dark">{formatCurrency(maxAmount)}</span>
                 </p>
               )}
             </div>
@@ -276,7 +278,7 @@ export function PaymentFormPage() {
             <div className="flex flex-col gap-2">
               <label className="text-sm font-medium text-text-light dark:text-text-dark">Amount *</label>
               <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-subtle-text">$</span>
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-subtle-text">{currencySymbol}</span>
                 <input
                   type="number"
                   step="0.01"
@@ -297,7 +299,7 @@ export function PaymentFormPage() {
                   className="text-sm text-primary hover:underline text-left"
                   data-testid="pay-full-button"
                 >
-                  Pay full balance (${maxAmount.toFixed(2)})
+                  Pay full balance ({formatCurrency(maxAmount)})
                 </button>
               )}
             </div>

@@ -50,41 +50,48 @@ export function logTestMode() {
 // ===========================================================================
 
 export const backendTestUsers = {
-  // Primary admin account (from soupmarkets-web seed data)
-  // This user must have an Agent record for the target tenant
-  // NOTE: Backend expects username, not email for login
+  // Primary admin account - soup.support (soupmarkets-web seed data)
+  // This user should work across tenants
   admin: {
     username: 'soup.support',
     password: 'secret',
-    email: 'soup.support', // Use username - backend doesn't accept email format
+    email: 'soup.support',
     roles: ['ROLE_ADMIN', 'ROLE_USER'],
   },
-  // Demo user (for demo tenant)
+  // Secondary admin - fui@techatscale.io (SoupFinance tenant - TAS)
+  // Can be used as fallback if primary doesn't work
+  fuiTas: {
+    username: 'fui@techatscale.io',
+    password: 'fui@techatscale.io',
+    email: 'fui@techatscale.io',
+    roles: ['ROLE_ADMIN', 'ROLE_USER'],
+  },
+  // Demo user for demo tenant
   demo: {
     username: 'fui.nusenu',
     password: 'secret',
-    email: 'fui.nusenu', // Use username
+    email: 'fui.nusenu',
     roles: ['ROLE_USER'],
   },
-  // Test agent user (if configured)
+  // Test agent user (use primary admin)
   testAgent: {
-    username: 'test.agent',
+    username: 'soup.support',
     password: 'secret',
-    email: 'test.agent', // Use username
+    email: 'soup.support',
     roles: ['ROLE_USER'],
   },
-  // Finance-focused user (requires Agent record in database)
+  // Finance-focused user (use primary admin)
   finance: {
-    username: 'soup.support', // Use same as admin until separate finance user created
+    username: 'soup.support',
     password: 'secret',
-    email: 'soup.support', // Use username
+    email: 'soup.support',
     roles: ['ROLE_ADMIN', 'ROLE_USER', 'ROLE_FINANCE_REPORTS'],
   },
   // Legacy reference (same as admin)
   legacyAdmin: {
     username: 'soup.support',
     password: 'secret',
-    email: 'soup.support', // Use username
+    email: 'soup.support',
     roles: ['ROLE_ADMIN', 'ROLE_USER'],
   },
 };
@@ -325,6 +332,32 @@ export async function mockTokenValidationApi(
         body: JSON.stringify({
           error: 'Unauthorized',
           message: 'Token expired or invalid',
+        }),
+      });
+    }
+  });
+
+  // Added (2026-01-30): Mock account settings endpoint for currency formatting
+  // The accountStore fetches this on authentication to get tenant currency settings
+  await page.route('**/rest/account/current.json*', (route) => {
+    if (success) {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: 'account-001',
+          name: 'Test Company',
+          currency: 'USD',
+          dateCreated: '2024-01-01T00:00:00Z',
+        }),
+      });
+    } else {
+      route.fulfill({
+        status: 401,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          error: 'Unauthorized',
+          message: 'Not authenticated',
         }),
       });
     }

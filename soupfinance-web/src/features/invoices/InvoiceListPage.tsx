@@ -5,8 +5,11 @@
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { listInvoices } from '../../api';
+import { useFormatCurrency } from '../../stores';
 
 export function InvoiceListPage() {
+  const formatCurrency = useFormatCurrency();
+
   // Changed: Added error state handling for API failures
   const { data: invoices, isLoading, error } = useQuery({
     queryKey: ['invoices'],
@@ -78,7 +81,7 @@ export function InvoiceListPage() {
                     <td className="px-6 py-4 text-subtle-text">{invoice.issueDate}</td>
                     <td className="px-6 py-4 text-subtle-text">{invoice.dueDate}</td>
                     <td className="px-6 py-4 text-right font-medium text-text-light dark:text-text-dark">
-                      ${invoice.totalAmount?.toFixed(2)}
+                      {formatCurrency(invoice.totalAmount)}
                     </td>
                     <td className="px-6 py-4 text-center">
                       <span className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${getStatusStyle(invoice.status)}`} data-testid={`invoice-status-${invoice.id}`}>

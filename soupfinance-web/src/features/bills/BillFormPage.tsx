@@ -13,6 +13,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getBill, createBill, updateBill } from '../../api/endpoints/bills';
 import { listVendors } from '../../api/endpoints/vendors';
+import { useFormatCurrency } from '../../stores';
 import type { BillItem } from '../../types';
 
 // Added: Line item type for form state (without id for new items)
@@ -28,6 +29,7 @@ export function BillFormPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const formatCurrency = useFormatCurrency();
   const isEdit = !!id;
 
   // Added: Form state
@@ -413,7 +415,7 @@ export function BillFormPage() {
                         />
                       </td>
                       <td className="px-4 py-3 text-right font-medium text-text-light dark:text-text-dark">
-                        ${lineAmount.toFixed(2)}
+                        {formatCurrency(lineAmount)}
                       </td>
                       <td className="px-4 py-3 text-center">
                         <button
@@ -439,15 +441,15 @@ export function BillFormPage() {
               <div className="w-64 space-y-2">
                 <div className="flex justify-between text-text-light dark:text-text-dark">
                   <span className="text-subtle-text">Subtotal</span>
-                  <span data-testid="bill-subtotal">${subtotal.toFixed(2)}</span>
+                  <span data-testid="bill-subtotal">{formatCurrency(subtotal)}</span>
                 </div>
                 <div className="flex justify-between text-text-light dark:text-text-dark">
                   <span className="text-subtle-text">Tax</span>
-                  <span data-testid="bill-tax">${taxAmount.toFixed(2)}</span>
+                  <span data-testid="bill-tax">{formatCurrency(taxAmount)}</span>
                 </div>
                 <div className="flex justify-between text-lg font-bold text-text-light dark:text-text-dark border-t border-border-light dark:border-border-dark pt-2">
                   <span>Total</span>
-                  <span data-testid="bill-total">${totalAmount.toFixed(2)}</span>
+                  <span data-testid="bill-total">{formatCurrency(totalAmount)}</span>
                 </div>
               </div>
             </div>

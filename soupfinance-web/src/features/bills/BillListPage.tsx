@@ -5,10 +5,12 @@
  * Added: Full API integration with listBills endpoint
  * Added: Loading, empty, and error states
  * Added: data-testid attributes for E2E testing
+ * Changed: Uses dynamic currency formatting from account settings
  */
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { listBills } from '../../api/endpoints/bills';
+import { useFormatCurrency } from '../../stores';
 
 export function BillListPage() {
   // Added: Fetch bills from API
@@ -16,6 +18,9 @@ export function BillListPage() {
     queryKey: ['bills'],
     queryFn: () => listBills({ max: 20, sort: 'dateCreated', order: 'desc' }),
   });
+
+  // Changed: Use dynamic currency formatting from account settings
+  const formatCurrency = useFormatCurrency();
 
   return (
     <div className="flex flex-col gap-6" data-testid="bill-list-page">
@@ -82,10 +87,10 @@ export function BillListPage() {
                     <td className="px-6 py-4 text-subtle-text">{bill.issueDate}</td>
                     <td className="px-6 py-4 text-subtle-text">{bill.dueDate}</td>
                     <td className="px-6 py-4 text-right font-medium text-text-light dark:text-text-dark">
-                      ${bill.totalAmount?.toFixed(2)}
+                      {formatCurrency(bill.totalAmount)}
                     </td>
                     <td className="px-6 py-4 text-right font-medium text-text-light dark:text-text-dark">
-                      ${bill.amountDue?.toFixed(2)}
+                      {formatCurrency(bill.amountDue)}
                     </td>
                     <td className="px-6 py-4 text-center">
                       <span className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${getStatusStyle(bill.status)}`} data-testid={`bill-status-${bill.id}`}>

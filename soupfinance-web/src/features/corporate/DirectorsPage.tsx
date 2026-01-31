@@ -445,6 +445,7 @@ export function DirectorsPage() {
                 <button
                   onClick={() => handleDelete(deleteConfirmId)}
                   disabled={deleteMutation.isPending}
+                  data-testid="confirm-delete-button"
                   className="flex-1 h-10 px-4 rounded-lg bg-danger text-white font-bold text-sm hover:bg-danger/90 disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {deleteMutation.isPending ? (

@@ -83,7 +83,7 @@ export function JournalEntryPage() {
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   // Changed: Fetch accounts from API via useLedgerAccounts hook
-  // Changed: Renamed to _accountsLoading to suppress unused variable warning (can be used for loading state)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { data: accounts, isLoading: _accountsLoading } = useLedgerAccounts();
 
   // Added: Convert accounts to select options format

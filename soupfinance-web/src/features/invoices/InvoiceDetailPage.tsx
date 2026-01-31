@@ -18,11 +18,13 @@ import {
   sendInvoice,
   cancelInvoice,
 } from '../../api/endpoints/invoices';
+import { useFormatCurrency } from '../../stores';
 
 export function InvoiceDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const formatCurrency = useFormatCurrency();
 
   // Added: Fetch invoice details from API
   const { data: invoice, isLoading, error } = useQuery({
@@ -234,29 +236,29 @@ export function InvoiceDetailPage() {
           <div className="p-6 space-y-3">
             <div className="flex justify-between">
               <p className="text-subtle-text">Subtotal</p>
-              <p className="font-medium text-text-light dark:text-text-dark" data-testid="invoice-subtotal">${(invoice.subtotal || 0).toFixed(2)}</p>
+              <p className="font-medium text-text-light dark:text-text-dark" data-testid="invoice-subtotal">{formatCurrency(invoice.subtotal)}</p>
             </div>
             {(invoice.discountAmount || 0) > 0 && (
               <div className="flex justify-between">
                 <p className="text-subtle-text">Discount</p>
-                <p className="font-medium text-danger" data-testid="invoice-discount">-${(invoice.discountAmount || 0).toFixed(2)}</p>
+                <p className="font-medium text-danger" data-testid="invoice-discount">-{formatCurrency(invoice.discountAmount)}</p>
               </div>
             )}
             <div className="flex justify-between">
               <p className="text-subtle-text">Tax</p>
-              <p className="font-medium text-text-light dark:text-text-dark" data-testid="invoice-tax">${(invoice.taxAmount || 0).toFixed(2)}</p>
+              <p className="font-medium text-text-light dark:text-text-dark" data-testid="invoice-tax">{formatCurrency(invoice.taxAmount)}</p>
             </div>
             <div className="flex justify-between border-t border-border-light dark:border-border-dark pt-3">
               <p className="font-bold text-text-light dark:text-text-dark">Total</p>
-              <p className="font-bold text-text-light dark:text-text-dark" data-testid="invoice-total">${(invoice.totalAmount || 0).toFixed(2)}</p>
+              <p className="font-bold text-text-light dark:text-text-dark" data-testid="invoice-total">{formatCurrency(invoice.totalAmount)}</p>
             </div>
             <div className="flex justify-between">
               <p className="text-subtle-text">Amount Paid</p>
-              <p className="font-medium text-success" data-testid="invoice-paid">${(invoice.amountPaid || 0).toFixed(2)}</p>
+              <p className="font-medium text-success" data-testid="invoice-paid">{formatCurrency(invoice.amountPaid)}</p>
             </div>
             <div className="flex justify-between bg-primary/10 -mx-6 px-6 py-3 mt-3">
               <p className="font-bold text-primary">Balance Due</p>
-              <p className="font-bold text-primary" data-testid="invoice-balance-due">${(invoice.amountDue || 0).toFixed(2)}</p>
+              <p className="font-bold text-primary" data-testid="invoice-balance-due">{formatCurrency(invoice.amountDue)}</p>
             </div>
           </div>
         </div>
@@ -285,10 +287,10 @@ export function InvoiceDetailPage() {
                   <tr key={item.id || index} className="border-b border-border-light dark:border-border-dark">
                     <td className="px-6 py-4 text-text-light dark:text-text-dark">{item.description}</td>
                     <td className="px-6 py-4 text-right text-text-light dark:text-text-dark">{item.quantity}</td>
-                    <td className="px-6 py-4 text-right text-text-light dark:text-text-dark">${(item.unitPrice || 0).toFixed(2)}</td>
+                    <td className="px-6 py-4 text-right text-text-light dark:text-text-dark">{formatCurrency(item.unitPrice)}</td>
                     <td className="px-6 py-4 text-right text-subtle-text">{item.taxRate || 0}%</td>
                     <td className="px-6 py-4 text-right text-subtle-text">{item.discountPercent || 0}%</td>
-                    <td className="px-6 py-4 text-right font-medium text-text-light dark:text-text-dark">${(item.amount || 0).toFixed(2)}</td>
+                    <td className="px-6 py-4 text-right font-medium text-text-light dark:text-text-dark">{formatCurrency(item.amount)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -337,7 +339,7 @@ export function InvoiceDetailPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-subtle-text">{payment.reference || '-'}</td>
-                    <td className="px-6 py-4 text-right font-medium text-success">${(payment.amount || 0).toFixed(2)}</td>
+                    <td className="px-6 py-4 text-right font-medium text-success">{formatCurrency(payment.amount)}</td>
                   </tr>
                 ))}
               </tbody>

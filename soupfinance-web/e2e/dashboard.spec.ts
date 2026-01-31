@@ -7,7 +7,6 @@ import { test, expect } from '@playwright/test';
 import {
   mockDashboardApi,
   mockTokenValidationApi,
-  mockInvoicesApi,
   mockInvoices,
   mockBills,
   takeScreenshot
@@ -182,10 +181,8 @@ test.describe('Dashboard', () => {
       // Changed: Use specific endpoint pattern and add token validation mock
       await mockTokenValidationApi(page, true);
 
-      // Changed: Use longer delay (5s) and track request state to reliably test loading
-      let invoiceRequestReceived = false;
+      // Changed: Use longer delay (5s) to reliably test loading state
       await page.route('**/rest/invoice/index.json*', async (route) => {
-        invoiceRequestReceived = true;
         await new Promise((resolve) => setTimeout(resolve, 5000));
         route.fulfill({
           status: 200,

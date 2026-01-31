@@ -12,12 +12,15 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { listAllInvoicePayments } from '../../api/endpoints/invoices';
 import { listAllBillPayments } from '../../api/endpoints/bills';
+import { useFormatCurrency } from '../../stores';
 import type { InvoicePayment, BillPayment } from '../../types';
 
 // Added: Tab type for filtering
 type PaymentTab = 'incoming' | 'outgoing';
 
 export function PaymentListPage() {
+  const formatCurrency = useFormatCurrency();
+
   // Added: Tab state
   const [activeTab, setActiveTab] = useState<PaymentTab>('incoming');
 
@@ -211,7 +214,7 @@ export function PaymentListPage() {
                           {payment.reference || '-'}
                         </td>
                         <td className="px-6 py-4 text-right font-medium text-success">
-                          +${payment.amount?.toFixed(2)}
+                          +{formatCurrency(payment.amount)}
                         </td>
                       </tr>
                     ))
@@ -241,7 +244,7 @@ export function PaymentListPage() {
                           {payment.reference || '-'}
                         </td>
                         <td className="px-6 py-4 text-right font-medium text-danger">
-                          -${payment.amount?.toFixed(2)}
+                          -{formatCurrency(payment.amount)}
                         </td>
                       </tr>
                     ))}
@@ -260,8 +263,8 @@ export function PaymentListPage() {
           <div className="flex gap-2 items-center">
             <span>Total:</span>
             <span className={`font-bold ${activeTab === 'incoming' ? 'text-success' : 'text-danger'}`}>
-              {activeTab === 'incoming' ? '+' : '-'}$
-              {payments.reduce((sum, p) => sum + (p.amount || 0), 0).toFixed(2)}
+              {activeTab === 'incoming' ? '+' : '-'}
+              {formatCurrency(payments.reduce((sum, p) => sum + (p.amount || 0), 0))}
             </span>
           </div>
         </div>
