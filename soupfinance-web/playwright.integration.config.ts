@@ -20,8 +20,8 @@ const INTEGRATION_TEST_PORT = 5181;
 const LXC_BACKEND_URL = 'http://10.115.213.183:9090';
 
 export default defineConfig({
-  testDir: './e2e',
-  testMatch: '**/*.spec.ts',
+  testDir: './e2e/integration',
+  testMatch: '**/*.integration.spec.ts',
 
   // Longer timeout for real backend calls
   timeout: 60 * 1000,
@@ -65,13 +65,14 @@ export default defineConfig({
   outputDir: 'test-results-integration/',
 
   // Start dev server pointing to real LXC backend
+  // IMPORTANT: Use VITE_PROXY_TARGET (not VITE_API_URL) - this is what vite.config.ts reads
   webServer: {
-    command: `VITE_API_URL=${LXC_BACKEND_URL} npm run dev -- --port ${INTEGRATION_TEST_PORT}`,
+    command: `VITE_PROXY_TARGET=${LXC_BACKEND_URL} npm run dev -- --port ${INTEGRATION_TEST_PORT}`,
     url: `http://localhost:${INTEGRATION_TEST_PORT}`,
     reuseExistingServer: false,
     timeout: 120 * 1000,
     env: {
-      VITE_API_URL: LXC_BACKEND_URL,
+      VITE_PROXY_TARGET: LXC_BACKEND_URL,
     },
   },
 });
