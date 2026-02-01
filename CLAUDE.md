@@ -15,7 +15,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Tenant Architecture
 
-**See [plans/soupfinance-tenant-architecture-refactor.md](plans/soupfinance-tenant-architecture-refactor.md) for current status and full details.**
+**Status:** Registration Complete, Client CRUD Pending
+**See [plans/soupfinance-tenant-architecture-refactor.md](plans/soupfinance-tenant-architecture-refactor.md) for full details.**
 
 | Aspect | Description |
 |--------|-------------|
@@ -44,6 +45,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | **Gradle Concurrency** | [.claude/rules/gradle-concurrent-tasks.md](.claude/rules/gradle-concurrent-tasks.md) | NEVER run concurrent Gradle tasks in same project |
 | **Port Configuration** | [.claude/rules/port-configuration.md](.claude/rules/port-configuration.md) | Vite 5173, E2E 5180, Storybook 6006, Backend 9090 |
 | **Design System** | [.claude/rules/soupfinance-design-system.md](.claude/rules/soupfinance-design-system.md) | Tailwind v4 tokens, Manrope font, Material Symbols icons |
+| **Deployment** | [.claude/rules/soupfinance-deployment.md](.claude/rules/soupfinance-deployment.md) | SSH key `crypttransact_rsa` required, NOT id_rsa |
 
 ## Quick Commands
 
@@ -204,6 +206,18 @@ cd soupfinance-web
 | Backend Tomcat | 140.82.32.141 | `/root/tomcat9078/logs/catalina.out` |
 
 **Quick SSH:** `ssh root@140.82.32.141` → `tail -f /root/tomcat9078/logs/catalina.out | grep -iE 'error|exception'`
+
+### SSH Config (Recommended)
+
+Add to `~/.ssh/config`:
+```
+Host soupfinance-prod
+    HostName 65.20.112.224
+    User root
+    IdentityFile ~/.ssh/crypttransact_rsa
+    IdentitiesOnly yes
+```
+Then use: `ssh soupfinance-prod`
 
 ## When Implementing Features
 
