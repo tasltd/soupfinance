@@ -8,9 +8,13 @@ import { backendTestUsers, takeScreenshot } from '../fixtures';
 // Helper to login before each test
 async function loginAsAdmin(page: any) {
   await page.goto('/login');
-  await page.getByTestId('login-email-input').fill(backendTestUsers.admin.username);
+  // Wait for login form to be ready
+  await page.getByTestId('login-email-input').waitFor({ state: 'visible' });
+  // Use same credentials as auth tests that pass
+  await page.getByTestId('login-email-input').fill(backendTestUsers.admin.email);
   await page.getByTestId('login-password-input').fill(backendTestUsers.admin.password);
   await page.getByTestId('login-submit-button').click();
+  // Wait for redirect to dashboard
   await expect(page).toHaveURL(/\/dashboard/, { timeout: 15000 });
 }
 

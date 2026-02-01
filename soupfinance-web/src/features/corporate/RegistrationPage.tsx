@@ -18,6 +18,7 @@ import { useNavigate } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { registerTenant } from '../../api/endpoints/registration';
 import type { TenantRegistration, BusinessType } from '../../api/endpoints/registration';
+import { Logo } from '../../components/Logo';
 
 export function RegistrationPage() {
   const navigate = useNavigate();
@@ -130,10 +131,7 @@ export function RegistrationPage() {
       <div className="flex flex-col gap-8" data-testid="registration-success">
         {/* Mobile logo */}
         <div className="lg:hidden flex items-center gap-3 justify-center mb-4">
-          <div className="size-12 rounded-full bg-primary flex items-center justify-center text-white font-bold text-xl">
-            SF
-          </div>
-          <h1 className="text-2xl font-bold text-text-light dark:text-text-dark">SoupFinance</h1>
+          <Logo variant="full" size={48} />
         </div>
 
         {/* Success icon */}
@@ -206,10 +204,7 @@ export function RegistrationPage() {
     <div className="flex flex-col gap-8" data-testid="registration-page">
       {/* Mobile logo */}
       <div className="lg:hidden flex items-center gap-3 justify-center mb-4">
-        <div className="size-12 rounded-full bg-primary flex items-center justify-center text-white font-bold text-xl">
-          SF
-        </div>
-        <h1 className="text-2xl font-bold text-text-light dark:text-text-dark">SoupFinance</h1>
+        <Logo variant="full" size={48} />
       </div>
 
       {/* Header */}

@@ -7,6 +7,20 @@
 
 ---
 
+## Architecture Context (CRITICAL)
+
+**SoupFinance follows a Tenant-per-Account architecture:**
+
+Each SoupFinance customer gets their own `Account` (the multi-tenant discriminator domain in soupmarkets-web).
+
+1. **SoupFinance registration creates a NEW Account (tenant)**, not Corporate entities in a shared tenant
+2. **Invoice clients are managed via `/rest/invoiceClient/*` endpoints** (NOT `/rest/client/*` which is for investment clients)
+3. **Business types**: TRADING (inventory-based, has COGS) and SERVICES (no inventory, labor expenses)
+4. **Password is NOT required during registration** - set during email confirmation
+5. **Email verification required before login**
+
+---
+
 ## Implementation Progress
 
 | Phase | Status | Notes |

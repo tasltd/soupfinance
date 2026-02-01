@@ -16,6 +16,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { confirmEmail } from '../../api/endpoints/registration';
+import { Logo } from '../../components/Logo';
 
 // Password requirements
 const PASSWORD_MIN_LENGTH = 8;
@@ -123,10 +124,7 @@ export function ConfirmEmailPage() {
       <div className="flex flex-col gap-8" data-testid="confirm-email-success">
         {/* Mobile logo */}
         <div className="lg:hidden flex items-center gap-3 justify-center mb-4">
-          <div className="size-12 rounded-full bg-primary flex items-center justify-center text-white font-bold text-xl">
-            SF
-          </div>
-          <h1 className="text-2xl font-bold text-text-light dark:text-text-dark">SoupFinance</h1>
+          <Logo variant="full" size={48} />
         </div>
 
         {/* Success icon */}
@@ -169,10 +167,7 @@ export function ConfirmEmailPage() {
     <div className="flex flex-col gap-8" data-testid="confirm-email-page">
       {/* Mobile logo */}
       <div className="lg:hidden flex items-center gap-3 justify-center mb-4">
-        <div className="size-12 rounded-full bg-primary flex items-center justify-center text-white font-bold text-xl">
-          SF
-        </div>
-        <h1 className="text-2xl font-bold text-text-light dark:text-text-dark">SoupFinance</h1>
+        <Logo variant="full" size={48} />
       </div>
 
       {/* Header */}

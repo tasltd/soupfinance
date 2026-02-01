@@ -17,6 +17,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { requestOTP, verifyOTP } from '../../api/auth';
 import { useAuthStore } from '../../stores';
+import { Logo } from '../../components/Logo';
 
 // State passed from registration page
 interface VerifyLocationState {
@@ -170,10 +171,7 @@ export function VerifyPage() {
     <div className="flex flex-col gap-8" data-testid="verify-page">
       {/* Mobile logo */}
       <div className="lg:hidden flex items-center gap-3 justify-center mb-4">
-        <div className="size-12 rounded-full bg-primary flex items-center justify-center text-white font-bold text-xl">
-          SF
-        </div>
-        <h1 className="text-2xl font-bold text-text-light dark:text-text-dark">SoupFinance</h1>
+        <Logo variant="full" size={48} />
       </div>
 
       {/* Header */}

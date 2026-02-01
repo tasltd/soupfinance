@@ -1,0 +1,37 @@
+# SoupFinance Robots.txt
+# Corporate Accounting & Invoicing Software for Africa
+# https://www.soupfinance.com
+
+# Allow all search engines
+User-agent: *
+Allow: /
+
+# Sitemap location
+Sitemap: https://www.soupfinance.com/sitemap.xml
+
+# Crawl-delay for polite crawling (optional)
+Crawl-delay: 1
+
+# Google specific
+User-agent: Googlebot
+Allow: /
+
+# Bing specific
+User-agent: Bingbot
+Allow: /
+
+# Allow social media crawlers for rich previews
+User-agent: facebookexternalhit
+Allow: /
+
+User-agent: Twitterbot
+Allow: /
+
+User-agent: LinkedInBot
+Allow: /
+
+# Disallow common non-content paths (none exist yet, but prepared for future)
+# Disallow: /api/
+# Disallow: /admin/
+# Disallow: /_next/
+# Disallow: /private/
