@@ -656,13 +656,32 @@ export const mockBillItems = [
   },
 ];
 
+// Changed (2026-02-01): Use current month dates so MTD calculations work correctly
+// Helper to get current month dates for mock data
+function getCurrentMonthDate(day: number): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+function getNextMonthDate(day: number): string {
+  const now = new Date();
+  const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, day);
+  return `${nextMonth.getFullYear()}-${String(nextMonth.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+function getLastMonthDate(day: number): string {
+  const now = new Date();
+  const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, day);
+  return `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
 export const mockBills = [
   {
     id: 'bill-001',
     billNumber: 'BILL-2026-001',
     vendor: { id: 'vendor-001', name: 'Acme Corp' },
-    issueDate: '2026-01-15',
-    dueDate: '2026-02-14',
+    issueDate: getCurrentMonthDate(15),
+    dueDate: getNextMonthDate(14),
     status: 'PENDING' as const,
     subtotal: 900.0,
     taxAmount: 90.0,
@@ -675,8 +694,8 @@ export const mockBills = [
     id: 'bill-002',
     billNumber: 'BILL-2026-002',
     vendor: { id: 'vendor-002', name: 'Tech Supplies Inc' },
-    issueDate: '2026-01-10',
-    dueDate: '2026-02-10',
+    issueDate: getCurrentMonthDate(10),
+    dueDate: getNextMonthDate(10),
     status: 'PAID' as const,
     subtotal: 2000.0,
     taxAmount: 200.0,
@@ -689,8 +708,8 @@ export const mockBills = [
     id: 'bill-003',
     billNumber: 'BILL-2026-003',
     vendor: { id: 'vendor-003', name: 'Office Solutions' },
-    issueDate: '2025-12-01',
-    dueDate: '2025-12-31',
+    issueDate: getLastMonthDate(1),
+    dueDate: getLastMonthDate(31),
     status: 'OVERDUE' as const,
     subtotal: 1500.0,
     taxAmount: 150.0,

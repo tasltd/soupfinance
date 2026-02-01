@@ -19,6 +19,9 @@ export default defineConfig({
   // Test file pattern
   testMatch: '**/*.spec.ts',
 
+  // Exclude integration tests from mock runs (they require real backend)
+  testIgnore: '**/integration/**',
+
   // Global timeout for each test
   timeout: 30 * 1000,
 

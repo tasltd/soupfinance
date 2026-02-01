@@ -1,15 +1,58 @@
 /**
- * Corporate Registration E2E Tests
+ * Tenant Registration E2E Tests
  * Tests registration form rendering, validation, and submission flows
+ *
+ * Updated (2026-02-01): Tests now match new tenant registration form with:
+ * - Company name
+ * - Business type buttons (TRADING/SERVICES)
+ * - Admin first/last name
+ * - Email (no phone - password set during email confirmation)
  */
 import { test, expect } from '@playwright/test';
-import {
-  mockCorporateRegistrationApi,
-  mockCorporate,
-  takeScreenshot,
-} from './fixtures';
+import { takeScreenshot } from './fixtures';
 
-test.describe('Corporate Registration', () => {
+// Mock tenant registration data
+const mockTenantRegistration = {
+  companyName: 'Test Company LLC',
+  businessType: 'SERVICES' as const,
+  adminFirstName: 'John',
+  adminLastName: 'Doe',
+  email: 'john.doe@testcompany.com',
+};
+
+/**
+ * Mock tenant registration API
+ * POST /account/register.json
+ */
+async function mockTenantRegistrationApi(
+  page: Awaited<ReturnType<typeof test.page>>,
+  success = true
+) {
+  await page.route('**/account/register.json', (route) => {
+    if (success) {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          message: 'Registration successful. Please check your email to confirm your account.',
+        }),
+      });
+    } else {
+      route.fulfill({
+        status: 400,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: false,
+          error: 'Email already registered',
+          message: 'An account with this email already exists.',
+        }),
+      });
+    }
+  });
+}
+
+test.describe('Tenant Registration', () => {
   test.beforeEach(async ({ page }) => {
     // Clear any existing auth state
     await page.addInitScript(() => {
@@ -24,15 +67,16 @@ test.describe('Corporate Registration', () => {
 
       // Verify page elements
       await expect(page.getByTestId('registration-page')).toBeVisible();
-      await expect(page.getByTestId('registration-heading')).toHaveText('Register Your Company');
+      await expect(page.getByTestId('registration-heading')).toHaveText('Create Your Account');
 
       // Verify all form fields are present
       await expect(page.getByTestId('registration-form')).toBeVisible();
       await expect(page.getByTestId('registration-company-name-input')).toBeVisible();
-      await expect(page.getByTestId('registration-reg-number-input')).toBeVisible();
-      await expect(page.getByTestId('registration-business-type-select')).toBeVisible();
+      await expect(page.getByTestId('registration-business-type-trading')).toBeVisible();
+      await expect(page.getByTestId('registration-business-type-services')).toBeVisible();
+      await expect(page.getByTestId('registration-admin-first-name')).toBeVisible();
+      await expect(page.getByTestId('registration-admin-last-name')).toBeVisible();
       await expect(page.getByTestId('registration-email-input')).toBeVisible();
-      await expect(page.getByTestId('registration-phone-input')).toBeVisible();
       await expect(page.getByTestId('registration-submit-button')).toBeVisible();
 
       await takeScreenshot(page, 'registration-form-verified');
@@ -46,32 +90,40 @@ test.describe('Corporate Registration', () => {
         'placeholder',
         'Enter your company name'
       );
-      await expect(page.getByTestId('registration-reg-number-input')).toHaveAttribute(
+      await expect(page.getByTestId('registration-admin-first-name')).toHaveAttribute(
         'placeholder',
-        'e.g., C-123456'
+        'First name'
+      );
+      await expect(page.getByTestId('registration-admin-last-name')).toHaveAttribute(
+        'placeholder',
+        'Last name'
       );
       await expect(page.getByTestId('registration-email-input')).toHaveAttribute(
         'placeholder',
-        'finance@yourcompany.com'
-      );
-      await expect(page.getByTestId('registration-phone-input')).toHaveAttribute(
-        'placeholder',
-        '+1 (555) 123-4567'
+        'Enter your email address'
       );
     });
 
-    test('business type dropdown has all options', async ({ page }) => {
+    test('business type buttons show TRADING and SERVICES options', async ({ page }) => {
       await page.goto('/register');
 
-      const select = page.getByTestId('registration-business-type-select');
+      // Verify business type buttons
+      const tradingButton = page.getByTestId('registration-business-type-trading');
+      const servicesButton = page.getByTestId('registration-business-type-services');
 
-      // Verify the select has options
-      const options = await select.locator('option').allTextContents();
-      expect(options).toContain('Limited Liability Company (LLC)');
-      expect(options).toContain('Public Limited Company (PLC)');
-      expect(options).toContain('Partnership');
-      expect(options).toContain('Sole Proprietorship');
-      expect(options).toContain('Non-Profit Organization');
+      await expect(tradingButton).toBeVisible();
+      await expect(servicesButton).toBeVisible();
+      await expect(tradingButton).toContainText('Trading');
+      await expect(servicesButton).toContainText('Services');
+    });
+
+    test('SERVICES is selected by default', async ({ page }) => {
+      await page.goto('/register');
+
+      // SERVICES should be selected by default (has primary styling)
+      const servicesButton = page.getByTestId('registration-business-type-services');
+      // Check it has the selected class (border-primary)
+      await expect(servicesButton).toHaveClass(/border-primary/);
     });
 
     test('shows login link for existing users', async ({ page }) => {
@@ -96,13 +148,7 @@ test.describe('Corporate Registration', () => {
         'Company name is required'
       );
 
-      await expect(page.getByTestId('registration-reg-number-error')).toBeVisible();
-      await expect(page.getByTestId('registration-reg-number-error')).toHaveText(
-        'Registration number is required'
-      );
-
       await expect(page.getByTestId('registration-email-error')).toBeVisible();
-      await expect(page.getByTestId('registration-phone-error')).toBeVisible();
 
       await takeScreenshot(page, 'registration-validation-errors');
     });
@@ -111,22 +157,22 @@ test.describe('Corporate Registration', () => {
       await page.goto('/register');
 
       // Fill all required fields with valid data except email
-      // Note: Using an email that passes HTML5 validation but may fail custom validation
       await page.getByTestId('registration-company-name-input').fill('Test Company');
-      await page.getByTestId('registration-reg-number-input').fill('C-123456');
+      await page.getByTestId('registration-admin-first-name').fill('John');
+      await page.getByTestId('registration-admin-last-name').fill('Doe');
 
-      // Use an email that triggers HTML5 native validation (no @ sign)
+      // Use an invalid email format (has @ but no domain - passes HTML5 pattern but fails our validation)
       const emailInput = page.getByTestId('registration-email-input');
-      await emailInput.fill('invalid-email');
-      await page.getByTestId('registration-phone-input').fill('+1 555-123-4567');
+      await emailInput.fill('test@invalid');
 
       // Click submit to trigger validation
       await page.getByTestId('registration-submit-button').click();
 
-      // HTML5 validation shows browser-native error for invalid email format
-      // Check that the input has :invalid pseudo-class (browser validation failed)
-      const isInvalid = await emailInput.evaluate((el: HTMLInputElement) => !el.validity.valid);
-      expect(isInvalid).toBe(true);
+      // Should show email validation error (our custom validation catches incomplete emails)
+      await expect(page.getByTestId('registration-email-error')).toBeVisible();
+      await expect(page.getByTestId('registration-email-error')).toHaveText(
+        'Please enter a valid email address'
+      );
 
       await takeScreenshot(page, 'registration-email-validation-error');
     });
@@ -151,78 +197,76 @@ test.describe('Corporate Registration', () => {
   });
 
   test.describe('Successful Registration', () => {
-    test('successful registration navigates to onboarding', async ({ page }) => {
-      await mockCorporateRegistrationApi(page, true, mockCorporate);
+    test('successful registration shows email confirmation screen', async ({ page }) => {
+      await mockTenantRegistrationApi(page, true);
 
       await page.goto('/register');
       await takeScreenshot(page, 'registration-success-before-fill');
 
       // Fill in all required fields
-      await page.getByTestId('registration-company-name-input').fill(mockCorporate.name);
-      await page.getByTestId('registration-reg-number-input').fill(
-        mockCorporate.certificateOfIncorporationNumber
-      );
-      await page.getByTestId('registration-business-type-select').selectOption(
-        mockCorporate.businessCategory
-      );
-      await page.getByTestId('registration-email-input').fill(mockCorporate.email);
-      await page.getByTestId('registration-phone-input').fill(mockCorporate.phoneNumber);
+      await page.getByTestId('registration-company-name-input').fill(mockTenantRegistration.companyName);
+      await page.getByTestId('registration-business-type-services').click();
+      await page.getByTestId('registration-admin-first-name').fill(mockTenantRegistration.adminFirstName);
+      await page.getByTestId('registration-admin-last-name').fill(mockTenantRegistration.adminLastName);
+      await page.getByTestId('registration-email-input').fill(mockTenantRegistration.email);
 
       await takeScreenshot(page, 'registration-success-form-filled');
 
       // Submit form
       await page.getByTestId('registration-submit-button').click();
 
-      // Wait for navigation to onboarding
-      await page.waitForURL('**/onboarding/company*');
+      // Wait for success screen
+      await expect(page.getByTestId('registration-success')).toBeVisible();
+      await expect(page.getByTestId('registration-success-heading')).toHaveText('Check Your Email');
 
-      await takeScreenshot(page, 'registration-success-onboarding');
+      await takeScreenshot(page, 'registration-success-confirmation');
     });
 
     test('submit button shows loading state during registration', async ({ page }) => {
       // Set up delayed API response
-      await page.route('**/rest/corporate/save*', async (route) => {
+      await page.route('**/account/register.json', async (route) => {
         await new Promise((resolve) => setTimeout(resolve, 1000));
         route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify(mockCorporate),
+          body: JSON.stringify({
+            success: true,
+            message: 'Registration successful',
+          }),
         });
       });
 
       await page.goto('/register');
 
       // Fill in form
-      await page.getByTestId('registration-company-name-input').fill(mockCorporate.name);
-      await page.getByTestId('registration-reg-number-input').fill(
-        mockCorporate.certificateOfIncorporationNumber
-      );
-      await page.getByTestId('registration-email-input').fill(mockCorporate.email);
-      await page.getByTestId('registration-phone-input').fill(mockCorporate.phoneNumber);
+      await page.getByTestId('registration-company-name-input').fill(mockTenantRegistration.companyName);
+      await page.getByTestId('registration-admin-first-name').fill(mockTenantRegistration.adminFirstName);
+      await page.getByTestId('registration-admin-last-name').fill(mockTenantRegistration.adminLastName);
+      await page.getByTestId('registration-email-input').fill(mockTenantRegistration.email);
 
       // Submit and check loading state
       await page.getByTestId('registration-submit-button').click();
 
       // Button should show loading text
-      await expect(page.getByTestId('registration-submit-button')).toContainText('Registering');
+      await expect(page.getByTestId('registration-submit-button')).toContainText('Creating Account');
       await takeScreenshot(page, 'registration-loading-state');
 
       // Wait for completion
-      await page.waitForURL('**/onboarding/company*');
+      await expect(page.getByTestId('registration-success')).toBeVisible();
     });
   });
 
   test.describe('Registration Failures', () => {
     test('shows error message when registration fails', async ({ page }) => {
-      await mockCorporateRegistrationApi(page, false);
+      await mockTenantRegistrationApi(page, false);
 
       await page.goto('/register');
 
       // Fill in form
       await page.getByTestId('registration-company-name-input').fill('Existing Company');
-      await page.getByTestId('registration-reg-number-input').fill('C-EXISTING');
+      await page.getByTestId('registration-admin-first-name').fill('Jane');
+      await page.getByTestId('registration-admin-last-name').fill('Smith');
       await page.getByTestId('registration-email-input').fill('existing@company.com');
-      await page.getByTestId('registration-phone-input').fill('+1 555-999-9999');
 
       // Submit form
       await page.getByTestId('registration-submit-button').click();
@@ -232,8 +276,8 @@ test.describe('Corporate Registration', () => {
 
       await takeScreenshot(page, 'registration-api-error');
 
-      // Should still be on registration page
-      await expect(page).toHaveURL(/\/register/);
+      // Should still be on registration page (not showing success)
+      await expect(page.getByTestId('registration-page')).toBeVisible();
     });
   });
 
@@ -256,19 +300,16 @@ test.describe('Corporate Registration', () => {
     test('can select different business types', async ({ page }) => {
       await page.goto('/register');
 
-      const select = page.getByTestId('registration-business-type-select');
+      const tradingButton = page.getByTestId('registration-business-type-trading');
+      const servicesButton = page.getByTestId('registration-business-type-services');
 
-      // Select Partnership
-      await select.selectOption('PARTNERSHIP');
-      await expect(select).toHaveValue('PARTNERSHIP');
+      // Select Trading
+      await tradingButton.click();
+      await expect(tradingButton).toHaveClass(/border-primary/);
 
-      // Select Public Limited
-      await select.selectOption('PUBLIC_LIMITED');
-      await expect(select).toHaveValue('PUBLIC_LIMITED');
-
-      // Select Non-Profit
-      await select.selectOption('NON_PROFIT');
-      await expect(select).toHaveValue('NON_PROFIT');
+      // Select Services
+      await servicesButton.click();
+      await expect(servicesButton).toHaveClass(/border-primary/);
 
       await takeScreenshot(page, 'registration-business-type-changed');
     });
@@ -278,8 +319,8 @@ test.describe('Corporate Registration', () => {
 
       // Fill in some fields but leave email empty
       await page.getByTestId('registration-company-name-input').fill('Test Company');
-      await page.getByTestId('registration-reg-number-input').fill('C-123456');
-      await page.getByTestId('registration-phone-input').fill('+1 555-123-4567');
+      await page.getByTestId('registration-admin-first-name').fill('John');
+      await page.getByTestId('registration-admin-last-name').fill('Doe');
       // Leave email empty
 
       // Submit form
@@ -290,8 +331,8 @@ test.describe('Corporate Registration', () => {
 
       // But filled fields should retain their values
       await expect(page.getByTestId('registration-company-name-input')).toHaveValue('Test Company');
-      await expect(page.getByTestId('registration-reg-number-input')).toHaveValue('C-123456');
-      await expect(page.getByTestId('registration-phone-input')).toHaveValue('+1 555-123-4567');
+      await expect(page.getByTestId('registration-admin-first-name')).toHaveValue('John');
+      await expect(page.getByTestId('registration-admin-last-name')).toHaveValue('Doe');
 
       await takeScreenshot(page, 'registration-state-preserved');
     });

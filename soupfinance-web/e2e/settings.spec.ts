@@ -842,7 +842,7 @@ test.describe('Settings - Account Settings', () => {
 
     await page.goto('/settings/account');
 
-    await expect(page.locator('text=Account Settings')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Account Settings' })).toBeVisible();
     await expect(page.locator('input[name="name"]')).toBeVisible();
     await expect(page.locator('select[name="currency"]')).toBeVisible();
 
