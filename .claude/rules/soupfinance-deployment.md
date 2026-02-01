@@ -67,3 +67,39 @@ Client -> Cloudflare (DNS/SSL) -> Apache (65.20.112.224) -> Static files + API p
 2. DNS is managed via Cloudflare
 3. API requests (/rest/*) are proxied to Tomcat backend on port 8080
 4. Always verify deployment by visiting https://app.soupfinance.com
+
+## Troubleshooting
+
+### App shows landing page instead of React app
+**Cause**: Missing HTTPS (port 443) vhost for `app.soupfinance.com`. Cloudflare connects to origin via HTTPS.
+
+**Fix**: Ensure `/etc/apache2/sites-available/app-soupfinance-com.conf` has BOTH port 80 and port 443 vhosts:
+```apache
+<VirtualHost *:80>
+    ServerName app.soupfinance.com
+    Redirect permanent / https://app.soupfinance.com/
+</VirtualHost>
+
+<VirtualHost *:443>
+    ServerName app.soupfinance.com
+    SSLEngine on
+    SSLCertificateFile /etc/letsencrypt/live/app.soupfinance.com/fullchain.pem
+    SSLCertificateKeyFile /etc/letsencrypt/live/app.soupfinance.com/privkey.pem
+    DocumentRoot /var/www/soupfinance
+    # ... SPA routing and proxy config ...
+</VirtualHost>
+```
+
+**Verify vhosts**: `apache2ctl -S | grep soupfinance`
+
+### Landing page deploy removes logo files
+**Cause**: The `deploy-landing.sh` script uses rsync `--delete` which removes files not in source.
+
+**Fix**: After running deploy-landing.sh, manually upload logo assets:
+```bash
+scp -i ~/.ssh/crypttransact_rsa \
+  soupfinance-landing/logo.png \
+  soupfinance-landing/favicon.* \
+  soupfinance-landing/apple-touch-icon.png \
+  root@65.20.112.224:/var/www/soupfinance-landing/
+```
