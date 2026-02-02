@@ -6,22 +6,16 @@
 import { Outlet } from 'react-router-dom';
 import { SideNav } from './SideNav';
 import { TopNav } from './TopNav';
-import { useUIStore } from '../../stores';
 
 export function MainLayout() {
-  const sidebarCollapsed = useUIStore((state) => state.sidebarCollapsed);
-
   return (
     <div className="relative flex min-h-screen w-full bg-background-light dark:bg-background-dark">
       {/* Side Navigation */}
       <SideNav />
 
       {/* Main Content Area */}
-      <div
-        className={`flex-1 flex flex-col transition-all duration-300 ${
-          sidebarCollapsed ? 'md:ml-20' : 'md:ml-64'
-        }`}
-      >
+      {/* Note: No margin-left needed - sidebar is md:sticky so it's in document flow */}
+      <div className="flex-1 flex flex-col transition-all duration-300">
         {/* Top Navigation */}
         <TopNav />
 
