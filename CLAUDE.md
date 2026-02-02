@@ -42,6 +42,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | **Design System** | [.claude/rules/soupfinance-design-system.md](.claude/rules/soupfinance-design-system.md) | Tailwind v4 tokens, Manrope font, Material Symbols icons |
 | **E2E Testing** | [.claude/rules/e2e-testing-patterns.md](.claude/rules/e2e-testing-patterns.md) | Token from sessionStorage (not localStorage), dual-storage strategy |
 | **Deployment** | [.claude/rules/soupfinance-deployment.md](.claude/rules/soupfinance-deployment.md) | SSH key `crypttransact_rsa` required, NOT id_rsa |
+| **Cloudflare SSL** | [.claude/rules/cloudflare-ssl-configuration.md](.claude/rules/cloudflare-ssl-configuration.md) | **CRITICAL**: Apache MUST have SSL VirtualHost on port 443 for Cloudflare |
 
 ## Quick Commands
 
