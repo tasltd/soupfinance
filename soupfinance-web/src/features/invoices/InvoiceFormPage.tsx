@@ -8,12 +8,15 @@
  * Added: Loading, error, and validation states
  * Added: Save Draft and Save & Send functionality
  * Added: data-testid attributes for E2E testing
+ * Changed (2026-02-01): Added tax rate dropdown from domain data API
+ * Changed (2026-02-01): Added service description autocomplete for line items
  */
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getInvoice, createInvoice, updateInvoice, sendInvoice } from '../../api/endpoints/invoices';
 import { listClients } from '../../api/endpoints/clients';
+import { listTaxRates, listInvoiceServices } from '../../api/endpoints/domainData';
 import { useFormatCurrency } from '../../stores';
 import type { InvoiceItem } from '../../types';
 
@@ -49,6 +52,18 @@ export function InvoiceFormPage() {
   const { data: clients, isLoading: clientsLoading } = useQuery({
     queryKey: ['clients'],
     queryFn: () => listClients({ max: 100 }),
+  });
+
+  // Added (2026-02-01): Fetch tax rates for dropdown
+  const { data: taxRates } = useQuery({
+    queryKey: ['tax-rates'],
+    queryFn: () => listTaxRates(),
+  });
+
+  // Added (2026-02-01): Fetch service descriptions for autocomplete
+  const { data: serviceDescriptions } = useQuery({
+    queryKey: ['invoice-services'],
+    queryFn: () => listInvoiceServices({ max: 100 }),
   });
 
   // Added: Fetch invoice data when editing
@@ -477,14 +492,23 @@ export function InvoiceFormPage() {
                   return (
                     <tr key={index} className="border-b border-border-light dark:border-border-dark">
                       <td className="px-6 py-3">
+                        {/* Changed (2026-02-01): Added datalist for service description autocomplete */}
                         <input
                           type="text"
+                          list="service-descriptions"
                           value={item.description}
                           onChange={(e) => updateLineItem(index, 'description', e.target.value)}
                           className="w-full h-10 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-3 text-text-light dark:text-text-dark focus:border-primary focus:ring-1 focus:ring-primary/50"
                           placeholder="Item description"
                           data-testid={`invoice-item-description-${index}`}
                         />
+                        <datalist id="service-descriptions">
+                          {serviceDescriptions?.map((service) => (
+                            <option key={service.id} value={service.name}>
+                              {service.description}
+                            </option>
+                          ))}
+                        </datalist>
                       </td>
                       <td className="px-4 py-3">
                         <input
@@ -521,16 +545,19 @@ export function InvoiceFormPage() {
                         />
                       </td>
                       <td className="px-4 py-3">
-                        <input
-                          type="number"
+                        {/* Changed (2026-02-01): Tax rate dropdown from domain data */}
+                        <select
                           value={item.taxRate}
                           onChange={(e) => updateLineItem(index, 'taxRate', parseFloat(e.target.value) || 0)}
-                          className="w-full h-10 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-3 text-right text-text-light dark:text-text-dark focus:border-primary focus:ring-1 focus:ring-primary/50"
-                          min="0"
-                          max="100"
-                          step="0.1"
+                          className="w-full h-10 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-2 text-right text-text-light dark:text-text-dark focus:border-primary focus:ring-1 focus:ring-primary/50"
                           data-testid={`invoice-item-taxRate-${index}`}
-                        />
+                        >
+                          {taxRates?.map((tax) => (
+                            <option key={tax.id} value={tax.rate}>
+                              {tax.name}
+                            </option>
+                          )) || <option value="0">No Tax</option>}
+                        </select>
                       </td>
                       <td className="px-4 py-3 text-right font-medium text-text-light dark:text-text-dark">
                         {formatCurrency(lineAmount)}

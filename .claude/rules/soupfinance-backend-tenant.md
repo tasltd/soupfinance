@@ -14,15 +14,11 @@ SoupFinance uses the **Tech At Scale (TAS)** tenant in soupmarkets-web.
 ## API Endpoints
 
 ### Public Endpoints (Unauthenticated)
-These endpoints use `/client/*` path and do NOT require authentication:
 
 | Endpoint | Purpose |
 |----------|---------|
-| `POST /client/register.json` | Corporate registration (new company signup) |
-| `POST /client/authenticate.json` | 2FA - request OTP code |
-| `POST /client/verifyCode.json` | 2FA - verify OTP code |
-| `GET /client/checkPhone.json` | Check if phone exists |
-| `GET /client/checkEmail.json` | Check if email exists |
+| `POST /account/register.json` | Creates Account + Agent + SbUser (tenant-isolated) |
+| `POST /account/confirmEmail.json` | Sets password and enables user after email verification |
 
 ### Authenticated Endpoints
 These endpoints require `X-Auth-Token` header:
@@ -33,11 +29,14 @@ These endpoints require `X-Auth-Token` header:
 | `GET /rest/corporate/show/:id.json` | View corporate details |
 | `PUT /rest/corporate/update/:id.json` | Update corporate |
 
-## Registration Flow
+## Registration Flow (Tenant-per-Account)
 
-1. **New Company Signup**: Use `/client/register.json` (public, no auth)
-2. **2FA Verification**: Use `/client/authenticate.json` then `/client/verifyCode.json`
-3. **After Login**: Admin endpoints use `/rest/*` with X-Auth-Token
+1. **New Tenant Registration**: `POST /account/register.json` (creates Account + Agent + SbUser)
+2. **Email Confirmation**: User clicks link in email, then `POST /account/confirmEmail.json` sets password
+3. **Login**: Standard login with credentials
+4. **After Login**: All endpoints use `/rest/*` with X-Auth-Token
+
+**Note:** This creates a NEW tenant (Account) for each customer, NOT a Corporate entity in a shared tenant.
 
 ## API Consumer Credentials
 
@@ -96,13 +95,11 @@ systemctl restart soupbroker.service
 
 ## Common Issues
 
-### 403 on /rest/corporate/save.json
-This endpoint requires authentication. For public registration, use `/client/register.json` instead.
+### 403 on /rest/* endpoints
+These endpoints require authentication. Include `X-Auth-Token` header.
 
 ### 302 Redirect to /login/auth
-The request is unauthenticated. Either:
-1. Use `/client/*` endpoints for public access
-2. Include `X-Auth-Token` header for `/rest/*` endpoints
+The request is unauthenticated. Include `X-Auth-Token` header for `/rest/*` endpoints.
 
 ### ModSecurity Warnings
 Warnings about "Host header is a numeric IP address" are expected when testing with IP instead of domain name. Use proper domain (`app.soupfinance.com`) for production.

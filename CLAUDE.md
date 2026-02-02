@@ -27,11 +27,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Backend Branch**: `feature/soupfinance-tenant-registration` (worktree: `soupmarkets-web-soupfinance-tenant/`)
 
-### Deprecated (DO NOT USE)
-
-- `/onboarding/company`, `/onboarding/directors`, `/onboarding/documents`, `/onboarding/status` - Old KYC flow
-- `POST /client/register.json` - Old Corporate registration
-
 ---
 
 ## Critical Rules (MUST READ)
@@ -40,11 +35,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 |------|----------|---------|
 | **Tenant Architecture** | [plans/soupfinance-tenant-architecture-refactor.md](plans/soupfinance-tenant-architecture-refactor.md) | Tenant-per-Account: Registration creates new `Account`, NOT Corporate |
 | **Domain Architecture** | [.claude/rules/soupfinance-domain-architecture.md](.claude/rules/soupfinance-domain-architecture.md) | `www.soupfinance.com` = landing (NO login), `app.soupfinance.com` = React app |
-| **Backend Tenant** | [.claude/rules/soupfinance-backend-tenant.md](.claude/rules/soupfinance-backend-tenant.md) | Uses TAS tenant at `tas.soupmarkets.com`, public API at `/client/*` |
+| **Backend Tenant** | [.claude/rules/soupfinance-backend-tenant.md](.claude/rules/soupfinance-backend-tenant.md) | Uses TAS tenant at `tas.soupmarkets.com`, registration via `/account/*` |
 | **Backend Changes** | [.claude/rules/backend-changes-workflow.md](.claude/rules/backend-changes-workflow.md) | Do NOT modify backend directly; create plans in `.claude/plans/` |
 | **Gradle Concurrency** | [.claude/rules/gradle-concurrent-tasks.md](.claude/rules/gradle-concurrent-tasks.md) | NEVER run concurrent Gradle tasks in same project |
 | **Port Configuration** | [.claude/rules/port-configuration.md](.claude/rules/port-configuration.md) | Vite 5173, E2E 5180, Storybook 6006, Backend 9090 |
 | **Design System** | [.claude/rules/soupfinance-design-system.md](.claude/rules/soupfinance-design-system.md) | Tailwind v4 tokens, Manrope font, Material Symbols icons |
+| **E2E Testing** | [.claude/rules/e2e-testing-patterns.md](.claude/rules/e2e-testing-patterns.md) | Token from sessionStorage (not localStorage), dual-storage strategy |
 | **Deployment** | [.claude/rules/soupfinance-deployment.md](.claude/rules/soupfinance-deployment.md) | SSH key `crypttransact_rsa` required, NOT id_rsa |
 
 ## Quick Commands
@@ -58,6 +54,7 @@ cd soupfinance-web
 npm install && npm run dev              # Start dev server (port 5173, mock/no backend)
 npm run dev:lxc                         # Dev against LXC backend (uses .env.lxc)
 npm run build                           # Production build (runs tsc -b first)
+npm run preview                         # Preview production build locally
 npm run lint                            # ESLint
 
 # Unit/Integration Tests (Vitest)
@@ -129,7 +126,7 @@ soupfinance-web/src/
 │   ├── auth/, dashboard/, invoices/, bills/, vendors/, payments/
 │   ├── ledger/, accounting/, reports/
 │   ├── clients/           # NEW: Individual/Corporate client management
-│   └── corporate/         # DEPRECATED: Full KYC onboarding (being removed)
+│   └── corporate/         # Company profile management
 ├── i18n/                  # 4 languages (en, de, fr, nl), 12 namespaces
 ├── stores/                # Zustand (authStore, uiStore)
 ├── types/                 # TypeScript interfaces (mirrors Grails domains)
@@ -148,7 +145,7 @@ soupfinance-web/src/
 | **Token Validation** | GET `/rest/user/current.json` on app mount |
 | **Invoice Clients** | `/rest/invoiceClient/*` (NOT `/rest/client/*` which is for investment clients) |
 
-**Proxy Configuration:** Vite proxies `/rest/*`, `/client/*`, and `/account/*` to backend (default `localhost:9090`, or `VITE_API_URL` from `.env.lxc`).
+**Proxy Configuration:** Vite proxies `/rest/*`, `/client/*`, and `/account/*` to backend (default `localhost:9090`, or `VITE_PROXY_TARGET` from `.env.lxc`).
 
 **API Quirks:**
 - `/rest/sbUser/index.json` requires `?sort=id` (default `dateCreated` sort not available for SbUser domain)
@@ -171,13 +168,18 @@ soupfinance-web/src/
 soupfinance-web/
 ├── src/**/__tests__/           # Unit/integration (Vitest)
 ├── e2e/                        # E2E tests (Playwright)
-│   └── fixtures.ts             # authenticatedPage, mockApiResponse(), domain mocks
+│   ├── fixtures.ts             # authenticatedPage, mockApiResponse(), domain mocks
+│   └── integration/            # LXC backend integration tests
+├── playwright.config.ts        # Mock mode config (port 5180)
+├── playwright.lxc.config.ts    # LXC backend config
+└── playwright.integration.config.ts  # Integration-only config
 ```
 
 **Important:**
 - Axios is globally mocked in `src/test/setup.ts`
 - E2E tests auto-start Vite dev server (see `playwright.config.ts`)
 - Pages MUST fetch from API, never use mock data as fallback in production
+- Use `isLxcMode()` from fixtures to conditionally skip mock-only tests
 
 ## Deployment
 

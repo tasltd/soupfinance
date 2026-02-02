@@ -49,7 +49,9 @@ test.describe('Invoice Integration Tests', () => {
     // Make direct API call to check response structure
     const response = await page.request.get('/rest/invoice/index.json', {
       headers: {
-        'X-Auth-Token': await page.evaluate(() => localStorage.getItem('access_token') || ''),
+        'X-Auth-Token': await page.evaluate(() =>
+          localStorage.getItem('access_token') || sessionStorage.getItem('access_token') || ''
+        ),
       },
     });
 

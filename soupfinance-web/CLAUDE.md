@@ -117,6 +117,26 @@ const testUsers = getTestUsers();
 await mockLoginApi(page, true, testUsers.admin);
 ```
 
+### E2E Token Retrieval (CRITICAL)
+The auth store uses **dual-storage** - ALWAYS check both:
+```typescript
+async function getAuthToken(page: any): Promise<string> {
+  return await page.evaluate(() =>
+    localStorage.getItem('access_token') || sessionStorage.getItem('access_token') || ''
+  );
+}
+```
+- `rememberMe=true` → localStorage
+- `rememberMe=false` (DEFAULT) → sessionStorage
+
+### E2E Session Handling
+Backend sessions can expire during tests. Check before asserting:
+```typescript
+const isLoginPage = await page.getByText(/session expired|sign in|welcome back/i)
+  .first().isVisible({ timeout: 3000 }).catch(() => false);
+if (isLoginPage) { console.log('Session expired'); return; }
+```
+
 ## Key Conventions
 
 ### Data Test IDs
