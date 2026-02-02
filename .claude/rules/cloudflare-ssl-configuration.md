@@ -1,18 +1,23 @@
-# Cloudflare SSL Configuration for SoupFinance
+# Apache VirtualHost Configuration for SoupFinance
 
-## Critical: Apache MUST Have SSL VirtualHost on Port 443
+## CRITICAL: Both Port 80 AND Port 443 VirtualHosts Required
 
-**Problem:** Cloudflare uses "Full (strict)" SSL mode, which means it connects to the origin server on **port 443 (HTTPS)**, NOT port 80 (HTTP).
+**Problem:** Cloudflare uses "Full (strict)" SSL mode, connecting to origin on **port 443 (HTTPS)**.
 
-If Apache only has an HTTP VirtualHost (`<VirtualHost *:80>`), Cloudflare requests will:
-- Return 404 for SPA routes like `/login`, `/register`, `/dashboard`
-- Only `/` might work if there's a default SSL vhost
+If Apache only has `<VirtualHost *:80>`, Cloudflare requests return 404 for all SPA routes.
+
+## VirtualHost Requirements Checklist
+
+| Domain | Port 80 | Port 443 | Document Root |
+|--------|---------|----------|---------------|
+| `app.soupfinance.com` | ✅ Required | ✅ **CRITICAL** | `/var/www/soupfinance` |
+| `www.soupfinance.com` | ✅ Required | ✅ **CRITICAL** | `/var/www/soupfinance-landing` |
 
 ## Architecture
 
 ```
 User Browser (HTTPS) -> Cloudflare -> Origin Server (HTTPS port 443)
-                                   -> Apache SSL VirtualHost
+                                   -> Apache SSL VirtualHost (*:443)
                                    -> /var/www/soupfinance/index.html
 ```
 
