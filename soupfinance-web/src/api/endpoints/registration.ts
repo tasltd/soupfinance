@@ -8,6 +8,13 @@
  * - Email verification required before login
  * - Business type determines initial Chart of Accounts
  *
+ * PROXY CONFIGURATION (2026-02-03):
+ * Requests go through the proxy (Vite dev / Apache prod) which:
+ * 1. Injects Api-Authorization header (identifies SoupFinance app to backend)
+ * 2. Forwards to backend (tas.soupmarkets.com in production)
+ * The Api-Authorization header allows the backend to determine the correct
+ * frontend URL (applicationUrl) for email confirmation links.
+ *
  * Endpoints:
  * - POST /account/register.json - Create tenant + admin user
  * - POST /account/confirmEmail.json - Verify email + set password
@@ -16,8 +23,10 @@
 import axios from 'axios';
 
 // Axios instance for /account/ endpoints (public, unauthenticated)
+// Uses empty baseURL so requests go through the proxy which injects Api-Authorization
+// The proxy (Vite dev / Apache prod) handles routing to the backend
 const accountApiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_URL?.replace('/rest', '') || '',
+  baseURL: '',  // Empty = relative paths go through proxy
   headers: {
     'Content-Type': 'application/json',
   },

@@ -48,11 +48,22 @@ Features: `accounting`, `auth`, `bills`, `clients`, `corporate`, `dashboard`, `i
 - **auth.ts**: Login/logout, token management, OTP verification
 - **endpoints/{domain}.ts**: Domain-specific API functions (invoices, bills, vendors, etc.)
 - **endpoints/email.ts**: Email service for sending invoices/bills/reports with PDF attachments
+- **endpoints/registration.ts**: Tenant registration (uses `/account/*` proxy, not `/rest/*`)
 
 Key patterns:
-- Backend uses `application/x-www-form-urlencoded` content type
-- Use `toFormData()` helper for POST/PUT requests
-- Nested objects with `id` are serialized as `{field}.id`
+- Backend uses `application/json` content type (migrated from form-urlencoded 2026-01)
+- Foreign keys: Use nested objects `{ vendor: { id: "uuid" } }` not `vendor.id`
+- Registration endpoints go through `/account/*` proxy which injects `Api-Authorization` header
+
+### Runtime Validation (`src/schemas/`)
+Optional Zod schemas for API response validation:
+- **base.ts**: Base entity, FK reference, enum schemas
+- **domains.ts**: Domain-specific schemas (Vendor, Invoice, Bill, etc.)
+- **validate.ts**: `validateResponse()`, `validateArray()`, `safeValidate()` utilities
+
+Validation behavior:
+- **Development**: Logs error + throws (catches issues early)
+- **Production**: Logs error only (app continues working)
 
 ### State Management (`src/stores/`)
 Zustand stores with persistence:
@@ -139,6 +150,21 @@ if (isLoginPage) { console.log('Session expired'); return; }
 
 ## Key Conventions
 
+### Documentation & Planning
+
+| Rule | Why |
+|------|-----|
+| **Backend plans in backend repo** | Put implementation plans for backend (Grails) changes in `soupmarkets-web/docs/PLAN-*.md`, not here |
+| **Frontend plans here** | Frontend-specific plans go in `docs/PLAN-*.md` in this repo |
+| **Cross-project references** | If a plan spans both, create in backend repo and reference from frontend |
+
+### Git Operations
+
+| Rule | Why |
+|------|-----|
+| **Only commit/push this repo** | When working in soupfinance-web, never commit or push changes to other projects (e.g., soupmarkets-web) |
+| **Ask before cross-repo commits** | If backend changes are needed, inform the user but let them handle commits in other repos |
+
 ### Data Test IDs
 All interactive elements have `data-testid` attributes for E2E testing:
 - Page containers: `{feature}-page`, `{feature}-list-page`
@@ -190,8 +216,11 @@ ssh -i ~/.ssh/crypttransact_rsa root@65.20.112.224
 ### Architecture
 ```
 Client -> Cloudflare (DNS/SSL) -> Apache (65.20.112.224) -> Static files
-                                                        -> /rest/* proxy to Tomcat (port 8080)
+                                                        -> /rest/* proxy to tas.soupmarkets.com
+                                                        -> /account/* proxy to tas.soupmarkets.com
 ```
+
+Apache injects `Api-Authorization: Basic {credentials}` header for all proxied requests.
 
 ## Port Configuration
 
@@ -212,3 +241,37 @@ SoupFinance uses strict domain separation:
 | `app.soupfinance.com` | Application | React SPA (this project) |
 
 **Important**: The landing page (`soupfinance-landing/`) is a separate project. Never add login forms to the landing page.
+
+## Proxy Configuration
+
+The Vite dev server (and production Apache) proxies API requests and injects authentication:
+
+| Path | Target | Headers Injected |
+|------|--------|------------------|
+| `/rest/*` | Backend (Grails) | `Api-Authorization` (API consumer credentials) |
+| `/account/*` | Backend (Grails) | `Api-Authorization` (for tenant registration) |
+| `/client/*` | Backend (Grails) | `Api-Authorization` (public client APIs) |
+
+### API Consumer Credentials
+
+| Environment | Location | Notes |
+|-------------|----------|-------|
+| **Development** | `.env.lxc.local` (git-ignored) | Copy from `.env.lxc.local.example` |
+| **Production** | Server Apache config | `/etc/apache2/sites-available/app-soupfinance-com.conf` |
+
+**NEVER commit credentials to the repo.** Development credentials go in `.env.lxc.local` which is git-ignored via `*.local` pattern.
+
+## Related Projects
+
+| Project | Location | Purpose |
+|---------|----------|---------|
+| **soupmarkets-web** | `../../../soupmarkets-web` | Grails backend (tas.soupmarkets.com) |
+| **soupfinance-landing** | `../soupfinance-landing` | Marketing site (www.soupfinance.com) |
+
+## Documentation
+
+| Document | Purpose |
+|----------|---------|
+| **[docs/api-contract-schema.md](docs/api-contract-schema.md)** | API types, structure interceptor, Zod schemas |
+| **[docs/PLAN-api-consumer-email-confirmation.md](docs/PLAN-api-consumer-email-confirmation.md)** | Email confirmation flow implementation |
+| **[docs/PLAN-corporate-registration-frontend.md](docs/PLAN-corporate-registration-frontend.md)** | Corporate registration UI plan |
