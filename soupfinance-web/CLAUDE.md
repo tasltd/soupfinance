@@ -44,7 +44,7 @@ src/features/{feature}/
 Features: `accounting`, `auth`, `bills`, `clients`, `corporate`, `dashboard`, `invoices`, `ledger`, `payments`, `reports`, `settings`, `vendors`
 
 ### API Layer (`src/api/`)
-- **client.ts**: Axios instance with X-Auth-Token authentication, auto-401 redirect
+- **client.ts**: Axios instance with X-Auth-Token authentication, auto-401 redirect, response normalization utilities
 - **auth.ts**: Login/logout, token management, OTP verification
 - **endpoints/{domain}.ts**: Domain-specific API functions (invoices, bills, vendors, etc.)
 - **endpoints/email.ts**: Email service for sending invoices/bills/reports with PDF attachments
@@ -54,6 +54,25 @@ Key patterns:
 - Backend uses `application/json` content type (migrated from form-urlencoded 2026-01)
 - Foreign keys: Use nested objects `{ vendor: { id: "uuid" } }` not `vendor.id`
 - Registration endpoints go through `/account/*` proxy which injects `Api-Authorization` header
+- Client sends `X-Api-Consumer: SOUPFINANCE` header to identify app in backend logs/Sentry
+
+### Response Normalization (`src/api/client.ts`)
+Backend can return certain fields as either objects or arrays (depending on count). Use these utilities:
+```typescript
+import { normalizeToArray, normalizeToObject, normalizeClientAccountResponse } from '../api/client';
+
+// normalizeToArray: Ensures value is always an array
+const services = normalizeToArray(response.accountServices);
+// [] if null/undefined, [item] if object, array if already array
+
+// normalizeToObject: Ensures value is an object (first item if array)
+const individual = normalizeToObject(response.individual);
+// null if empty, first item if array, object if already object
+
+// normalizeClientAccountResponse: Normalizes common fields in one call
+const normalized = normalizeClientAccountResponse(response.data);
+// Handles: accountServices (→array), portfolioAccountServicesList (→array), individual (→object)
+```
 
 ### Runtime Validation (`src/schemas/`)
 Optional Zod schemas for API response validation:
@@ -146,6 +165,19 @@ Backend sessions can expire during tests. Check before asserting:
 const isLoginPage = await page.getByText(/session expired|sign in|welcome back/i)
   .first().isVisible({ timeout: 3000 }).catch(() => false);
 if (isLoginPage) { console.log('Session expired'); return; }
+```
+
+### E2E Form Element Types
+Pay attention to form element types when writing E2E tests:
+```typescript
+// Input fields - use .fill()
+await page.getByTestId('bill-item-description-0').fill('Office supplies');
+
+// Select dropdowns - use .selectOption()
+await page.getByTestId('bill-item-taxRate-0').selectOption('10');
+
+// Currency displays - include thousand separators
+await expect(page.locator('text=$25,000.00')).toBeVisible(); // NOT $25000.00
 ```
 
 ## Key Conventions
@@ -249,8 +281,21 @@ The Vite dev server (and production Apache) proxies API requests and injects aut
 | Path | Target | Headers Injected |
 |------|--------|------------------|
 | `/rest/*` | Backend (Grails) | `Api-Authorization` (API consumer credentials) |
-| `/account/*` | Backend (Grails) | `Api-Authorization` (for tenant registration) |
+| `^/account/` | Backend (Grails) | `Api-Authorization` (for tenant registration) |
 | `/client/*` | Backend (Grails) | `Api-Authorization` (public client APIs) |
+
+### Vite Proxy Regex Patterns (IMPORTANT)
+Vite proxy uses **prefix matching** by default. Use regex patterns when there are route conflicts:
+
+```typescript
+// ❌ WRONG: /account matches /accounting/* frontend routes
+'/account': proxyConfig,
+
+// ✅ CORRECT: Use regex to only match /account/ API paths
+'^/account/': proxyConfig,
+```
+
+This prevents the proxy from intercepting frontend routes like `/accounting/transactions`.
 
 ### API Consumer Credentials
 
