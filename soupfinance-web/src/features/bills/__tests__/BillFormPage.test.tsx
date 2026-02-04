@@ -486,13 +486,13 @@ describe('BillFormPage', () => {
       await user.clear(priceInput);
       await user.type(priceInput, '100');
 
-      await user.clear(taxInput);
-      await user.type(taxInput, '10');
+      // Tax rate is a select dropdown, not an input
+      await user.selectOptions(taxInput, '10');
 
       expect((descInput as HTMLInputElement).value).toBe('Test Item');
       expect((qtyInput as HTMLInputElement).value).toBe('5');
       expect((priceInput as HTMLInputElement).value).toBe('100');
-      expect((taxInput as HTMLInputElement).value).toBe('10');
+      expect((taxInput as HTMLSelectElement).value).toBe('10');
     });
   });
 
@@ -548,8 +548,8 @@ describe('BillFormPage', () => {
       await user.clear(priceInput);
       await user.type(priceInput, '100');
 
-      await user.clear(taxInput);
-      await user.type(taxInput, '10');
+      // Tax rate is a select dropdown, not an input
+      await user.selectOptions(taxInput, '10');
 
       await waitFor(() => {
         const subtotal = screen.getByTestId('bill-subtotal');

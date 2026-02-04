@@ -1,11 +1,11 @@
 /**
  * Unit tests for API client helper functions
- * Tests toFormData and toQueryString utilities
- * 
+ * Tests toFormData, toQueryString, and response normalization utilities
+ *
  * Note: axios is mocked globally in test/setup.ts
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { toFormData, toQueryString } from '../client'
+import { toFormData, toQueryString, normalizeToArray, normalizeToObject, normalizeClientAccountResponse } from '../client'
 
 describe('API Client Helper Functions', () => {
   beforeEach(() => {
@@ -370,6 +370,166 @@ describe('API Client Helper Functions', () => {
       // Assert - X-Auth-Token contains just the token value, not "Bearer X" format
       expect(config.headers['X-Auth-Token']).toBe('my-access-token-123')
       expect(config.headers['X-Auth-Token']).not.toMatch(/^Bearer/)
+    })
+  })
+
+  // =============================================================================
+  // Response Normalization Utilities
+  // =============================================================================
+  // The soupmarkets backend can return certain fields (accountServices, individual)
+  // as either objects or arrays depending on the data. These utilities normalize
+  // the responses for consistent frontend handling.
+
+  describe('normalizeToArray', () => {
+    it('returns empty array for null', () => {
+      expect(normalizeToArray(null)).toEqual([])
+    })
+
+    it('returns empty array for undefined', () => {
+      expect(normalizeToArray(undefined)).toEqual([])
+    })
+
+    it('returns same array if already an array', () => {
+      const input = [{ id: '1' }, { id: '2' }]
+      expect(normalizeToArray(input)).toEqual(input)
+    })
+
+    it('wraps single object in array', () => {
+      const input = { id: '1', name: 'Test' }
+      expect(normalizeToArray(input)).toEqual([{ id: '1', name: 'Test' }])
+    })
+
+    it('handles empty array', () => {
+      expect(normalizeToArray([])).toEqual([])
+    })
+
+    it('handles primitive values', () => {
+      expect(normalizeToArray('string')).toEqual(['string'])
+      expect(normalizeToArray(123)).toEqual([123])
+      expect(normalizeToArray(true)).toEqual([true])
+    })
+  })
+
+  describe('normalizeToObject', () => {
+    it('returns null for null', () => {
+      expect(normalizeToObject(null)).toBeNull()
+    })
+
+    it('returns null for undefined', () => {
+      expect(normalizeToObject(undefined)).toBeNull()
+    })
+
+    it('returns same object if already an object', () => {
+      const input = { id: '1', name: 'Test' }
+      expect(normalizeToObject(input)).toEqual({ id: '1', name: 'Test' })
+    })
+
+    it('returns first item if array', () => {
+      const input = [{ id: '1', name: 'First' }, { id: '2', name: 'Second' }]
+      expect(normalizeToObject(input)).toEqual({ id: '1', name: 'First' })
+    })
+
+    it('returns null for empty array', () => {
+      expect(normalizeToObject([])).toBeNull()
+    })
+
+    it('handles array with single item', () => {
+      const input = [{ id: '1', name: 'Only' }]
+      expect(normalizeToObject(input)).toEqual({ id: '1', name: 'Only' })
+    })
+  })
+
+  describe('normalizeClientAccountResponse', () => {
+    it('normalizes accountServices from object to array', () => {
+      const input = {
+        id: '123',
+        name: 'Test Client',
+        accountServices: { id: 'svc-1', type: 'PORTFOLIO' },
+      }
+      const result = normalizeClientAccountResponse(input)
+
+      expect(result.accountServices).toEqual([{ id: 'svc-1', type: 'PORTFOLIO' }])
+      expect(result.id).toBe('123')
+      expect(result.name).toBe('Test Client')
+    })
+
+    it('keeps accountServices as array if already array', () => {
+      const input = {
+        id: '123',
+        accountServices: [{ id: 'svc-1' }, { id: 'svc-2' }],
+      }
+      const result = normalizeClientAccountResponse(input)
+
+      expect(result.accountServices).toEqual([{ id: 'svc-1' }, { id: 'svc-2' }])
+    })
+
+    it('normalizes portfolioAccountServicesList from object to array', () => {
+      const input = {
+        id: '123',
+        portfolioAccountServicesList: { id: 'pas-1', fundId: 'fund-123' },
+      }
+      const result = normalizeClientAccountResponse(input)
+
+      expect(result.portfolioAccountServicesList).toEqual([{ id: 'pas-1', fundId: 'fund-123' }])
+    })
+
+    it('normalizes individual from array to object (first item)', () => {
+      const input = {
+        id: '123',
+        individual: [{ id: 'ind-1', firstName: 'John' }],
+      }
+      const result = normalizeClientAccountResponse(input)
+
+      expect(result.individual).toEqual({ id: 'ind-1', firstName: 'John' })
+    })
+
+    it('keeps individual as object if already object', () => {
+      const input = {
+        id: '123',
+        individual: { id: 'ind-1', firstName: 'John' },
+      }
+      const result = normalizeClientAccountResponse(input)
+
+      expect(result.individual).toEqual({ id: 'ind-1', firstName: 'John' })
+    })
+
+    it('handles missing fields gracefully', () => {
+      const input = {
+        id: '123',
+        name: 'Test',
+      }
+      const result = normalizeClientAccountResponse(input)
+
+      expect(result.id).toBe('123')
+      expect(result.name).toBe('Test')
+      expect('accountServices' in result).toBe(false)
+      expect('individual' in result).toBe(false)
+    })
+
+    it('handles all fields at once', () => {
+      const input = {
+        id: '123',
+        accountServices: { id: 'svc-1' },
+        portfolioAccountServicesList: [{ id: 'pas-1' }, { id: 'pas-2' }],
+        individual: [{ id: 'ind-1', firstName: 'John' }],
+      }
+      const result = normalizeClientAccountResponse(input)
+
+      expect(result.accountServices).toEqual([{ id: 'svc-1' }])
+      expect(result.portfolioAccountServicesList).toEqual([{ id: 'pas-1' }, { id: 'pas-2' }])
+      expect(result.individual).toEqual({ id: 'ind-1', firstName: 'John' })
+    })
+
+    it('handles null values in fields', () => {
+      const input = {
+        id: '123',
+        accountServices: null,
+        individual: null,
+      }
+      const result = normalizeClientAccountResponse(input)
+
+      expect(result.accountServices).toEqual([])
+      expect(result.individual).toBeNull()
     })
   })
 })

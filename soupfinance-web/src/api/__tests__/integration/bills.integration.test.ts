@@ -1,9 +1,10 @@
 /**
  * Integration tests for bills API module
  * Tests Bill CRUD, Items, and Payments endpoints
- * with proper URL construction, query params, and FormData serialization
+ * with proper URL construction, query params, and JSON serialization
  *
  * Added: Integration test suite for bills.ts
+ * Updated: Jan 2026 - Migrated from FormData to JSON serialization
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import axios from 'axios';
@@ -23,6 +24,12 @@ vi.mock('axios', () => ({
     })),
   },
 }));
+
+// Mock CSRF token response
+const mockCsrfToken = {
+  SYNCHRONIZER_TOKEN: 'test-csrf-token-123',
+  SYNCHRONIZER_URI: '/bill/save',
+};
 
 describe('Bills API Integration', () => {
   let mockAxiosInstance: {
@@ -147,7 +154,7 @@ describe('Bills API Integration', () => {
   });
 
   describe('createBill', () => {
-    it('creates bill with FormData serialization', async () => {
+    it('creates bill with JSON serialization', async () => {
       // Arrange
       const newBill = {
         billNumber: 'BILL-003',
@@ -163,6 +170,8 @@ describe('Bills API Integration', () => {
         ...newBill,
         status: 'DRAFT',
       };
+      // Mock CSRF token fetch and POST response
+      mockAxiosInstance.get.mockResolvedValueOnce({ data: { bill: mockCsrfToken } });
       mockAxiosInstance.post.mockResolvedValue({ data: mockResponse });
 
       vi.resetModules();
@@ -171,18 +180,21 @@ describe('Bills API Integration', () => {
       // Act
       const result = await createBill(newBill);
 
-      // Assert
+      // Assert - verify CSRF token was fetched
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/bill/create.json');
+
+      // Assert - verify POST with JSON body including CSRF token
       expect(mockAxiosInstance.post).toHaveBeenCalledWith(
         '/bill/save.json',
-        expect.any(URLSearchParams)
+        expect.objectContaining({
+          billNumber: 'BILL-003',
+          vendor: { id: 'vendor-uuid-456' },
+          totalAmount: 5000.00,
+          notes: 'Office equipment',
+          SYNCHRONIZER_TOKEN: mockCsrfToken.SYNCHRONIZER_TOKEN,
+          SYNCHRONIZER_URI: mockCsrfToken.SYNCHRONIZER_URI,
+        })
       );
-
-      // Verify FormData contains correct fields including FK serialization
-      const formData = mockAxiosInstance.post.mock.calls[0][1] as URLSearchParams;
-      expect(formData.get('billNumber')).toBe('BILL-003');
-      expect(formData.get('vendor.id')).toBe('vendor-uuid-456');
-      expect(formData.get('totalAmount')).toBe('5000');
-      expect(formData.get('notes')).toBe('Office equipment');
 
       expect(result.id).toBe('new-bill-uuid');
       expect(result.status).toBe('DRAFT');
@@ -190,6 +202,7 @@ describe('Bills API Integration', () => {
 
     it('handles validation errors', async () => {
       // Arrange
+      mockAxiosInstance.get.mockResolvedValueOnce({ data: { bill: mockCsrfToken } });
       const mockError = {
         response: {
           status: 422,
@@ -207,7 +220,7 @@ describe('Bills API Integration', () => {
   });
 
   describe('updateBill', () => {
-    it('updates bill with ID in FormData', async () => {
+    it('updates bill with ID in JSON body', async () => {
       // Arrange
       const billId = 'bill-uuid-789';
       const updateData = {
@@ -216,6 +229,8 @@ describe('Bills API Integration', () => {
       };
 
       const mockResponse = { id: billId, ...updateData, status: 'PENDING' };
+      // Mock CSRF token fetch from edit endpoint
+      mockAxiosInstance.get.mockResolvedValueOnce({ data: { bill: mockCsrfToken } });
       mockAxiosInstance.put.mockResolvedValue({ data: mockResponse });
 
       vi.resetModules();
@@ -224,16 +239,19 @@ describe('Bills API Integration', () => {
       // Act
       const result = await updateBill(billId, updateData);
 
-      // Assert
+      // Assert - verify CSRF token was fetched from edit endpoint
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith(`/bill/edit/${billId}.json`);
+
+      // Assert - verify PUT with JSON body including ID and CSRF token
       expect(mockAxiosInstance.put).toHaveBeenCalledWith(
         `/bill/update/${billId}.json`,
-        expect.any(URLSearchParams)
+        expect.objectContaining({
+          id: billId,
+          notes: 'Updated bill notes',
+          SYNCHRONIZER_TOKEN: mockCsrfToken.SYNCHRONIZER_TOKEN,
+          SYNCHRONIZER_URI: mockCsrfToken.SYNCHRONIZER_URI,
+        })
       );
-
-      // Verify ID is included in FormData
-      const formData = mockAxiosInstance.put.mock.calls[0][1] as URLSearchParams;
-      expect(formData.get('id')).toBe(billId);
-      expect(formData.get('notes')).toBe('Updated bill notes');
 
       expect(result.notes).toBe('Updated bill notes');
     });
@@ -262,7 +280,7 @@ describe('Bills API Integration', () => {
   // =============================================================================
 
   describe('addBillItem', () => {
-    it('adds item to bill with FormData', async () => {
+    it('adds item to bill with JSON', async () => {
       // Arrange
       const itemData = {
         bill: { id: 'bill-uuid' },
@@ -273,6 +291,8 @@ describe('Bills API Integration', () => {
       };
 
       const mockResponse = { id: 'bill-item-uuid', ...itemData, amount: 435.00 };
+      // Mock CSRF token for billItem
+      mockAxiosInstance.get.mockResolvedValueOnce({ data: { billItem: mockCsrfToken } });
       mockAxiosInstance.post.mockResolvedValue({ data: mockResponse });
 
       vi.resetModules();
@@ -282,16 +302,17 @@ describe('Bills API Integration', () => {
       const result = await addBillItem(itemData);
 
       // Assert
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/billItem/create.json');
       expect(mockAxiosInstance.post).toHaveBeenCalledWith(
         '/billItem/save.json',
-        expect.any(URLSearchParams)
+        expect.objectContaining({
+          bill: { id: 'bill-uuid' },
+          description: 'Printer Cartridges',
+          quantity: 5,
+          unitPrice: 75.00,
+          SYNCHRONIZER_TOKEN: mockCsrfToken.SYNCHRONIZER_TOKEN,
+        })
       );
-
-      const formData = mockAxiosInstance.post.mock.calls[0][1] as URLSearchParams;
-      expect(formData.get('bill.id')).toBe('bill-uuid');
-      expect(formData.get('description')).toBe('Printer Cartridges');
-      expect(formData.get('quantity')).toBe('5');
-      expect(formData.get('unitPrice')).toBe('75');
 
       expect(result.amount).toBe(435.00);
     });
@@ -301,6 +322,7 @@ describe('Bills API Integration', () => {
     it('updates bill item', async () => {
       // Arrange
       const mockResponse = { id: 'bill-item-uuid', quantity: 10 };
+      mockAxiosInstance.get.mockResolvedValueOnce({ data: { billItem: mockCsrfToken } });
       mockAxiosInstance.put.mockResolvedValue({ data: mockResponse });
 
       vi.resetModules();
@@ -310,13 +332,15 @@ describe('Bills API Integration', () => {
       const result = await updateBillItem('bill-item-uuid', { quantity: 10 });
 
       // Assert
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/billItem/edit/bill-item-uuid.json');
       expect(mockAxiosInstance.put).toHaveBeenCalledWith(
         '/billItem/update/bill-item-uuid.json',
-        expect.any(URLSearchParams)
+        expect.objectContaining({
+          id: 'bill-item-uuid',
+          quantity: 10,
+          SYNCHRONIZER_TOKEN: mockCsrfToken.SYNCHRONIZER_TOKEN,
+        })
       );
-
-      const formData = mockAxiosInstance.put.mock.calls[0][1] as URLSearchParams;
-      expect(formData.get('id')).toBe('bill-item-uuid');
 
       expect(result.quantity).toBe(10);
     });
@@ -380,6 +404,7 @@ describe('Bills API Integration', () => {
       };
 
       const mockResponse = { id: 'payment-uuid', ...paymentData };
+      mockAxiosInstance.get.mockResolvedValueOnce({ data: { billPayment: mockCsrfToken } });
       mockAxiosInstance.post.mockResolvedValue({ data: mockResponse });
 
       vi.resetModules();
@@ -389,16 +414,17 @@ describe('Bills API Integration', () => {
       const result = await recordBillPayment(paymentData);
 
       // Assert
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/billPayment/create.json');
       expect(mockAxiosInstance.post).toHaveBeenCalledWith(
         '/billPayment/save.json',
-        expect.any(URLSearchParams)
+        expect.objectContaining({
+          bill: { id: 'bill-uuid' },
+          amount: 1500.00,
+          paymentMethod: 'CHEQUE',
+          reference: 'CHQ-98765',
+          SYNCHRONIZER_TOKEN: mockCsrfToken.SYNCHRONIZER_TOKEN,
+        })
       );
-
-      const formData = mockAxiosInstance.post.mock.calls[0][1] as URLSearchParams;
-      expect(formData.get('bill.id')).toBe('bill-uuid');
-      expect(formData.get('amount')).toBe('1500');
-      expect(formData.get('paymentMethod')).toBe('CHEQUE');
-      expect(formData.get('reference')).toBe('CHQ-98765');
 
       expect(result.id).toBe('payment-uuid');
     });

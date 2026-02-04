@@ -292,7 +292,8 @@ test.describe('Ledger Management', () => {
       // Verify account data
       await expect(page.locator('text=1000')).toBeVisible(); // Code
       await expect(page.locator('text=Cash')).toBeVisible(); // Name
-      await expect(page.locator('text=$25000.00')).toBeVisible(); // Balance
+      // Changed: Balance includes thousand separator formatting
+      await expect(page.locator('text=$25,000.00')).toBeVisible(); // Balance
     });
 
     test('can collapse and expand account groups', async ({ page }) => {
@@ -449,14 +450,15 @@ test.describe('Ledger Management', () => {
       await page.goto('/ledger/transactions');
 
       // First transaction (tx-001) is a DEBIT of $10000
+      // Changed: Balance formatting includes thousand separator
       const row1 = page.getByTestId('ledger-row-tx-001');
-      await expect(row1.locator('td').nth(4)).toContainText('$10000.00'); // Debit column
+      await expect(row1.locator('td').nth(4)).toContainText('$10,000.00'); // Debit column
       await expect(row1.locator('td').nth(5)).toContainText('-'); // Credit column should be empty
 
       // Second transaction (tx-002) is a CREDIT of $10000
       const row2 = page.getByTestId('ledger-row-tx-002');
       await expect(row2.locator('td').nth(4)).toContainText('-'); // Debit column
-      await expect(row2.locator('td').nth(5)).toContainText('$10000.00'); // Credit column
+      await expect(row2.locator('td').nth(5)).toContainText('$10,000.00'); // Credit column
     });
 
     test('shows status badges with correct styling', async ({ page }) => {

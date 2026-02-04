@@ -1,9 +1,10 @@
 /**
  * Integration tests for corporate API module
  * Tests Corporate KYC CRUD, Directors, Documents, and KYC submission endpoints
- * with proper URL construction, query params, and FormData serialization
+ * with proper URL construction, query params, and JSON serialization
  *
  * Added: Integration test suite for corporate.ts
+ * Updated: Jan 2026 - Migrated from FormData to JSON serialization
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import axios from 'axios';
@@ -57,7 +58,7 @@ describe('Corporate API Integration', () => {
   // =============================================================================
 
   describe('createCorporate', () => {
-    it('creates corporate with FormData serialization', async () => {
+    it('creates corporate with JSON serialization', async () => {
       // Arrange
       const newCorporate = {
         name: 'Acme Corporation Ltd',
@@ -79,18 +80,16 @@ describe('Corporate API Integration', () => {
       // Act
       const result = await createCorporate(newCorporate);
 
-      // Assert
+      // Assert - verify POST with JSON body
       expect(mockAxiosInstance.post).toHaveBeenCalledWith(
         '/corporate/save.json',
-        expect.any(URLSearchParams)
+        expect.objectContaining({
+          name: 'Acme Corporation Ltd',
+          certificateOfIncorporationNumber: 'COI-12345',
+          businessCategory: 'LIMITED_LIABILITY',
+          email: 'info@acmecorp.com',
+        })
       );
-
-      // Verify FormData contains correct fields
-      const formData = mockAxiosInstance.post.mock.calls[0][1] as URLSearchParams;
-      expect(formData.get('name')).toBe('Acme Corporation Ltd');
-      expect(formData.get('certificateOfIncorporationNumber')).toBe('COI-12345');
-      expect(formData.get('businessCategory')).toBe('LIMITED_LIABILITY');
-      expect(formData.get('email')).toBe('info@acmecorp.com');
 
       expect(result.id).toBe('corp-uuid-123');
       expect(result.kycStatus).toBe('PENDING');
@@ -152,7 +151,7 @@ describe('Corporate API Integration', () => {
   });
 
   describe('updateCorporate', () => {
-    it('updates corporate with ID in FormData', async () => {
+    it('updates corporate with ID in JSON body', async () => {
       // Arrange
       const corpId = 'corp-uuid-789';
       const updateData = {
@@ -169,15 +168,15 @@ describe('Corporate API Integration', () => {
       // Act
       const result = await updateCorporate(corpId, updateData);
 
-      // Assert
+      // Assert - verify PUT with JSON body including ID
       expect(mockAxiosInstance.put).toHaveBeenCalledWith(
         `/corporate/update/${corpId}.json`,
-        expect.any(URLSearchParams)
+        expect.objectContaining({
+          id: corpId,
+          address: 'Updated Address, Mombasa',
+          phoneNumber: '+254711999888',
+        })
       );
-
-      const formData = mockAxiosInstance.put.mock.calls[0][1] as URLSearchParams;
-      expect(formData.get('id')).toBe(corpId);
-      expect(formData.get('address')).toBe('Updated Address, Mombasa');
 
       expect(result.address).toBe('Updated Address, Mombasa');
     });
@@ -292,7 +291,7 @@ describe('Corporate API Integration', () => {
   });
 
   describe('addDirector', () => {
-    it('adds director with FormData serialization', async () => {
+    it('adds director with JSON serialization', async () => {
       // Arrange
       const newDirector = {
         firstName: 'Robert',
@@ -312,24 +311,23 @@ describe('Corporate API Integration', () => {
       // Act
       const result = await addDirector(newDirector);
 
-      // Assert
+      // Assert - verify POST with JSON body
       expect(mockAxiosInstance.post).toHaveBeenCalledWith(
         '/corporateAccountPerson/save.json',
-        expect.any(URLSearchParams)
+        expect.objectContaining({
+          firstName: 'Robert',
+          lastName: 'Johnson',
+          role: 'BENEFICIAL_OWNER',
+          corporate: { id: 'corp-uuid-456' },
+        })
       );
-
-      const formData = mockAxiosInstance.post.mock.calls[0][1] as URLSearchParams;
-      expect(formData.get('firstName')).toBe('Robert');
-      expect(formData.get('lastName')).toBe('Johnson');
-      expect(formData.get('role')).toBe('BENEFICIAL_OWNER');
-      expect(formData.get('corporate.id')).toBe('corp-uuid-456');
 
       expect(result.id).toBe('new-dir-uuid');
     });
   });
 
   describe('updateDirector', () => {
-    it('updates director with ID in FormData', async () => {
+    it('updates director with ID in JSON body', async () => {
       // Arrange
       const directorId = 'dir-uuid-789';
       const updateData = { phoneNumber: '+254700555666', role: 'SIGNATORY' as const };
@@ -343,15 +341,15 @@ describe('Corporate API Integration', () => {
       // Act
       const result = await updateDirector(directorId, updateData);
 
-      // Assert
+      // Assert - verify PUT with JSON body including ID
       expect(mockAxiosInstance.put).toHaveBeenCalledWith(
         `/corporateAccountPerson/update/${directorId}.json`,
-        expect.any(URLSearchParams)
+        expect.objectContaining({
+          id: directorId,
+          role: 'SIGNATORY',
+          phoneNumber: '+254700555666',
+        })
       );
-
-      const formData = mockAxiosInstance.put.mock.calls[0][1] as URLSearchParams;
-      expect(formData.get('id')).toBe(directorId);
-      expect(formData.get('role')).toBe('SIGNATORY');
 
       expect(result.role).toBe('SIGNATORY');
     });

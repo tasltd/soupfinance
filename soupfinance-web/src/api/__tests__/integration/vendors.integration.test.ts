@@ -1,9 +1,10 @@
 /**
  * Integration tests for vendors API module
  * Tests Vendor CRUD and Reports endpoints
- * with proper URL construction, query params, and FormData serialization
+ * with proper URL construction, query params, and JSON serialization
  *
  * Added: Integration test suite for vendors.ts
+ * Updated: Jan 2026 - Migrated from FormData to JSON serialization
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import axios from 'axios';
@@ -23,6 +24,12 @@ vi.mock('axios', () => ({
     })),
   },
 }));
+
+// Mock CSRF token response
+const mockCsrfToken = {
+  SYNCHRONIZER_TOKEN: 'test-csrf-token-123',
+  SYNCHRONIZER_URI: '/vendor/save',
+};
 
 describe('Vendors API Integration', () => {
   let mockAxiosInstance: {
@@ -165,7 +172,7 @@ describe('Vendors API Integration', () => {
   });
 
   describe('createVendor', () => {
-    it('creates vendor with FormData serialization', async () => {
+    it('creates vendor with JSON serialization', async () => {
       // Arrange
       const newVendor = {
         name: 'New Supplier Co',
@@ -178,6 +185,8 @@ describe('Vendors API Integration', () => {
       };
 
       const mockResponse = { id: 'new-vendor-uuid', ...newVendor };
+      // Mock CSRF token fetch (first GET) and POST response
+      mockAxiosInstance.get.mockResolvedValueOnce({ data: { vendor: mockCsrfToken } });
       mockAxiosInstance.post.mockResolvedValue({ data: mockResponse });
 
       vi.resetModules();
@@ -186,19 +195,22 @@ describe('Vendors API Integration', () => {
       // Act
       const result = await createVendor(newVendor);
 
-      // Assert
+      // Assert - verify CSRF token was fetched
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/vendor/create.json');
+
+      // Assert - verify POST with JSON body including CSRF token
       expect(mockAxiosInstance.post).toHaveBeenCalledWith(
         '/vendor/save.json',
-        expect.any(URLSearchParams)
+        expect.objectContaining({
+          name: 'New Supplier Co',
+          email: 'info@newsupplier.com',
+          phoneNumber: '+254711223344',
+          paymentTerms: 45,
+          taxIdentificationNumber: 'TIN-999888',
+          SYNCHRONIZER_TOKEN: mockCsrfToken.SYNCHRONIZER_TOKEN,
+          SYNCHRONIZER_URI: mockCsrfToken.SYNCHRONIZER_URI,
+        })
       );
-
-      // Verify FormData contains correct fields
-      const formData = mockAxiosInstance.post.mock.calls[0][1] as URLSearchParams;
-      expect(formData.get('name')).toBe('New Supplier Co');
-      expect(formData.get('email')).toBe('info@newsupplier.com');
-      expect(formData.get('phoneNumber')).toBe('+254711223344');
-      expect(formData.get('paymentTerms')).toBe('45');
-      expect(formData.get('taxIdentificationNumber')).toBe('TIN-999888');
 
       expect(result.id).toBe('new-vendor-uuid');
     });
@@ -206,6 +218,7 @@ describe('Vendors API Integration', () => {
     it('creates vendor with minimal required fields', async () => {
       // Arrange
       const minimalVendor = { name: 'Minimal Vendor' };
+      mockAxiosInstance.get.mockResolvedValueOnce({ data: { vendor: mockCsrfToken } });
       mockAxiosInstance.post.mockResolvedValue({ data: { id: 'uuid', ...minimalVendor } });
 
       vi.resetModules();
@@ -214,16 +227,18 @@ describe('Vendors API Integration', () => {
       // Act
       await createVendor(minimalVendor);
 
-      // Assert
-      const formData = mockAxiosInstance.post.mock.calls[0][1] as URLSearchParams;
-      expect(formData.get('name')).toBe('Minimal Vendor');
+      // Assert - JSON body with only name and CSRF token
+      const postData = mockAxiosInstance.post.mock.calls[0][1] as Record<string, unknown>;
+      expect(postData.name).toBe('Minimal Vendor');
+      expect(postData.SYNCHRONIZER_TOKEN).toBe(mockCsrfToken.SYNCHRONIZER_TOKEN);
       // Optional fields should not be present
-      expect(formData.has('email')).toBe(false);
-      expect(formData.has('phoneNumber')).toBe(false);
+      expect(postData.email).toBeUndefined();
+      expect(postData.phoneNumber).toBeUndefined();
     });
 
     it('handles validation errors', async () => {
       // Arrange
+      mockAxiosInstance.get.mockResolvedValueOnce({ data: { vendor: mockCsrfToken } });
       const mockError = {
         response: {
           status: 422,
@@ -241,7 +256,7 @@ describe('Vendors API Integration', () => {
   });
 
   describe('updateVendor', () => {
-    it('updates vendor with ID in FormData', async () => {
+    it('updates vendor with ID in JSON body', async () => {
       // Arrange
       const vendorId = 'vendor-uuid-456';
       const updateData = {
@@ -251,6 +266,8 @@ describe('Vendors API Integration', () => {
       };
 
       const mockResponse = { id: vendorId, ...updateData };
+      // Mock CSRF token fetch from edit endpoint
+      mockAxiosInstance.get.mockResolvedValueOnce({ data: { vendor: mockCsrfToken } });
       mockAxiosInstance.put.mockResolvedValue({ data: mockResponse });
 
       vi.resetModules();
@@ -259,26 +276,30 @@ describe('Vendors API Integration', () => {
       // Act
       const result = await updateVendor(vendorId, updateData);
 
-      // Assert
+      // Assert - verify CSRF token was fetched from edit endpoint
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith(`/vendor/edit/${vendorId}.json`);
+
+      // Assert - verify PUT with JSON body including ID and CSRF token
       expect(mockAxiosInstance.put).toHaveBeenCalledWith(
         `/vendor/update/${vendorId}.json`,
-        expect.any(URLSearchParams)
+        expect.objectContaining({
+          id: vendorId,
+          name: 'Updated Vendor Name',
+          paymentTerms: 60,
+          SYNCHRONIZER_TOKEN: mockCsrfToken.SYNCHRONIZER_TOKEN,
+          SYNCHRONIZER_URI: mockCsrfToken.SYNCHRONIZER_URI,
+        })
       );
-
-      // Verify ID is included in FormData
-      const formData = mockAxiosInstance.put.mock.calls[0][1] as URLSearchParams;
-      expect(formData.get('id')).toBe(vendorId);
-      expect(formData.get('name')).toBe('Updated Vendor Name');
-      expect(formData.get('paymentTerms')).toBe('60');
 
       expect(result.name).toBe('Updated Vendor Name');
     });
 
-    it('partial update preserves existing fields', async () => {
+    it('partial update includes only provided fields', async () => {
       // Arrange
       const vendorId = 'vendor-uuid-789';
       const partialUpdate = { notes: 'Updated notes only' };
 
+      mockAxiosInstance.get.mockResolvedValueOnce({ data: { vendor: mockCsrfToken } });
       mockAxiosInstance.put.mockResolvedValue({ data: { id: vendorId, ...partialUpdate } });
 
       vi.resetModules();
@@ -287,13 +308,14 @@ describe('Vendors API Integration', () => {
       // Act
       await updateVendor(vendorId, partialUpdate);
 
-      // Assert
-      const formData = mockAxiosInstance.put.mock.calls[0][1] as URLSearchParams;
-      expect(formData.get('id')).toBe(vendorId);
-      expect(formData.get('notes')).toBe('Updated notes only');
-      // Other fields should not be in FormData
-      expect(formData.has('name')).toBe(false);
-      expect(formData.has('email')).toBe(false);
+      // Assert - JSON body with only provided fields plus ID and CSRF
+      const putData = mockAxiosInstance.put.mock.calls[0][1] as Record<string, unknown>;
+      expect(putData.id).toBe(vendorId);
+      expect(putData.notes).toBe('Updated notes only');
+      expect(putData.SYNCHRONIZER_TOKEN).toBe(mockCsrfToken.SYNCHRONIZER_TOKEN);
+      // Other fields should not be in JSON body
+      expect(putData.name).toBeUndefined();
+      expect(putData.email).toBeUndefined();
     });
   });
 
@@ -391,6 +413,7 @@ describe('Vendors API Integration', () => {
 
     it('propagates duplicate name validation error', async () => {
       // Arrange
+      mockAxiosInstance.get.mockResolvedValueOnce({ data: { vendor: mockCsrfToken } });
       const mockError = {
         response: {
           status: 422,

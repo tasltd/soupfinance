@@ -63,10 +63,12 @@ export default defineConfig(({ mode }) => {
         // Added: Proxy for /client/* endpoints (public/unauthenticated)
         // Used by registration and other public client-facing APIs
         '/client': proxyConfig,
-        // Added: Proxy for /account/* endpoints (tenant registration)
+        // Added: Proxy for /account/* API endpoints (tenant registration)
         // Used by SoupFinance self-service registration flow
         // Proxy injects Api-Authorization header to identify app to backend
-        '/account': proxyConfig,
+        // IMPORTANT: Use regex to avoid matching /accounting/* frontend routes
+        // Vite proxy does prefix matching, so /account would match /accounting/transactions
+        '^/account/': proxyConfig,
       },
     },
   }

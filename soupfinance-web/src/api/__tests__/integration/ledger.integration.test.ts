@@ -1,9 +1,10 @@
 /**
  * Integration tests for ledger API module
  * Tests Ledger Accounts (Chart of Accounts), Transactions, and Reports endpoints
- * with proper URL construction, query params, and FormData serialization
+ * with proper URL construction, query params, and JSON serialization
  *
  * Added: Integration test suite for ledger.ts
+ * Updated: Jan 2026 - Migrated from FormData to JSON serialization
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import axios from 'axios';
@@ -23,6 +24,12 @@ vi.mock('axios', () => ({
     })),
   },
 }));
+
+// Mock CSRF token response
+const mockCsrfToken = {
+  SYNCHRONIZER_TOKEN: 'test-csrf-token-123',
+  SYNCHRONIZER_URI: '/ledgerAccount/save',
+};
 
 describe('Ledger API Integration', () => {
   let mockAxiosInstance: {
@@ -211,7 +218,7 @@ describe('Ledger API Integration', () => {
   });
 
   describe('createLedgerAccount', () => {
-    it('creates account with FormData serialization', async () => {
+    it('creates account with JSON serialization', async () => {
       // Arrange
       const newAccount = {
         code: '1030',
@@ -222,6 +229,8 @@ describe('Ledger API Integration', () => {
       };
 
       const mockResponse = { id: 'new-acc-uuid', ...newAccount, balance: 0 };
+      // Mock CSRF token fetch and POST response
+      mockAxiosInstance.get.mockResolvedValueOnce({ data: { ledgerAccount: mockCsrfToken } });
       mockAxiosInstance.post.mockResolvedValue({ data: mockResponse });
 
       vi.resetModules();
@@ -230,17 +239,21 @@ describe('Ledger API Integration', () => {
       // Act
       const result = await createLedgerAccount(newAccount);
 
-      // Assert
+      // Assert - verify CSRF token was fetched
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/ledgerAccount/create.json');
+
+      // Assert - verify POST with JSON body including CSRF token
       expect(mockAxiosInstance.post).toHaveBeenCalledWith(
         '/ledgerAccount/save.json',
-        expect.any(URLSearchParams)
+        expect.objectContaining({
+          code: '1030',
+          name: 'Petty Cash',
+          ledgerGroup: 'ASSET',
+          isActive: true,
+          SYNCHRONIZER_TOKEN: mockCsrfToken.SYNCHRONIZER_TOKEN,
+          SYNCHRONIZER_URI: mockCsrfToken.SYNCHRONIZER_URI,
+        })
       );
-
-      const formData = mockAxiosInstance.post.mock.calls[0][1] as URLSearchParams;
-      expect(formData.get('code')).toBe('1030');
-      expect(formData.get('name')).toBe('Petty Cash');
-      expect(formData.get('ledgerGroup')).toBe('ASSET');
-      expect(formData.get('isActive')).toBe('true');
 
       expect(result.id).toBe('new-acc-uuid');
     });
@@ -254,6 +267,7 @@ describe('Ledger API Integration', () => {
         parentAccount: { id: 'parent-acc-uuid' },
       };
 
+      mockAxiosInstance.get.mockResolvedValueOnce({ data: { ledgerAccount: mockCsrfToken } });
       mockAxiosInstance.post.mockResolvedValue({ data: { id: 'new-uuid', ...newAccount } });
 
       vi.resetModules();
@@ -262,18 +276,19 @@ describe('Ledger API Integration', () => {
       // Act
       await createLedgerAccount(newAccount);
 
-      // Assert - verify FK serialization
-      const formData = mockAxiosInstance.post.mock.calls[0][1] as URLSearchParams;
-      expect(formData.get('parentAccount.id')).toBe('parent-acc-uuid');
+      // Assert - verify FK serialization in JSON body
+      const postData = mockAxiosInstance.post.mock.calls[0][1] as Record<string, unknown>;
+      expect(postData.parentAccount).toEqual({ id: 'parent-acc-uuid' });
     });
   });
 
   describe('updateLedgerAccount', () => {
-    it('updates account with ID in FormData', async () => {
+    it('updates account with ID in JSON body', async () => {
       // Arrange
       const accountId = 'acc-uuid-456';
       const updateData = { name: 'Updated Cash Account', description: 'Updated description' };
 
+      mockAxiosInstance.get.mockResolvedValueOnce({ data: { ledgerAccount: mockCsrfToken } });
       mockAxiosInstance.put.mockResolvedValue({ data: { id: accountId, ...updateData } });
 
       vi.resetModules();
@@ -282,15 +297,18 @@ describe('Ledger API Integration', () => {
       // Act
       const result = await updateLedgerAccount(accountId, updateData);
 
-      // Assert
+      // Assert - verify CSRF token was fetched from edit endpoint
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith(`/ledgerAccount/edit/${accountId}.json`);
+
+      // Assert - verify PUT with JSON body including ID and CSRF token
       expect(mockAxiosInstance.put).toHaveBeenCalledWith(
         `/ledgerAccount/update/${accountId}.json`,
-        expect.any(URLSearchParams)
+        expect.objectContaining({
+          id: accountId,
+          name: 'Updated Cash Account',
+          SYNCHRONIZER_TOKEN: mockCsrfToken.SYNCHRONIZER_TOKEN,
+        })
       );
-
-      const formData = mockAxiosInstance.put.mock.calls[0][1] as URLSearchParams;
-      expect(formData.get('id')).toBe(accountId);
-      expect(formData.get('name')).toBe('Updated Cash Account');
 
       expect(result.name).toBe('Updated Cash Account');
     });
@@ -405,7 +423,7 @@ describe('Ledger API Integration', () => {
   });
 
   describe('createLedgerTransaction', () => {
-    it('creates journal entry with FormData serialization', async () => {
+    it('creates journal entry with JSON serialization', async () => {
       // Arrange
       const newTxn = {
         transactionDate: '2026-01-20',
@@ -417,6 +435,8 @@ describe('Ledger API Integration', () => {
       };
 
       const mockResponse = { id: 'new-txn-uuid', ...newTxn, status: 'PENDING' };
+      // Mock CSRF token fetch and POST response
+      mockAxiosInstance.get.mockResolvedValueOnce({ data: { ledgerTransaction: mockCsrfToken } });
       mockAxiosInstance.post.mockResolvedValue({ data: mockResponse });
 
       vi.resetModules();
@@ -425,17 +445,21 @@ describe('Ledger API Integration', () => {
       // Act
       const result = await createLedgerTransaction(newTxn);
 
-      // Assert
+      // Assert - verify CSRF token was fetched
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/ledgerTransaction/create.json');
+
+      // Assert - verify POST with JSON body including CSRF token
       expect(mockAxiosInstance.post).toHaveBeenCalledWith(
         '/ledgerTransaction/save.json',
-        expect.any(URLSearchParams)
+        expect.objectContaining({
+          transactionDate: '2026-01-20',
+          debitAccount: { id: 'expense-acc-uuid' },
+          creditAccount: { id: 'cash-acc-uuid' },
+          amount: 10000,
+          SYNCHRONIZER_TOKEN: mockCsrfToken.SYNCHRONIZER_TOKEN,
+          SYNCHRONIZER_URI: mockCsrfToken.SYNCHRONIZER_URI,
+        })
       );
-
-      const formData = mockAxiosInstance.post.mock.calls[0][1] as URLSearchParams;
-      expect(formData.get('transactionDate')).toBe('2026-01-20');
-      expect(formData.get('debitAccount.id')).toBe('expense-acc-uuid');
-      expect(formData.get('creditAccount.id')).toBe('cash-acc-uuid');
-      expect(formData.get('amount')).toBe('10000');
 
       expect(result.id).toBe('new-txn-uuid');
       expect(result.status).toBe('PENDING');
@@ -584,6 +608,7 @@ describe('Ledger API Integration', () => {
   describe('Error handling', () => {
     it('propagates validation errors for duplicate account codes', async () => {
       // Arrange
+      mockAxiosInstance.get.mockResolvedValueOnce({ data: { ledgerAccount: mockCsrfToken } });
       const mockError = {
         response: {
           status: 422,

@@ -61,11 +61,12 @@ describe('API Client Integration', () => {
       vi.resetModules();
       await import('../../client');
 
-      // Assert
+      // Assert - migrated from FormData to JSON content type
       expect(axios.create).toHaveBeenCalledWith(
         expect.objectContaining({
           headers: expect.objectContaining({
-            'Content-Type': 'application/x-www-form-urlencoded',
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
           }),
           timeout: 30000,
         })

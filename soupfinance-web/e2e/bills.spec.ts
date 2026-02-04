@@ -625,7 +625,8 @@ test.describe('Bill Management', () => {
       await page.getByTestId('bill-item-description-0').fill('Test Service');
       await page.getByTestId('bill-item-quantity-0').fill('5');
       await page.getByTestId('bill-item-unitPrice-0').fill('100');
-      await page.getByTestId('bill-item-taxRate-0').fill('10');
+      // Changed: taxRate is now a select dropdown, not an input field
+      await page.getByTestId('bill-item-taxRate-0').selectOption('10');
 
       await takeScreenshot(page, 'bills-form-with-line-item');
     });
@@ -667,10 +668,11 @@ test.describe('Bill Management', () => {
       // Fill in line item (Qty: 10 × Price: $50 = $500, Tax 10% = $50, Total = $550)
       await page.getByTestId('bill-item-quantity-0').fill('10');
       await page.getByTestId('bill-item-unitPrice-0').fill('50');
-      await page.getByTestId('bill-item-taxRate-0').fill('10');
+      // Changed: taxRate is now a select dropdown, not an input field
+      await page.getByTestId('bill-item-taxRate-0').selectOption('10');
 
-      // Trigger calculation (blur event)
-      await page.getByTestId('bill-item-taxRate-0').blur();
+      // Trigger calculation (blur event on unit price since selectOption auto-triggers change)
+      await page.getByTestId('bill-item-unitPrice-0').blur();
 
       // Verify totals are calculated
       await expect(page.getByTestId('bill-subtotal')).toContainText('500');
