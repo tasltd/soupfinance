@@ -7,7 +7,7 @@
  * - Account Persons (directors, signatories)
  * - Account configuration
  */
-import apiClient, { toFormData, toQueryString } from '../client';
+import apiClient, { toQueryString } from '../client';
 import type {
   Agent,
   AgentFormData,
@@ -40,7 +40,7 @@ export interface ListParams {
 // ============================================================================
 
 /**
- * Transform AgentFormData to backend format
+ * Transform AgentFormData to backend JSON format
  */
 function transformAgentData(data: AgentFormData): Record<string, unknown> {
   const transformed: Record<string, unknown> = {
@@ -51,19 +51,19 @@ function transformAgentData(data: AgentFormData): Record<string, unknown> {
     address: data.address,
   };
 
-  // Handle user access (login credentials)
-  if (data.username) {
-    transformed['userAccess.username'] = data.username;
-  }
-  if (data.password) {
-    transformed['userAccess.password'] = data.password;
+  // Handle user access (login credentials) as nested object
+  if (data.username || data.password) {
+    transformed.userAccess = {
+      ...(data.username && { username: data.username }),
+      ...(data.password && { password: data.password }),
+    };
   }
 
-  // Handle roles as authorities
+  // Handle roles as authorities array
   if (data.roles && data.roles.length > 0) {
-    data.roles.forEach((roleAuthority, index) => {
-      transformed[`authorities[${index}].authority`] = roleAuthority;
-    });
+    transformed.authorities = data.roles.map((roleAuthority) => ({
+      authority: roleAuthority,
+    }));
   }
 
   return transformed;
@@ -101,7 +101,7 @@ export const agentApi = {
    */
   create: async (data: AgentFormData): Promise<Agent> => {
     const transformed = transformAgentData(data);
-    const response = await apiClient.post<Agent>('/agent/save.json', toFormData(transformed));
+    const response = await apiClient.post<Agent>('/agent/save.json', transformed);
     return response.data;
   },
 
@@ -110,7 +110,7 @@ export const agentApi = {
    */
   update: async (id: string, data: AgentFormData): Promise<Agent> => {
     const transformed = { id, ...transformAgentData(data) };
-    const response = await apiClient.put<Agent>('/agent/update.json', toFormData(transformed));
+    const response = await apiClient.put<Agent>('/agent/update.json', transformed);
     return response.data;
   },
 
@@ -125,7 +125,7 @@ export const agentApi = {
    * Update agent password/access credentials
    */
   updatePassword: async (id: string, password: string): Promise<void> => {
-    await apiClient.put(`/agent/updateAccess/${id}`, toFormData({ password }));
+    await apiClient.put(`/agent/updateAccess/${id}`, { password });
   },
 };
 
@@ -134,7 +134,7 @@ export const agentApi = {
 // ============================================================================
 
 /**
- * Transform AccountBankDetailsFormData to backend format
+ * Transform AccountBankDetailsFormData to backend JSON format
  */
 function transformBankDetailsData(data: AccountBankDetailsFormData): Record<string, unknown> {
   const transformed: Record<string, unknown> = {
@@ -147,16 +147,16 @@ function transformBankDetailsData(data: AccountBankDetailsFormData): Record<stri
     defaultClientEquityAccount: data.defaultClientEquityAccount,
   };
 
-  // Handle bank reference
+  // Handle bank reference as nested object
   if (data.bankId) {
-    transformed['bank.id'] = data.bankId;
+    transformed.bank = { id: data.bankId };
   } else if (data.bankForOtherOption) {
     transformed.bankForOtherOption = data.bankForOtherOption;
   }
 
-  // Handle ledger account link
+  // Handle ledger account link as nested object
   if (data.ledgerAccountId) {
-    transformed['ledgerAccount.id'] = data.ledgerAccountId;
+    transformed.ledgerAccount = { id: data.ledgerAccountId };
   }
 
   return transformed;
@@ -189,7 +189,7 @@ export const accountBankDetailsApi = {
     const transformed = transformBankDetailsData(data);
     const response = await apiClient.post<AccountBankDetails>(
       '/accountBankDetails/save.json',
-      toFormData(transformed)
+      transformed
     );
     return response.data;
   },
@@ -201,7 +201,7 @@ export const accountBankDetailsApi = {
     const transformed = { id, ...transformBankDetailsData(data) };
     const response = await apiClient.put<AccountBankDetails>(
       '/accountBankDetails/update.json',
-      toFormData(transformed)
+      transformed
     );
     return response.data;
   },
@@ -219,7 +219,7 @@ export const accountBankDetailsApi = {
 // ============================================================================
 
 /**
- * Transform AccountPersonFormData to backend format
+ * Transform AccountPersonFormData to backend JSON format
  */
 function transformAccountPersonData(data: AccountPersonFormData): Record<string, unknown> {
   return {
@@ -266,7 +266,7 @@ export const accountPersonApi = {
     const transformed = transformAccountPersonData(data);
     const response = await apiClient.post<AccountPerson>(
       '/accountPerson/save.json',
-      toFormData(transformed)
+      transformed
     );
     return response.data;
   },
@@ -278,7 +278,7 @@ export const accountPersonApi = {
     const transformed = { id, ...transformAccountPersonData(data) };
     const response = await apiClient.put<AccountPerson>(
       '/accountPerson/update.json',
-      toFormData(transformed)
+      transformed
     );
     return response.data;
   },
@@ -336,7 +336,7 @@ export const accountSettingsApi = {
    * Update account settings
    */
   update: async (data: Partial<AccountSettings>): Promise<AccountSettings> => {
-    const response = await apiClient.put<AccountSettings>('/account/update.json', toFormData(data));
+    const response = await apiClient.put<AccountSettings>('/account/update.json', data);
     return response.data;
   },
 };

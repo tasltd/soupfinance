@@ -1,8 +1,12 @@
 /**
  * Bill (Expenses) API endpoints
  * Maps to soupmarkets-web /rest/bill/* endpoints
+ *
+ * CSRF Token Pattern:
+ * POST/PUT/DELETE operations require CSRF token from create.json or edit.json endpoint.
+ * The TokenWithFormInterceptor adds SYNCHRONIZER_TOKEN and SYNCHRONIZER_URI to these responses.
  */
-import apiClient, { toFormData, toQueryString } from '../client';
+import apiClient, { toQueryString, getCsrfToken, getCsrfTokenForEdit } from '../client';
 import type { Bill, BillItem, BillPayment, ListParams } from '../../types';
 
 const BASE_URL = '/bill';
@@ -33,20 +37,39 @@ export async function getBill(id: string): Promise<Bill> {
 /**
  * Create new bill
  * POST /rest/bill/save.json
+ *
+ * CSRF Token Required: Calls create.json first to get SYNCHRONIZER_TOKEN
  */
 export async function createBill(data: Partial<Bill>): Promise<Bill> {
-  const formData = toFormData(data as Record<string, unknown>);
-  const response = await apiClient.post<Bill>(`${BASE_URL}/save.json`, formData);
+  // Step 1: Get CSRF token from create endpoint
+  const csrf = await getCsrfToken('bill');
+
+  // Step 2: Include CSRF token in JSON body
+  const response = await apiClient.post<Bill>(`${BASE_URL}/save.json`, {
+    ...data,
+    SYNCHRONIZER_TOKEN: csrf.SYNCHRONIZER_TOKEN,
+    SYNCHRONIZER_URI: csrf.SYNCHRONIZER_URI,
+  });
   return response.data;
 }
 
 /**
  * Update existing bill
  * PUT /rest/bill/update/:id.json
+ *
+ * CSRF Token Required: Calls edit.json first to get SYNCHRONIZER_TOKEN
  */
 export async function updateBill(id: string, data: Partial<Bill>): Promise<Bill> {
-  const formData = toFormData({ ...data, id } as Record<string, unknown>);
-  const response = await apiClient.put<Bill>(`${BASE_URL}/update/${id}.json`, formData);
+  // Step 1: Get CSRF token from edit endpoint
+  const csrf = await getCsrfTokenForEdit('bill', id);
+
+  // Step 2: Include CSRF token in JSON body
+  const response = await apiClient.put<Bill>(`${BASE_URL}/update/${id}.json`, {
+    ...data,
+    id,
+    SYNCHRONIZER_TOKEN: csrf.SYNCHRONIZER_TOKEN,
+    SYNCHRONIZER_URI: csrf.SYNCHRONIZER_URI,
+  });
   return response.data;
 }
 
@@ -65,20 +88,39 @@ export async function deleteBill(id: string): Promise<void> {
 /**
  * Add item to bill
  * POST /rest/billItem/save.json
+ *
+ * CSRF Token Required: Calls create.json first to get SYNCHRONIZER_TOKEN
  */
 export async function addBillItem(data: Partial<BillItem>): Promise<BillItem> {
-  const formData = toFormData(data as Record<string, unknown>);
-  const response = await apiClient.post<BillItem>('/billItem/save.json', formData);
+  // Step 1: Get CSRF token from create endpoint
+  const csrf = await getCsrfToken('billItem');
+
+  // Step 2: Include CSRF token in JSON body
+  const response = await apiClient.post<BillItem>('/billItem/save.json', {
+    ...data,
+    SYNCHRONIZER_TOKEN: csrf.SYNCHRONIZER_TOKEN,
+    SYNCHRONIZER_URI: csrf.SYNCHRONIZER_URI,
+  });
   return response.data;
 }
 
 /**
  * Update bill item
  * PUT /rest/billItem/update/:id.json
+ *
+ * CSRF Token Required: Calls edit.json first to get SYNCHRONIZER_TOKEN
  */
 export async function updateBillItem(id: string, data: Partial<BillItem>): Promise<BillItem> {
-  const formData = toFormData({ ...data, id } as Record<string, unknown>);
-  const response = await apiClient.put<BillItem>(`/billItem/update/${id}.json`, formData);
+  // Step 1: Get CSRF token from edit endpoint
+  const csrf = await getCsrfTokenForEdit('billItem', id);
+
+  // Step 2: Include CSRF token in JSON body
+  const response = await apiClient.put<BillItem>(`/billItem/update/${id}.json`, {
+    ...data,
+    id,
+    SYNCHRONIZER_TOKEN: csrf.SYNCHRONIZER_TOKEN,
+    SYNCHRONIZER_URI: csrf.SYNCHRONIZER_URI,
+  });
   return response.data;
 }
 
@@ -119,10 +161,19 @@ export async function listBillPayments(billId: string): Promise<BillPayment[]> {
 /**
  * Record payment against bill
  * POST /rest/billPayment/save.json
+ *
+ * CSRF Token Required: Calls create.json first to get SYNCHRONIZER_TOKEN
  */
 export async function recordBillPayment(data: Partial<BillPayment>): Promise<BillPayment> {
-  const formData = toFormData(data as Record<string, unknown>);
-  const response = await apiClient.post<BillPayment>('/billPayment/save.json', formData);
+  // Step 1: Get CSRF token from create endpoint
+  const csrf = await getCsrfToken('billPayment');
+
+  // Step 2: Include CSRF token in JSON body
+  const response = await apiClient.post<BillPayment>('/billPayment/save.json', {
+    ...data,
+    SYNCHRONIZER_TOKEN: csrf.SYNCHRONIZER_TOKEN,
+    SYNCHRONIZER_URI: csrf.SYNCHRONIZER_URI,
+  });
   return response.data;
 }
 

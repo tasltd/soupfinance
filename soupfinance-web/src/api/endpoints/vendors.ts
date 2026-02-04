@@ -1,8 +1,12 @@
 /**
  * Vendor API endpoints
  * Maps to soupmarkets-web /rest/vendor/* endpoints
+ *
+ * CSRF Token Pattern:
+ * POST/PUT/DELETE operations require CSRF token from create.json or edit.json endpoint.
+ * The TokenWithFormInterceptor adds SYNCHRONIZER_TOKEN and SYNCHRONIZER_URI to these responses.
  */
-import apiClient, { toFormData, toQueryString } from '../client';
+import apiClient, { toQueryString, getCsrfToken, getCsrfTokenForEdit } from '../client';
 import type { Vendor, ListParams } from '../../types';
 
 const BASE_URL = '/vendor';
@@ -33,20 +37,39 @@ export async function getVendor(id: string): Promise<Vendor> {
 /**
  * Create new vendor
  * POST /rest/vendor/save.json
+ *
+ * CSRF Token Required: Calls create.json first to get SYNCHRONIZER_TOKEN
  */
 export async function createVendor(data: Partial<Vendor>): Promise<Vendor> {
-  const formData = toFormData(data as Record<string, unknown>);
-  const response = await apiClient.post<Vendor>(`${BASE_URL}/save.json`, formData);
+  // Step 1: Get CSRF token from create endpoint
+  const csrf = await getCsrfToken('vendor');
+
+  // Step 2: Include CSRF token in JSON body
+  const response = await apiClient.post<Vendor>(`${BASE_URL}/save.json`, {
+    ...data,
+    SYNCHRONIZER_TOKEN: csrf.SYNCHRONIZER_TOKEN,
+    SYNCHRONIZER_URI: csrf.SYNCHRONIZER_URI,
+  });
   return response.data;
 }
 
 /**
  * Update existing vendor
  * PUT /rest/vendor/update/:id.json
+ *
+ * CSRF Token Required: Calls edit.json first to get SYNCHRONIZER_TOKEN
  */
 export async function updateVendor(id: string, data: Partial<Vendor>): Promise<Vendor> {
-  const formData = toFormData({ ...data, id } as Record<string, unknown>);
-  const response = await apiClient.put<Vendor>(`${BASE_URL}/update/${id}.json`, formData);
+  // Step 1: Get CSRF token from edit endpoint
+  const csrf = await getCsrfTokenForEdit('vendor', id);
+
+  // Step 2: Include CSRF token in JSON body
+  const response = await apiClient.put<Vendor>(`${BASE_URL}/update/${id}.json`, {
+    ...data,
+    id,
+    SYNCHRONIZER_TOKEN: csrf.SYNCHRONIZER_TOKEN,
+    SYNCHRONIZER_URI: csrf.SYNCHRONIZER_URI,
+  });
   return response.data;
 }
 

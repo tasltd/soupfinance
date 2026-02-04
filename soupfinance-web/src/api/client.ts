@@ -311,7 +311,7 @@ export function normalizeToObject<T>(value: T | T[] | null | undefined): T | nul
  * // normalized.individual is always an object or null
  */
 export function normalizeClientAccountResponse<T extends Record<string, unknown>>(data: T): T {
-  const normalized = { ...data };
+  const normalized = { ...data } as Record<string, unknown>;
 
   // Normalize accountServices to always be an array
   if ('accountServices' in normalized) {
@@ -328,5 +328,5 @@ export function normalizeClientAccountResponse<T extends Record<string, unknown>
     normalized.individual = normalizeToObject(normalized.individual);
   }
 
-  return normalized;
+  return normalized as T;
 }

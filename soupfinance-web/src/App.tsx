@@ -1,6 +1,11 @@
 /**
  * SoupFinance Main Application
  * Sets up routing, query client, and global providers
+ *
+ * Frontend error logging:
+ * - FrontendLoggerService captures console errors, unhandled JS errors, and promise rejections
+ * - ErrorBoundary catches React component errors
+ * - All errors are sent to backend at /rest/frontendLog/batch.json with [SOUPFINANCE] tag
  */
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -8,6 +13,12 @@ import { useEffect } from 'react';
 
 // Added: i18n initialization - must be imported before any component that uses translations
 import './i18n';
+
+// Frontend error logging - must be imported early to capture errors during initialization
+import { frontendLogger } from './utils/frontendLogger';
+
+// React Error Boundary - catches component errors
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 // Stores
 import { useAuthStore, useUIStore, useAccountStore } from './stores';
@@ -155,6 +166,17 @@ export default function App() {
   const fetchAccountSettings = useAccountStore((state) => state.fetchSettings);
   const accountInitialized = useAccountStore((state) => state.isInitialized);
 
+  // Initialize frontend logger on mount - captures console errors, JS errors, and promise rejections
+  // This sends all errors to backend at /rest/frontendLog/batch.json with [SOUPFINANCE] tag
+  useEffect(() => {
+    frontendLogger.initialize();
+
+    // Cleanup on unmount
+    return () => {
+      frontendLogger.destroy();
+    };
+  }, []);
+
   // Initialize auth state on mount
   // Changed: Now async - validates token with server
   useEffect(() => {
@@ -179,11 +201,12 @@ export default function App() {
   }, [darkMode]);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <ToastProvider>
-        <BrowserRouter>
-          <Routes>
-          {/* Public routes */}
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <ToastProvider>
+          <BrowserRouter>
+            <Routes>
+            {/* Public routes */}
           <Route element={<AuthLayout />}>
             <Route
               path="/login"
@@ -290,11 +313,12 @@ export default function App() {
             </Route>
           </Route>
 
-          {/* Catch all */}
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
-          </Routes>
-        </BrowserRouter>
-      </ToastProvider>
-    </QueryClientProvider>
+            {/* Catch all */}
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            </Routes>
+          </BrowserRouter>
+        </ToastProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }

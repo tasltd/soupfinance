@@ -17,7 +17,7 @@
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:report": "playwright show-report",
     "test:e2e:lxc": "playwright test --config=playwright.lxc.config.ts",
-    "test:e2e:lxc:integration": "playwright test --config=playwright.lxc.config.ts e2e/integration/",
+    "test:e2e:lxc:all": "TEST_MODE=lxc playwright test --config=playwright.lxc.config.ts --test-dir=e2e --test-match='**/*.spec.ts'",
     "test:e2e:lxc:headed": "playwright test --config=playwright.lxc.config.ts --headed",
     "test:e2e:lxc:report": "playwright show-report playwright-report-lxc",
     "storybook": "storybook dev -p 6006",

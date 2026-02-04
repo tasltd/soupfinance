@@ -26,11 +26,13 @@ import { defineConfig, devices } from '@playwright/test';
 process.env.TEST_MODE = 'lxc';
 
 export default defineConfig({
-  // Test directory
-  testDir: './e2e',
+  // Test directory - only run integration tests by default
+  // Integration tests are designed to work with real LXC backend
+  // Use 'npx playwright test --config=playwright.lxc.config.ts e2e/' to run all tests
+  testDir: './e2e/integration',
 
-  // Test file pattern
-  testMatch: '**/*.spec.ts',
+  // Test file pattern - integration specs only
+  testMatch: '**/*.integration.spec.ts',
 
   // Changed: Longer timeout for real API calls (60 seconds)
   timeout: 60 * 1000,

@@ -5,8 +5,12 @@
  * Added: Voucher support for payment/receipt workflows
  * Added: LedgerTransactionGroup support for balanced journal entries
  * Added: Journal entry creation with multiple line items
+ *
+ * CSRF Token Pattern:
+ * POST/PUT/DELETE operations require CSRF token from create.json or edit.json endpoint.
+ * The TokenWithFormInterceptor adds SYNCHRONIZER_TOKEN and SYNCHRONIZER_URI to these responses.
  */
-import apiClient, { toFormData, toQueryString } from '../client';
+import apiClient, { toQueryString, getCsrfToken, getCsrfTokenForEdit } from '../client';
 import type {
   LedgerAccount,
   LedgerTransaction,
@@ -56,20 +60,39 @@ export async function getLedgerAccount(id: string): Promise<LedgerAccount> {
 /**
  * Create new ledger account
  * POST /rest/ledgerAccount/save.json
+ *
+ * CSRF Token Required: Calls create.json first to get SYNCHRONIZER_TOKEN
  */
 export async function createLedgerAccount(data: Partial<LedgerAccount>): Promise<LedgerAccount> {
-  const formData = toFormData(data as Record<string, unknown>);
-  const response = await apiClient.post<LedgerAccount>('/ledgerAccount/save.json', formData);
+  // Step 1: Get CSRF token from create endpoint
+  const csrf = await getCsrfToken('ledgerAccount');
+
+  // Step 2: Include CSRF token in JSON body
+  const response = await apiClient.post<LedgerAccount>('/ledgerAccount/save.json', {
+    ...data,
+    SYNCHRONIZER_TOKEN: csrf.SYNCHRONIZER_TOKEN,
+    SYNCHRONIZER_URI: csrf.SYNCHRONIZER_URI,
+  });
   return response.data;
 }
 
 /**
  * Update existing ledger account
  * PUT /rest/ledgerAccount/update/:id.json
+ *
+ * CSRF Token Required: Calls edit.json first to get SYNCHRONIZER_TOKEN
  */
 export async function updateLedgerAccount(id: string, data: Partial<LedgerAccount>): Promise<LedgerAccount> {
-  const formData = toFormData({ ...data, id } as Record<string, unknown>);
-  const response = await apiClient.put<LedgerAccount>(`/ledgerAccount/update/${id}.json`, formData);
+  // Step 1: Get CSRF token from edit endpoint
+  const csrf = await getCsrfTokenForEdit('ledgerAccount', id);
+
+  // Step 2: Include CSRF token in JSON body
+  const response = await apiClient.put<LedgerAccount>(`/ledgerAccount/update/${id}.json`, {
+    ...data,
+    id,
+    SYNCHRONIZER_TOKEN: csrf.SYNCHRONIZER_TOKEN,
+    SYNCHRONIZER_URI: csrf.SYNCHRONIZER_URI,
+  });
   return response.data;
 }
 
@@ -111,10 +134,19 @@ export async function getLedgerTransaction(id: string): Promise<LedgerTransactio
 /**
  * Create new ledger transaction (journal entry)
  * POST /rest/ledgerTransaction/save.json
+ *
+ * CSRF Token Required: Calls create.json first to get SYNCHRONIZER_TOKEN
  */
 export async function createLedgerTransaction(data: Partial<LedgerTransaction>): Promise<LedgerTransaction> {
-  const formData = toFormData(data as Record<string, unknown>);
-  const response = await apiClient.post<LedgerTransaction>('/ledgerTransaction/save.json', formData);
+  // Step 1: Get CSRF token from create endpoint
+  const csrf = await getCsrfToken('ledgerTransaction');
+
+  // Step 2: Include CSRF token in JSON body
+  const response = await apiClient.post<LedgerTransaction>('/ledgerTransaction/save.json', {
+    ...data,
+    SYNCHRONIZER_TOKEN: csrf.SYNCHRONIZER_TOKEN,
+    SYNCHRONIZER_URI: csrf.SYNCHRONIZER_URI,
+  });
   return response.data;
 }
 
@@ -213,10 +245,15 @@ export async function getVoucher(id: string): Promise<Voucher> {
  *
  * Note: Voucher and underlying LedgerTransaction share the same ID.
  * The backend creates both atomically using a foreign key generator.
+ *
+ * CSRF Token Required: Calls create.json first to get SYNCHRONIZER_TOKEN
  */
 export async function createVoucher(data: CreateVoucherRequest): Promise<Voucher> {
-  // Added: Transform request to Grails-compatible FormData with nested field names
-  const formDataObj: Record<string, unknown> = {
+  // Step 1: Get CSRF token from create endpoint
+  const csrf = await getCsrfToken('voucher');
+
+  // Step 2: Build JSON body with nested objects for foreign keys
+  const body: Record<string, unknown> = {
     voucherType: data.voucherType,
     voucherTo: data.voucherTo,
     voucherDate: data.voucherDate,
@@ -224,48 +261,48 @@ export async function createVoucher(data: CreateVoucherRequest): Promise<Voucher
     description: data.description,
     reference: data.reference,
     beneficiaryName: data.beneficiaryName,
+    SYNCHRONIZER_TOKEN: csrf.SYNCHRONIZER_TOKEN,
+    SYNCHRONIZER_URI: csrf.SYNCHRONIZER_URI,
   };
 
-  // Added: FK references use dot notation for Grails data binding
-  if (data.clientId) formDataObj['client.id'] = data.clientId;
-  if (data.vendorId) formDataObj['vendor.id'] = data.vendorId;
-  if (data.staffId) formDataObj['staff.id'] = data.staffId;
-  if (data.cashAccountId) formDataObj['cashAccount.id'] = data.cashAccountId;
-  if (data.expenseAccountId) formDataObj['expenseAccount.id'] = data.expenseAccountId;
-  if (data.incomeAccountId) formDataObj['incomeAccount.id'] = data.incomeAccountId;
+  // FK references as nested objects for JSON binding
+  if (data.clientId) body.client = { id: data.clientId };
+  if (data.vendorId) body.vendor = { id: data.vendorId };
+  if (data.staffId) body.staff = { id: data.staffId };
+  if (data.cashAccountId) body.cashAccount = { id: data.cashAccountId };
+  if (data.expenseAccountId) body.expenseAccount = { id: data.expenseAccountId };
+  if (data.incomeAccountId) body.incomeAccount = { id: data.incomeAccountId };
 
-  const formData = toFormData(formDataObj);
-  const response = await apiClient.post<Voucher>('/voucher/save.json', formData);
+  const response = await apiClient.post<Voucher>('/voucher/save.json', body);
   return response.data;
 }
 
 /**
  * Update existing voucher
  * PUT /rest/voucher/update/:id.json
+ *
+ * CSRF Token Required: Calls edit.json first to get SYNCHRONIZER_TOKEN
  */
 export async function updateVoucher(id: string, data: Partial<CreateVoucherRequest>): Promise<Voucher> {
-  const formDataObj: Record<string, unknown> = { id, ...data };
+  // Step 1: Get CSRF token from edit endpoint
+  const csrf = await getCsrfTokenForEdit('voucher', id);
 
-  // Added: FK references use dot notation
-  if (data.clientId) {
-    formDataObj['client.id'] = data.clientId;
-    delete formDataObj.clientId;
-  }
-  if (data.vendorId) {
-    formDataObj['vendor.id'] = data.vendorId;
-    delete formDataObj.vendorId;
-  }
-  if (data.cashAccountId) {
-    formDataObj['cashAccount.id'] = data.cashAccountId;
-    delete formDataObj.cashAccountId;
-  }
-  if (data.expenseAccountId) {
-    formDataObj['expenseAccount.id'] = data.expenseAccountId;
-    delete formDataObj.expenseAccountId;
-  }
+  // Step 2: Build JSON body with nested objects for foreign keys
+  const { clientId, vendorId, cashAccountId, expenseAccountId, ...rest } = data;
+  const body: Record<string, unknown> = {
+    id,
+    ...rest,
+    SYNCHRONIZER_TOKEN: csrf.SYNCHRONIZER_TOKEN,
+    SYNCHRONIZER_URI: csrf.SYNCHRONIZER_URI,
+  };
 
-  const formData = toFormData(formDataObj);
-  const response = await apiClient.put<Voucher>(`/voucher/update/${id}.json`, formData);
+  // FK references as nested objects for JSON binding
+  if (clientId) body.client = { id: clientId };
+  if (vendorId) body.vendor = { id: vendorId };
+  if (cashAccountId) body.cashAccount = { id: cashAccountId };
+  if (expenseAccountId) body.expenseAccount = { id: expenseAccountId };
+
+  const response = await apiClient.put<Voucher>(`/voucher/update/${id}.json`, body);
   return response.data;
 }
 
@@ -337,35 +374,33 @@ export async function getTransactionGroup(id: string): Promise<LedgerTransaction
  *
  * This creates a LedgerTransactionGroup with multiple LedgerTransaction entries.
  * Total debits must equal total credits for the entry to be valid.
+ *
+ * CSRF Token Required: Calls create.json first to get SYNCHRONIZER_TOKEN
  */
 export async function createJournalEntry(data: CreateJournalEntryRequest): Promise<LedgerTransactionGroup> {
-  // Added: Transform journal entry to Grails-compatible format with indexed fields
-  const formDataObj: Record<string, unknown> = {
+  // Step 1: Get CSRF token from create endpoint
+  const csrf = await getCsrfToken('ledgerTransaction');
+
+  // Step 2: Build JSON body with array of line items
+  const ledgerTransactionList = data.lines.map((line) => ({
+    ledgerAccount: { id: line.accountId },
+    transactionDate: data.entryDate,
+    description: line.description || data.description,
+    amount: line.debitAmount > 0 ? line.debitAmount : line.creditAmount,
+    transactionState: line.debitAmount > 0 ? 'DEBIT' : 'CREDIT',
+    journalEntryType: 'SINGLE_ENTRY',
+  }));
+
+  const body = {
     groupDate: data.entryDate,
     description: data.description,
     reference: data.reference,
+    ledgerTransactionList,
+    SYNCHRONIZER_TOKEN: csrf.SYNCHRONIZER_TOKEN,
+    SYNCHRONIZER_URI: csrf.SYNCHRONIZER_URI,
   };
 
-  // Added: Each line item uses indexed notation for Grails list binding
-  // Format: ledgerTransactionList[0].accountId, ledgerTransactionList[0].debitAmount, etc.
-  data.lines.forEach((line, index) => {
-    formDataObj[`ledgerTransactionList[${index}].ledgerAccount.id`] = line.accountId;
-    formDataObj[`ledgerTransactionList[${index}].transactionDate`] = data.entryDate;
-    formDataObj[`ledgerTransactionList[${index}].description`] = line.description || data.description;
-
-    // Added: For double-entry, we use SINGLE_ENTRY mode where each line has either debit or credit
-    if (line.debitAmount > 0) {
-      formDataObj[`ledgerTransactionList[${index}].amount`] = line.debitAmount;
-      formDataObj[`ledgerTransactionList[${index}].transactionState`] = 'DEBIT';
-    } else {
-      formDataObj[`ledgerTransactionList[${index}].amount`] = line.creditAmount;
-      formDataObj[`ledgerTransactionList[${index}].transactionState`] = 'CREDIT';
-    }
-    formDataObj[`ledgerTransactionList[${index}].journalEntryType`] = 'SINGLE_ENTRY';
-  });
-
-  const formData = toFormData(formDataObj);
-  const response = await apiClient.post<LedgerTransactionGroup>('/ledgerTransaction/saveMultiple.json', formData);
+  const response = await apiClient.post<LedgerTransactionGroup>('/ledgerTransaction/saveMultiple.json', body);
   return response.data;
 }
 

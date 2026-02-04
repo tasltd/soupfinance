@@ -3,7 +3,7 @@
  * Maps to soupmarkets-web /rest/corporate/* endpoints
  * Handles corporate KYC onboarding flow
  */
-import apiClient, { toFormData, toQueryString } from '../client';
+import apiClient, { toQueryString } from '../client';
 import type { Corporate, CorporateAccountPerson, CorporateDocuments, ListParams } from '../../types';
 
 const CORPORATE_URL = '/corporate';
@@ -19,8 +19,7 @@ const DOCUMENTS_URL = '/corporateDocuments';
  * POST /rest/corporate/save.json
  */
 export async function createCorporate(data: Partial<Corporate>): Promise<Corporate> {
-  const formData = toFormData(data as Record<string, unknown>);
-  const response = await apiClient.post<Corporate>(`${CORPORATE_URL}/save.json`, formData);
+  const response = await apiClient.post<Corporate>(`${CORPORATE_URL}/save.json`, data);
   return response.data;
 }
 
@@ -38,8 +37,7 @@ export async function getCorporate(id: string): Promise<Corporate> {
  * PUT /rest/corporate/update/:id.json
  */
 export async function updateCorporate(id: string, data: Partial<Corporate>): Promise<Corporate> {
-  const formData = toFormData({ ...data, id } as Record<string, unknown>);
-  const response = await apiClient.put<Corporate>(`${CORPORATE_URL}/update/${id}.json`, formData);
+  const response = await apiClient.put<Corporate>(`${CORPORATE_URL}/update/${id}.json`, { ...data, id });
   return response.data;
 }
 
@@ -86,8 +84,7 @@ export async function getDirector(id: string): Promise<CorporateAccountPerson> {
  * POST /rest/corporateAccountPerson/save.json
  */
 export async function addDirector(data: Partial<CorporateAccountPerson>): Promise<CorporateAccountPerson> {
-  const formData = toFormData(data as Record<string, unknown>);
-  const response = await apiClient.post<CorporateAccountPerson>(`${PERSON_URL}/save.json`, formData);
+  const response = await apiClient.post<CorporateAccountPerson>(`${PERSON_URL}/save.json`, data);
   return response.data;
 }
 
@@ -96,8 +93,7 @@ export async function addDirector(data: Partial<CorporateAccountPerson>): Promis
  * PUT /rest/corporateAccountPerson/update/:id.json
  */
 export async function updateDirector(id: string, data: Partial<CorporateAccountPerson>): Promise<CorporateAccountPerson> {
-  const formData = toFormData({ ...data, id } as Record<string, unknown>);
-  const response = await apiClient.put<CorporateAccountPerson>(`${PERSON_URL}/update/${id}.json`, formData);
+  const response = await apiClient.put<CorporateAccountPerson>(`${PERSON_URL}/update/${id}.json`, { ...data, id });
   return response.data;
 }
 

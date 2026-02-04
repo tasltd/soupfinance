@@ -11,7 +11,7 @@
  * - INDIVIDUAL: Person with firstName, lastName
  * - CORPORATE: Company with companyName, contactPerson
  */
-import apiClient, { toFormData, toQueryString } from '../client';
+import apiClient, { toQueryString } from '../client';
 import type { ListParams } from '../../types';
 
 const BASE_URL = '/invoiceClient';
@@ -74,9 +74,6 @@ export interface InvoiceClientInput {
   contactPerson?: string;
   registrationNumber?: string;
   taxNumber?: string;
-
-  // Index signature for toFormData compatibility
-  [key: string]: unknown;
 }
 
 // =============================================================================
@@ -107,8 +104,7 @@ export async function getClient(id: string): Promise<InvoiceClient> {
  * POST /rest/invoiceClient/save.json
  */
 export async function createClient(data: InvoiceClientInput): Promise<InvoiceClient> {
-  const formData = toFormData(data);
-  const response = await apiClient.post<InvoiceClient>(`${BASE_URL}/save.json`, formData);
+  const response = await apiClient.post<InvoiceClient>(`${BASE_URL}/save.json`, data);
   return response.data;
 }
 
@@ -117,8 +113,7 @@ export async function createClient(data: InvoiceClientInput): Promise<InvoiceCli
  * PUT /rest/invoiceClient/update/:id.json
  */
 export async function updateClient(id: string, data: Partial<InvoiceClientInput>): Promise<InvoiceClient> {
-  const formData = toFormData({ ...data, id });
-  const response = await apiClient.put<InvoiceClient>(`${BASE_URL}/update/${id}.json`, formData);
+  const response = await apiClient.put<InvoiceClient>(`${BASE_URL}/update/${id}.json`, { ...data, id });
   return response.data;
 }
 
