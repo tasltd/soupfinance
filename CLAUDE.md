@@ -17,6 +17,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | E2E tests | `cd soupfinance-web && npm run test:e2e` |
 | E2E single file | `cd soupfinance-web && npm run test:e2e -- e2e/auth.spec.ts` |
 | E2E against LXC | `cd soupfinance-web && npm run test:e2e:lxc` |
+| E2E all (LXC) | `cd soupfinance-web && npm run test:e2e:lxc:all` |
+| E2E integration only | `cd soupfinance-web && npx playwright test --config=playwright.lxc.config.ts e2e/integration/` |
+| E2E report | `cd soupfinance-web && npm run test:e2e:report` |
 | Test coverage | `cd soupfinance-web && npm run test:coverage` |
 | Preview build | `cd soupfinance-web && npm run preview` |
 | Storybook | `cd soupfinance-web && npm run storybook` |
@@ -38,7 +41,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `soupfinance-designs/` | HTML mockups (114 screens) | Design reference only |
 | `plans/` | Architecture plans and backend change requests | Implementation plans |
 | `prd/` | Product Requirements Documents | Modular PRD (see `PRD.md` for index) |
-| `docs/` | API contract schemas, frontend implementation plans | `PLAN-*.md` files |
+| `docs/` | User journeys, validation reports | Reference documentation |
 | `scripts/` | Utility scripts | `get-issues.sh` (symlink to shared scripts) |
 
 **Tech Stack:** React 19 · TypeScript · Vite 7 · TailwindCSS v4 · Zustand (state) · TanStack Query (data) · React Hook Form + Zod (forms) · Recharts (charts) · Axios (HTTP) · Vitest + Playwright (tests) · Storybook 10 · i18next (4 languages: en/de/fr/nl, 12 namespaces)
@@ -206,13 +209,14 @@ Both the Vite dev server and production Apache proxy API requests to the Grails 
 | Mock interactive | `npm run test:e2e:ui` | Playwright UI |
 | LXC backend | `npm run test:e2e:lxc` | `playwright.lxc.config.ts` |
 | LXC headed | `npm run test:e2e:lxc:headed` | Same, with browser UI |
-| LXC all tests | `npm run test:e2e:lxc:all` | All tests against real backend |
+| LXC all tests | `npm run test:e2e:lxc:all` | All tests (mock + integration) against real backend |
 
 **Key patterns:**
 - Auth token dual-storage: ALWAYS check both `localStorage` and `sessionStorage` (`rememberMe=true` → localStorage, default → sessionStorage)
 - Use `isLxcMode()` from fixtures to conditionally skip mock-only tests
 - Use `data-testid` attributes: `{feature}-page`, `{feature}-form`, `{feature}-submit-button`, `{feature}-table`
 - Handle session expiry in LXC mode before asserting
+- Integration tests live in `e2e/integration/` and follow `*.integration.spec.ts` naming (only run against LXC backend)
 
 ### Test Credentials (LXC Backend)
 
@@ -270,7 +274,7 @@ source env-variables.sh && ./gradlew assembleDeployToSoupfinance
 4. Include dark mode variants (`dark:` prefix)
 5. Add i18n keys to all 4 language files in `src/i18n/locales/{lang}/`
 6. Backend changes needed? Create a plan in `plans/` — do NOT modify backend directly
-7. Frontend-specific plans go in `docs/PLAN-*.md`; backend plans go in the `soupmarkets-web` repo
+7. All implementation plans (frontend and backend) go in `plans/`; backend-specific plans also go in the `soupmarkets-web` repo
 
 ## Git
 

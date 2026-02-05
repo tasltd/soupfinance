@@ -22,7 +22,7 @@ npm run test:run -- src/features/invoices/__tests__/InvoiceFormPage.test.tsx  # 
 npm run test:e2e         # Run with mocks (port 5180)
 npm run test:e2e:headed  # Run with browser UI
 npm run test:e2e:lxc     # Run against real LXC backend
-npm run test:e2e:lxc:integration  # Integration tests only
+npm run test:e2e:lxc:all # All tests (mock + integration) against LXC
 
 # Deployment
 ./deploy/deploy-to-production.sh   # Deploy to app.soupfinance.com
@@ -186,9 +186,9 @@ await expect(page.locator('text=$25,000.00')).toBeVisible(); // NOT $25000.00
 
 | Rule | Why |
 |------|-----|
-| **Backend plans in backend repo** | Put implementation plans for backend (Grails) changes in `soupmarkets-web/docs/PLAN-*.md`, not here |
-| **Frontend plans here** | Frontend-specific plans go in `docs/PLAN-*.md` in this repo |
-| **Cross-project references** | If a plan spans both, create in backend repo and reference from frontend |
+| **All plans in `plans/`** | Implementation plans (frontend and backend) go in `../plans/` |
+| **Backend plans also in backend repo** | Backend-specific (Grails) change plans also go in `soupmarkets-web/docs/` |
+| **Cross-project references** | If a plan spans both, create in backend repo and reference from `plans/` |
 
 ### Git Operations
 
@@ -313,10 +313,10 @@ This prevents the proxy from intercepting frontend routes like `/accounting/tran
 | **soupmarkets-web** | `../../../soupmarkets-web` | Grails backend (tas.soupmarkets.com) |
 | **soupfinance-landing** | `../soupfinance-landing` | Marketing site (www.soupfinance.com) |
 
-## Documentation
+## Related Documentation
 
 | Document | Purpose |
 |----------|---------|
-| **[docs/api-contract-schema.md](docs/api-contract-schema.md)** | API types, structure interceptor, Zod schemas |
-| **[docs/PLAN-api-consumer-email-confirmation.md](docs/PLAN-api-consumer-email-confirmation.md)** | Email confirmation flow implementation |
-| **[docs/PLAN-corporate-registration-frontend.md](docs/PLAN-corporate-registration-frontend.md)** | Corporate registration UI plan |
+| **[../plans/](../plans/)** | Implementation plans and backend change requests |
+| **[../prd/](../prd/)** | Product Requirements Documents (see `../PRD.md` for index) |
+| **[../docs/USER-JOURNEYS.md](../docs/USER-JOURNEYS.md)** | User journey documentation |
