@@ -53,14 +53,8 @@ export const logger = {
 };
 ```
 
-#### 1.2 Add Request Header for Backend Identification
-```typescript
-// In apiClient interceptor - add X-Api-Consumer header
-apiClient.interceptors.request.use((config) => {
-  config.headers['X-Api-Consumer'] = 'SOUPFINANCE';
-  // ... existing token logic
-});
-```
+#### 1.2 Backend App Identification
+The backend identifies the app via the `Api-Authorization` header injected by the proxy. The `ApiAuthenticatorInterceptor` resolves the authenticated `ApiConsumer` name — no separate client header is needed.
 
 #### 1.3 Add Request/Response Logging
 ```typescript
@@ -412,7 +406,7 @@ src/
 
 ### Phase 1: Foundation (Priority: CRITICAL) ✅
 1. ✅ Create logger utility with SoupFinance tags
-2. ✅ Update apiClient with X-Api-Consumer header and logging
+2. ✅ Update apiClient with logging (app identified via proxy Api-Authorization header)
 3. ✅ Add Settings types
 4. ✅ Add Settings API endpoints
 
@@ -440,7 +434,7 @@ src/
 - `/rest/accountBankDetails/*` - Bank accounts
 - `/rest/ledgerAccount/*` - For dropdown selection
 
-**Note**: The backend should log the `X-Api-Consumer` header value in its access logs.
+**Note**: The backend identifies the app via the authenticated `ApiConsumer` name from the `Api-Authorization` header (injected by the proxy).
 
 ---
 
@@ -465,7 +459,7 @@ src/
 
 ### Logging
 - [ ] Verify logs show [SOUPFINANCE] tags
-- [ ] Verify X-Api-Consumer header sent to backend
+- [ ] Verify backend resolves ApiConsumer name from proxy Api-Authorization header
 
 ### E2E Tests
 - [ ] settings.spec.ts - User list page tests

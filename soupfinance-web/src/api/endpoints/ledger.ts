@@ -405,6 +405,43 @@ export async function createJournalEntry(data: CreateJournalEntryRequest): Promi
 }
 
 /**
+ * Update an existing journal entry (multi-line balanced transaction)
+ * PUT /rest/ledgerTransactionGroup/update/:id.json
+ *
+ * Updates the LedgerTransactionGroup and its LedgerTransaction entries.
+ * Only PENDING (draft) entries can be updated.
+ *
+ * CSRF Token Required: Calls edit.json first to get SYNCHRONIZER_TOKEN
+ */
+export async function updateJournalEntry(id: string, data: CreateJournalEntryRequest): Promise<LedgerTransactionGroup> {
+  // Step 1: Get CSRF token from edit endpoint
+  const csrf = await getCsrfTokenForEdit('ledgerTransactionGroup', id);
+
+  // Step 2: Build JSON body with array of line items
+  const ledgerTransactionList = data.lines.map((line) => ({
+    ledgerAccount: { id: line.accountId },
+    transactionDate: data.entryDate,
+    description: line.description || data.description,
+    amount: line.debitAmount > 0 ? line.debitAmount : line.creditAmount,
+    transactionState: line.debitAmount > 0 ? 'DEBIT' : 'CREDIT',
+    journalEntryType: 'SINGLE_ENTRY',
+  }));
+
+  const body = {
+    id,
+    groupDate: data.entryDate,
+    description: data.description,
+    reference: data.reference,
+    ledgerTransactionList,
+    SYNCHRONIZER_TOKEN: csrf.SYNCHRONIZER_TOKEN,
+    SYNCHRONIZER_URI: csrf.SYNCHRONIZER_URI,
+  };
+
+  const response = await apiClient.put<LedgerTransactionGroup>(`/ledgerTransactionGroup/update/${id}.json`, body);
+  return response.data;
+}
+
+/**
  * Post a pending transaction group to ledger
  * POST /rest/ledgerTransactionGroup/post/:id.json
  */

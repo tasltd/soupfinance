@@ -33,6 +33,11 @@ import { LoginPage } from './features/auth/LoginPage';
 import { VerifyPage } from './features/auth/VerifyPage';
 // Added (2026-01-30): Email confirmation page for tenant registration
 import { ConfirmEmailPage } from './features/auth/ConfirmEmailPage';
+// Resend confirmation email page
+import { ResendConfirmationPage } from './features/auth/ResendConfirmationPage';
+// Forgot password and reset password pages
+import { ForgotPasswordPage } from './features/auth/ForgotPasswordPage';
+import { ResetPasswordPage } from './features/auth/ResetPasswordPage';
 
 // Dashboard
 import { DashboardPage } from './features/dashboard/DashboardPage';
@@ -138,10 +143,13 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 function PublicRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const isInitialized = useAuthStore((state) => state.isInitialized);
-  const isLoading = useAuthStore((state) => state.isLoading);
 
-  // Added: Show loading while initializing auth
-  if (!isInitialized || isLoading) {
+  // Show loading only during initialization (token validation), NOT during
+  // active login attempts. The login form manages its own loading state.
+  // isInitialized stays false until initialize() completes, so this
+  // properly blocks during token validation without unmounting the form
+  // when authStore.login() sets isLoading: true.
+  if (!isInitialized) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background-light dark:bg-background-dark">
         <div className="flex flex-col items-center gap-4">
@@ -222,6 +230,12 @@ export default function App() {
             <Route path="/verify" element={<VerifyPage />} />
             {/* Added (2026-01-30): Email Confirmation (public - for tenant registration) */}
             <Route path="/confirm-email" element={<ConfirmEmailPage />} />
+            {/* Resend confirmation email (public - accessible from registration success and login error) */}
+            <Route path="/resend-confirmation" element={<ResendConfirmationPage />} />
+            {/* Forgot password (public - accessible from login page) */}
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            {/* Reset password (public - accessed via email link with token query param) */}
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
           </Route>
 
           {/* Protected routes */}

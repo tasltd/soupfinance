@@ -8,44 +8,51 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 |------|---------|
 | Get issues | `./scripts/get-issues.sh --project SOUPFINANCE --markdown` |
 | Dev server | `cd soupfinance-web && npm run dev` |
+| Dev with backend | `cd soupfinance-web && npm run dev:lxc` |
+| Build | `cd soupfinance-web && npm run build` |
+| Lint | `cd soupfinance-web && npm run lint` |
 | Unit tests | `cd soupfinance-web && npm run test:run` |
+| Single test file | `cd soupfinance-web && npx vitest run src/path/to/test.ts` |
+| Test by name | `cd soupfinance-web && npx vitest run -t "test name"` |
 | E2E tests | `cd soupfinance-web && npm run test:e2e` |
+| E2E single file | `cd soupfinance-web && npm run test:e2e -- e2e/auth.spec.ts` |
+| E2E against LXC | `cd soupfinance-web && npm run test:e2e:lxc` |
+| Test coverage | `cd soupfinance-web && npm run test:coverage` |
+| Preview build | `cd soupfinance-web && npm run preview` |
 | Storybook | `cd soupfinance-web && npm run storybook` |
+| Build Storybook | `cd soupfinance-web && npm run build-storybook` |
 | Start backend | `cd backend && ./tomcat-control.sh start` |
+| Backend status | `cd backend && ./tomcat-control.sh status` |
+| Deploy frontend | `cd soupfinance-web && ./deploy/deploy-to-production.sh` |
+| Deploy landing | `cd soupfinance-landing && ./deploy-landing.sh` |
 
 ## Project Overview
 
 **SoupFinance** is a corporate accounting/invoicing platform (React frontend + Grails backend). Part of the Soupmarkets ecosystem.
 
-| Component | Purpose |
-|-----------|---------|
-| `soupfinance-web/` | React 19 + TypeScript + Vite 7 + TailwindCSS v4 (main app) |
-| `soupfinance-landing/` | Static HTML marketing site for www.soupfinance.com |
-| `backend/` | LXC container with Grails WAR for local development |
-| `soupfinance-designs/` | HTML mockups (114 screens) - design reference only |
+| Component | Purpose | Details |
+|-----------|---------|---------|
+| `soupfinance-web/` | React 19 + TypeScript + Vite 7 + TailwindCSS v4 | Main app — see `soupfinance-web/CLAUDE.md` for detailed patterns |
+| `soupfinance-landing/` | Static HTML marketing site | www.soupfinance.com — see `soupfinance-landing/CLAUDE.md` |
+| `backend/` | LXC container with Grails WAR | Local development backend |
+| `soupfinance-designs/` | HTML mockups (114 screens) | Design reference only |
+| `plans/` | Architecture plans and backend change requests | Implementation plans |
+| `prd/` | Product Requirements Documents | Modular PRD (see `PRD.md` for index) |
+| `docs/` | API contract schemas, frontend implementation plans | `PLAN-*.md` files |
+| `scripts/` | Utility scripts | `get-issues.sh` (symlink to shared scripts) |
 
-## Tenant Architecture (CRITICAL)
-
-**Tenant-per-Account model:** Each customer gets their own `Account` (not Corporate entities in a shared tenant).
-
-| Flow | Endpoint | Notes |
-|------|----------|-------|
-| Registration | `POST /account/register.json` | Creates Account + Agent + SbUser |
-| Email Confirm | `POST /account/confirmEmail.json` | Sets password, enables user |
-| Invoice Clients | `/rest/invoiceClient/*` | NOT `/rest/client/*` (investment clients) |
-
-**Business Types:** TRADING (inventory/COGS) or SERVICES (labor expenses, no inventory)
+**Tech Stack:** React 19 · TypeScript · Vite 7 · TailwindCSS v4 · Zustand (state) · TanStack Query (data) · React Hook Form + Zod (forms) · Recharts (charts) · Axios (HTTP) · Vitest + Playwright (tests) · Storybook 10 · i18next (4 languages: en/de/fr/nl, 12 namespaces)
 
 ---
 
 ## Critical Rules (MUST READ)
 
-| Rule | Location | Summary |
-|------|----------|---------|
+| Rule | File | Summary |
+|------|------|---------|
 | **Tenant Architecture** | [plans/soupfinance-tenant-architecture-refactor.md](plans/soupfinance-tenant-architecture-refactor.md) | Tenant-per-Account: Registration creates new `Account`, NOT Corporate |
 | **Domain Architecture** | [.claude/rules/soupfinance-domain-architecture.md](.claude/rules/soupfinance-domain-architecture.md) | `www.soupfinance.com` = landing (NO login), `app.soupfinance.com` = React app |
 | **Backend Tenant** | [.claude/rules/soupfinance-backend-tenant.md](.claude/rules/soupfinance-backend-tenant.md) | Uses TAS tenant at `tas.soupmarkets.com`, registration via `/account/*` |
-| **Backend Changes** | [.claude/rules/backend-changes-workflow.md](.claude/rules/backend-changes-workflow.md) | Do NOT modify backend directly; create plans in `.claude/plans/` |
+| **Backend Changes** | [.claude/rules/backend-changes-workflow.md](.claude/rules/backend-changes-workflow.md) | Do NOT modify backend directly; create plans in `plans/` |
 | **Gradle Concurrency** | [.claude/rules/gradle-concurrent-tasks.md](.claude/rules/gradle-concurrent-tasks.md) | NEVER run concurrent Gradle tasks in same project |
 | **Port Configuration** | [.claude/rules/port-configuration.md](.claude/rules/port-configuration.md) | Vite 5173, E2E 5180, Storybook 6006, Backend 9090 |
 | **Design System** | [.claude/rules/soupfinance-design-system.md](.claude/rules/soupfinance-design-system.md) | Tailwind v4 tokens, Manrope font, Material Symbols icons |
@@ -53,53 +60,176 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | **E2E Testing** | [.claude/rules/e2e-testing-patterns.md](.claude/rules/e2e-testing-patterns.md) | Token from sessionStorage (not localStorage), dual-storage strategy |
 | **Deployment** | [.claude/rules/soupfinance-deployment.md](.claude/rules/soupfinance-deployment.md) | SSH key `crypttransact_rsa` required, NOT id_rsa |
 | **Deployment Restrictions** | [.claude/rules/deployment-restrictions.md](.claude/rules/deployment-restrictions.md) | **NEVER** deploy to Soupmarkets prod IPs; only soupfinance frontend/landing |
-| **Cloudflare SSL** | [.claude/rules/cloudflare-ssl-configuration.md](.claude/rules/cloudflare-ssl-configuration.md) | **CRITICAL**: Apache MUST have SSL VirtualHost on port 443 for Cloudflare |
+| **Cloudflare SSL** | [.claude/rules/cloudflare-ssl-configuration.md](.claude/rules/cloudflare-ssl-configuration.md) | Apache MUST have SSL VirtualHost on port 443 for Cloudflare |
 | **Server VHosts** | [.claude/rules/production-server-vhosts.md](.claude/rules/production-server-vhosts.md) | All Apache VHost configs for 65.20.112.224, proxy routes, SSL certs |
 
-## Quick Commands
+---
 
-### React App (soupfinance-web/)
+## Tenant Architecture (CRITICAL)
 
-```bash
-cd soupfinance-web
+**Tenant-per-Account model:** Each customer gets their own `Account` (not Corporate entities in a shared tenant).
 
-# Development
-npm install && npm run dev              # Start dev server (port 5173, mock/no backend)
-npm run dev:lxc                         # Dev against LXC backend (uses .env.lxc)
-npm run build                           # Production build (runs tsc -b first)
-npm run preview                         # Preview production build locally
-npm run lint                            # ESLint
+**Business Types:** TRADING (inventory/COGS) or SERVICES (labor expenses, no inventory)
 
-# Unit/Integration Tests (Vitest)
-npm run test                            # Watch mode
-npm run test:run                        # CI mode
-npm run test:coverage                   # With coverage report
-npx vitest run src/api/__tests__/client.test.ts    # Single file
-npx vitest run -t "should attach Bearer token"    # By name
+| Flow | Endpoint | Notes |
+|------|----------|-------|
+| Registration | `POST /account/register.json` | Creates Account + Agent + SbUser |
+| Email Confirm | `POST /account/confirmEmail.json` | Sets password, enables user |
+| Invoice Clients | `/rest/invoiceClient/*` | NOT `/rest/client/*` (investment clients) |
 
-# E2E Tests (Playwright) - port 5180
-npm run test:e2e                        # Headless with mocks
-npm run test:e2e:headed                 # With browser UI
-npm run test:e2e:ui                     # Interactive Playwright UI
-npm run test:e2e -- e2e/auth.spec.ts    # Single file
+---
 
-# E2E against LXC backend (real API, no mocks)
-npm run test:e2e:lxc                    # Headless (integration tests only)
-npm run test:e2e:lxc:headed             # With browser UI
-npm run test:e2e:lxc:all                # ALL tests against LXC (including mock tests)
-npm run test:e2e:report                 # View last mock E2E report
-npm run test:e2e:lxc:report             # View last LXC E2E report
+## Architecture
 
-# Storybook (component docs)
-npm run storybook                       # Port 6006
-npm run build-storybook                 # Build static docs
+### Frontend Structure (`soupfinance-web/src/`)
+
+```
+api/                    # Axios client + endpoint modules
+├── client.ts          # Base instance, auth interceptors, CSRF helpers, response normalization
+└── endpoints/         # Feature-specific: invoices, bills, vendors, ledger, corporate, reports, etc.
+components/
+├── layout/            # MainLayout, AuthLayout, SideNav, TopNav
+├── forms/             # Input, Select, Textarea, Checkbox, Radio, DatePicker
+├── feedback/          # AlertBanner, Spinner, Toast, Tooltip, ToastProvider
+├── tables/            # Data table components
+└── ErrorBoundary.tsx  # Global React error boundary
+features/              # Page components by domain (auth, dashboard, invoices, bills, vendors,
+│                      #   payments, ledger, accounting, reports, clients, corporate, settings)
+hooks/                 # usePdf, useEmailSend, useDashboardStats, useLedgerAccounts, useTransactions
+i18n/                  # 4 languages (en, de, fr, nl), 12 namespaces
+schemas/               # Zod runtime validation (dev: throw, prod: log only)
+stores/                # Zustand: authStore, uiStore, accountStore (currency/company settings)
+types/                 # TypeScript interfaces mirroring Grails domains
+utils/                 # frontendLogger (sends errors to /rest/frontendLog/batch.json), logger
+App.tsx                # Routes + providers (ProtectedRoute, PublicRoute wrappers)
 ```
 
-### Local Backend (LXC)
+### API Patterns (CRITICAL)
+
+| Pattern | Detail |
+|---------|--------|
+| **Auth Header** | `X-Auth-Token: {token}` (NOT Bearer) |
+| **Login** | POST `/rest/api/login` with JSON body |
+| **Data Content-Type** | `application/json` for all requests |
+| **Token Validation** | GET `/rest/user/current.json` on app mount |
+| **Invoice Clients** | `/rest/invoiceClient/*` (NOT `/rest/client/*` which is for investment clients) |
+| **CSRF Token** | **REQUIRED** for all POST/PUT/DELETE - fetch from `create.json`/`edit.json` first |
+| **Foreign Keys** | Use nested objects `{ vendor: { id: "uuid" } }` not `vendor.id` |
+| **Registration** | Goes through `/account/*` proxy (not `/rest/*`) |
+| **App Identification** | Backend identifies the app via the `Api-Authorization` header injected by the proxy (ApiAuthenticatorInterceptor resolves the ApiConsumer name) |
+
+#### Grails REST URL Pattern
+
+```
+GET    /rest/{controller}/index.json         # List (paginated)
+GET    /rest/{controller}/show/{id}.json     # Read
+GET    /rest/{controller}/create.json        # Get CSRF token (for new)
+GET    /rest/{controller}/edit/{id}.json     # Get CSRF token (for update)
+POST   /rest/{controller}/save.json          # Create
+PUT    /rest/{controller}/update/{id}.json   # Update
+DELETE /rest/{controller}/delete/{id}.json   # Delete (soft)
+```
+
+#### CSRF Token Flow
+
+1. GET `/rest/{controller}/create.json` → response includes `SYNCHRONIZER_TOKEN` + `SYNCHRONIZER_URI`
+2. Include both in subsequent POST/PUT/DELETE JSON body
+3. For updates: call `edit.json` instead of `create.json`
+4. Without token, POST returns 302 redirect (not JSON)
+5. Use `getCsrfToken()` / `getCsrfTokenForEdit()` helpers from `client.ts`
+
+#### File/Image Upload
+
+Backend `SoupBrokerFileUtilityService` accepts three formats for any `SoupBrokerFile` property:
+- **Base64 String**: `logo: "data:image/png;base64,..."` (auto-detected via `Base64.isBase64()`)
+- **Public URL**: `logo: "https://example.com/logo.png"` (backend downloads it)
+- **MultipartFile**: Standard multipart form upload with `{fieldName}File` convention
+
+#### Response Normalization
+
+Backend can return fields as either objects or arrays. Use helpers from `client.ts`:
+- `normalizeToArray(value)` → always returns array
+- `normalizeToObject(value)` → always returns object (first item if array)
+- `normalizeClientAccountResponse(data)` → normalizes common response fields
+
+#### Module-Prefixed Controllers
+
+Some controllers have module prefixes: `/rest/finance/bill/*`, `/rest/trading/vendor/*`, `/rest/kyc/corporate/*`
+
+Available modules: `trading`, `finance`, `funds`, `setting`, `tools`, `sales`, `kyc`, `clients`, `admin`, `staff`
+
+#### API Quirks
+
+- `/rest/sbUser/index.json` requires `?sort=id` (default sort not available)
+- Finance reports: Use `/rest/financeReports/*` (NOT `/rest/report/*` which returns 404)
+- `/rest/bill/index.json` may return 302 — needs `Accept: application/json` header
+
+### Proxy Configuration & Api-Authorization
+
+Both the Vite dev server and production Apache proxy API requests to the Grails backend. The proxy injects an `Api-Authorization: Basic base64(consumerId:secret)` header on **all** proxied paths. This authenticates the app as an `ApiConsumer` with the backend's `ApiAuthenticatorInterceptor` — the secret never reaches the browser.
+
+| Path | Target | Notes |
+|------|--------|-------|
+| `/rest/*` | Backend (Grails) | Main API |
+| `^/account/` | Backend | Tenant registration (regex to avoid matching `/accounting/*`) |
+| `/client/*` | Backend | Public client APIs |
+
+| Environment | Where credentials live |
+|-------------|----------------------|
+| Development | `.env.lxc.local` (git-ignored) — `VITE_API_CONSUMER_ID` + `VITE_API_CONSUMER_SECRET` |
+| Production | Apache VHost config on 65.20.112.224 (`RequestHeader set Api-Authorization ...`) |
+
+### Routing Conventions
+
+- REST-style: `/invoices`, `/invoices/new`, `/invoices/:id`, `/invoices/:id/edit`
+- `ProtectedRoute`: Requires auth, validates token on mount, shows loading while initializing
+- `PublicRoute`: Redirects to dashboard if authenticated
+- Settings nested: `/settings/users`, `/settings/bank-accounts`, `/settings/account`
+
+---
+
+## Testing
+
+### Unit Tests (Vitest + React Testing Library)
+
+- Axios globally mocked in `src/test/setup.ts` — no real HTTP in unit tests
+- Render with `QueryClientProvider` + `MemoryRouter` wrappers
+- Mock API at module level: `vi.mock('../../../api/endpoints/invoices', ...)`
+- Mock hooks when needed: `vi.mock('../../../hooks', ...)`
+
+### E2E Tests (Playwright)
+
+| Mode | Command | Config |
+|------|---------|--------|
+| Mock (default) | `npm run test:e2e` | `playwright.config.ts` (port 5180) |
+| Mock headed | `npm run test:e2e:headed` | Same, with browser UI |
+| Mock interactive | `npm run test:e2e:ui` | Playwright UI |
+| LXC backend | `npm run test:e2e:lxc` | `playwright.lxc.config.ts` |
+| LXC headed | `npm run test:e2e:lxc:headed` | Same, with browser UI |
+| LXC all tests | `npm run test:e2e:lxc:all` | All tests against real backend |
+
+**Key patterns:**
+- Auth token dual-storage: ALWAYS check both `localStorage` and `sessionStorage` (`rememberMe=true` → localStorage, default → sessionStorage)
+- Use `isLxcMode()` from fixtures to conditionally skip mock-only tests
+- Use `data-testid` attributes: `{feature}-page`, `{feature}-form`, `{feature}-submit-button`, `{feature}-table`
+- Handle session expiry in LXC mode before asserting
+
+### Test Credentials (LXC Backend)
+
+| Username | Password | Roles | Use Case |
+|----------|----------|-------|----------|
+| `test.admin` | `secret` | ROLE_ADMIN, ROLE_USER | Full admin access |
+| `test.user` | `secret` | ROLE_USER | Minimal user access |
+| `test.finance` | `secret` | ROLE_USER + Finance roles | Finance CRUD testing |
+| `soup.support` | `secret` | ROLE_ADMIN, ROLE_USER | Legacy admin (seed data) |
+
+---
+
+## Local Backend (LXC)
 
 ```bash
 cd backend
-./tomcat-control.sh start               # Start backend (starts LXC containers if needed)
+./tomcat-control.sh start               # Start (starts LXC containers if needed)
 ./tomcat-control.sh status              # Check status, get container IP (10.115.213.183)
 ./tomcat-control.sh logs                # View Tomcat logs
 ./tomcat-control.sh stop                # Stop when done
@@ -113,213 +243,9 @@ source env-variables.sh && ./gradlew assembleDeployToSoupfinance
 
 **Database** (LXC MariaDB): Host `soupmarkets-mariadb`, DB `soupbroker_soupfinance`, User `soupbroker`
 
-### Landing Page (soupfinance-landing/)
+**Request flow:** Browser → Vite dev server (5173) → proxy `/rest/*` → LXC Backend (10.115.213.183:9090) → MariaDB (10.115.213.114:3306)
 
-```bash
-cd soupfinance-landing
-python3 -m http.server 8000             # Preview locally
-./deploy-landing.sh                     # Deploy to production
-```
-
-## Architecture
-
-### React App Structure
-
-```
-soupfinance-web/src/
-├── api/                    # Axios client + endpoint modules
-│   ├── client.ts          # Base instance + toFormData/toQueryString helpers
-│   └── endpoints/         # Feature-specific (invoices, bills, ledger, vendors, corporate, reports)
-├── components/
-│   ├── layout/            # MainLayout, AuthLayout, SideNav, TopNav
-│   ├── forms/             # Input, Select, Textarea, Checkbox, Radio, DatePicker
-│   ├── feedback/          # AlertBanner, Spinner, Toast, Tooltip
-│   └── tables/            # Data table components
-├── features/              # Page components by domain
-│   ├── auth/, dashboard/, invoices/, bills/, vendors/, payments/
-│   ├── ledger/, accounting/, reports/
-│   ├── clients/           # NEW: Individual/Corporate client management
-│   └── corporate/         # Company profile management
-├── i18n/                  # 4 languages (en, de, fr, nl), 12 namespaces
-├── stores/                # Zustand (authStore, uiStore)
-├── types/                 # TypeScript interfaces (mirrors Grails domains)
-└── App.tsx                # Routes + providers
-```
-
-**Key Tech:** Zustand (state) · TanStack Query (data) · React Hook Form + Zod (forms) · Recharts (charts) · Axios (HTTP) · Vitest + Playwright (tests) · Storybook 10 (docs)
-
-**API Endpoint Modules** (`src/api/endpoints/`): `bills.ts`, `clients.ts`, `corporate.ts`, `domainData.ts`, `email.ts`, `invoices.ts`, `ledger.ts`, `registration.ts`, `reports.ts`, `settings.ts`, `vendors.ts`
-
-### API Patterns (CRITICAL)
-
-| Pattern | Detail |
-|---------|--------|
-| **Auth Header** | `X-Auth-Token: {token}` (NOT Bearer) |
-| **Login** | POST `/rest/api/login` with JSON body |
-| **Data Content-Type** | `application/json` for all requests |
-| **Token Validation** | GET `/rest/user/current.json` on app mount |
-| **Invoice Clients** | `/rest/invoiceClient/*` (NOT `/rest/client/*` which is for investment clients) |
-| **CSRF Token** | **REQUIRED** for all POST/PUT/DELETE - see pattern below |
-
-#### CSRF Token Pattern (REQUIRED for POST/PUT/DELETE)
-
-The Grails backend uses `withForm {}` CSRF protection. The `TokenWithFormInterceptor` handles this for all `create` actions.
-
-**How it works:**
-1. Call `GET /rest/{controller}/create.json` - interceptor adds CSRF token to response
-2. Response includes `SYNCHRONIZER_TOKEN` and `SYNCHRONIZER_URI` fields
-3. Include both in subsequent POST/PUT/DELETE requests in JSON body
-
-**Example Implementation:**
-```typescript
-// Step 1: Get CSRF token from create endpoint
-const createResponse = await api.get('/rest/vendor/create.json');
-const csrfToken = createResponse.data.vendor?.SYNCHRONIZER_TOKEN;
-const csrfUri = createResponse.data.vendor?.SYNCHRONIZER_URI;
-
-// Step 2: Include CSRF token in JSON body
-const saveResponse = await api.post('/rest/vendor/save.json', {
-  name: 'Acme Corp',
-  symbol: 'ACME',
-  SYNCHRONIZER_TOKEN: csrfToken,
-  SYNCHRONIZER_URI: csrfUri,
-});
-```
-
-**Key Points:**
-- The CSRF token is per-session and per-URI
-- Without the token, POST returns 302 redirect (not JSON)
-- The interceptor matches `action: ~/(create)/` pattern
-- For updates: call `edit.json` first to get token for update operations
-
-#### File/Image Upload Pattern
-
-The backend `SoupBrokerFileUtilityService` accepts files in three formats for any `SoupBrokerFile` property:
-
-| Format | How to Send | Example |
-|--------|-------------|---------|
-| **Base64 String** | Send base64-encoded file data directly | `logo: "data:image/png;base64,iVBORw0KGgo..."` or just the base64 string |
-| **Public URL** | Send a fully-qualified URL, backend downloads it | `logo: "https://example.com/logo.png"` |
-| **MultipartFile** | Standard multipart form upload | `logoFile: <File object>` (requires multipart/form-data) |
-
-**Example (Base64 in JSON):**
-```typescript
-// Send logo as base64 in JSON body
-const response = await api.post('/rest/vendor/save.json', {
-  name: 'Acme Corp',
-  logo: base64EncodedImageString, // Service detects Base64.isBase64()
-  SYNCHRONIZER_TOKEN: csrfToken,
-  SYNCHRONIZER_URI: csrfUri,
-});
-```
-
-**Example (Public URL in JSON):**
-```typescript
-// Backend will download from URL automatically
-const response = await api.post('/rest/vendor/save.json', {
-  name: 'Acme Corp',
-  logo: 'https://cdn.example.com/company-logo.png', // Service validates URL
-  SYNCHRONIZER_TOKEN: csrfToken,
-  SYNCHRONIZER_URI: csrfUri,
-});
-```
-
-**Example (Multipart File Upload):**
-```typescript
-// For actual file uploads, use FormData with multipart/form-data
-const formData = new FormData();
-formData.append('name', 'Acme Corp');
-formData.append('logoFile', fileObject); // Note: {fieldName}File convention
-formData.append('SYNCHRONIZER_TOKEN', csrfToken);
-formData.append('SYNCHRONIZER_URI', csrfUri);
-
-const response = await api.post('/rest/vendor/save.json', formData, {
-  headers: { 'Content-Type': 'multipart/form-data' }
-});
-```
-
-**Backend Service:** `grails-app/services/soupbroker/tools/SoupBrokerFileUtilityService.groovy`
-- Auto-detects input type via `Base64.isBase64()` and `UrlValidator().isValid()`
-- Compresses images via `imageCompressionService` (ImageMagick)
-- Stores files via SFTP or local filesystem (with fallback)
-
-**Proxy Configuration:** Vite proxies `/rest/*`, `/client/*`, and `/account/*` to backend (default `localhost:9090`, or `VITE_PROXY_TARGET` from `.env.lxc`).
-
-**API Quirks:**
-- `/rest/sbUser/index.json` requires `?sort=id` (default `dateCreated` sort not available for SbUser domain)
-- Finance reports: Use `/rest/financeReports/*` (NOT `/rest/report/*` which returns 404)
-
-#### Module-Prefixed Controllers
-
-Some controllers have module prefixes in their URL paths:
-```
-/rest/finance/bill/*        /rest/finance/voucher/*
-/rest/trading/vendor/*      /rest/kyc/corporate/*
-```
-
-Available modules: `trading`, `finance`, `funds`, `setting`, `tools`, `sales`, `kyc`, `clients`, `admin`, `staff`
-
-### API Endpoint Status (LXC Backend)
-
-**Working Endpoints:**
-| Endpoint | Status | Notes |
-|----------|--------|-------|
-| `POST /rest/api/login` | ✅ 200 | Returns access_token |
-| `GET /rest/user/current.json` | ✅ 200 | Returns current user |
-| `GET /rest/invoice/index.json` | ✅ 200 | Returns invoice list |
-| `GET /rest/vendor/index.json` | ✅ 200 | Returns vendor list |
-| `GET /rest/ledgerAccount/index.json` | ✅ 200 | Returns account list |
-| `GET /rest/ledgerAccount/balance.json` | ✅ 200 | Account balance |
-| `GET /rest/ledgerTransaction/index.json` | ✅ 200 | Returns transactions |
-| `GET /rest/financeReports/balanceSheet.json` | ✅ 200 | Returns balance sheet |
-| `GET /rest/financeReports/agedPayables.json` | ✅ 200 | Returns AP aging |
-| `GET /rest/voucher/index.json` | ✅ 200 | Returns voucher list |
-| `GET /rest/financeReports/incomeStatement.json` | ✅ 200 | Returns P&L report |
-
-**Frontend CSRF Token Implementation:**
-All save endpoints in `src/api/endpoints/` now use `getCsrfToken()` and `getCsrfTokenForEdit()` helpers from `client.ts`:
-- `vendors.ts`: `createVendor()`, `updateVendor()`
-- `ledger.ts`: `createLedgerAccount()`, `updateLedgerAccount()`, `createLedgerTransaction()`, `createVoucher()`, `updateVoucher()`, `createJournalEntry()`
-- `bills.ts`: `createBill()`, `updateBill()`, `addBillItem()`, `updateBillItem()`, `recordBillPayment()`
-- `invoices.ts`: `createInvoice()`, `updateInvoice()`, `addInvoiceItem()`, `updateInvoiceItem()`, `recordInvoicePayment()`
-
-**Known Issues (see [backend plan](../soupmarkets-web/plans/soupfinance-api-endpoint-fixes.md)):**
-| Endpoint | Issue | Workaround |
-|----------|-------|------------|
-| `GET /rest/bill/index.json` | Returns 302 | Needs `Accept: application/json` header |
-| `POST /rest/vendor/save.json` | Returns 302 without token | Use `getCsrfToken('vendor')` first |
-| `POST /rest/ledgerAccount/save.json` | Returns 302 without token | Use `getCsrfToken('ledgerAccount')` first |
-
-### Test Credentials (LXC Backend)
-
-| Username | Password | Roles | Use Case |
-|----------|----------|-------|----------|
-| `test.admin` | `secret` | ROLE_ADMIN, ROLE_USER | Full admin access |
-| `test.user` | `secret` | ROLE_USER | Minimal user access |
-| `test.finance` | `secret` | ROLE_USER + Finance roles* | Finance CRUD testing |
-| `soup.support` | `secret` | ROLE_ADMIN, ROLE_USER | Legacy admin (seed data) |
-| `admin` | `secret` | ROLE_ADMIN, ROLE_USER | Legacy admin (seed data) |
-
-*Finance roles: ROLE_INVOICE, ROLE_BILL, ROLE_LEDGER_TRANSACTION, ROLE_VENDOR, ROLE_FINANCE_REPORTS, ROLE_LEDGER_ACCOUNT, ROLE_VOUCHER
-
-### Test Organization
-
-```
-soupfinance-web/
-├── src/**/__tests__/           # Unit/integration (Vitest)
-├── e2e/                        # E2E tests (Playwright)
-│   ├── fixtures.ts             # authenticatedPage, mockApiResponse(), domain mocks
-│   └── integration/            # LXC backend integration tests
-├── playwright.config.ts        # Mock mode config (port 5180)
-├── playwright.lxc.config.ts    # LXC backend config
-└── playwright.integration.config.ts  # Integration-only config
-```
-
-**Important:**
-- Axios is globally mocked in `src/test/setup.ts`
-- E2E tests auto-start Vite dev server (see `playwright.config.ts`)
-- Pages MUST fetch from API, never use mock data as fallback in production
-- Use `isLxcMode()` from fixtures to conditionally skip mock-only tests
+---
 
 ## Deployment
 
@@ -330,25 +256,21 @@ soupfinance-web/
 | Deploy Dir | /var/www/soupfinance |
 | SSH Key | `~/.ssh/crypttransact_rsa` (NOT id_rsa) |
 
-```bash
-cd soupfinance-web && ./deploy/deploy-to-production.sh   # Deploy to app.soupfinance.com
-```
+**CRITICAL:** Sites only accessible via domain names, NEVER via direct IP. **NEVER** deploy to Soupmarkets production IPs (140.82.32.141, tas.soupmarkets.com, edge.soupmarkets.com).
 
-**CRITICAL:** Sites only accessible via domain names, NEVER via direct IP.
+**Production architecture:** Client → Cloudflare (DNS/SSL) → Apache (65.20.112.224) → Static files OR proxy `/rest/*` `/account/*` to tas.soupmarkets.com
 
-### Logs
-
-| Log | Path |
-|-----|------|
-| Frontend Apache | `65.20.112.224:/var/log/apache2/app.soupfinance.com-*.log` |
-| Backend Tomcat | `140.82.32.141:/root/tomcat9078/logs/catalina.out` |
+---
 
 ## Implementing Features
 
-1. Check `soupfinance-designs/` for mockups
+1. Check `soupfinance-designs/` for HTML mockups (114 screens covering all UI states)
 2. Use existing feature modules as templates (copy invoice patterns for new entities)
-3. See [.claude/rules/soupfinance-design-system.md](.claude/rules/soupfinance-design-system.md) for design tokens (primary: `#f24a0d`, font: Manrope, icons: Material Symbols)
+3. Follow design system: primary `#f24a0d`, font Manrope, icons Material Symbols Outlined
 4. Include dark mode variants (`dark:` prefix)
+5. Add i18n keys to all 4 language files in `src/i18n/locales/{lang}/`
+6. Backend changes needed? Create a plan in `plans/` — do NOT modify backend directly
+7. Frontend-specific plans go in `docs/PLAN-*.md`; backend plans go in the `soupmarkets-web` repo
 
 ## Git
 
@@ -359,4 +281,6 @@ cd soupfinance-web && ./deploy/deploy-to-production.sh   # Deploy to app.soupfin
 
 Part of **Soupmarkets** ecosystem (see `../CLAUDE.md`).
 
-**Note:** For detailed frontend development (API patterns, hooks, state management), see `soupfinance-web/CLAUDE.md`. For PRD and feature requirements, see `PRD.md` and `prd/` directory.
+**Important:** Only commit/push changes to this repo. If backend changes are needed in soupmarkets-web, inform the user but do not commit to other repos.
+
+**Note:** For detailed frontend patterns (API layer, hooks, state management, testing), see `soupfinance-web/CLAUDE.md`.

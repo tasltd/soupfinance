@@ -67,8 +67,8 @@ test.describe('Authentication', () => {
       await expect(page.getByText('Remember me')).toBeVisible();
     });
 
-    test.skip('login page shows forgot password link', async ({ page }) => {
-      // TODO: Implement forgot password feature
+    // Changed: Forgot password link now implemented on LoginPage
+    test('login page shows forgot password link', async ({ page }) => {
       await page.goto('/login');
 
       await expect(page.getByTestId('login-forgot-password-link')).toBeVisible();
@@ -103,8 +103,7 @@ test.describe('Authentication', () => {
       await expect(page.getByTestId('dashboard-heading')).toHaveText('Financial Overview');
     });
 
-    // Skip: Loading state is difficult to test reliably with mocked APIs
-    test.skip('login button shows loading state while submitting', async ({ page }) => {
+    test('login button shows loading state while submitting', async ({ page }) => {
       // Set up delayed API response to observe loading state
       // Use a longer delay and don't fulfill until we've checked the loading state
       let resolveLogin: (value: unknown) => void;
@@ -236,46 +235,26 @@ test.describe('Authentication', () => {
   });
 
   test.describe('Logout', () => {
-    // Skip: Zustand store persistence makes this test unreliable with mocked APIs
-    test.skip('logout redirects to login page', async ({ page }) => {
-      // Set up authenticated state
-      await page.addInitScript(() => {
-        const mockUser = {
-          username: 'admin',
-          email: 'admin@soupfinance.com',
-          roles: ['ROLE_ADMIN', 'ROLE_USER'],
-        };
-        localStorage.setItem('access_token', 'mock-jwt-token');
-        localStorage.setItem('user', JSON.stringify(mockUser));
-        localStorage.setItem(
-          'auth-storage',
-          JSON.stringify({
-            state: { user: mockUser, isAuthenticated: true },
-            version: 0,
-          })
-        );
-      });
-
-      // Changed: Use mockDashboardApi for comprehensive dashboard mocking
+    test('logout redirects to login page', async ({ page }) => {
+      // Log in through the UI (not addInitScript which re-fires on every navigation)
+      await mockLoginApi(page, true, testUsers.admin);
       await mockDashboardApi(page);
 
-      // Go to dashboard first
-      await page.goto('/dashboard');
+      await page.goto('/login');
+      await page.getByTestId('login-email-input').fill(testUsers.admin.email);
+      await page.getByTestId('login-password-input').fill(testUsers.admin.password);
+      await page.getByTestId('login-submit-button').click();
+
+      // Verify dashboard loaded after login
+      await expect(page).toHaveURL(/\/dashboard/, { timeout: 10000 });
       await expect(page.getByTestId('dashboard-page')).toBeVisible();
       await takeScreenshot(page, 'auth-logout-before');
 
-      // Find and click logout button (has data-testid="logout-button")
-      const logoutButton = page.getByTestId('logout-button');
-      await logoutButton.click();
+      // Click logout — apiLogout() clears storage and navigates to /login
+      await page.getByTestId('logout-button').click();
 
-      // Clear all route mocks so the app uses real route protection
-      await page.unroute('**/*');
-
-      // After logout, auth state is cleared. Access protected route to verify redirect
-      await page.goto('/dashboard');
-
-      // Should be redirected to login page (route protection kicks in)
-      await expect(page).toHaveURL(/\/login/);
+      // Should redirect to login page (apiLogout does window.location.href = '/login')
+      await expect(page).toHaveURL(/\/login/, { timeout: 10000 });
       await expect(page.getByTestId('login-page')).toBeVisible();
       await takeScreenshot(page, 'auth-logout-after');
     });

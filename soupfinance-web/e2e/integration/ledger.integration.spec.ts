@@ -92,7 +92,24 @@ test.describe('Ledger Integration Tests', () => {
     test('ledger account CRUD flow', async ({ page }) => {
       const token = await getAuthToken(page);
 
-      // 1. Create ledger account
+      // 0. Fetch CSRF token from create.json (required by Grails withForm protection)
+      const csrfResponse = await page.request.get(`${API_BASE}/rest/ledgerAccount/create.json`, {
+        headers: { 'X-Auth-Token': token },
+      });
+
+      let csrfToken = '';
+      let csrfUri = '';
+      if (csrfResponse.ok()) {
+        const csrfData = await csrfResponse.json();
+        // CSRF token can be at root or nested under controller name
+        csrfToken = csrfData.SYNCHRONIZER_TOKEN || csrfData.ledgerAccount?.SYNCHRONIZER_TOKEN || '';
+        csrfUri = csrfData.SYNCHRONIZER_URI || csrfData.ledgerAccount?.SYNCHRONIZER_URI || '';
+        console.log('CSRF token obtained:', csrfToken ? 'YES' : 'NO');
+      } else {
+        console.log('CSRF create.json status:', csrfResponse.status());
+      }
+
+      // 1. Create ledger account (include CSRF token)
       const accountData = new URLSearchParams({
         name: `Test Account ${Date.now()}`,
         accountNumber: `TEST-${Date.now().toString().slice(-6)}`,
@@ -100,6 +117,8 @@ test.describe('Ledger Integration Tests', () => {
         ledgerSubGroup: 'CURRENT_ASSET',
         description: 'Integration test account',
         currency: 'USD',
+        ...(csrfToken && { SYNCHRONIZER_TOKEN: csrfToken }),
+        ...(csrfUri && { SYNCHRONIZER_URI: csrfUri }),
       });
 
       const createResponse = await page.request.post(`${API_BASE}/rest/ledgerAccount/save.json`, {
@@ -114,7 +133,7 @@ test.describe('Ledger Integration Tests', () => {
       console.log('Create ledger account status:', createResponse.status());
 
       if (createResponse.status() === 302) {
-        console.log('Ledger account save endpoint redirects');
+        console.log('Ledger account save endpoint redirects (CSRF token may not be supported)');
         test.skip();
         return;
       }

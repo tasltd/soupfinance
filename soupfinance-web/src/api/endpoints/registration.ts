@@ -19,6 +19,8 @@
  * - POST /account/register.json - Create tenant + admin user
  * - POST /account/confirmEmail.json - Verify email + set password
  * - POST /account/resendConfirmation.json - Resend confirmation email
+ * - POST /account/forgotPassword.json - Request password reset email
+ * - POST /account/resetPassword.json - Reset password with token
  */
 import axios from 'axios';
 
@@ -82,6 +84,18 @@ export interface EmailConfirmation {
 export interface ResendConfirmation {
   /** Email to resend confirmation to */
   email: string;
+}
+
+/**
+ * Password reset request (after receiving reset email)
+ */
+export interface PasswordReset {
+  /** Token from password reset email */
+  token: string;
+  /** New password */
+  password: string;
+  /** Password confirmation */
+  confirmPassword: string;
 }
 
 /**
@@ -190,6 +204,52 @@ export async function resendConfirmation(email: string): Promise<ConfirmationRes
   const response = await accountApiClient.post<ConfirmationResponse>(
     '/account/resendConfirmation.json',
     { email }
+  );
+
+  return response.data;
+}
+
+/**
+ * Request password reset email
+ * POST /account/forgotPassword.json
+ *
+ * Sends a password reset link to the user's email.
+ * Returns success even if email doesn't exist (prevents email enumeration).
+ *
+ * NOTE: Backend endpoint may not yet exist. This is the frontend-ready API call.
+ * Backend needs: AccountController.forgotPassword action that generates a reset token,
+ * stores it, and sends an email with a link to /reset-password?token=xxx
+ *
+ * @param email - Email address to send reset link to
+ * @returns Confirmation response
+ */
+export async function forgotPassword(email: string): Promise<ConfirmationResponse> {
+  const response = await accountApiClient.post<ConfirmationResponse>(
+    '/account/forgotPassword.json',
+    { email }
+  );
+
+  return response.data;
+}
+
+/**
+ * Reset password using token from email
+ * POST /account/resetPassword.json
+ *
+ * Validates the reset token and sets a new password.
+ *
+ * NOTE: Backend endpoint may not yet exist. This is the frontend-ready API call.
+ * Backend needs: AccountController.resetPassword action that validates the token,
+ * updates the password, and invalidates the token.
+ *
+ * @param data - Token and new password
+ * @returns Confirmation response
+ * @throws AxiosError on invalid/expired token or validation errors
+ */
+export async function resetPassword(data: PasswordReset): Promise<ConfirmationResponse> {
+  const response = await accountApiClient.post<ConfirmationResponse>(
+    '/account/resetPassword.json',
+    data
   );
 
   return response.data;

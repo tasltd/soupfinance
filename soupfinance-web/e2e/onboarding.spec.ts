@@ -69,10 +69,10 @@ test.describe('Corporate Onboarding Flow', () => {
       ).toBeVisible();
 
       // Added: Verify progress indicator shows step 2
-      await expect(page.getByText('Company Info')).toBeVisible();
+      await expect(page.getByText('Company Info', { exact: true })).toBeVisible();
 
-      // Added: Verify Physical Address section
-      await expect(page.getByText('Physical Address')).toBeVisible();
+      // Added: Verify Physical Address section (use heading role to avoid matching "Same as physical address" text)
+      await expect(page.getByRole('heading', { name: 'Physical Address' })).toBeVisible();
       await expect(page.locator('input[name="physicalAddress"]')).toBeVisible();
       await expect(page.locator('input[name="physicalCity"]')).toBeVisible();
       await expect(page.locator('input[name="physicalState"]')).toBeVisible();
@@ -80,7 +80,7 @@ test.describe('Corporate Onboarding Flow', () => {
       await expect(page.locator('input[name="physicalCountry"]')).toBeVisible();
 
       // Added: Verify Postal Address section
-      await expect(page.getByText('Postal Address')).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'Postal Address' })).toBeVisible();
       await expect(page.locator('input[name="sameAsPhysical"]')).toBeVisible();
 
       // Added: Verify Business Details section
@@ -293,8 +293,8 @@ test.describe('Corporate Onboarding Flow', () => {
       // Added: Set up list to return new director after save
       await mockDirectorsApi(page, CORPORATE_ID, [newDirector]);
 
-      // Added: Submit form
-      await page.getByRole('button', { name: 'Add Person' }).click();
+      // Added: Submit form (exact: true to avoid matching the page-level "add Add Person" button with icon)
+      await page.getByRole('button', { name: 'Add Person', exact: true }).click();
 
       // Added: Modal should close and director should appear in list
       await expect(page.getByRole('heading', { name: 'Add Person' })).not.toBeVisible({ timeout: 3000 });
@@ -379,7 +379,7 @@ test.describe('Corporate Onboarding Flow', () => {
       await page.getByText('Add Person').first().click();
 
       // Added: Try to submit empty form - HTML5 validation should prevent submission
-      await page.getByRole('button', { name: 'Add Person' }).click();
+      await page.getByRole('button', { name: 'Add Person', exact: true }).click();
 
       // Added: First name input should show validation (required attribute)
       const firstNameInput = page.locator('input[name="firstName"]');
@@ -731,9 +731,9 @@ test.describe('Corporate Onboarding Flow', () => {
 
       // Added: Verify company info section
       await expect(page.getByText('Company Information')).toBeVisible();
-      await expect(page.getByText(mockCorporate.name)).toBeVisible();
+      await expect(page.getByText(mockCorporate.name, { exact: true })).toBeVisible();
       await expect(page.getByText(mockCorporate.certificateOfIncorporationNumber)).toBeVisible();
-      await expect(page.getByText(mockCorporate.email)).toBeVisible();
+      await expect(page.getByTestId('kyc-status-page').getByText(mockCorporate.email)).toBeVisible();
       await expect(page.getByText(mockCorporate.phoneNumber)).toBeVisible();
     });
 

@@ -182,6 +182,29 @@ test.describe('Payment Management', () => {
       });
     });
 
+    // Mock CSRF token endpoints (required before save)
+    await page.route('**/rest/invoicePayment/create.json*', (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          SYNCHRONIZER_TOKEN: 'mock-csrf-token-invoice',
+          SYNCHRONIZER_URI: '/rest/invoicePayment/save',
+        }),
+      });
+    });
+
+    await page.route('**/rest/billPayment/create.json*', (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          SYNCHRONIZER_TOKEN: 'mock-csrf-token-bill',
+          SYNCHRONIZER_URI: '/rest/billPayment/save',
+        }),
+      });
+    });
+
     // Mock record invoice payment
     await page.route('**/rest/invoicePayment/save*', (route) => {
       route.fulfill({
@@ -248,7 +271,7 @@ test.describe('Payment Management', () => {
 
       // Verify payment data
       await expect(page.locator('text=Bank Transfer').first()).toBeVisible();
-      await expect(page.locator('text=+$2500.00')).toBeVisible();
+      await expect(page.locator('text=+$2,500.00')).toBeVisible();
 
       // Verify summary is visible
       await expect(page.getByTestId('payment-summary')).toBeVisible();
@@ -269,7 +292,7 @@ test.describe('Payment Management', () => {
       await expect(page.getByTestId('payment-row-bp-001')).toBeVisible();
       await expect(page.getByTestId('payment-row-bp-002')).toBeVisible();
 
-      // Verify outgoing payment shows negative amounts
+      // Verify outgoing payment shows negative amounts (no thousands separator needed for < 1000)
       await expect(page.locator('text=-$850.00')).toBeVisible();
 
       await takeScreenshot(page, 'payment-list-outgoing');
@@ -476,12 +499,12 @@ test.describe('Payment Management', () => {
 
       // Should show balance due text
       await expect(page.locator('text=Balance due:')).toBeVisible();
-      // Changed: Use getByText with exact match to avoid multiple matches
-      await expect(page.getByText('$3000.00', { exact: true })).toBeVisible();
+      // formatCurrency uses toLocaleString('en-US') which adds thousands separator
+      await expect(page.getByText('$3,000.00', { exact: true })).toBeVisible();
 
       // Should show "Pay full balance" button
       await expect(page.getByTestId('pay-full-button')).toBeVisible();
-      await expect(page.getByTestId('pay-full-button')).toContainText('$3000.00');
+      await expect(page.getByTestId('pay-full-button')).toContainText('$3,000.00');
 
       await takeScreenshot(page, 'payment-form-balance-due');
     });

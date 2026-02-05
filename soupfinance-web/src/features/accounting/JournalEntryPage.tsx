@@ -4,10 +4,12 @@
  * Reference: soupfinance-designs/general-ledger-entries/, design-system.md
  *
  * Changed: Now fetches ledger accounts from API via useLedgerAccounts hook
+ * Changed: Added edit mode - loads existing LedgerTransactionGroup when :id param present
  */
-import { useState, useMemo, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useForm, useFieldArray } from 'react-hook-form';
+import { useQuery } from '@tanstack/react-query';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { format } from 'date-fns';
@@ -15,7 +17,7 @@ import { Input } from '../../components/forms/Input';
 import { Select, type SelectOption } from '../../components/forms/Select';
 import { DatePicker } from '../../components/forms/DatePicker';
 import { Textarea } from '../../components/forms/Textarea';
-import { createJournalEntry } from '../../api/endpoints/ledger';
+import { createJournalEntry, getTransactionGroup, updateJournalEntry } from '../../api/endpoints/ledger';
 import { useLedgerAccounts } from '../../hooks/useLedgerAccounts';
 import type { CreateJournalEntryRequest } from '../../types';
 
@@ -76,11 +78,28 @@ const createEmptyLine = () => ({
  * - Dynamic line items with account selection
  * - Real-time debit/credit balance validation
  * - Save as draft or post immediately
+ * - Edit mode: loads existing LedgerTransactionGroup when :id param is present
+ * - Read-only mode for posted/reversed entries
  */
 export function JournalEntryPage() {
   const navigate = useNavigate();
+  const { id: entryId } = useParams<{ id: string }>();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // Added: Determine if we're in edit mode (entryId present and not 'new')
+  const isEditMode = !!entryId && entryId !== 'new';
+
+  // Added: Fetch existing transaction group when editing
+  const { data: existingGroup, isLoading: isLoadingGroup } = useQuery({
+    queryKey: ['transaction-group', entryId],
+    queryFn: () => getTransactionGroup(entryId!),
+    enabled: isEditMode,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Added: Determine if entry is read-only (posted or reversed entries cannot be edited)
+  const isReadOnly = isEditMode && !!existingGroup && (existingGroup.status === 'POSTED' || existingGroup.status === 'REVERSED');
 
   // Changed: Fetch accounts from API via useLedgerAccounts hook
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -101,6 +120,7 @@ export function JournalEntryPage() {
     control,
     handleSubmit,
     watch,
+    reset,
     formState: { errors },
   } = useForm<JournalEntryFormData>({
     resolver: zodResolver(journalEntrySchema) as never,
@@ -112,6 +132,31 @@ export function JournalEntryPage() {
       lines: [createEmptyLine(), createEmptyLine()],
     },
   });
+
+  // Added: Populate form when existing transaction group data loads (edit mode)
+  useEffect(() => {
+    if (existingGroup && isEditMode) {
+      const lines = existingGroup.ledgerTransactionList.map((tx) => ({
+        accountId: tx.ledgerAccount?.id || tx.debitLedgerAccount?.id || tx.creditLedgerAccount?.id || '',
+        accountName: tx.ledgerAccount?.name || tx.debitLedgerAccount?.name || tx.creditLedgerAccount?.name || '',
+        debitAmount: tx.transactionState === 'DEBIT' ? tx.amount : 0,
+        creditAmount: tx.transactionState === 'CREDIT' ? tx.amount : 0,
+        description: tx.description || '',
+      }));
+
+      // Ensure at least 2 lines for the form
+      while (lines.length < 2) {
+        lines.push(createEmptyLine());
+      }
+
+      reset({
+        entryDate: existingGroup.groupDate || format(new Date(), 'yyyy-MM-dd'),
+        reference: existingGroup.reference || '',
+        description: existingGroup.description || '',
+        lines,
+      });
+    }
+  }, [existingGroup, isEditMode, reset]);
 
   // Added: useFieldArray for dynamic line item management
   const { fields, append, remove } = useFieldArray({
@@ -147,8 +192,10 @@ export function JournalEntryPage() {
     }
   }, [fields.length, remove]);
 
-  // Added: Form submission handler for saving/posting journal entry
+  // Changed: Form submission handler supports both create and update modes
   const onSubmit = async (data: JournalEntryFormData) => {
+    if (isReadOnly) return; // Prevent submission of posted/reversed entries
+
     setIsSubmitting(true);
     setSubmitError(null);
 
@@ -166,7 +213,12 @@ export function JournalEntryPage() {
         })),
       };
 
-      await createJournalEntry(request);
+      // Changed: Call update when editing, create when new
+      if (isEditMode && entryId) {
+        await updateJournalEntry(entryId, request);
+      } else {
+        await createJournalEntry(request);
+      }
 
       // Added: Navigate back to ledger transactions after successful save
       navigate('/ledger/transactions');
@@ -196,6 +248,16 @@ export function JournalEntryPage() {
     }).format(amount);
   };
 
+  // Added: Show loading state while fetching existing entry data
+  if (isEditMode && isLoadingGroup) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4" data-testid="journal-entry-page">
+        <span className="material-symbols-outlined text-4xl text-primary animate-spin">progress_activity</span>
+        <p className="text-subtle-text">Loading journal entry...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-6" data-testid="journal-entry-page">
       {/* Page Header */}
@@ -205,10 +267,14 @@ export function JournalEntryPage() {
             className="text-3xl font-black tracking-tight text-text-light dark:text-text-dark"
             data-testid="journal-entry-heading"
           >
-            New Journal Entry
+            {isEditMode ? 'Edit Journal Entry' : 'New Journal Entry'}
           </h1>
           <p className="text-subtle-text">
-            Record a multi-line accounting transaction
+            {isReadOnly
+              ? 'This entry has been posted and cannot be modified'
+              : isEditMode
+                ? 'Modify this accounting transaction'
+                : 'Record a multi-line accounting transaction'}
           </p>
         </div>
 
@@ -220,31 +286,46 @@ export function JournalEntryPage() {
             className="h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm hover:bg-primary/5"
             data-testid="journal-entry-cancel-button"
           >
-            Cancel
+            {isReadOnly ? 'Back' : 'Cancel'}
           </button>
-          <button
-            type="button"
-            onClick={handleSaveDraft}
-            disabled={isSubmitting}
-            className="h-10 px-4 rounded-lg bg-primary/20 text-primary font-bold text-sm hover:bg-primary/30 disabled:opacity-50 disabled:cursor-not-allowed"
-            data-testid="journal-entry-save-draft-button"
-          >
-            Save Draft
-          </button>
-          <button
-            type="button"
-            onClick={handleSaveAndPost}
-            disabled={isSubmitting || !isBalanced}
-            className="h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            data-testid="journal-entry-save-post-button"
-          >
-            {isSubmitting && (
-              <span className="material-symbols-outlined animate-spin text-base">progress_activity</span>
-            )}
-            Save & Post
-          </button>
+          {!isReadOnly && (
+            <>
+              <button
+                type="button"
+                onClick={handleSaveDraft}
+                disabled={isSubmitting}
+                className="h-10 px-4 rounded-lg bg-primary/20 text-primary font-bold text-sm hover:bg-primary/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                data-testid="journal-entry-save-draft-button"
+              >
+                Save Draft
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveAndPost}
+                disabled={isSubmitting || !isBalanced}
+                className="h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                data-testid="journal-entry-save-post-button"
+              >
+                {isSubmitting && (
+                  <span className="material-symbols-outlined animate-spin text-base">progress_activity</span>
+                )}
+                {isEditMode ? 'Update & Post' : 'Save & Post'}
+              </button>
+            </>
+          )}
         </div>
       </div>
+
+      {/* Added: Read-only banner for posted/reversed entries */}
+      {isReadOnly && (
+        <div
+          className="p-4 rounded-lg bg-warning/10 border border-warning/30 text-warning text-sm flex items-center gap-2"
+          data-testid="journal-entry-readonly-banner"
+        >
+          <span className="material-symbols-outlined text-xl">lock</span>
+          This journal entry has been {existingGroup?.status?.toLowerCase()} and cannot be modified.
+        </div>
+      )}
 
       {/* Error Banner */}
       {submitError && (
@@ -270,6 +351,7 @@ export function JournalEntryPage() {
             <DatePicker
               label="Entry Date"
               required
+              disabled={isReadOnly}
               {...register('entryDate')}
               error={errors.entryDate?.message}
               data-testid="journal-entry-date-input"
@@ -277,6 +359,7 @@ export function JournalEntryPage() {
             <Input
               label="Reference"
               placeholder="e.g., JE-2024-001"
+              disabled={isReadOnly}
               {...register('reference')}
               error={errors.reference?.message}
               data-testid="journal-entry-reference-input"
@@ -291,6 +374,7 @@ export function JournalEntryPage() {
               required
               placeholder="Describe the purpose of this journal entry..."
               rows={2}
+              disabled={isReadOnly}
               {...register('description')}
               error={errors.description?.message}
               data-testid="journal-entry-description-input"
@@ -306,15 +390,17 @@ export function JournalEntryPage() {
       >
         <div className="px-6 py-4 border-b border-border-light dark:border-border-dark flex justify-between items-center">
           <h2 className="text-lg font-bold text-text-light dark:text-text-dark">Line Items</h2>
-          <button
-            type="button"
-            onClick={handleAddLine}
-            className="flex items-center gap-1 h-9 px-3 rounded-lg bg-primary/10 text-primary text-sm font-medium hover:bg-primary/20"
-            data-testid="journal-entry-add-line-button"
-          >
-            <span className="material-symbols-outlined text-lg">add</span>
-            Add Line
-          </button>
+          {!isReadOnly && (
+            <button
+              type="button"
+              onClick={handleAddLine}
+              className="flex items-center gap-1 h-9 px-3 rounded-lg bg-primary/10 text-primary text-sm font-medium hover:bg-primary/20"
+              data-testid="journal-entry-add-line-button"
+            >
+              <span className="material-symbols-outlined text-lg">add</span>
+              Add Line
+            </button>
+          )}
         </div>
 
         {/* Line Items Table */}
@@ -341,6 +427,7 @@ export function JournalEntryPage() {
                     <Select
                       options={accountOptions}
                       placeholder="Select account..."
+                      disabled={isReadOnly}
                       {...register(`lines.${index}.accountId`)}
                       error={errors.lines?.[index]?.accountId?.message}
                       data-testid={`journal-entry-line-${index}-account`}
@@ -356,8 +443,9 @@ export function JournalEntryPage() {
                         step="0.01"
                         min="0"
                         placeholder="0.00"
+                        disabled={isReadOnly}
                         {...register(`lines.${index}.debitAmount`, { valueAsNumber: true })}
-                        className="w-full h-12 pl-7 pr-4 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark text-right text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none"
+                        className="w-full h-12 pl-7 pr-4 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark text-right text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed"
                         data-testid={`journal-entry-line-${index}-debit`}
                       />
                     </div>
@@ -372,8 +460,9 @@ export function JournalEntryPage() {
                         step="0.01"
                         min="0"
                         placeholder="0.00"
+                        disabled={isReadOnly}
                         {...register(`lines.${index}.creditAmount`, { valueAsNumber: true })}
-                        className="w-full h-12 pl-7 pr-4 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark text-right text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none"
+                        className="w-full h-12 pl-7 pr-4 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark text-right text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed"
                         data-testid={`journal-entry-line-${index}-credit`}
                       />
                     </div>
@@ -384,24 +473,27 @@ export function JournalEntryPage() {
                     <input
                       type="text"
                       placeholder="Line description (optional)"
+                      disabled={isReadOnly}
                       {...register(`lines.${index}.description`)}
-                      className="w-full h-12 px-4 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark placeholder:text-subtle-text focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none"
+                      className="w-full h-12 px-4 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark placeholder:text-subtle-text focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed"
                       data-testid={`journal-entry-line-${index}-description`}
                     />
                   </td>
 
                   {/* Remove Line Button */}
                   <td className="px-4 py-3 text-center">
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveLine(index)}
-                      disabled={fields.length <= 2}
-                      className="flex items-center justify-center size-10 rounded-full text-subtle-text hover:text-danger hover:bg-danger/10 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-subtle-text disabled:hover:bg-transparent"
-                      title={fields.length <= 2 ? 'Minimum 2 lines required' : 'Remove line'}
-                      data-testid={`journal-entry-line-${index}-remove`}
-                    >
-                      <span className="material-symbols-outlined text-xl">delete</span>
-                    </button>
+                    {!isReadOnly && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveLine(index)}
+                        disabled={fields.length <= 2}
+                        className="flex items-center justify-center size-10 rounded-full text-subtle-text hover:text-danger hover:bg-danger/10 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-subtle-text disabled:hover:bg-transparent"
+                        title={fields.length <= 2 ? 'Minimum 2 lines required' : 'Remove line'}
+                        data-testid={`journal-entry-line-${index}-remove`}
+                      >
+                        <span className="material-symbols-outlined text-xl">delete</span>
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}

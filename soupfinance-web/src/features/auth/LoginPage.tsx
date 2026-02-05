@@ -4,9 +4,21 @@
  * Reference: soupfinance-designs/login-authentication/
  */
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../../stores';
 import { Logo } from '../../components/Logo';
+
+/** Patterns in backend error messages that indicate the email has not been confirmed yet */
+const UNCONFIRMED_PATTERNS = [
+  'email not confirmed',
+  'not confirmed',
+  'email not verified',
+  'not verified',
+  'account not activated',
+  'not activated',
+  'confirm your email',
+  'pending confirmation',
+];
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -51,7 +63,19 @@ export function LoginPage() {
       {/* Error message */}
       {error && (
         <div className="p-4 rounded-lg bg-danger/10 border border-danger/30 text-danger text-sm" data-testid="login-error">
-          {error}
+          <p>{error}</p>
+          {UNCONFIRMED_PATTERNS.some((p) => error.toLowerCase().includes(p)) && (
+            <p className="mt-2">
+              <Link
+                to="/resend-confirmation"
+                state={{ email }}
+                className="text-primary hover:underline font-medium"
+                data-testid="login-resend-confirmation-link"
+              >
+                Resend confirmation email
+              </Link>
+            </p>
+          )}
         </div>
       )}
 
@@ -87,8 +111,8 @@ export function LoginPage() {
           />
         </label>
 
-        {/* Changed (2026-01-28): Wired up Remember Me checkbox, removed non-functional Forgot Password link */}
-        <div className="flex items-center">
+        {/* Changed: Remember Me checkbox + Forgot Password link */}
+        <div className="flex items-center justify-between">
           <label className="flex items-center gap-2 cursor-pointer">
             <input
               type="checkbox"
@@ -99,6 +123,13 @@ export function LoginPage() {
             />
             <span className="text-sm text-subtle-text">Remember me</span>
           </label>
+          <Link
+            to="/forgot-password"
+            className="text-sm text-primary hover:underline font-medium"
+            data-testid="login-forgot-password-link"
+          >
+            Forgot password?
+          </Link>
         </div>
 
         <button

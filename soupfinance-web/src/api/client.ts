@@ -44,10 +44,6 @@ apiClient.interceptors.request.use(
       config.headers['X-Auth-Token'] = token;
     }
 
-    // Added: Add X-Api-Consumer header to identify this app in backend logs
-    // This helps filter Sentry/backend logs by API consumer
-    config.headers['X-Api-Consumer'] = 'SOUPFINANCE';
-
     // Record start time for duration calculation
     config.metadata = { startTime: Date.now() };
 

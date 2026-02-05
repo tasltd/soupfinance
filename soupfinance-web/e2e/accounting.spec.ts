@@ -664,9 +664,8 @@ test.describe('Accounting Module', () => {
       await expect(page).toHaveURL(/\/ledger\/transactions/);
     });
 
-    // Skipped: JournalEntryPage doesn't yet implement loading existing data for editing
-    // (would need useQuery to fetch LedgerTransactionGroup by ID from API)
-    test.skip('loads existing entry data for editing', async ({ page }) => {
+    // Changed: JournalEntryPage now loads existing LedgerTransactionGroup data via useQuery
+    test('loads existing entry data for editing', async ({ page }) => {
       await mockAccountingApi(page);
 
       await page.goto('/accounting/journal-entry/group-001');

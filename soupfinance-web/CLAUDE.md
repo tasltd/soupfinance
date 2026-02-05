@@ -54,7 +54,7 @@ Key patterns:
 - Backend uses `application/json` content type (migrated from form-urlencoded 2026-01)
 - Foreign keys: Use nested objects `{ vendor: { id: "uuid" } }` not `vendor.id`
 - Registration endpoints go through `/account/*` proxy which injects `Api-Authorization` header
-- Client sends `X-Api-Consumer: SOUPFINANCE` header to identify app in backend logs/Sentry
+- Backend identifies the app via the `Api-Authorization` header injected by the proxy (ApiAuthenticatorInterceptor resolves the ApiConsumer name)
 
 ### Response Normalization (`src/api/client.ts`)
 Backend can return certain fields as either objects or arrays (depending on count). Use these utilities:

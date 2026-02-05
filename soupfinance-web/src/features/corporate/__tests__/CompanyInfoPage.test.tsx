@@ -5,7 +5,7 @@
  * Changed (2026-01-28): Initial test suite creation for corporate KYC onboarding
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -464,10 +464,8 @@ describe('CompanyInfoPage', () => {
     it('shows loading state during submission', async () => {
       const user = userEvent.setup()
 
-      // Make updateCorporate take some time
-      vi.mocked(updateCorporate).mockImplementation(
-        () => new Promise((resolve) => setTimeout(() => resolve(mockCorporate), 100))
-      )
+      // Make updateCorporate hang (never resolves) to observe loading state
+      vi.mocked(updateCorporate).mockImplementation(() => new Promise(() => {}))
 
       renderCompanyInfoPage()
 
@@ -545,10 +543,13 @@ describe('CompanyInfoPage', () => {
 
       await user.click(screen.getByText('Save & Continue'))
 
-      // Should not navigate on error
-      await waitFor(() => {
-        expect(mockNavigate).not.toHaveBeenCalledWith('/onboarding/directors?id=corp-123')
+      // Allow React Query to process the mutation rejection asynchronously
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 50))
       })
+
+      // Should not navigate on error
+      expect(mockNavigate).not.toHaveBeenCalledWith('/onboarding/directors?id=corp-123')
     })
   })
 
