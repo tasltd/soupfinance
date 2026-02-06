@@ -172,7 +172,7 @@ describe('Vendors API Integration', () => {
   });
 
   describe('createVendor', () => {
-    it('creates vendor with JSON serialization', async () => {
+    it('creates vendor with JSON body and CSRF in URL query string', async () => {
       // Arrange
       const newVendor = {
         name: 'New Supplier Co',
@@ -198,19 +198,20 @@ describe('Vendors API Integration', () => {
       // Assert - verify CSRF token was fetched
       expect(mockAxiosInstance.get).toHaveBeenCalledWith('/vendor/create.json');
 
-      // Assert - verify POST with JSON body including CSRF token
-      expect(mockAxiosInstance.post).toHaveBeenCalledWith(
-        '/vendor/save.json',
-        expect.objectContaining({
-          name: 'New Supplier Co',
-          email: 'info@newsupplier.com',
-          phoneNumber: '+254711223344',
-          paymentTerms: 45,
-          taxIdentificationNumber: 'TIN-999888',
-          SYNCHRONIZER_TOKEN: mockCsrfToken.SYNCHRONIZER_TOKEN,
-          SYNCHRONIZER_URI: mockCsrfToken.SYNCHRONIZER_URI,
-        })
-      );
+      // Assert - verify POST URL includes CSRF token as query params
+      const postUrl = mockAxiosInstance.post.mock.calls[0][0] as string;
+      expect(postUrl).toContain('/vendor/save.json?');
+      expect(postUrl).toContain('SYNCHRONIZER_TOKEN=');
+      expect(postUrl).toContain('SYNCHRONIZER_URI=');
+
+      // Assert - verify JSON body contains entity data only (no CSRF in body)
+      const postData = mockAxiosInstance.post.mock.calls[0][1] as Record<string, unknown>;
+      expect(postData.name).toBe('New Supplier Co');
+      expect(postData.email).toBe('info@newsupplier.com');
+      expect(postData.phoneNumber).toBe('+254711223344');
+      expect(postData.paymentTerms).toBe(45);
+      expect(postData.SYNCHRONIZER_TOKEN).toBeUndefined();
+      expect(postData.SYNCHRONIZER_URI).toBeUndefined();
 
       expect(result.id).toBe('new-vendor-uuid');
     });
@@ -227,10 +228,11 @@ describe('Vendors API Integration', () => {
       // Act
       await createVendor(minimalVendor);
 
-      // Assert - JSON body with only name and CSRF token
+      // Assert - JSON body with only name (CSRF is in URL, not body)
       const postData = mockAxiosInstance.post.mock.calls[0][1] as Record<string, unknown>;
       expect(postData.name).toBe('Minimal Vendor');
-      expect(postData.SYNCHRONIZER_TOKEN).toBe(mockCsrfToken.SYNCHRONIZER_TOKEN);
+      // Changed: CSRF tokens are now in URL query string, not in JSON body
+      expect(postData.SYNCHRONIZER_TOKEN).toBeUndefined();
       // Optional fields should not be present
       expect(postData.email).toBeUndefined();
       expect(postData.phoneNumber).toBeUndefined();
@@ -256,7 +258,7 @@ describe('Vendors API Integration', () => {
   });
 
   describe('updateVendor', () => {
-    it('updates vendor with ID in JSON body', async () => {
+    it('updates vendor with ID in JSON body (no CSRF)', async () => {
       // Arrange
       const vendorId = 'vendor-uuid-456';
       const updateData = {
@@ -266,8 +268,7 @@ describe('Vendors API Integration', () => {
       };
 
       const mockResponse = { id: vendorId, ...updateData };
-      // Mock CSRF token fetch from edit endpoint
-      mockAxiosInstance.get.mockResolvedValueOnce({ data: { vendor: mockCsrfToken } });
+      // Changed: No CSRF token fetch needed for PUT/update operations
       mockAxiosInstance.put.mockResolvedValue({ data: mockResponse });
 
       vi.resetModules();
@@ -276,30 +277,33 @@ describe('Vendors API Integration', () => {
       // Act
       const result = await updateVendor(vendorId, updateData);
 
-      // Assert - verify CSRF token was fetched from edit endpoint
-      expect(mockAxiosInstance.get).toHaveBeenCalledWith(`/vendor/edit/${vendorId}.json`);
+      // Assert - verify no CSRF token fetch (GET should not be called)
+      expect(mockAxiosInstance.get).not.toHaveBeenCalled();
 
-      // Assert - verify PUT with JSON body including ID and CSRF token
+      // Assert - verify PUT with JSON body including ID but NO CSRF token
       expect(mockAxiosInstance.put).toHaveBeenCalledWith(
         `/vendor/update/${vendorId}.json`,
         expect.objectContaining({
           id: vendorId,
           name: 'Updated Vendor Name',
           paymentTerms: 60,
-          SYNCHRONIZER_TOKEN: mockCsrfToken.SYNCHRONIZER_TOKEN,
-          SYNCHRONIZER_URI: mockCsrfToken.SYNCHRONIZER_URI,
         })
       );
+
+      // Assert - verify CSRF tokens are NOT in the request body
+      const putData = mockAxiosInstance.put.mock.calls[0][1] as Record<string, unknown>;
+      expect(putData.SYNCHRONIZER_TOKEN).toBeUndefined();
+      expect(putData.SYNCHRONIZER_URI).toBeUndefined();
 
       expect(result.name).toBe('Updated Vendor Name');
     });
 
-    it('partial update includes only provided fields', async () => {
+    it('partial update includes only provided fields plus ID', async () => {
       // Arrange
       const vendorId = 'vendor-uuid-789';
       const partialUpdate = { notes: 'Updated notes only' };
 
-      mockAxiosInstance.get.mockResolvedValueOnce({ data: { vendor: mockCsrfToken } });
+      // Changed: No CSRF token fetch needed for PUT/update operations
       mockAxiosInstance.put.mockResolvedValue({ data: { id: vendorId, ...partialUpdate } });
 
       vi.resetModules();
@@ -308,11 +312,13 @@ describe('Vendors API Integration', () => {
       // Act
       await updateVendor(vendorId, partialUpdate);
 
-      // Assert - JSON body with only provided fields plus ID and CSRF
+      // Assert - JSON body with only provided fields plus ID (no CSRF)
       const putData = mockAxiosInstance.put.mock.calls[0][1] as Record<string, unknown>;
       expect(putData.id).toBe(vendorId);
       expect(putData.notes).toBe('Updated notes only');
-      expect(putData.SYNCHRONIZER_TOKEN).toBe(mockCsrfToken.SYNCHRONIZER_TOKEN);
+      // Changed: CSRF tokens should NOT be present in update requests
+      expect(putData.SYNCHRONIZER_TOKEN).toBeUndefined();
+      expect(putData.SYNCHRONIZER_URI).toBeUndefined();
       // Other fields should not be in JSON body
       expect(putData.name).toBeUndefined();
       expect(putData.email).toBeUndefined();

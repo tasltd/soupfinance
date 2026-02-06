@@ -78,7 +78,7 @@ export function InvoiceDetailPage() {
   const handleOpenSendDialog = () => {
     resetEmailState();
     setRecipientEmail('');
-    setRecipientName(invoice?.client?.name || '');
+    setRecipientName(invoice?.accountServices?.serialised || '');
     setShowSendDialog(true);
   };
 
@@ -144,11 +144,12 @@ export function InvoiceDetailPage() {
       <div className="flex flex-wrap justify-between items-center gap-4">
         <div>
           <h1 className="text-3xl font-black tracking-tight text-text-light dark:text-text-dark" data-testid="invoice-detail-heading">
-            Invoice {invoice.invoiceNumber}
+            Invoice {String(invoice.number)}
           </h1>
           <p className="text-subtle-text mt-1">
-            <span className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${getStatusStyle(invoice.status)}`} data-testid="invoice-detail-status">
-              {invoice.status}
+            {/* Fix: invoice.status is optional, default to DRAFT */}
+            <span className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${getStatusStyle(invoice.status || 'DRAFT')}`} data-testid="invoice-detail-status">
+              {invoice.status || 'DRAFT'}
             </span>
           </p>
         </div>
@@ -220,24 +221,30 @@ export function InvoiceDetailPage() {
           <div className="p-6 grid grid-cols-2 gap-4">
             <div>
               <p className="text-sm text-subtle-text">Invoice Number</p>
-              <p className="font-medium text-text-light dark:text-text-dark" data-testid="invoice-number">{invoice.invoiceNumber}</p>
+              <p className="font-medium text-text-light dark:text-text-dark" data-testid="invoice-number">{String(invoice.number)}</p>
             </div>
             <div>
-              <p className="text-sm text-subtle-text">Client</p>
-              <p className="font-medium text-text-light dark:text-text-dark" data-testid="invoice-client">{invoice.client?.name || 'N/A'}</p>
+              <p className="text-sm text-subtle-text">Account</p>
+              <p className="font-medium text-text-light dark:text-text-dark" data-testid="invoice-account">{invoice.accountServices?.serialised || 'N/A'}</p>
             </div>
             <div>
-              <p className="text-sm text-subtle-text">Issue Date</p>
-              <p className="font-medium text-text-light dark:text-text-dark" data-testid="invoice-issue-date">{invoice.issueDate}</p>
+              <p className="text-sm text-subtle-text">Invoice Date</p>
+              <p className="font-medium text-text-light dark:text-text-dark" data-testid="invoice-date">{invoice.invoiceDate}</p>
             </div>
             <div>
               <p className="text-sm text-subtle-text">Due Date</p>
-              <p className="font-medium text-text-light dark:text-text-dark" data-testid="invoice-due-date">{invoice.dueDate}</p>
+              <p className="font-medium text-text-light dark:text-text-dark" data-testid="invoice-due-date">{invoice.paymentDate}</p>
             </div>
-            {invoice.terms && (
-              <div className="col-span-2">
-                <p className="text-sm text-subtle-text">Payment Terms</p>
-                <p className="font-medium text-text-light dark:text-text-dark">{invoice.terms}</p>
+            {invoice.purchaseOrderNumber && (
+              <div>
+                <p className="text-sm text-subtle-text">PO Number</p>
+                <p className="font-medium text-text-light dark:text-text-dark">{invoice.purchaseOrderNumber}</p>
+              </div>
+            )}
+            {invoice.currency && (
+              <div>
+                <p className="text-sm text-subtle-text">Currency</p>
+                <p className="font-medium text-text-light dark:text-text-dark">{invoice.currency}</p>
               </div>
             )}
             {invoice.notes && (
@@ -290,7 +297,7 @@ export function InvoiceDetailPage() {
         <div className="px-6 py-4 border-b border-border-light dark:border-border-dark">
           <h2 className="text-lg font-bold text-text-light dark:text-text-dark">Line Items</h2>
         </div>
-        {invoice.items && invoice.items.length > 0 ? (
+        {invoice.invoiceItemList && invoice.invoiceItemList.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full text-sm" data-testid="invoice-items-table">
               <thead className="text-xs text-subtle-text uppercase bg-background-light dark:bg-background-dark">
@@ -298,20 +305,16 @@ export function InvoiceDetailPage() {
                   <th className="px-6 py-3 text-left">Description</th>
                   <th className="px-6 py-3 text-right">Qty</th>
                   <th className="px-6 py-3 text-right">Unit Price</th>
-                  <th className="px-6 py-3 text-right">Tax Rate</th>
-                  <th className="px-6 py-3 text-right">Discount</th>
                   <th className="px-6 py-3 text-right">Amount</th>
                 </tr>
               </thead>
               <tbody>
-                {invoice.items.map((item, index) => (
+                {invoice.invoiceItemList.map((item, index) => (
                   <tr key={item.id || index} className="border-b border-border-light dark:border-border-dark">
                     <td className="px-6 py-4 text-text-light dark:text-text-dark">{item.description}</td>
                     <td className="px-6 py-4 text-right text-text-light dark:text-text-dark">{item.quantity}</td>
                     <td className="px-6 py-4 text-right text-text-light dark:text-text-dark">{formatCurrency(item.unitPrice)}</td>
-                    <td className="px-6 py-4 text-right text-subtle-text">{item.taxRate || 0}%</td>
-                    <td className="px-6 py-4 text-right text-subtle-text">{item.discountPercent || 0}%</td>
-                    <td className="px-6 py-4 text-right font-medium text-text-light dark:text-text-dark">{formatCurrency(item.amount)}</td>
+                    <td className="px-6 py-4 text-right font-medium text-text-light dark:text-text-dark">{formatCurrency(item.quantity * item.unitPrice)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -388,7 +391,7 @@ export function InvoiceDetailPage() {
             </div>
             <div className="p-6 space-y-4">
               <p className="text-sm text-subtle-text">
-                Send invoice <strong>{invoice?.invoiceNumber}</strong> with a frontend-generated PDF attachment.
+                Send invoice <strong>{String(invoice?.number)}</strong> with a frontend-generated PDF attachment.
               </p>
 
               <div>

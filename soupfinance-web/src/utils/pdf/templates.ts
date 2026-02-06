@@ -290,7 +290,8 @@ export function generateInvoiceHtml(
   company: CompanyInfo,
   formatCurrency: (amount: number | null | undefined) => string
 ): string {
-  const statusClass = getStatusClass(invoice.status);
+  // Fix: invoice.status is optional (InvoiceStatus | undefined), default to DRAFT
+  const statusClass = getStatusClass(invoice.status || 'DRAFT');
 
   return `
     <!DOCTYPE html>
@@ -313,22 +314,22 @@ export function generateInvoiceHtml(
           </div>
           <div class="document-info">
             <div class="document-title">INVOICE</div>
-            <div class="document-number">${escapeHtml(invoice.invoiceNumber)}</div>
-            <div class="document-date">Date: ${escapeHtml(invoice.issueDate)}</div>
-            <div class="status-badge ${statusClass}">${escapeHtml(invoice.status)}</div>
+            <div class="document-number">${escapeHtml(String(invoice.number))}</div>
+            <div class="document-date">Date: ${escapeHtml(invoice.invoiceDate)}</div>
+            <div class="status-badge ${statusClass}">${escapeHtml(invoice.status || 'DRAFT')}</div>
           </div>
         </div>
 
         <div class="parties">
           <div class="party">
             <div class="party-label">Bill To</div>
-            <div class="party-name">${escapeHtml(invoice.client?.name || 'N/A')}</div>
+            <div class="party-name">${escapeHtml(invoice.accountServices?.serialised || 'N/A')}</div>
           </div>
           <div class="party">
             <div class="party-label">Payment Details</div>
             <div class="party-details">
-              <strong>Due Date:</strong> ${escapeHtml(invoice.dueDate)}<br>
-              ${invoice.terms ? `<strong>Terms:</strong> ${escapeHtml(invoice.terms)}` : ''}
+              <strong>Due Date:</strong> ${escapeHtml(invoice.paymentDate)}<br>
+              ${invoice.purchaseOrderNumber ? `<strong>PO Number:</strong> ${escapeHtml(invoice.purchaseOrderNumber)}` : ''}
             </div>
           </div>
         </div>
@@ -344,13 +345,13 @@ export function generateInvoiceHtml(
             </tr>
           </thead>
           <tbody>
-            ${(invoice.items || []).map(item => `
+            ${(invoice.invoiceItemList || []).map(item => `
               <tr>
                 <td>${escapeHtml(item.description)}</td>
                 <td class="text-right">${item.quantity}</td>
                 <td class="text-right">${formatCurrency(item.unitPrice)}</td>
-                <td class="text-right">${item.taxRate || 0}%</td>
-                <td class="text-right font-medium">${formatCurrency(item.amount)}</td>
+                <td class="text-right">-</td>
+                <td class="text-right font-medium">${formatCurrency(item.quantity * item.unitPrice)}</td>
               </tr>
             `).join('')}
           </tbody>

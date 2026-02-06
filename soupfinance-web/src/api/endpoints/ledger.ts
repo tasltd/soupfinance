@@ -7,10 +7,11 @@
  * Added: Journal entry creation with multiple line items
  *
  * CSRF Token Pattern:
- * POST/PUT/DELETE operations require CSRF token from create.json or edit.json endpoint.
- * The TokenWithFormInterceptor adds SYNCHRONIZER_TOKEN and SYNCHRONIZER_URI to these responses.
+ * Changed: Only POST/save operations require CSRF token from create.json endpoint.
+ * PUT (update) and DELETE operations do NOT require CSRF tokens.
  */
-import apiClient, { toQueryString, getCsrfToken, getCsrfTokenForEdit } from '../client';
+// Changed: Removed unused getCsrfTokenForEdit import (will be used when edit is implemented)
+import apiClient, { toQueryString, getCsrfToken, csrfQueryString } from '../client';
 import type {
   LedgerAccount,
   LedgerTransaction,
@@ -67,12 +68,11 @@ export async function createLedgerAccount(data: Partial<LedgerAccount>): Promise
   // Step 1: Get CSRF token from create endpoint
   const csrf = await getCsrfToken('ledgerAccount');
 
-  // Step 2: Include CSRF token in JSON body
-  const response = await apiClient.post<LedgerAccount>('/ledgerAccount/save.json', {
-    ...data,
-    SYNCHRONIZER_TOKEN: csrf.SYNCHRONIZER_TOKEN,
-    SYNCHRONIZER_URI: csrf.SYNCHRONIZER_URI,
-  });
+  // Step 2: Pass CSRF token as URL query params (Grails withForm reads from request params, not JSON body)
+  const response = await apiClient.post<LedgerAccount>(
+    `/ledgerAccount/save.json?${csrfQueryString(csrf)}`,
+    data
+  );
   return response.data;
 }
 
@@ -80,19 +80,13 @@ export async function createLedgerAccount(data: Partial<LedgerAccount>): Promise
  * Update existing ledger account
  * PUT /rest/ledgerAccount/update/:id.json
  *
- * CSRF Token Required: Calls edit.json first to get SYNCHRONIZER_TOKEN
+ * Changed: Updates do not require CSRF tokens
  */
 export async function updateLedgerAccount(id: string, data: Partial<LedgerAccount>): Promise<LedgerAccount> {
-  // Step 1: Get CSRF token from edit endpoint
-  const csrf = await getCsrfTokenForEdit('ledgerAccount', id);
-
-  // Step 2: Include CSRF token in JSON body
-  const response = await apiClient.put<LedgerAccount>(`/ledgerAccount/update/${id}.json`, {
-    ...data,
-    id,
-    SYNCHRONIZER_TOKEN: csrf.SYNCHRONIZER_TOKEN,
-    SYNCHRONIZER_URI: csrf.SYNCHRONIZER_URI,
-  });
+  const response = await apiClient.put<LedgerAccount>(
+    `/ledgerAccount/update/${id}.json`,
+    { ...data, id }
+  );
   return response.data;
 }
 
@@ -141,12 +135,11 @@ export async function createLedgerTransaction(data: Partial<LedgerTransaction>):
   // Step 1: Get CSRF token from create endpoint
   const csrf = await getCsrfToken('ledgerTransaction');
 
-  // Step 2: Include CSRF token in JSON body
-  const response = await apiClient.post<LedgerTransaction>('/ledgerTransaction/save.json', {
-    ...data,
-    SYNCHRONIZER_TOKEN: csrf.SYNCHRONIZER_TOKEN,
-    SYNCHRONIZER_URI: csrf.SYNCHRONIZER_URI,
-  });
+  // Step 2: Pass CSRF token as URL query params (Grails withForm reads from request params, not JSON body)
+  const response = await apiClient.post<LedgerTransaction>(
+    `/ledgerTransaction/save.json?${csrfQueryString(csrf)}`,
+    data
+  );
   return response.data;
 }
 
@@ -261,8 +254,6 @@ export async function createVoucher(data: CreateVoucherRequest): Promise<Voucher
     description: data.description,
     reference: data.reference,
     beneficiaryName: data.beneficiaryName,
-    SYNCHRONIZER_TOKEN: csrf.SYNCHRONIZER_TOKEN,
-    SYNCHRONIZER_URI: csrf.SYNCHRONIZER_URI,
   };
 
   // FK references as nested objects for JSON binding
@@ -273,7 +264,11 @@ export async function createVoucher(data: CreateVoucherRequest): Promise<Voucher
   if (data.expenseAccountId) body.expenseAccount = { id: data.expenseAccountId };
   if (data.incomeAccountId) body.incomeAccount = { id: data.incomeAccountId };
 
-  const response = await apiClient.post<Voucher>('/voucher/save.json', body);
+  // Pass CSRF token as URL query params (Grails withForm reads from request params, not JSON body)
+  const response = await apiClient.post<Voucher>(
+    `/voucher/save.json?${csrfQueryString(csrf)}`,
+    body
+  );
   return response.data;
 }
 
@@ -281,19 +276,14 @@ export async function createVoucher(data: CreateVoucherRequest): Promise<Voucher
  * Update existing voucher
  * PUT /rest/voucher/update/:id.json
  *
- * CSRF Token Required: Calls edit.json first to get SYNCHRONIZER_TOKEN
+ * Changed: Updates do not require CSRF tokens
  */
 export async function updateVoucher(id: string, data: Partial<CreateVoucherRequest>): Promise<Voucher> {
-  // Step 1: Get CSRF token from edit endpoint
-  const csrf = await getCsrfTokenForEdit('voucher', id);
-
-  // Step 2: Build JSON body with nested objects for foreign keys
+  // Build JSON body with nested objects for foreign keys
   const { clientId, vendorId, cashAccountId, expenseAccountId, ...rest } = data;
   const body: Record<string, unknown> = {
     id,
     ...rest,
-    SYNCHRONIZER_TOKEN: csrf.SYNCHRONIZER_TOKEN,
-    SYNCHRONIZER_URI: csrf.SYNCHRONIZER_URI,
   };
 
   // FK references as nested objects for JSON binding
@@ -302,7 +292,10 @@ export async function updateVoucher(id: string, data: Partial<CreateVoucherReque
   if (cashAccountId) body.cashAccount = { id: cashAccountId };
   if (expenseAccountId) body.expenseAccount = { id: expenseAccountId };
 
-  const response = await apiClient.put<Voucher>(`/voucher/update/${id}.json`, body);
+  const response = await apiClient.put<Voucher>(
+    `/voucher/update/${id}.json`,
+    body
+  );
   return response.data;
 }
 
@@ -396,11 +389,13 @@ export async function createJournalEntry(data: CreateJournalEntryRequest): Promi
     description: data.description,
     reference: data.reference,
     ledgerTransactionList,
-    SYNCHRONIZER_TOKEN: csrf.SYNCHRONIZER_TOKEN,
-    SYNCHRONIZER_URI: csrf.SYNCHRONIZER_URI,
   };
 
-  const response = await apiClient.post<LedgerTransactionGroup>('/ledgerTransaction/saveMultiple.json', body);
+  // Pass CSRF token as URL query params (Grails withForm reads from request params, not JSON body)
+  const response = await apiClient.post<LedgerTransactionGroup>(
+    `/ledgerTransaction/saveMultiple.json?${csrfQueryString(csrf)}`,
+    body
+  );
   return response.data;
 }
 
@@ -411,13 +406,10 @@ export async function createJournalEntry(data: CreateJournalEntryRequest): Promi
  * Updates the LedgerTransactionGroup and its LedgerTransaction entries.
  * Only PENDING (draft) entries can be updated.
  *
- * CSRF Token Required: Calls edit.json first to get SYNCHRONIZER_TOKEN
+ * Changed: Updates do not require CSRF tokens
  */
 export async function updateJournalEntry(id: string, data: CreateJournalEntryRequest): Promise<LedgerTransactionGroup> {
-  // Step 1: Get CSRF token from edit endpoint
-  const csrf = await getCsrfTokenForEdit('ledgerTransactionGroup', id);
-
-  // Step 2: Build JSON body with array of line items
+  // Build JSON body with array of line items
   const ledgerTransactionList = data.lines.map((line) => ({
     ledgerAccount: { id: line.accountId },
     transactionDate: data.entryDate,
@@ -433,11 +425,12 @@ export async function updateJournalEntry(id: string, data: CreateJournalEntryReq
     description: data.description,
     reference: data.reference,
     ledgerTransactionList,
-    SYNCHRONIZER_TOKEN: csrf.SYNCHRONIZER_TOKEN,
-    SYNCHRONIZER_URI: csrf.SYNCHRONIZER_URI,
   };
 
-  const response = await apiClient.put<LedgerTransactionGroup>(`/ledgerTransactionGroup/update/${id}.json`, body);
+  const response = await apiClient.put<LedgerTransactionGroup>(
+    `/ledgerTransactionGroup/update/${id}.json`,
+    body
+  );
   return response.data;
 }
 

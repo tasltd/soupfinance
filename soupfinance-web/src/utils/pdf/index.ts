@@ -131,7 +131,7 @@ export async function generateInvoicePdf(
   formatCurrency: (amount: number | null | undefined) => string
 ): Promise<void> {
   const html = generateInvoiceHtml(invoice, companyInfo, formatCurrency);
-  const filename = `Invoice-${invoice.invoiceNumber}.pdf`;
+  const filename = `Invoice-${String(invoice.number)}.pdf`;
   await generateAndDownloadPdf(html, filename);
 }
 

@@ -31,10 +31,12 @@ import { listInvoices } from '../../../api';
 function createMockInvoice(overrides: Partial<Invoice> = {}): Invoice {
   return {
     id: 'inv-123',
-    invoiceNumber: 'INV-2024-001',
-    client: { id: 'client-1', name: 'Acme Corp' },
-    issueDate: '2024-01-15',
-    dueDate: '2024-02-15',
+    // Changed: invoiceNumber → number (int), client → accountServices, issueDate → invoiceDate, dueDate → paymentDate
+    number: 2024001,
+    accountServices: { id: 'client-1', serialised: 'Acme Corp' },
+    invoiceDate: '2024-01-15',
+    paymentDate: '2024-02-15',
+    currency: 'USD',
     status: 'DRAFT' as InvoiceStatus,
     subtotal: 1000,
     taxAmount: 100,
@@ -205,8 +207,10 @@ describe('InvoiceListPage', () => {
       await screen.findByTestId('invoice-list-table');
 
       expect(screen.getByText('Invoice #')).toBeInTheDocument();
-      expect(screen.getByText('Client')).toBeInTheDocument();
-      expect(screen.getByText('Date')).toBeInTheDocument();
+      // Changed: 'Client' → 'Account' (matches InvoiceListPage table header)
+      expect(screen.getByText('Account')).toBeInTheDocument();
+      // Changed: 'Date' → 'Invoice Date' (matches InvoiceListPage table header)
+      expect(screen.getByText('Invoice Date')).toBeInTheDocument();
       expect(screen.getByText('Due Date')).toBeInTheDocument();
       expect(screen.getByText('Amount')).toBeInTheDocument();
       expect(screen.getByText('Status')).toBeInTheDocument();
@@ -214,12 +218,13 @@ describe('InvoiceListPage', () => {
     });
 
     it('renders invoice row with correct data', async () => {
+      // Changed: field names to match Grails domain (number, accountServices, invoiceDate, paymentDate)
       const mockInvoice = createMockInvoice({
         id: 'inv-456',
-        invoiceNumber: 'INV-2024-042',
-        client: { id: 'client-2', name: 'Tech Solutions Inc' },
-        issueDate: '2024-03-01',
-        dueDate: '2024-03-31',
+        number: 2024042,
+        accountServices: { id: 'client-2', serialised: 'Tech Solutions Inc' },
+        invoiceDate: '2024-03-01',
+        paymentDate: '2024-03-31',
         totalAmount: 2500.50,
         status: 'SENT',
       });
@@ -230,15 +235,15 @@ describe('InvoiceListPage', () => {
       const row = await screen.findByTestId('invoice-row-inv-456');
       expect(row).toBeInTheDocument();
 
-      // Check invoice number link
+      // Changed: invoice number is now an integer, display format depends on component
       const invoiceLink = within(row).getByTestId('invoice-link-inv-456');
-      expect(invoiceLink).toHaveTextContent('INV-2024-042');
+      expect(invoiceLink).toHaveTextContent('2024042');
       expect(invoiceLink).toHaveAttribute('href', '/invoices/inv-456');
 
-      // Check client name
+      // Check client name (from accountServices.serialised)
       expect(within(row).getByText('Tech Solutions Inc')).toBeInTheDocument();
 
-      // Check dates
+      // Check dates (invoiceDate and paymentDate)
       expect(within(row).getByText('2024-03-01')).toBeInTheDocument();
       expect(within(row).getByText('2024-03-31')).toBeInTheDocument();
 
@@ -247,10 +252,11 @@ describe('InvoiceListPage', () => {
     });
 
     it('renders multiple invoices', async () => {
+      // Changed: invoiceNumber → number (integer, matches Grails domain)
       const mockInvoices = [
-        createMockInvoice({ id: 'inv-1', invoiceNumber: 'INV-001' }),
-        createMockInvoice({ id: 'inv-2', invoiceNumber: 'INV-002' }),
-        createMockInvoice({ id: 'inv-3', invoiceNumber: 'INV-003' }),
+        createMockInvoice({ id: 'inv-1', number: 1 }),
+        createMockInvoice({ id: 'inv-2', number: 2 }),
+        createMockInvoice({ id: 'inv-3', number: 3 }),
       ];
       vi.mocked(listInvoices).mockResolvedValue(mockInvoices);
 

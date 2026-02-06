@@ -218,7 +218,7 @@ describe('Ledger API Integration', () => {
   });
 
   describe('createLedgerAccount', () => {
-    it('creates account with JSON serialization', async () => {
+    it('creates account with JSON body and CSRF in URL query string', async () => {
       // Arrange
       const newAccount = {
         code: '1030',
@@ -242,18 +242,20 @@ describe('Ledger API Integration', () => {
       // Assert - verify CSRF token was fetched
       expect(mockAxiosInstance.get).toHaveBeenCalledWith('/ledgerAccount/create.json');
 
-      // Assert - verify POST with JSON body including CSRF token
-      expect(mockAxiosInstance.post).toHaveBeenCalledWith(
-        '/ledgerAccount/save.json',
-        expect.objectContaining({
-          code: '1030',
-          name: 'Petty Cash',
-          ledgerGroup: 'ASSET',
-          isActive: true,
-          SYNCHRONIZER_TOKEN: mockCsrfToken.SYNCHRONIZER_TOKEN,
-          SYNCHRONIZER_URI: mockCsrfToken.SYNCHRONIZER_URI,
-        })
-      );
+      // Assert - verify POST URL includes CSRF token as query params
+      const postUrl = mockAxiosInstance.post.mock.calls[0][0] as string;
+      expect(postUrl).toContain('/ledgerAccount/save.json?');
+      expect(postUrl).toContain('SYNCHRONIZER_TOKEN=');
+      expect(postUrl).toContain('SYNCHRONIZER_URI=');
+
+      // Assert - verify JSON body contains entity data only (no CSRF in body)
+      const postData = mockAxiosInstance.post.mock.calls[0][1] as Record<string, unknown>;
+      expect(postData.code).toBe('1030');
+      expect(postData.name).toBe('Petty Cash');
+      expect(postData.ledgerGroup).toBe('ASSET');
+      expect(postData.isActive).toBe(true);
+      expect(postData.SYNCHRONIZER_TOKEN).toBeUndefined();
+      expect(postData.SYNCHRONIZER_URI).toBeUndefined();
 
       expect(result.id).toBe('new-acc-uuid');
     });
@@ -283,12 +285,12 @@ describe('Ledger API Integration', () => {
   });
 
   describe('updateLedgerAccount', () => {
-    it('updates account with ID in JSON body', async () => {
+    it('updates account with ID in JSON body (no CSRF)', async () => {
       // Arrange
       const accountId = 'acc-uuid-456';
       const updateData = { name: 'Updated Cash Account', description: 'Updated description' };
 
-      mockAxiosInstance.get.mockResolvedValueOnce({ data: { ledgerAccount: mockCsrfToken } });
+      // Changed: No CSRF token fetch needed for PUT/update operations
       mockAxiosInstance.put.mockResolvedValue({ data: { id: accountId, ...updateData } });
 
       vi.resetModules();
@@ -297,18 +299,21 @@ describe('Ledger API Integration', () => {
       // Act
       const result = await updateLedgerAccount(accountId, updateData);
 
-      // Assert - verify CSRF token was fetched from edit endpoint
-      expect(mockAxiosInstance.get).toHaveBeenCalledWith(`/ledgerAccount/edit/${accountId}.json`);
+      // Assert - verify no CSRF token fetch (GET should not be called)
+      expect(mockAxiosInstance.get).not.toHaveBeenCalled();
 
-      // Assert - verify PUT with JSON body including ID and CSRF token
+      // Assert - verify PUT with JSON body including ID but NO CSRF token
       expect(mockAxiosInstance.put).toHaveBeenCalledWith(
         `/ledgerAccount/update/${accountId}.json`,
         expect.objectContaining({
           id: accountId,
           name: 'Updated Cash Account',
-          SYNCHRONIZER_TOKEN: mockCsrfToken.SYNCHRONIZER_TOKEN,
         })
       );
+
+      // Assert - verify CSRF tokens are NOT in the request body
+      const putData = mockAxiosInstance.put.mock.calls[0][1] as Record<string, unknown>;
+      expect(putData.SYNCHRONIZER_TOKEN).toBeUndefined();
 
       expect(result.name).toBe('Updated Cash Account');
     });
@@ -423,7 +428,7 @@ describe('Ledger API Integration', () => {
   });
 
   describe('createLedgerTransaction', () => {
-    it('creates journal entry with JSON serialization', async () => {
+    it('creates journal entry with JSON body and CSRF in URL query string', async () => {
       // Arrange
       const newTxn = {
         transactionDate: '2026-01-20',
@@ -448,18 +453,20 @@ describe('Ledger API Integration', () => {
       // Assert - verify CSRF token was fetched
       expect(mockAxiosInstance.get).toHaveBeenCalledWith('/ledgerTransaction/create.json');
 
-      // Assert - verify POST with JSON body including CSRF token
-      expect(mockAxiosInstance.post).toHaveBeenCalledWith(
-        '/ledgerTransaction/save.json',
-        expect.objectContaining({
-          transactionDate: '2026-01-20',
-          debitAccount: { id: 'expense-acc-uuid' },
-          creditAccount: { id: 'cash-acc-uuid' },
-          amount: 10000,
-          SYNCHRONIZER_TOKEN: mockCsrfToken.SYNCHRONIZER_TOKEN,
-          SYNCHRONIZER_URI: mockCsrfToken.SYNCHRONIZER_URI,
-        })
-      );
+      // Assert - verify POST URL includes CSRF token as query params
+      const postUrl = mockAxiosInstance.post.mock.calls[0][0] as string;
+      expect(postUrl).toContain('/ledgerTransaction/save.json?');
+      expect(postUrl).toContain('SYNCHRONIZER_TOKEN=');
+      expect(postUrl).toContain('SYNCHRONIZER_URI=');
+
+      // Assert - verify JSON body contains entity data only (no CSRF in body)
+      const postData = mockAxiosInstance.post.mock.calls[0][1] as Record<string, unknown>;
+      expect(postData.transactionDate).toBe('2026-01-20');
+      expect(postData.debitAccount).toEqual({ id: 'expense-acc-uuid' });
+      expect(postData.creditAccount).toEqual({ id: 'cash-acc-uuid' });
+      expect(postData.amount).toBe(10000);
+      expect(postData.SYNCHRONIZER_TOKEN).toBeUndefined();
+      expect(postData.SYNCHRONIZER_URI).toBeUndefined();
 
       expect(result.id).toBe('new-txn-uuid');
       expect(result.status).toBe('PENDING');

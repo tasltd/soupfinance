@@ -38,58 +38,72 @@ export const vendorSchema = baseEntitySchema.extend({
 export type Vendor = z.infer<typeof vendorSchema>;
 
 // =============================================================================
-// Invoice Client Schema
+// Account Services Schema (replaces Invoice Client)
 // =============================================================================
 
-export const invoiceClientTypeSchema = z.enum(['INDIVIDUAL', 'CORPORATE']);
-
-export const invoiceClientSchema = baseEntitySchema.extend({
-  clientType: invoiceClientTypeSchema,
-  name: z.string(),
-  email: z.string(),
-  phone: optionalString,
-  address: optionalString,
-  // Individual fields
-  firstName: optionalString,
-  lastName: optionalString,
-  // Corporate fields
-  companyName: optionalString,
-  contactPerson: optionalString,
-  registrationNumber: optionalString,
-  taxNumber: optionalString,
+/**
+ * AccountServices from soupbroker.kyc.AccountServices
+ * Portfolio/service arrangement connected to a broker KYC client.
+ * Used as the invoice recipient.
+ */
+export const accountServicesSchema = baseEntitySchema.extend({
+  client: fkReferenceSchema.optional(),
+  serialised: z.string(),
+  simpleName: optionalString,
+  customName: optionalString,
+  currency: optionalString,
+  baseCurrency: optionalString,
 });
 
-export type InvoiceClient = z.infer<typeof invoiceClientSchema>;
+export type AccountServicesZod = z.infer<typeof accountServicesSchema>;
+
+// Changed: Renamed from InvoiceClient to Client to match backend domain (soupbroker.kyc.Client)
+export const clientTypeSchema = z.enum(['INDIVIDUAL', 'CORPORATE']);
+// NOTE: Client Zod schema not yet defined — use types/index.ts Client interface for now
+export const invoiceClientSchema = accountServicesSchema; // @deprecated legacy alias
 
 // =============================================================================
-// Invoice Schema
+// Invoice Schema (matches soupbroker.finance.Invoice domain)
 // =============================================================================
 
 export const invoiceItemSchema = baseEntitySchema.extend({
   invoice: fkReferenceSchema.optional(),
+  serviceDescription: fkReferenceSchema.optional(),
   description: z.string(),
   quantity: z.number(),
   unitPrice: z.number(),
-  taxRate: z.number(),
+  priority: z.number().optional(),
+  taxEntryInvoiceItemList: z.array(z.unknown()).optional().nullable(),
+  // Computed/UI-only fields
+  taxRate: z.number().optional(),
   discountPercent: z.number().optional().default(0),
-  amount: z.number(),
+  amount: z.number().optional(),
 });
 
 export const invoiceSchema = baseEntitySchema.extend({
-  invoiceNumber: z.string(),
-  client: fkReferenceSchema,
-  issueDate: z.string(),
-  dueDate: z.string(),
-  status: invoiceStatusSchema,
-  subtotal: z.number(),
-  taxAmount: z.number(),
-  discountAmount: z.number().optional().default(0),
-  totalAmount: z.number(),
-  amountPaid: z.number(),
-  amountDue: z.number(),
+  // Backend fields
+  number: z.number(),
+  accountServices: fkReferenceSchema,
+  invoiceDate: z.string(),
+  paymentDate: z.string(),
+  currency: z.string().optional().default('GHS'),
+  baseCurrency: optionalString,
+  exchangeRate: z.number().optional(),
   notes: optionalString,
-  terms: optionalString,
-  items: z.array(invoiceItemSchema).optional(),
+  purchaseOrderNumber: optionalString,
+  quickReference: optionalString,
+  invoiceItemList: z.array(invoiceItemSchema).optional().nullable(),
+  invoicePaymentList: z.array(z.unknown()).optional().nullable(),
+  invoiceTaxEntryList: z.array(z.unknown()).optional().nullable(),
+  totalCount: z.number().optional(),
+  // Computed fields (added by API transform layer)
+  status: invoiceStatusSchema.optional(),
+  subtotal: z.number().optional(),
+  taxAmount: z.number().optional(),
+  discountAmount: z.number().optional().default(0),
+  totalAmount: z.number().optional(),
+  amountPaid: z.number().optional(),
+  amountDue: z.number().optional(),
 });
 
 export type Invoice = z.infer<typeof invoiceSchema>;

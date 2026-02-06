@@ -70,21 +70,65 @@ export interface CorporateDocuments extends BaseEntity {
 }
 
 // =============================================================================
-// Finance Types - Client (Invoice Recipients)
+// Finance Types - Account Services (Invoice Recipients)
 // =============================================================================
 
-// Added: Client type for invoice recipients
+/**
+ * AccountServices - portfolio connected to a broker KYC client.
+ * Used as the invoice recipient (replaces the non-existent invoiceClient domain).
+ * Backend domain: soupbroker.kyc.AccountServices
+ *
+ * Each broker client has at least one AccountServices. Invoices are created
+ * against an AccountServices (not directly against a client).
+ *
+ * The `serialised` field serves as the display name, e.g.:
+ *   "Direct Account : Corporate(Acme Corp) | Growth Portfolio"
+ */
+export interface AccountServices extends BaseEntity {
+  client?: { id: string; serialised?: string; class?: string };
+  serialised: string;
+  simpleName?: string;
+  simpleNameWithoutIo?: string;
+  customName?: string;
+  currency?: string;
+  baseCurrency?: string;
+  investmentObjective?: string;
+  investmentHorizon?: string;
+  portfolioList?: Array<{ id: string; serialised?: string; class?: string }>;
+}
+
+// =============================================================================
+// KYC Client Types (tenant's billing recipients)
+// =============================================================================
+
+/**
+ * Client - the tenant's customer for billing purposes.
+ * Backend domain: soupbroker.kyc.Client
+ *
+ * A Client holds the metadata needed to populate invoice recipient fields
+ * (name, email, address, tax number). Each Client is linked to an AccountServices
+ * which provides the FK reference for invoices.
+ *
+ * Endpoints: `/rest/client/index.json`, `/rest/client/show/:id.json`
+ */
+export type ClientType = 'INDIVIDUAL' | 'CORPORATE';
+
 export interface Client extends BaseEntity {
   name: string;
+  clientType: ClientType;
   email?: string;
   phone?: string;
   address?: string;
-  city?: string;
-  state?: string;
-  zipCode?: string;
-  country?: string;
+  // Individual fields (from KYC Individual)
+  firstName?: string;
+  lastName?: string;
+  // Corporate fields (from KYC Corporate)
+  companyName?: string;
+  contactPerson?: string;
+  registrationNumber?: string;
   taxNumber?: string;
-  notes?: string;
+  // FK to AccountServices (for invoice reference)
+  accountServices?: { id: string; serialised?: string; class?: string };
 }
 
 // =============================================================================
@@ -93,31 +137,76 @@ export interface Client extends BaseEntity {
 
 export type InvoiceStatus = 'DRAFT' | 'SENT' | 'VIEWED' | 'PARTIAL' | 'PAID' | 'OVERDUE' | 'CANCELLED';
 
+/**
+ * Invoice domain model matching soupbroker.finance.Invoice.
+ *
+ * Backend field mapping:
+ *   - number (int)         → invoice number, displayed as string
+ *   - accountServices (FK) → invoice recipient (portfolio/account)
+ *   - invoiceDate          → date the invoice was issued
+ *   - paymentDate          → due date for payment
+ *   - invoiceItemList      → line items (may be references or full objects)
+ *   - invoicePaymentList   → recorded payments
+ *
+ * Computed fields (calculated by API transform layer from invoiceItemList):
+ *   - status, subtotal, taxAmount, discountAmount, totalAmount, amountPaid, amountDue
+ */
 export interface Invoice extends BaseEntity {
-  invoiceNumber: string;
-  client: { id: string; name?: string };
-  issueDate: string;
-  dueDate: string;
-  status: InvoiceStatus;
-  subtotal: number;
-  taxAmount: number;
-  discountAmount: number;
-  totalAmount: number;
-  amountPaid: number;
-  amountDue: number;
+  // Backend fields (from /rest/invoice/)
+  number: number;
+  accountServices: { id: string; serialised?: string; class?: string };
+  invoiceDate: string;
+  paymentDate: string;
+  currency: string;
+  baseCurrency?: string;
+  exchangeRate?: number;
   notes?: string;
-  terms?: string;
-  items?: InvoiceItem[];
+  purchaseOrderNumber?: string;
+  quickReference?: string;
+  invoiceItemList?: InvoiceItem[];
+  invoicePaymentList?: InvoicePayment[] | null;
+  invoiceTaxEntryList?: unknown[] | null;
+  serialised?: string;
+  totalCount?: number;
+
+  // Computed fields (added by API transform layer)
+  status?: InvoiceStatus;
+  subtotal?: number;
+  taxAmount?: number;
+  discountAmount?: number;
+  totalAmount?: number;
+  amountPaid?: number;
+  amountDue?: number;
 }
 
+/**
+ * InvoiceItem domain model matching soupbroker.finance.InvoiceItem.
+ *
+ * Backend fields:
+ *   - description (string)       → line item description text
+ *   - quantity (number)          → quantity
+ *   - unitPrice (number)         → price per unit
+ *   - serviceDescription (FK)    → reference to predefined service type
+ *   - priority (int)             → sort order
+ *   - taxEntryInvoiceItemList    → tax entries for this item
+ *
+ * Note: taxRate and discountPercent are NOT first-class backend fields.
+ * Tax is handled via taxEntryInvoiceItemList (separate entities).
+ * Discount is not a backend concept.
+ */
 export interface InvoiceItem extends BaseEntity {
-  invoice: { id: string };
+  invoice?: { id: string; serialised?: string; class?: string };
+  serviceDescription?: { id: string; serialised?: string; class?: string; name?: string };
   description: string;
   quantity: number;
   unitPrice: number;
-  taxRate: number;
-  discountPercent: number;
-  amount: number;
+  priority?: number;
+  taxEntryInvoiceItemList?: unknown[] | null;
+  serialised?: string;
+  // Computed/UI-only fields (not from backend)
+  taxRate?: number;
+  discountPercent?: number;
+  amount?: number;
 }
 
 export interface InvoicePayment extends BaseEntity {

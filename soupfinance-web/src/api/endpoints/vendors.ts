@@ -3,10 +3,11 @@
  * Maps to soupmarkets-web /rest/vendor/* endpoints
  *
  * CSRF Token Pattern:
- * POST/PUT/DELETE operations require CSRF token from create.json or edit.json endpoint.
- * The TokenWithFormInterceptor adds SYNCHRONIZER_TOKEN and SYNCHRONIZER_URI to these responses.
+ * Changed: Only POST/save operations require CSRF token from create.json endpoint.
+ * PUT (update) and DELETE operations do NOT require CSRF tokens.
  */
-import apiClient, { toQueryString, getCsrfToken, getCsrfTokenForEdit } from '../client';
+// Changed: Removed unused getCsrfTokenForEdit import (will be used when edit is implemented)
+import apiClient, { toQueryString, getCsrfToken, csrfQueryString } from '../client';
 import type { Vendor, ListParams } from '../../types';
 
 const BASE_URL = '/vendor';
@@ -44,12 +45,11 @@ export async function createVendor(data: Partial<Vendor>): Promise<Vendor> {
   // Step 1: Get CSRF token from create endpoint
   const csrf = await getCsrfToken('vendor');
 
-  // Step 2: Include CSRF token in JSON body
-  const response = await apiClient.post<Vendor>(`${BASE_URL}/save.json`, {
-    ...data,
-    SYNCHRONIZER_TOKEN: csrf.SYNCHRONIZER_TOKEN,
-    SYNCHRONIZER_URI: csrf.SYNCHRONIZER_URI,
-  });
+  // Step 2: Pass CSRF token as URL query params (Grails withForm reads from request params, not JSON body)
+  const response = await apiClient.post<Vendor>(
+    `${BASE_URL}/save.json?${csrfQueryString(csrf)}`,
+    data
+  );
   return response.data;
 }
 
@@ -57,19 +57,13 @@ export async function createVendor(data: Partial<Vendor>): Promise<Vendor> {
  * Update existing vendor
  * PUT /rest/vendor/update/:id.json
  *
- * CSRF Token Required: Calls edit.json first to get SYNCHRONIZER_TOKEN
+ * Changed: Updates do not require CSRF tokens
  */
 export async function updateVendor(id: string, data: Partial<Vendor>): Promise<Vendor> {
-  // Step 1: Get CSRF token from edit endpoint
-  const csrf = await getCsrfTokenForEdit('vendor', id);
-
-  // Step 2: Include CSRF token in JSON body
-  const response = await apiClient.put<Vendor>(`${BASE_URL}/update/${id}.json`, {
-    ...data,
-    id,
-    SYNCHRONIZER_TOKEN: csrf.SYNCHRONIZER_TOKEN,
-    SYNCHRONIZER_URI: csrf.SYNCHRONIZER_URI,
-  });
+  const response = await apiClient.put<Vendor>(
+    `${BASE_URL}/update/${id}.json`,
+    { ...data, id }
+  );
   return response.data;
 }
 

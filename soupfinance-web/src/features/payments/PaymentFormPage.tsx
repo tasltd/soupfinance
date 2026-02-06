@@ -257,7 +257,7 @@ export function PaymentFormPage() {
                   {paymentType === 'invoice'
                     ? unpaidInvoices?.map((invoice: Invoice) => (
                         <option key={invoice.id} value={invoice.id}>
-                          {invoice.invoiceNumber} - {invoice.client?.name || 'Unknown'} - Due: {formatCurrency(invoice.amountDue)}
+                          {String(invoice.number)} - {invoice.accountServices?.serialised || 'Unknown'} - Due: {formatCurrency(invoice.amountDue)}
                         </option>
                       ))
                     : unpaidBills?.map((bill: Bill) => (

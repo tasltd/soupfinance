@@ -134,16 +134,17 @@ export function DashboardPage() {
                     data-testid={`dashboard-invoice-row-${invoice.id}`}
                   >
                     <td className="px-6 py-4 font-medium text-primary">
-                      {invoice.invoiceNumber}
+                      {String(invoice.number)}
                     </td>
                     <td className="px-6 py-4 text-text-light dark:text-text-dark">
-                      {invoice.client?.name || 'N/A'}
+                      {invoice.accountServices?.serialised || 'N/A'}
                     </td>
                     <td className="px-6 py-4 text-right text-text-light dark:text-text-dark">
                       {formatCurrency(invoice.totalAmount)}
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <StatusBadge status={invoice.status} />
+                      {/* Fix: invoice.status is optional, default to DRAFT */}
+                      <StatusBadge status={invoice.status || 'DRAFT'} />
                     </td>
                   </tr>
                 ))}

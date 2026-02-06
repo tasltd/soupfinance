@@ -1,167 +1,90 @@
 /**
- * Invoice Client API endpoints for SoupFinance
- * Maps to soupmarkets-web /rest/invoiceClient/* endpoints
+ * Client API endpoints for SoupFinance
  *
- * ARCHITECTURE (2026-01-30):
- * Invoice clients are the tenant's own customers/contacts for billing purposes.
- * They have basic info (name, email, phone) - no full KYC required.
- * Different from the broker /client/* endpoints which are for trading clients.
+ * ARCHITECTURE:
+ * In SoupFinance, "clients" are KYC Client entities from the Grails backend
+ * (soupbroker.kyc.Client). Each Client can own one or more AccountServices.
  *
- * Client types:
- * - INDIVIDUAL: Person with firstName, lastName
- * - CORPORATE: Company with companyName, contactPerson
+ * Invoices reference accountServices.id as the FK, but client metadata
+ * (name, email, phone, address) comes from the Client entity.
+ *
+ * Endpoints:
+ *   - /rest/client/index.json         → List KYC clients
+ *   - /rest/client/show/:id.json      → Get single KYC client
+ *   - /rest/accountServices/show/:id.json → Get single account services
  */
 import apiClient, { toQueryString } from '../client';
-import type { ListParams } from '../../types';
-
-const BASE_URL = '/invoiceClient';
+import type { ListParams, AccountServices, Client } from '../../types';
 
 // =============================================================================
-// Types
+// AccountServices (the invoice FK reference)
 // =============================================================================
 
 /**
- * Client type discriminator
+ * Get single account services by ID
+ * GET /rest/accountServices/show/:id.json
  */
-export type InvoiceClientType = 'INDIVIDUAL' | 'CORPORATE';
-
-/**
- * Invoice client for billing purposes
- * Simplified client model - no full KYC required
- */
-export interface InvoiceClient {
-  id: string;
-  clientType: InvoiceClientType;
-  /** Display name (computed: firstName+lastName for individual, companyName for corporate) */
-  name: string;
-  /** Required for invoicing */
-  email: string;
-  /** Optional phone contact */
-  phone?: string;
-  /** Billing/mailing address */
-  address?: string;
-
-  // Individual-specific fields
-  firstName?: string;
-  lastName?: string;
-
-  // Corporate-specific fields
-  companyName?: string;
-  contactPerson?: string;
-  registrationNumber?: string;
-  taxNumber?: string;
-
-  // Metadata
-  dateCreated?: string;
-  lastUpdated?: string;
-}
-
-/**
- * Create/update client payload
- */
-export interface InvoiceClientInput {
-  clientType: InvoiceClientType;
-  email: string;
-  phone?: string;
-  address?: string;
-
-  // Individual-specific
-  firstName?: string;
-  lastName?: string;
-
-  // Corporate-specific
-  companyName?: string;
-  contactPerson?: string;
-  registrationNumber?: string;
-  taxNumber?: string;
+export async function getAccountServices(id: string): Promise<AccountServices> {
+  const response = await apiClient.get<AccountServices>(`/accountServices/show/${id}.json`);
+  return response.data;
 }
 
 // =============================================================================
-// Client CRUD
+// Client CRUD (KYC Client - the billing recipient with metadata)
 // =============================================================================
 
 /**
- * List invoice clients with pagination
- * GET /rest/invoiceClient/index.json
+ * List clients
+ * GET /rest/client/index.json
+ *
+ * Returns Client entities with name, email, phone, address, clientType.
+ * Each Client is linked to AccountServices for invoice FK reference.
  */
-export async function listClients(params?: ListParams & { search?: string; clientType?: InvoiceClientType }): Promise<InvoiceClient[]> {
+export async function listClients(params?: ListParams & { search?: string; clientType?: string }): Promise<Client[]> {
   const query = params ? `?${toQueryString(params)}` : '';
-  const response = await apiClient.get<InvoiceClient[]>(`${BASE_URL}/index.json${query}`);
+  const response = await apiClient.get<Client[]>(`/client/index.json${query}`);
   return response.data;
 }
 
 /**
  * Get single client by ID
- * GET /rest/invoiceClient/show/:id.json
+ * GET /rest/client/show/:id.json
  */
-export async function getClient(id: string): Promise<InvoiceClient> {
-  const response = await apiClient.get<InvoiceClient>(`${BASE_URL}/show/${id}.json`);
+export async function getClient(id: string): Promise<Client> {
+  const response = await apiClient.get<Client>(`/client/show/${id}.json`);
   return response.data;
 }
 
 /**
- * Create new invoice client
- * POST /rest/invoiceClient/save.json
+ * Extract display name from an AccountServices serialised string.
+ * e.g. "Direct Account : Corporate(Acme Corp) | Growth Portfolio" → uses as-is
  */
-export async function createClient(data: InvoiceClientInput): Promise<InvoiceClient> {
-  const response = await apiClient.post<InvoiceClient>(`${BASE_URL}/save.json`, data);
-  return response.data;
-}
-
-/**
- * Update existing client
- * PUT /rest/invoiceClient/update/:id.json
- */
-export async function updateClient(id: string, data: Partial<InvoiceClientInput>): Promise<InvoiceClient> {
-  const response = await apiClient.put<InvoiceClient>(`${BASE_URL}/update/${id}.json`, { ...data, id });
-  return response.data;
-}
-
-/**
- * Delete client (soft delete)
- * DELETE /rest/invoiceClient/delete/:id.json
- */
-export async function deleteClient(id: string): Promise<void> {
-  await apiClient.delete(`${BASE_URL}/delete/${id}.json`);
+export function getAccountServicesDisplayName(serialised?: string): string {
+  if (!serialised) return 'N/A';
+  return serialised;
 }
 
 // =============================================================================
-// Client Reports
+// Re-exports from types (for backward compatibility imports)
 // =============================================================================
 
-/**
- * Get client invoice summary
- * GET /rest/invoiceClient/invoiceSummary/:id.json
- */
-export async function getClientInvoiceSummary(clientId: string): Promise<{
-  client: InvoiceClient;
-  totalInvoiced: number;
-  totalPaid: number;
-  totalOutstanding: number;
-  invoices: Array<{ id: string; invoiceNumber: string; amount: number; status: string }>;
-}> {
-  const response = await apiClient.get(`${BASE_URL}/invoiceSummary/${clientId}.json`);
-  return response.data;
+// Changed: Renamed from InvoiceClient/InvoiceClientType to Client/ClientType
+export type { Client, ClientType } from '../../types';
+export type ClientInput = Record<string, unknown>;
+
+// Stub CRUD methods - client creation/update managed through KYC backend
+export async function createClient(_data: unknown): Promise<Client> {
+  throw new Error('Client creation is managed through the KYC module, not directly via API.');
 }
 
-// =============================================================================
-// Legacy Types (Deprecated)
-// =============================================================================
+export async function updateClient(_id: string, _data: unknown): Promise<Client> {
+  throw new Error('Client updates are managed through the KYC module, not directly via API.');
+}
 
-/**
- * @deprecated Use InvoiceClient instead
- * Old Client type - kept for backwards compatibility
- */
-export interface Client {
-  id: string;
-  name: string;
-  email?: string;
-  phone?: string;
-  address?: string;
-  city?: string;
-  state?: string;
-  zipCode?: string;
-  country?: string;
-  taxNumber?: string;
-  notes?: string;
+export async function deleteClient(_id: string): Promise<void> {
+  throw new Error('Client deletion is managed through the KYC module, not directly via API.');
+}
+
+export async function getClientInvoiceSummary(_clientId: string): Promise<unknown> {
+  throw new Error('Invoice summary endpoint not available.');
 }

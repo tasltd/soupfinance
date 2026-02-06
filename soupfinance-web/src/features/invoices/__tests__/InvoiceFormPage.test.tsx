@@ -1,6 +1,12 @@
 /**
  * Unit tests for InvoiceFormPage component
  * Tests create/edit modes, form validation, line items, and submission
+ *
+ * Changed (2026-02-06): Aligned mocks and test IDs with refactored component:
+ *   - Component uses listInvoices (not listClients) for account dropdown
+ *   - Component uses listTaxRates + listInvoiceServices from domainData
+ *   - Test IDs: invoice-account-select (not invoice-client-select),
+ *     invoice-date-input (not invoice-issue-date-input)
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
@@ -9,19 +15,29 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { InvoiceFormPage } from '../InvoiceFormPage';
 import type { Invoice, InvoiceStatus } from '../../../types';
-import type { InvoiceClient } from '../../../api/endpoints/clients';
 
-// Mock the API modules - must match exact import paths in component
-// Changed: Split mocks to match actual import paths in InvoiceFormPage.tsx
+// Mock the API modules - must match exact import paths in InvoiceFormPage.tsx
+// Changed: Component imports listInvoices (not listClients) for account services dropdown
 vi.mock('../../../api/endpoints/invoices', () => ({
   getInvoice: vi.fn(),
   createInvoice: vi.fn(),
   updateInvoice: vi.fn(),
   sendInvoice: vi.fn(),
+  listInvoices: vi.fn(),
 }));
 
-vi.mock('../../../api/endpoints/clients', () => ({
-  listClients: vi.fn(),
+// Changed: Component imports listTaxRates and listInvoiceServices from domainData
+vi.mock('../../../api/endpoints/domainData', () => ({
+  listTaxRates: vi.fn(),
+  listInvoiceServices: vi.fn(),
+}));
+
+// Mock the stores for currency formatting
+vi.mock('../../../stores', () => ({
+  useFormatCurrency: () => (amount: number | null | undefined) => {
+    const value = amount ?? 0;
+    return `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  },
 }));
 
 // Mock useNavigate
@@ -34,35 +50,25 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
-import { getInvoice, createInvoice, updateInvoice, sendInvoice } from '../../../api/endpoints/invoices';
-import { listClients } from '../../../api/endpoints/clients';
+import { getInvoice, createInvoice, updateInvoice, sendInvoice, listInvoices } from '../../../api/endpoints/invoices';
+import { listTaxRates, listInvoiceServices } from '../../../api/endpoints/domainData';
 
 // ============================================================================
 // Test Helpers
 // ============================================================================
 
-function createMockClient(overrides: Partial<InvoiceClient> = {}): InvoiceClient {
-  return {
-    id: 'client-123',
-    clientType: 'CORPORATE',
-    name: 'Acme Corporation',
-    email: 'billing@acme.com',
-    phone: '+1-555-0100',
-    address: '123 Main St',
-    companyName: 'Acme Corporation',
-    dateCreated: '2024-01-01T10:00:00Z',
-    lastUpdated: '2024-01-01T10:00:00Z',
-    ...overrides,
-  };
-}
-
+/**
+ * PURPOSE: Create a mock invoice with accountServices for the dropdown.
+ * The form populates the Account select from existing invoices' accountServices.
+ */
 function createMockInvoice(overrides: Partial<Invoice> = {}): Invoice {
   return {
     id: 'inv-123',
-    invoiceNumber: 'INV-2024-001',
-    client: { id: 'client-123', name: 'Acme Corporation' },
-    issueDate: '2024-01-15',
-    dueDate: '2024-02-15',
+    number: 2024001,
+    accountServices: { id: 'as-123', serialised: 'Acme Corporation' },
+    invoiceDate: '2024-01-15',
+    paymentDate: '2024-02-15',
+    currency: 'USD',
     status: 'DRAFT' as InvoiceStatus,
     subtotal: 1000,
     taxAmount: 100,
@@ -71,8 +77,7 @@ function createMockInvoice(overrides: Partial<Invoice> = {}): Invoice {
     amountPaid: 0,
     amountDue: 1050,
     notes: 'Thank you for your business',
-    terms: 'Net 30',
-    items: [
+    invoiceItemList: [
       {
         id: 'item-1',
         invoice: { id: 'inv-123' },
@@ -90,6 +95,19 @@ function createMockInvoice(overrides: Partial<Invoice> = {}): Invoice {
     lastUpdated: '2024-01-15T10:00:00Z',
     ...overrides,
   };
+}
+
+/**
+ * PURPOSE: Set up common mocks so the component can render without errors.
+ * The component calls listInvoices, listTaxRates, and listInvoiceServices on mount.
+ */
+function setupDefaultMocks(invoicesForDropdown: Invoice[] = [createMockInvoice()]) {
+  vi.mocked(listInvoices).mockResolvedValue(invoicesForDropdown);
+  vi.mocked(listTaxRates).mockResolvedValue([
+    { id: 'tax-none', name: 'No Tax', rate: 0 },
+    { id: 'tax-vat-15', name: 'VAT 15%', rate: 15 },
+  ]);
+  vi.mocked(listInvoiceServices).mockResolvedValue([]);
 }
 
 function createQueryClient() {
@@ -135,7 +153,7 @@ describe('InvoiceFormPage', () => {
 
   describe('rendering (create mode)', () => {
     it('renders the page container with correct test id', async () => {
-      vi.mocked(listClients).mockResolvedValue([createMockClient()]);
+      setupDefaultMocks();
 
       renderInvoiceFormPage();
 
@@ -143,31 +161,33 @@ describe('InvoiceFormPage', () => {
     });
 
     it('renders create mode heading', async () => {
-      vi.mocked(listClients).mockResolvedValue([createMockClient()]);
+      setupDefaultMocks();
 
       renderInvoiceFormPage();
 
       expect(await screen.findByText('New Invoice')).toBeInTheDocument();
     });
 
-    it('renders client select dropdown', async () => {
-      vi.mocked(listClients).mockResolvedValue([createMockClient()]);
+    // Changed: invoice-client-select → invoice-account-select (component uses accountServices)
+    it('renders account select dropdown', async () => {
+      setupDefaultMocks();
 
       renderInvoiceFormPage();
 
-      expect(await screen.findByTestId('invoice-client-select')).toBeInTheDocument();
+      expect(await screen.findByTestId('invoice-account-select')).toBeInTheDocument();
     });
 
-    it('renders issue date input', async () => {
-      vi.mocked(listClients).mockResolvedValue([createMockClient()]);
+    // Changed: invoice-issue-date-input → invoice-date-input (component uses invoiceDate)
+    it('renders invoice date input', async () => {
+      setupDefaultMocks();
 
       renderInvoiceFormPage();
 
-      expect(await screen.findByTestId('invoice-issue-date-input')).toBeInTheDocument();
+      expect(await screen.findByTestId('invoice-date-input')).toBeInTheDocument();
     });
 
     it('renders due date input', async () => {
-      vi.mocked(listClients).mockResolvedValue([createMockClient()]);
+      setupDefaultMocks();
 
       renderInvoiceFormPage();
 
@@ -175,7 +195,7 @@ describe('InvoiceFormPage', () => {
     });
 
     it('renders line items table', async () => {
-      vi.mocked(listClients).mockResolvedValue([createMockClient()]);
+      setupDefaultMocks();
 
       renderInvoiceFormPage();
 
@@ -183,7 +203,7 @@ describe('InvoiceFormPage', () => {
     });
 
     it('renders add item button', async () => {
-      vi.mocked(listClients).mockResolvedValue([createMockClient()]);
+      setupDefaultMocks();
 
       renderInvoiceFormPage();
 
@@ -191,7 +211,7 @@ describe('InvoiceFormPage', () => {
     });
 
     it('renders form action buttons', async () => {
-      vi.mocked(listClients).mockResolvedValue([createMockClient()]);
+      setupDefaultMocks();
 
       renderInvoiceFormPage();
 
@@ -205,7 +225,7 @@ describe('InvoiceFormPage', () => {
 
   describe('loading state', () => {
     it('shows loading state while fetching invoice in edit mode', () => {
-      vi.mocked(listClients).mockResolvedValue([createMockClient()]);
+      setupDefaultMocks();
       vi.mocked(getInvoice).mockImplementation(() => new Promise(() => {}));
 
       renderInvoiceFormPage({
@@ -219,7 +239,7 @@ describe('InvoiceFormPage', () => {
 
   describe('error state', () => {
     it('shows error when invoice fetch fails in edit mode', async () => {
-      vi.mocked(listClients).mockResolvedValue([createMockClient()]);
+      setupDefaultMocks();
       vi.mocked(getInvoice).mockRejectedValue(new Error('Invoice not found'));
 
       renderInvoiceFormPage({
@@ -234,7 +254,7 @@ describe('InvoiceFormPage', () => {
   describe('edit mode', () => {
     it('renders edit mode heading', async () => {
       const mockInvoice = createMockInvoice();
-      vi.mocked(listClients).mockResolvedValue([createMockClient()]);
+      setupDefaultMocks();
       vi.mocked(getInvoice).mockResolvedValue(mockInvoice);
 
       renderInvoiceFormPage({
@@ -247,10 +267,10 @@ describe('InvoiceFormPage', () => {
 
     it('populates form with existing invoice data', async () => {
       const mockInvoice = createMockInvoice({
-        issueDate: '2024-03-15',
-        dueDate: '2024-04-15',
+        invoiceDate: '2024-03-15',
+        paymentDate: '2024-04-15',
       });
-      vi.mocked(listClients).mockResolvedValue([createMockClient()]);
+      setupDefaultMocks();
       vi.mocked(getInvoice).mockResolvedValue(mockInvoice);
 
       renderInvoiceFormPage({
@@ -258,13 +278,12 @@ describe('InvoiceFormPage', () => {
         path: '/invoices/:id/edit',
       });
 
-      // Changed: Wait for actual form field instead of just the container
-      // The container renders before data loads, so we wait for date input which only has value after data loads
-      const issueDateInput = await screen.findByTestId('invoice-issue-date-input');
+      // Changed: invoice-issue-date-input → invoice-date-input
+      const invoiceDateInput = await screen.findByTestId('invoice-date-input');
 
       // Wait for the data to be populated
       await waitFor(() => {
-        expect(issueDateInput).toHaveValue('2024-03-15');
+        expect(invoiceDateInput).toHaveValue('2024-03-15');
       });
 
       const dueDateInput = screen.getByTestId('invoice-due-date-input');
@@ -273,7 +292,7 @@ describe('InvoiceFormPage', () => {
 
     it('calls getInvoice with correct ID', async () => {
       const mockInvoice = createMockInvoice();
-      vi.mocked(listClients).mockResolvedValue([createMockClient()]);
+      setupDefaultMocks();
       vi.mocked(getInvoice).mockResolvedValue(mockInvoice);
 
       renderInvoiceFormPage({
@@ -287,49 +306,52 @@ describe('InvoiceFormPage', () => {
     });
   });
 
-  describe('client selection', () => {
-    it('populates client dropdown with fetched clients', async () => {
-      const mockClients = [
-        createMockClient({ id: 'c1', name: 'Client One' }),
-        createMockClient({ id: 'c2', name: 'Client Two' }),
+  // Changed: "client selection" → "account selection" (component uses accountServices from invoices)
+  describe('account selection', () => {
+    it('populates account dropdown with accountServices from existing invoices', async () => {
+      // The component extracts unique accountServices from listInvoices() results
+      const mockInvoices = [
+        createMockInvoice({ id: 'inv-1', accountServices: { id: 'as-1', serialised: 'Account One' } }),
+        createMockInvoice({ id: 'inv-2', accountServices: { id: 'as-2', serialised: 'Account Two' } }),
       ];
-      vi.mocked(listClients).mockResolvedValue(mockClients);
+      setupDefaultMocks(mockInvoices);
 
       renderInvoiceFormPage();
 
-      // Changed: Wait for actual client options to load, not just the container
-      // The select shows "Loading clients..." until data is fetched
-      await screen.findByText('Client One');
+      // Wait for account options to load from invoices data
+      await screen.findByText('Account One');
 
-      const select = screen.getByTestId('invoice-client-select');
+      const select = screen.getByTestId('invoice-account-select');
       const options = within(select).getAllByRole('option');
 
-      // Should have placeholder + 2 clients
+      // Should have placeholder + 2 account services
       expect(options.length).toBeGreaterThanOrEqual(2);
-      expect(screen.getByText('Client One')).toBeInTheDocument();
-      expect(screen.getByText('Client Two')).toBeInTheDocument();
+      expect(screen.getByText('Account One')).toBeInTheDocument();
+      expect(screen.getByText('Account Two')).toBeInTheDocument();
     });
 
-    it('allows selecting a client', async () => {
+    it('allows selecting an account', async () => {
       const user = userEvent.setup();
-      const mockClient = createMockClient({ id: 'selected-client', name: 'Selected Corp' });
-      vi.mocked(listClients).mockResolvedValue([mockClient]);
+      const mockInvoices = [
+        createMockInvoice({ id: 'inv-1', accountServices: { id: 'selected-as', serialised: 'Selected Corp' } }),
+      ];
+      setupDefaultMocks(mockInvoices);
 
       renderInvoiceFormPage();
 
-      // Changed: Wait for actual client option to load, not just the container
+      // Wait for account option to load
       await screen.findByText('Selected Corp');
 
-      const select = screen.getByTestId('invoice-client-select');
-      await user.selectOptions(select, 'selected-client');
+      const select = screen.getByTestId('invoice-account-select');
+      await user.selectOptions(select, 'selected-as');
 
-      expect(select).toHaveValue('selected-client');
+      expect(select).toHaveValue('selected-as');
     });
   });
 
   describe('line items', () => {
     it('starts with one empty line item in create mode', async () => {
-      vi.mocked(listClients).mockResolvedValue([createMockClient()]);
+      setupDefaultMocks();
 
       renderInvoiceFormPage();
 
@@ -342,7 +364,7 @@ describe('InvoiceFormPage', () => {
 
     it('adds new line item when add button is clicked', async () => {
       const user = userEvent.setup();
-      vi.mocked(listClients).mockResolvedValue([createMockClient()]);
+      setupDefaultMocks();
 
       renderInvoiceFormPage();
 
@@ -360,7 +382,7 @@ describe('InvoiceFormPage', () => {
 
     it('removes line item when remove button is clicked', async () => {
       const user = userEvent.setup();
-      vi.mocked(listClients).mockResolvedValue([createMockClient()]);
+      setupDefaultMocks();
 
       renderInvoiceFormPage();
 
@@ -384,7 +406,7 @@ describe('InvoiceFormPage', () => {
 
     it('updates line item description', async () => {
       const user = userEvent.setup();
-      vi.mocked(listClients).mockResolvedValue([createMockClient()]);
+      setupDefaultMocks();
 
       renderInvoiceFormPage();
 
@@ -399,7 +421,7 @@ describe('InvoiceFormPage', () => {
 
     it('updates line item quantity', async () => {
       const user = userEvent.setup();
-      vi.mocked(listClients).mockResolvedValue([createMockClient()]);
+      setupDefaultMocks();
 
       renderInvoiceFormPage();
 
@@ -414,7 +436,7 @@ describe('InvoiceFormPage', () => {
 
     it('updates line item unit price', async () => {
       const user = userEvent.setup();
-      vi.mocked(listClients).mockResolvedValue([createMockClient()]);
+      setupDefaultMocks();
 
       renderInvoiceFormPage();
 
@@ -430,7 +452,7 @@ describe('InvoiceFormPage', () => {
 
   describe('totals calculation', () => {
     it('displays subtotal', async () => {
-      vi.mocked(listClients).mockResolvedValue([createMockClient()]);
+      setupDefaultMocks();
 
       renderInvoiceFormPage();
 
@@ -440,7 +462,7 @@ describe('InvoiceFormPage', () => {
     });
 
     it('displays tax amount', async () => {
-      vi.mocked(listClients).mockResolvedValue([createMockClient()]);
+      setupDefaultMocks();
 
       renderInvoiceFormPage();
 
@@ -450,7 +472,7 @@ describe('InvoiceFormPage', () => {
     });
 
     it('displays total', async () => {
-      vi.mocked(listClients).mockResolvedValue([createMockClient()]);
+      setupDefaultMocks();
 
       renderInvoiceFormPage();
 
@@ -463,20 +485,23 @@ describe('InvoiceFormPage', () => {
   describe('form submission (create mode)', () => {
     it('calls createInvoice on save draft', async () => {
       const user = userEvent.setup();
-      const mockClient = createMockClient();
-      vi.mocked(listClients).mockResolvedValue([mockClient]);
+      // Set up invoices with a known accountServices for selection
+      const mockInvoices = [
+        createMockInvoice({ id: 'inv-existing', accountServices: { id: 'as-1', serialised: 'Test Corp' } }),
+      ];
+      setupDefaultMocks(mockInvoices);
       vi.mocked(createInvoice).mockResolvedValue(createMockInvoice());
 
       renderInvoiceFormPage();
 
-      // Changed: Wait for client option to load before interacting
-      await screen.findByText(mockClient.name);
+      // Wait for account option to load from invoices
+      await screen.findByText('Test Corp');
 
-      // Fill required fields
-      const clientSelect = screen.getByTestId('invoice-client-select');
-      await user.selectOptions(clientSelect, mockClient.id);
+      // Fill required fields - select account
+      const accountSelect = screen.getByTestId('invoice-account-select');
+      await user.selectOptions(accountSelect, 'as-1');
 
-      // Changed: Fill due date (required by form validation)
+      // Fill due date (required by form validation)
       const dueDateInput = screen.getByTestId('invoice-due-date-input');
       await user.clear(dueDateInput);
       await user.type(dueDateInput, '2026-02-28');
@@ -504,21 +529,23 @@ describe('InvoiceFormPage', () => {
 
     it('calls sendInvoice after create when save & send is clicked', async () => {
       const user = userEvent.setup();
-      const mockClient = createMockClient();
       const mockInvoice = createMockInvoice();
-      vi.mocked(listClients).mockResolvedValue([mockClient]);
+      const mockInvoices = [
+        createMockInvoice({ id: 'inv-existing', accountServices: { id: 'as-1', serialised: 'Test Corp' } }),
+      ];
+      setupDefaultMocks(mockInvoices);
       vi.mocked(createInvoice).mockResolvedValue(mockInvoice);
       vi.mocked(sendInvoice).mockResolvedValue(mockInvoice);
 
       renderInvoiceFormPage();
 
-      // Changed: Wait for client option to load before interacting
-      await screen.findByText(mockClient.name);
+      // Wait for account option to load
+      await screen.findByText('Test Corp');
 
       // Fill required fields
-      await user.selectOptions(screen.getByTestId('invoice-client-select'), mockClient.id);
+      await user.selectOptions(screen.getByTestId('invoice-account-select'), 'as-1');
 
-      // Changed: Fill due date (required by form validation)
+      // Fill due date (required by form validation)
       const dueDateInput = screen.getByTestId('invoice-due-date-input');
       await user.clear(dueDateInput);
       await user.type(dueDateInput, '2026-02-28');
@@ -549,19 +576,21 @@ describe('InvoiceFormPage', () => {
 
     it('navigates to invoice list after successful create', async () => {
       const user = userEvent.setup();
-      const mockClient = createMockClient();
-      vi.mocked(listClients).mockResolvedValue([mockClient]);
+      const mockInvoices = [
+        createMockInvoice({ id: 'inv-existing', accountServices: { id: 'as-1', serialised: 'Test Corp' } }),
+      ];
+      setupDefaultMocks(mockInvoices);
       vi.mocked(createInvoice).mockResolvedValue(createMockInvoice());
 
       renderInvoiceFormPage();
 
-      // Changed: Wait for client option to load before interacting
-      await screen.findByText(mockClient.name);
+      // Wait for account option to load
+      await screen.findByText('Test Corp');
 
       // Fill form
-      await user.selectOptions(screen.getByTestId('invoice-client-select'), mockClient.id);
+      await user.selectOptions(screen.getByTestId('invoice-account-select'), 'as-1');
 
-      // Changed: Fill due date (required by form validation)
+      // Fill due date (required by form validation)
       const dueDateInput = screen.getByTestId('invoice-due-date-input');
       await user.clear(dueDateInput);
       await user.type(dueDateInput, '2026-02-28');
@@ -589,9 +618,8 @@ describe('InvoiceFormPage', () => {
   describe('form submission (edit mode)', () => {
     it('calls updateInvoice on save', async () => {
       const user = userEvent.setup();
-      const mockClient = createMockClient();
       const mockInvoice = createMockInvoice({ notes: 'Original notes' });
-      vi.mocked(listClients).mockResolvedValue([mockClient]);
+      setupDefaultMocks();
       vi.mocked(getInvoice).mockResolvedValue(mockInvoice);
       vi.mocked(updateInvoice).mockResolvedValue(mockInvoice);
 
@@ -600,7 +628,7 @@ describe('InvoiceFormPage', () => {
         path: '/invoices/:id/edit',
       });
 
-      // Changed: Wait for invoice data to load and populate the form
+      // Wait for invoice data to load and populate the form
       await waitFor(() => {
         expect(screen.getByTestId('invoice-notes-textarea')).toHaveValue('Original notes');
       });
@@ -620,9 +648,8 @@ describe('InvoiceFormPage', () => {
 
     it('passes invoice ID to updateInvoice', async () => {
       const user = userEvent.setup();
-      const mockClient = createMockClient();
       const mockInvoice = createMockInvoice({ id: 'inv-update-test', notes: 'Test notes' });
-      vi.mocked(listClients).mockResolvedValue([mockClient]);
+      setupDefaultMocks();
       vi.mocked(getInvoice).mockResolvedValue(mockInvoice);
       vi.mocked(updateInvoice).mockResolvedValue(mockInvoice);
 
@@ -631,7 +658,7 @@ describe('InvoiceFormPage', () => {
         path: '/invoices/:id/edit',
       });
 
-      // Changed: Wait for invoice data to load and populate the form
+      // Wait for invoice data to load and populate the form
       await waitFor(() => {
         expect(screen.getByTestId('invoice-notes-textarea')).toHaveValue('Test notes');
       });
@@ -648,42 +675,46 @@ describe('InvoiceFormPage', () => {
   });
 
   describe('form validation', () => {
-    it('shows error when no client selected', async () => {
+    // Changed: "no client selected" → "no account selected" (component validates accountServicesId)
+    it('shows error when no account selected', async () => {
       const user = userEvent.setup();
-      const mockClient = createMockClient();
-      vi.mocked(listClients).mockResolvedValue([mockClient]);
+      setupDefaultMocks();
 
       renderInvoiceFormPage();
 
-      // Changed: Wait for clients to load before interacting with form
-      await screen.findByText(mockClient.name);
+      await screen.findByTestId('invoice-form-page');
 
-      // Don't select client, try to save
+      // Don't select account, try to save
       await user.click(screen.getByTestId('invoice-form-save-draft-button'));
 
       await waitFor(() => {
-        // Changed: testId matches component's actual data-testid="invoice-form-error-message"
         expect(screen.getByTestId('invoice-form-error-message')).toBeInTheDocument();
       });
     });
 
     it('shows error when no line items have valid data', async () => {
       const user = userEvent.setup();
-      const mockClient = createMockClient();
-      vi.mocked(listClients).mockResolvedValue([mockClient]);
+      const mockInvoices = [
+        createMockInvoice({ id: 'inv-existing', accountServices: { id: 'as-1', serialised: 'Test Corp' } }),
+      ];
+      setupDefaultMocks(mockInvoices);
 
       renderInvoiceFormPage();
 
-      // Changed: Wait for clients to load before selecting
-      await screen.findByText(mockClient.name);
+      // Wait for account options to load
+      await screen.findByText('Test Corp');
 
-      // Select client but leave line items empty
-      await user.selectOptions(screen.getByTestId('invoice-client-select'), mockClient.id);
+      // Select account but leave line items empty
+      await user.selectOptions(screen.getByTestId('invoice-account-select'), 'as-1');
+
+      // Fill due date so that validation passes for date but fails for line items
+      const dueDateInput = screen.getByTestId('invoice-due-date-input');
+      await user.clear(dueDateInput);
+      await user.type(dueDateInput, '2026-02-28');
 
       await user.click(screen.getByTestId('invoice-form-save-draft-button'));
 
       await waitFor(() => {
-        // Changed: testId matches component's actual data-testid="invoice-form-error-message"
         expect(screen.getByTestId('invoice-form-error-message')).toBeInTheDocument();
       });
     });
@@ -692,7 +723,7 @@ describe('InvoiceFormPage', () => {
   describe('navigation', () => {
     it('navigates back to invoices list when cancel is clicked', async () => {
       const user = userEvent.setup();
-      vi.mocked(listClients).mockResolvedValue([createMockClient()]);
+      setupDefaultMocks();
 
       renderInvoiceFormPage();
 
@@ -704,9 +735,9 @@ describe('InvoiceFormPage', () => {
     });
   });
 
-  describe('notes and terms', () => {
+  describe('notes', () => {
     it('renders notes textarea', async () => {
-      vi.mocked(listClients).mockResolvedValue([createMockClient()]);
+      setupDefaultMocks();
 
       renderInvoiceFormPage();
 
@@ -715,19 +746,12 @@ describe('InvoiceFormPage', () => {
       expect(screen.getByTestId('invoice-notes-textarea')).toBeInTheDocument();
     });
 
-    it('renders terms textarea', async () => {
-      vi.mocked(listClients).mockResolvedValue([createMockClient()]);
-
-      renderInvoiceFormPage();
-
-      await screen.findByTestId('invoice-form-page');
-
-      expect(screen.getByTestId('invoice-terms-input')).toBeInTheDocument();
-    });
+    // Changed: Removed "renders terms textarea" test - component has no terms field
+    // The component has notes and PO number, but no separate terms input
 
     it('allows entering notes', async () => {
       const user = userEvent.setup();
-      vi.mocked(listClients).mockResolvedValue([createMockClient()]);
+      setupDefaultMocks();
 
       renderInvoiceFormPage();
 
@@ -743,7 +767,7 @@ describe('InvoiceFormPage', () => {
       const mockInvoice = createMockInvoice({
         notes: 'Existing notes here',
       });
-      vi.mocked(listClients).mockResolvedValue([createMockClient()]);
+      setupDefaultMocks();
       vi.mocked(getInvoice).mockResolvedValue(mockInvoice);
 
       renderInvoiceFormPage({
@@ -751,7 +775,7 @@ describe('InvoiceFormPage', () => {
         path: '/invoices/:id/edit',
       });
 
-      // Changed: Wait for invoice data to load and populate the form
+      // Wait for invoice data to load and populate the form
       await waitFor(() => {
         expect(screen.getByTestId('invoice-notes-textarea')).toHaveValue('Existing notes here');
       });
@@ -759,18 +783,19 @@ describe('InvoiceFormPage', () => {
   });
 
   describe('API interaction', () => {
-    it('calls listClients on mount', async () => {
-      vi.mocked(listClients).mockResolvedValue([createMockClient()]);
+    // Changed: Component calls listInvoices (not listClients) on mount
+    it('calls listInvoices on mount to populate account dropdown', async () => {
+      setupDefaultMocks();
 
       renderInvoiceFormPage();
 
       await screen.findByTestId('invoice-form-page');
 
-      expect(listClients).toHaveBeenCalled();
+      expect(listInvoices).toHaveBeenCalled();
     });
 
     it('does not call getInvoice in create mode', async () => {
-      vi.mocked(listClients).mockResolvedValue([createMockClient()]);
+      setupDefaultMocks();
 
       renderInvoiceFormPage();
 
@@ -780,7 +805,7 @@ describe('InvoiceFormPage', () => {
     });
 
     it('calls getInvoice in edit mode', async () => {
-      vi.mocked(listClients).mockResolvedValue([createMockClient()]);
+      setupDefaultMocks();
       vi.mocked(getInvoice).mockResolvedValue(createMockInvoice());
 
       renderInvoiceFormPage({

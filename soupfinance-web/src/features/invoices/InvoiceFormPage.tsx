@@ -2,25 +2,31 @@
  * Invoice Form Page (Create/Edit)
  * Reference: soupfinance-designs/new-invoice-form/
  *
- * Added: Full API integration with createInvoice/updateInvoice/sendInvoice endpoints
- * Added: Client dropdown fetched from listClients API
- * Added: Line items table with add/remove functionality
- * Added: Loading, error, and validation states
- * Added: Save Draft and Save & Send functionality
+ * ARCHITECTURE (2026-02-05 refactored):
+ * Uses the backend domain model:
+ *   - accountServices (FK) replaces "client" as the invoice recipient
+ *   - invoiceDate replaces issueDate
+ *   - paymentDate replaces dueDate
+ *   - invoiceItemList replaces items
+ *
+ * The Account Services dropdown is populated from:
+ *   1. Existing invoices (unique accountServices seen before)
+ *   2. Broker KYC clients (with account services lookup)
+ *
  * Added: data-testid attributes for E2E testing
  * Changed (2026-02-01): Added tax rate dropdown from domain data API
  * Changed (2026-02-01): Added service description autocomplete for line items
+ * Changed (2026-02-05): Replaced invoiceClient with accountServices
  */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getInvoice, createInvoice, updateInvoice, sendInvoice } from '../../api/endpoints/invoices';
-import { listClients } from '../../api/endpoints/clients';
+import { getInvoice, createInvoice, updateInvoice, sendInvoice, listInvoices } from '../../api/endpoints/invoices';
 import { listTaxRates, listInvoiceServices } from '../../api/endpoints/domainData';
 import { useFormatCurrency } from '../../stores';
 import type { InvoiceItem } from '../../types';
 
-// Added: Line item type for form state (without id for new items)
+// Line item type for form state (without id for new items)
 interface LineItem {
   id?: string;
   description: string;
@@ -30,6 +36,12 @@ interface LineItem {
   discountPercent: number;
 }
 
+// Account services option for dropdown
+interface AccountServicesOption {
+  id: string;
+  displayName: string;
+}
+
 export function InvoiceFormPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -37,59 +49,73 @@ export function InvoiceFormPage() {
   const formatCurrency = useFormatCurrency();
   const isEdit = !!id;
 
-  // Added: Form state
-  const [clientId, setClientId] = useState('');
-  const [issueDate, setIssueDate] = useState(new Date().toISOString().split('T')[0]);
-  const [dueDate, setDueDate] = useState('');
+  // Form state — uses backend field names
+  const [accountServicesId, setAccountServicesId] = useState('');
+  const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
+  const [paymentDate, setPaymentDate] = useState('');
   const [notes, setNotes] = useState('');
-  const [terms, setTerms] = useState('');
+  const [purchaseOrderNumber, setPurchaseOrderNumber] = useState('');
   const [lineItems, setLineItems] = useState<LineItem[]>([
     { description: '', quantity: 1, unitPrice: 0, taxRate: 0, discountPercent: 0 },
   ]);
   const [formError, setFormError] = useState<string | null>(null);
 
-  // Added: Fetch clients for dropdown
-  const { data: clients, isLoading: clientsLoading } = useQuery({
-    queryKey: ['clients'],
-    queryFn: () => listClients({ max: 100 }),
+  // Fetch existing invoices to extract known account services for dropdown
+  const { data: existingInvoices } = useQuery({
+    queryKey: ['invoices-for-form'],
+    queryFn: () => listInvoices({ max: 100 }),
   });
 
-  // Added (2026-02-01): Fetch tax rates for dropdown
+  // Build unique account services options from existing invoices
+  const accountServicesOptions: AccountServicesOption[] = useMemo(() => {
+    if (!existingInvoices) return [];
+    const seen = new Map<string, string>();
+    for (const inv of existingInvoices) {
+      if (inv.accountServices?.id && !seen.has(inv.accountServices.id)) {
+        seen.set(inv.accountServices.id, inv.accountServices.serialised || inv.accountServices.id);
+      }
+    }
+    return Array.from(seen.entries()).map(([asId, displayName]) => ({
+      id: asId,
+      displayName,
+    }));
+  }, [existingInvoices]);
+
+  // Fetch tax rates for dropdown
   const { data: taxRates } = useQuery({
     queryKey: ['tax-rates'],
     queryFn: () => listTaxRates(),
   });
 
-  // Added (2026-02-01): Fetch service descriptions for autocomplete
+  // Fetch service descriptions for autocomplete
   const { data: serviceDescriptions } = useQuery({
     queryKey: ['invoice-services'],
     queryFn: () => listInvoiceServices({ max: 100 }),
   });
 
-  // Added: Fetch invoice data when editing
+  // Fetch invoice data when editing
   const { data: invoice, isLoading: invoiceLoading, error: invoiceError } = useQuery({
     queryKey: ['invoice', id],
     queryFn: () => getInvoice(id!),
     enabled: isEdit,
   });
 
-  // Added: Populate form when invoice data loads
-  /* eslint-disable-next-line -- Syncing fetched data to form state is a valid use case */
+  // Populate form when invoice data loads
   useEffect(() => {
     if (invoice) {
-      setClientId(invoice.client?.id || '');
-      setIssueDate(invoice.issueDate || '');
-      setDueDate(invoice.dueDate || '');
+      setAccountServicesId(invoice.accountServices?.id || '');
+      setInvoiceDate(invoice.invoiceDate || '');
+      setPaymentDate(invoice.paymentDate || '');
       setNotes(invoice.notes || '');
-      setTerms(invoice.terms || '');
-      if (invoice.items && invoice.items.length > 0) {
+      setPurchaseOrderNumber(invoice.purchaseOrderNumber || '');
+      if (invoice.invoiceItemList && invoice.invoiceItemList.length > 0) {
         setLineItems(
-          invoice.items.map((item: InvoiceItem) => ({
+          invoice.invoiceItemList.map((item: InvoiceItem) => ({
             id: item.id,
             description: item.description,
             quantity: item.quantity,
             unitPrice: item.unitPrice,
-            taxRate: item.taxRate,
+            taxRate: item.taxRate || 0,
             discountPercent: item.discountPercent || 0,
           }))
         );
@@ -97,7 +123,7 @@ export function InvoiceFormPage() {
     }
   }, [invoice]);
 
-  // Added: Create mutation (draft)
+  // Create mutation (draft)
   const createMutation = useMutation({
     mutationFn: (data: Record<string, unknown>) => createInvoice(data),
     onSuccess: () => {
@@ -109,7 +135,7 @@ export function InvoiceFormPage() {
     },
   });
 
-  // Added: Update mutation
+  // Update mutation
   const updateMutation = useMutation({
     mutationFn: (data: Record<string, unknown>) => updateInvoice(id!, data),
     onSuccess: () => {
@@ -122,10 +148,9 @@ export function InvoiceFormPage() {
     },
   });
 
-  // Added: Send mutation (save and send)
+  // Send mutation (save and send)
   const sendMutation = useMutation({
     mutationFn: async (data: Record<string, unknown>) => {
-      // First create/update the invoice
       let invoiceId = id;
       if (isEdit) {
         await updateInvoice(id!, data);
@@ -133,7 +158,6 @@ export function InvoiceFormPage() {
         const newInvoice = await createInvoice(data);
         invoiceId = newInvoice.id;
       }
-      // Then send it
       return sendInvoice(invoiceId!);
     },
     onSuccess: (sentInvoice) => {
@@ -146,10 +170,9 @@ export function InvoiceFormPage() {
     },
   });
 
-  // Added: Calculate totals
+  // Calculate totals
   const subtotal = lineItems.reduce((sum, item) => {
-    const lineTotal = item.quantity * item.unitPrice;
-    return sum + lineTotal;
+    return sum + item.quantity * item.unitPrice;
   }, 0);
 
   const discountAmount = lineItems.reduce((sum, item) => {
@@ -165,7 +188,7 @@ export function InvoiceFormPage() {
 
   const totalAmount = subtotal - discountAmount + taxAmount;
 
-  // Added: Handle line item changes
+  // Handle line item changes
   const updateLineItem = (index: number, field: keyof LineItem, value: string | number) => {
     setLineItems((prev) =>
       prev.map((item, i) =>
@@ -174,7 +197,6 @@ export function InvoiceFormPage() {
     );
   };
 
-  // Added: Add new line item
   const addLineItem = () => {
     setLineItems((prev) => [
       ...prev,
@@ -182,25 +204,23 @@ export function InvoiceFormPage() {
     ]);
   };
 
-  // Added: Remove line item
   const removeLineItem = (index: number) => {
     if (lineItems.length > 1) {
       setLineItems((prev) => prev.filter((_, i) => i !== index));
     }
   };
 
-  // Added: Build form data
+  // Build form data for submission (uses backend field names)
   const buildFormData = () => {
-    // Validate
-    if (!clientId) {
-      setFormError('Please select a client');
+    if (!accountServicesId) {
+      setFormError('Please select an account');
       return null;
     }
-    if (!issueDate) {
-      setFormError('Please enter an issue date');
+    if (!invoiceDate) {
+      setFormError('Please enter an invoice date');
       return null;
     }
-    if (!dueDate) {
+    if (!paymentDate) {
       setFormError('Please enter a due date');
       return null;
     }
@@ -209,48 +229,33 @@ export function InvoiceFormPage() {
       return null;
     }
 
-    // Added: Build form data with foreign key format
+    // Build form data with backend FK format
     const formData: Record<string, unknown> = {
-      'client.id': clientId,
-      issueDate,
-      dueDate,
+      'accountServices.id': accountServicesId,
+      invoiceDate,
+      paymentDate,
       notes,
-      terms,
-      subtotal,
-      discountAmount,
-      taxAmount,
-      totalAmount,
+      purchaseOrderNumber,
     };
 
-    // Added: Include line items as indexed fields (Grails binding format)
+    // Include line items as indexed fields (Grails binding format)
     lineItems.forEach((item, index) => {
-      formData[`items[${index}].description`] = item.description;
-      formData[`items[${index}].quantity`] = item.quantity;
-      formData[`items[${index}].unitPrice`] = item.unitPrice;
-      formData[`items[${index}].taxRate`] = item.taxRate;
-      formData[`items[${index}].discountPercent`] = item.discountPercent;
-      // Calculate line amount after discount and tax
-      const lineTotal = item.quantity * item.unitPrice;
-      const afterDiscount = lineTotal - (lineTotal * item.discountPercent) / 100;
-      const withTax = afterDiscount + (afterDiscount * item.taxRate) / 100;
-      formData[`items[${index}].amount`] = withTax;
+      formData[`invoiceItemList[${index}].description`] = item.description;
+      formData[`invoiceItemList[${index}].quantity`] = item.quantity;
+      formData[`invoiceItemList[${index}].unitPrice`] = item.unitPrice;
       if (item.id) {
-        formData[`items[${index}].id`] = item.id;
+        formData[`invoiceItemList[${index}].id`] = item.id;
       }
     });
 
     return formData;
   };
 
-  // Added: Handle save draft
   const handleSaveDraft = (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
-
     const formData = buildFormData();
     if (!formData) return;
-
-    formData.status = 'DRAFT';
 
     if (isEdit) {
       updateMutation.mutate(formData);
@@ -259,21 +264,17 @@ export function InvoiceFormPage() {
     }
   };
 
-  // Added: Handle save and send
   const handleSaveAndSend = (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
-
     const formData = buildFormData();
     if (!formData) return;
-
-    formData.status = isEdit ? undefined : 'DRAFT'; // Status will be updated by send
     sendMutation.mutate(formData);
   };
 
   const isPending = createMutation.isPending || updateMutation.isPending || sendMutation.isPending;
 
-  // Added: Loading state for edit mode
+  // Loading state for edit mode
   if (isEdit && invoiceLoading) {
     return (
       <div className="flex flex-col gap-6" data-testid="invoice-form-page">
@@ -284,7 +285,6 @@ export function InvoiceFormPage() {
     );
   }
 
-  // Added: Error state for edit mode
   if (isEdit && invoiceError) {
     return (
       <div className="flex flex-col gap-6" data-testid="invoice-form-page">
@@ -292,10 +292,7 @@ export function InvoiceFormPage() {
           <span className="material-symbols-outlined text-6xl text-danger/50 mb-4">error</span>
           <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">Failed to load invoice</h3>
           <p className="text-subtle-text mb-4">The invoice could not be found or there was an error loading it.</p>
-          <button
-            onClick={() => navigate('/invoices')}
-            className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm"
-          >
+          <button onClick={() => navigate('/invoices')} className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm">
             Back to Invoices
           </button>
         </div>
@@ -312,7 +309,7 @@ export function InvoiceFormPage() {
             {isEdit ? 'Edit Invoice' : 'New Invoice'}
           </h1>
           <p className="text-subtle-text">
-            {isEdit ? 'Update invoice details' : 'Create a new invoice for your client'}
+            {isEdit ? 'Update invoice details' : 'Create a new invoice'}
           </p>
         </div>
         <div className="flex gap-3">
@@ -357,39 +354,35 @@ export function InvoiceFormPage() {
             <h2 className="text-lg font-bold text-text-light dark:text-text-dark">Invoice Details</h2>
           </div>
           <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Client */}
+            {/* Account Services (replaces Client dropdown) */}
             <div>
               <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                Client <span className="text-danger">*</span>
+                Account <span className="text-danger">*</span>
               </label>
               <select
-                value={clientId}
-                onChange={(e) => setClientId(e.target.value)}
+                value={accountServicesId}
+                onChange={(e) => setAccountServicesId(e.target.value)}
                 className="w-full h-12 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-3 text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/50"
-                data-testid="invoice-client-select"
+                data-testid="invoice-account-select"
               >
-                <option value="">Select a client</option>
-                {clientsLoading ? (
-                  <option disabled>Loading clients...</option>
-                ) : (
-                  clients?.map((client) => (
-                    <option key={client.id} value={client.id}>
-                      {client.name}
-                    </option>
-                  ))
-                )}
+                <option value="">Select an account</option>
+                {accountServicesOptions.map((as) => (
+                  <option key={as.id} value={as.id}>
+                    {as.displayName}
+                  </option>
+                ))}
               </select>
             </div>
 
             {/* Invoice Number (read-only for existing) */}
-            {isEdit && invoice?.invoiceNumber && (
+            {isEdit && invoice?.number && (
               <div>
                 <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
                   Invoice Number
                 </label>
                 <input
                   type="text"
-                  value={invoice.invoiceNumber}
+                  value={String(invoice.number)}
                   readOnly
                   className="w-full h-12 rounded-lg border border-border-light dark:border-border-dark bg-background-light/50 px-3 text-subtle-text cursor-not-allowed"
                   data-testid="invoice-number-input"
@@ -397,46 +390,46 @@ export function InvoiceFormPage() {
               </div>
             )}
 
-            {/* Issue Date */}
+            {/* Invoice Date */}
             <div>
               <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                Issue Date <span className="text-danger">*</span>
+                Invoice Date <span className="text-danger">*</span>
               </label>
               <input
                 type="date"
-                value={issueDate}
-                onChange={(e) => setIssueDate(e.target.value)}
+                value={invoiceDate}
+                onChange={(e) => setInvoiceDate(e.target.value)}
                 className="w-full h-12 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-3 text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/50"
-                data-testid="invoice-issue-date-input"
+                data-testid="invoice-date-input"
               />
             </div>
 
-            {/* Due Date */}
+            {/* Payment Date (Due Date) */}
             <div>
               <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
                 Due Date <span className="text-danger">*</span>
               </label>
               <input
                 type="date"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
+                value={paymentDate}
+                onChange={(e) => setPaymentDate(e.target.value)}
                 className="w-full h-12 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-3 text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/50"
                 data-testid="invoice-due-date-input"
               />
             </div>
 
-            {/* Terms */}
-            <div className="md:col-span-2">
+            {/* PO Number */}
+            <div>
               <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                Payment Terms
+                PO Number
               </label>
               <input
                 type="text"
-                value={terms}
-                onChange={(e) => setTerms(e.target.value)}
+                value={purchaseOrderNumber}
+                onChange={(e) => setPurchaseOrderNumber(e.target.value)}
                 className="w-full h-12 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-3 text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/50"
-                placeholder="e.g., Net 30, Due on receipt"
-                data-testid="invoice-terms-input"
+                placeholder="Purchase order number"
+                data-testid="invoice-po-number-input"
               />
             </div>
 
@@ -492,7 +485,6 @@ export function InvoiceFormPage() {
                   return (
                     <tr key={index} className="border-b border-border-light dark:border-border-dark">
                       <td className="px-6 py-3">
-                        {/* Changed (2026-02-01): Added datalist for service description autocomplete */}
                         <input
                           type="text"
                           list="service-descriptions"
@@ -545,7 +537,6 @@ export function InvoiceFormPage() {
                         />
                       </td>
                       <td className="px-4 py-3">
-                        {/* Changed (2026-02-01): Tax rate dropdown from domain data */}
                         <select
                           value={item.taxRate}
                           onChange={(e) => updateLineItem(index, 'taxRate', parseFloat(e.target.value) || 0)}

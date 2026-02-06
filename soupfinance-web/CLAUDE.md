@@ -21,12 +21,34 @@ npm run test:run -- src/features/invoices/__tests__/InvoiceFormPage.test.tsx  # 
 # Testing - E2E (Playwright)
 npm run test:e2e         # Run with mocks (port 5180)
 npm run test:e2e:headed  # Run with browser UI
-npm run test:e2e:lxc     # Run against real LXC backend
+npm run test:e2e:lxc     # Run against real LXC backend (integration tests only)
 npm run test:e2e:lxc:all # All tests (mock + integration) against LXC
+npm run test:e2e:report  # Open mock test report
+npm run test:e2e:lxc:report  # Open LXC test report
+
+# Run specific integration test file against LXC
+npx playwright test --config=playwright.lxc.config.ts e2e/integration/02-vendors.integration.spec.ts
 
 # Deployment
 ./deploy/deploy-to-production.sh   # Deploy to app.soupfinance.com
 ```
+
+## Environment Setup
+
+| File | Purpose | Git-tracked? |
+|------|---------|:---:|
+| `.env` | Default (no backend, mock mode) | Yes |
+| `.env.lxc` | LXC backend proxy target | Yes |
+| `.env.lxc.local` | API Consumer credentials for LXC | **No** (git-ignored via `*.local`) |
+| `.env.test` | E2E test environment | Yes |
+| `.env.production` | Production build settings | Yes |
+
+**To develop with LXC backend:** Copy `.env.lxc.local.example` → `.env.lxc.local` and fill in `VITE_API_CONSUMER_ID` + `VITE_API_CONSUMER_SECRET` (get from team). Then run `npm run dev:lxc`.
+
+**Key env vars:**
+- `VITE_PROXY_TARGET` — Where Vite proxy forwards `/rest/*` requests (e.g., `http://10.115.213.183:9090`)
+- `VITE_API_URL` — Frontend API base path (always `/rest`, relative — do NOT set to backend URL)
+- `VITE_API_CONSUMER_ID` / `VITE_API_CONSUMER_SECRET` — Proxy injects as `Api-Authorization: Basic base64(id:secret)`
 
 ## Architecture Overview
 
@@ -55,6 +77,25 @@ Key patterns:
 - Foreign keys: Use nested objects `{ vendor: { id: "uuid" } }` not `vendor.id`
 - Registration endpoints go through `/account/*` proxy which injects `Api-Authorization` header
 - Backend identifies the app via the `Api-Authorization` header injected by the proxy (ApiAuthenticatorInterceptor resolves the ApiConsumer name)
+- **CSRF tokens required** for all POST/PUT/DELETE — see CSRF flow below
+
+### CSRF Token Flow (CRITICAL for mutations)
+All create/update/delete operations require a CSRF token from the backend:
+```typescript
+// 1. Fetch CSRF token (for new entity)
+const csrf = await getCsrfToken('vendor'); // GET /rest/vendor/create.json
+
+// 2. Include in request body
+await apiClient.post('/vendor/save.json', {
+  name: 'Acme Corp',
+  SYNCHRONIZER_TOKEN: csrf.SYNCHRONIZER_TOKEN,
+  SYNCHRONIZER_URI: csrf.SYNCHRONIZER_URI,
+});
+
+// For updates, use getCsrfTokenForEdit(controller, id) instead
+const csrf = await getCsrfTokenForEdit('vendor', vendorId); // GET /rest/vendor/edit/{id}.json
+```
+Without CSRF token, POST returns 302 redirect (not JSON error).
 
 ### Response Normalization (`src/api/client.ts`)
 Backend can return certain fields as either objects or arrays (depending on count). Use these utilities:
@@ -104,9 +145,25 @@ All domain types mirror soupmarkets-web Grails domain classes:
 - Domain types: `Invoice`, `Bill`, `Vendor`, `Corporate`, `LedgerAccount`, etc.
 
 ### Routing (`src/App.tsx`)
-- `ProtectedRoute`: Requires authentication, validates token on mount
-- `PublicRoute`: Redirects to dashboard if already authenticated
+- `ProtectedRoute`: Requires authentication, validates token on mount, shows loading during `isInitialized` check
+- `PublicRoute`: Redirects to dashboard if already authenticated, waits for initialization
 - Routes follow REST conventions: `/invoices`, `/invoices/new`, `/invoices/:id`, `/invoices/:id/edit`
+- Accounting routes use type-based URLs: `/accounting/voucher/payment`, `/accounting/voucher/receipt`, `/accounting/journal-entry/:id`
+- Public (unauthenticated) routes: `/login`, `/register`, `/verify`, `/confirm-email`, `/forgot-password`, `/reset-password`
+
+## Code Quality
+
+### ESLint (Flat Config)
+- Config: `eslint.config.js` (ESLint v9 flat format)
+- Ignores: `dist`, `coverage`, `storybook-static`
+- Relaxed rules for tests: `@typescript-eslint/no-explicit-any` → warn, unused vars with `_` prefix allowed
+- E2E tests: `react-hooks/rules-of-hooks` off (Playwright fixtures aren't React)
+
+### Vitest Config
+- Environment: `jsdom` with globals enabled
+- Setup file: `src/test/setup.ts` (mocks axios globally, localStorage, window.location)
+- Coverage: V8 provider, HTML + JSON + text reporters
+- Mocks reset before each test (`vi.clearAllMocks()`), restored after (`vi.restoreAllMocks()`)
 
 ## Testing Patterns
 
@@ -146,6 +203,17 @@ test.skip(isLxcMode(), 'Mock-only test: skipped in LXC mode');
 const testUsers = getTestUsers();
 await mockLoginApi(page, true, testUsers.admin);
 ```
+
+### E2E Integration Tests (Numbered Ordering)
+Integration tests in `e2e/integration/` use numbered prefixes to control execution order (run serially with `workers: 1`):
+```
+01-auth.integration.spec.ts       # Login/auth must run first
+02-vendors.integration.spec.ts    # Vendor CRUD
+03-invoices.integration.spec.ts   # Invoice CRUD (may need vendors)
+04-bills.integration.spec.ts      # Bill CRUD
+05-payments.integration.spec.ts   # Payment recording
+```
+These test against the real LXC backend. Use `backendTestUsers` from `e2e/fixtures.ts` for credentials.
 
 ### E2E Token Retrieval (CRITICAL)
 The auth store uses **dual-storage** - ALWAYS check both:
@@ -215,18 +283,31 @@ const { register, handleSubmit, formState: { errors } } = useForm({
 ### API Endpoints
 Backend is soupmarkets-web (Grails). Endpoints follow pattern:
 ```
-/rest/{domain}/index.json      # List (paginated)
-/rest/{domain}/show/{id}.json  # Read
-/rest/{domain}/save.json       # Create
-/rest/{domain}/update/{id}.json # Update
-/rest/{domain}/delete/{id}.json # Delete (soft)
+GET    /rest/{domain}/index.json      # List (paginated)
+GET    /rest/{domain}/show/{id}.json  # Read
+GET    /rest/{domain}/create.json     # Get CSRF token (for new)
+GET    /rest/{domain}/edit/{id}.json  # Get CSRF token (for update)
+POST   /rest/{domain}/save.json       # Create (requires CSRF)
+PUT    /rest/{domain}/update/{id}.json # Update (requires CSRF)
+DELETE /rest/{domain}/delete/{id}.json # Delete/soft-delete (requires CSRF)
 ```
+Some controllers have module prefixes: `/rest/finance/bill/*`, `/rest/trading/vendor/*`, `/rest/kyc/corporate/*`
 
-### Styling
-Tailwind CSS v4 with custom design tokens:
-- Colors: `primary`, `text-light/dark`, `surface-light/dark`, `border-light/dark`
-- Dark mode: `dark:` prefix classes
-- Icons: Material Symbols (`<span className="material-symbols-outlined">icon_name</span>`)
+### Styling (Tailwind CSS v4)
+Tailwind v4 uses the Vite plugin (`@tailwindcss/vite`) — there is **no `tailwind.config.js`**. Custom tokens are defined via `@theme` in `src/index.css`:
+- Colors: `primary`, `background-light/dark`, `surface-light/dark`, `text-light/dark`, `border-light/dark`, `danger`, `success`, `warning`, `info`
+- Font: `--font-display: Manrope` (Google Fonts, loaded in `index.css`)
+- Dark mode: `dark:` prefix classes (toggled via `html.dark` class)
+- Icons: Material Symbols Outlined (`<span className="material-symbols-outlined">icon_name</span>`, use `.fill` class for filled variant)
+
+### Internationalization (i18n)
+4 languages (`en`, `de`, `fr`, `nl`), 12 namespaces in `src/i18n/locales/{lang}/`:
+
+`common` · `navigation` · `auth` · `dashboard` · `invoices` · `bills` · `payments` · `vendors` · `ledger` · `accounting` · `reports` · `corporate`
+
+- Language detection: `i18next-browser-languagedetector` → localStorage key `soupfinance_language`
+- Fallback: English (`en`)
+- When adding features: add keys to **all 4** language files in the corresponding namespace
 
 ## Deployment
 
@@ -312,6 +393,10 @@ This prevents the proxy from intercepting frontend routes like `/accounting/tran
 |---------|----------|---------|
 | **soupmarkets-web** | `../../../soupmarkets-web` | Grails backend (tas.soupmarkets.com) |
 | **soupfinance-landing** | `../soupfinance-landing` | Marketing site (www.soupfinance.com) |
+
+## Frontend Error Logging
+
+`frontendLogger` (`src/utils/frontendLogger.ts`) captures console errors, unhandled JS errors, and promise rejections. Errors are batched and sent to `/rest/frontendLog/batch.json` with `[SOUPFINANCE]` tag. Initialized in `App.tsx` on mount. The `ErrorBoundary` component wraps the entire app to catch React rendering errors.
 
 ## Related Documentation
 

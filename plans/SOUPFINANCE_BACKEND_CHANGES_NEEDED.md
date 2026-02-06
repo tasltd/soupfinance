@@ -135,6 +135,89 @@ This document outlines backend endpoints that return incorrect responses (302 re
 
 ---
 
+## Backend Caching / Persistence Issues
+
+### 8. Vendor Update (PUT) Returns 200 but Does Not Persist Changes
+
+**Endpoint:** `PUT /rest/vendor/update/{id}.json`
+
+**Current Behavior:**
+- PUT returns HTTP 200 with the submitted data in the response body (name shows updated value)
+- However, a subsequent `GET /rest/vendor/show/{id}.json` returns the OLD data
+- The update appears to succeed but the changes are NOT committed to the database
+- This occurs consistently through the Vite proxy and intermittently with direct backend calls
+
+**CSRF Token Context:**
+- The `vendor/edit/{id}.json` endpoint does NOT return SYNCHRONIZER_TOKEN/SYNCHRONIZER_URI
+- Using `vendor/create.json` CSRF tokens for update operations (backend accepts them)
+- Tokens are passed as URL query parameters (confirmed working for create operations)
+- The backend's `withForm` validation may be silently failing and entering the `invalidToken` closure,
+  which returns the submitted data without actually saving
+
+**Suspected Root Cause:**
+- Grails `withForm {}` CSRF validation may be session-bound in a way that breaks through HTTP proxies
+- The `invalidToken {}` closure likely responds with the submitted data (HTTP 200) without persisting
+- Alternatively, Hibernate second-level cache may be serving stale data for GET after PUT
+
+**Evidence:**
+```
+PUT /rest/vendor/update/{id}.json?SYNCHRONIZER_TOKEN=xxx → 200, name: "UpdatedName"
+GET /rest/vendor/show/{id}.json → name: "OriginalName" (NOT updated)
+```
+
+**Impact:** Vendor edits through the SoupFinance web app do not save. This affects:
+- `e2e/integration/02-vendors.integration.spec.ts` - "edit vendor via form updates vendor data"
+- Any production vendor update operations
+
+**Recommended Fix:**
+1. Investigate the VendorController `update` action's `withForm` / `invalidToken` logic
+2. Ensure `edit/{id}.json` returns SYNCHRONIZER_TOKEN for proper CSRF flow
+3. Check Hibernate cache invalidation after save operations
+4. Consider adding cache-busting headers or disabling entity caching for mutable endpoints
+
+---
+
+### 9. General: edit.json Endpoints Missing CSRF Tokens
+
+**Endpoints affected:**
+- `GET /rest/vendor/edit/{id}.json` — Does NOT include SYNCHRONIZER_TOKEN in response
+- Potentially other domain edit endpoints (invoice, bill, ledger, voucher)
+
+**Current Behavior:** The `edit/{id}.json` endpoints return entity data but do NOT include
+SYNCHRONIZER_TOKEN and SYNCHRONIZER_URI fields. The `create.json` endpoints DO include them.
+
+**Expected Behavior:** Both `create.json` and `edit/{id}.json` should include CSRF tokens,
+as the TokenWithFormInterceptor should add them to both.
+
+**Impact:** Frontend must use `create.json` CSRF tokens for update operations as a workaround,
+which may contribute to the update persistence issue (#8 above).
+
+---
+
+### 10. Vendor Delete Returns 200 but Does Not Remove Vendor
+
+**Endpoint:** `DELETE /rest/vendor/delete/{id}.json`
+
+**Current Behavior:**
+- DELETE returns HTTP 200 with `{"targetDomainClassEntity": {...}, "targetControllerName": "vendor"}`
+- But `GET /rest/vendor/show/{id}.json` still returns the vendor (not 404)
+- `GET /rest/vendor/index.json` still includes the vendor in list results
+
+**Expected Behavior:** After DELETE, the vendor should either:
+- Be completely removed (GET returns 404)
+- Be soft-deleted and excluded from index queries
+
+**Evidence:**
+```
+DELETE /rest/vendor/delete/{id}.json → 200 (success response)
+GET /rest/vendor/show/{id}.json → 200 (vendor still exists, no 'deleted' flag)
+```
+
+**Impact:** Vendor deletion appears to succeed in the UI but the vendor persists.
+- `e2e/integration/02-vendors.integration.spec.ts` - Delete tests
+
+---
+
 ## Summary of Failed/Skipped Tests Due to Backend
 
 | Test File | Failed | Skipped | Cause |

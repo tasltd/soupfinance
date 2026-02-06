@@ -10,7 +10,8 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { listClients, deleteClient } from '../../api';
-import type { InvoiceClient, InvoiceClientType } from '../../api/endpoints/clients';
+// Changed: Renamed from InvoiceClient/InvoiceClientType to Client/ClientType (matches backend domain)
+import type { Client, ClientType } from '../../api/endpoints/clients';
 
 // Delete confirmation state interface
 interface DeleteState {
@@ -24,7 +25,7 @@ export function ClientListPage() {
 
   // Search and filter state
   const [searchTerm, setSearchTerm] = useState('');
-  const [typeFilter, setTypeFilter] = useState<InvoiceClientType | ''>('');
+  const [typeFilter, setTypeFilter] = useState<ClientType | ''>('');
 
   // Delete confirmation modal state
   const [deleteState, setDeleteState] = useState<DeleteState>({
@@ -72,7 +73,7 @@ export function ClientListPage() {
   };
 
   // Get client type badge styles
-  const getTypeBadge = (type: InvoiceClientType) => {
+  const getTypeBadge = (type: ClientType) => {
     if (type === 'INDIVIDUAL') {
       return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400';
     }
@@ -122,7 +123,7 @@ export function ClientListPage() {
         {/* Type Filter */}
         <select
           value={typeFilter}
-          onChange={(e) => setTypeFilter(e.target.value as InvoiceClientType | '')}
+          onChange={(e) => setTypeFilter(e.target.value as ClientType | '')}
           className="h-10 px-4 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none"
           data-testid="client-type-filter"
         >
@@ -167,7 +168,7 @@ export function ClientListPage() {
                 </tr>
               </thead>
               <tbody>
-                {clients.map((client: InvoiceClient) => (
+                {clients.map((client: Client) => (
                   <tr
                     key={client.id}
                     className="border-b border-border-light dark:border-border-dark hover:bg-primary/5"

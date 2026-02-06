@@ -20,6 +20,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | E2E all (LXC) | `cd soupfinance-web && npm run test:e2e:lxc:all` |
 | E2E integration only | `cd soupfinance-web && npx playwright test --config=playwright.lxc.config.ts e2e/integration/` |
 | E2E report | `cd soupfinance-web && npm run test:e2e:report` |
+| E2E LXC report | `cd soupfinance-web && npm run test:e2e:lxc:report` |
 | Test coverage | `cd soupfinance-web && npm run test:coverage` |
 | Preview build | `cd soupfinance-web && npm run preview` |
 | Storybook | `cd soupfinance-web && npm run storybook` |
@@ -222,10 +223,9 @@ Both the Vite dev server and production Apache proxy API requests to the Grails 
 
 | Username | Password | Roles | Use Case |
 |----------|----------|-------|----------|
-| `test.admin` | `secret` | ROLE_ADMIN, ROLE_USER | Full admin access |
-| `test.user` | `secret` | ROLE_USER | Minimal user access |
-| `test.finance` | `secret` | ROLE_USER + Finance roles | Finance CRUD testing |
-| `soup.support` | `secret` | ROLE_ADMIN, ROLE_USER | Legacy admin (seed data) |
+| `soup.support` | `secret` | ROLE_ADMIN, ROLE_USER | Primary admin (seed data, works cross-tenant) |
+| `fui@techatscale.io` | `fui@techatscale.io` | ROLE_ADMIN, ROLE_USER | TAS tenant admin (fallback) |
+| `fui.nusenu` | `secret` | ROLE_USER | Demo tenant user |
 
 ---
 

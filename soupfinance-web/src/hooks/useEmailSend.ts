@@ -173,7 +173,7 @@ export function useEmailSend(): UseEmailSendReturn {
         const response = await emailApi.sendInvoice(
           invoice.id,
           pdfBlob,
-          invoice.invoiceNumber,
+          String(invoice.number),
           { email: recipientEmail, name: recipientName },
           options
         );

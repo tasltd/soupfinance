@@ -13,7 +13,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getClient, createClient, updateClient } from '../../api';
-import type { InvoiceClientType } from '../../api/endpoints/clients';
+// Changed: Renamed from InvoiceClientType to ClientType (matches backend domain)
+import type { ClientType } from '../../api/endpoints/clients';
 import { Input, Textarea } from '../../components/forms';
 
 // Validation schema with conditional requirements based on clientType
@@ -61,7 +62,8 @@ export function ClientFormPage() {
   const isEdit = !!id;
 
   // Track client type for conditional rendering
-  const [clientType, setClientType] = useState<InvoiceClientType>('INDIVIDUAL');
+  // Changed: InvoiceClientType → ClientType (matches backend domain soupbroker.kyc.Client)
+  const [clientType, setClientType] = useState<ClientType>('INDIVIDUAL');
 
   // React Hook Form setup
   const {

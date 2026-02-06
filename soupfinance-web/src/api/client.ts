@@ -171,19 +171,43 @@ export interface CsrfToken {
 }
 
 /**
+ * Build query string with CSRF tokens for URL-based CSRF token passing
+ *
+ * Grails' withForm {} reads SYNCHRONIZER_TOKEN from request parameters (form-encoded),
+ * NOT from JSON body. For JSON API calls, pass CSRF tokens as URL query parameters
+ * while keeping the JSON body for entity data.
+ *
+ * @param csrf - CSRF token object from getCsrfToken or getCsrfTokenForEdit
+ * @returns URL-encoded query string (without leading '?')
+ *
+ * @example
+ * const csrf = await getCsrfToken('vendor');
+ * await apiClient.post(`/vendor/save.json?${csrfQueryString(csrf)}`, data);
+ */
+export function csrfQueryString(csrf: CsrfToken): string {
+  const params = new URLSearchParams({
+    SYNCHRONIZER_TOKEN: csrf.SYNCHRONIZER_TOKEN,
+    SYNCHRONIZER_URI: csrf.SYNCHRONIZER_URI,
+  });
+  return params.toString();
+}
+
+/**
  * Get CSRF token from create.json endpoint for POST/PUT/DELETE operations
  *
  * The Grails backend uses withForm {} CSRF protection. The TokenWithFormInterceptor
  * adds SYNCHRONIZER_TOKEN and SYNCHRONIZER_URI to create.json responses.
- * These must be included in subsequent save/update requests.
+ * These must be included in subsequent save/update requests as URL query parameters.
+ *
+ * IMPORTANT: Grails reads SYNCHRONIZER_TOKEN from request parameters, NOT from JSON body.
+ * Use csrfQueryString() to append tokens to the URL instead of including them in the body.
  *
  * @param controller - The controller name (e.g., 'vendor', 'ledgerAccount', 'bill')
- * @returns CSRF token object to include in form data
+ * @returns CSRF token object to pass to csrfQueryString()
  *
  * @example
  * const csrf = await getCsrfToken('vendor');
- * const formData = toFormData({ ...data, ...csrf });
- * await apiClient.post('/vendor/save.json', formData);
+ * await apiClient.post(`/vendor/save.json?${csrfQueryString(csrf)}`, data);
  */
 export async function getCsrfToken(controller: string): Promise<CsrfToken> {
   const response = await apiClient.get<Record<string, unknown>>(`/${controller}/create.json`);
@@ -210,9 +234,16 @@ export async function getCsrfToken(controller: string): Promise<CsrfToken> {
  * Get CSRF token for edit operations
  * Similar to getCsrfToken but uses edit.json endpoint
  *
+ * IMPORTANT: Grails reads SYNCHRONIZER_TOKEN from request parameters, NOT from JSON body.
+ * Use csrfQueryString() to append tokens to the URL instead of including them in the body.
+ *
  * @param controller - The controller name
  * @param id - The entity ID to edit
- * @returns CSRF token object
+ * @returns CSRF token object to pass to csrfQueryString()
+ *
+ * @example
+ * const csrf = await getCsrfTokenForEdit('vendor', '123');
+ * await apiClient.put(`/vendor/update/123.json?${csrfQueryString(csrf)}`, data);
  */
 export async function getCsrfTokenForEdit(controller: string, id: string): Promise<CsrfToken> {
   const response = await apiClient.get<Record<string, unknown>>(`/${controller}/edit/${id}.json`);
