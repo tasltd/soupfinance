@@ -79,7 +79,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 |------|----------|-------|
 | Registration | `POST /account/register.json` | Creates Account + Agent + SbUser |
 | Email Confirm | `POST /account/confirmEmail.json` | Sets password, enables user |
-| Invoice Clients | `/rest/invoiceClient/*` | NOT `/rest/client/*` (investment clients) |
+| List Clients | `GET /rest/client/index.json` | KYC Client entities (name, email, phone) |
+| Client Account | `GET /rest/accountServices/show/:id.json` | AccountServices (the invoice FK target) |
 
 ---
 
@@ -116,7 +117,7 @@ App.tsx                # Routes + providers (ProtectedRoute, PublicRoute wrapper
 | **Login** | POST `/rest/api/login` with JSON body |
 | **Data Content-Type** | `application/json` for all requests |
 | **Token Validation** | GET `/rest/user/current.json` on app mount |
-| **Invoice Clients** | `/rest/invoiceClient/*` (NOT `/rest/client/*` which is for investment clients) |
+| **Invoice Clients** | `/rest/client/*` for Client entities (KYC clients); invoices reference `accountServices.id` as FK |
 | **CSRF Token** | **REQUIRED** for all POST/PUT/DELETE - fetch from `create.json`/`edit.json` first |
 | **Foreign Keys** | Use nested objects `{ vendor: { id: "uuid" } }` not `vendor.id` |
 | **Registration** | Goes through `/account/*` proxy (not `/rest/*`) |
@@ -162,6 +163,17 @@ Some controllers have module prefixes: `/rest/finance/bill/*`, `/rest/trading/ve
 
 Available modules: `trading`, `finance`, `funds`, `setting`, `tools`, `sales`, `kyc`, `clients`, `admin`, `staff`
 
+#### Client vs AccountServices (Invoice FK Pattern)
+
+Invoices reference `accountServices.id` as the foreign key, but client metadata (name, email) comes from the `Client` entity. The relationship is: `Client` owns one or more `AccountServices`.
+
+| Entity | Endpoint | Role |
+|--------|----------|------|
+| `Client` | `/rest/client/index.json` | KYC entity with name, email, phone, address |
+| `AccountServices` | `/rest/accountServices/show/:id.json` | Brokerage account; invoice FK target |
+
+Frontend pattern: List `Client` entities for dropdown, but save `accountServices.id` as the invoice FK.
+
 #### API Quirks
 
 - `/rest/sbUser/index.json` requires `?sort=id` (default sort not available)
@@ -196,6 +208,8 @@ Both the Vite dev server and production Apache proxy API requests to the Grails 
 
 ### Unit Tests (Vitest + React Testing Library)
 
+**768 tests** across **26 test files** (as of 2026-02-05).
+
 - Axios globally mocked in `src/test/setup.ts` — no real HTTP in unit tests
 - Render with `QueryClientProvider` + `MemoryRouter` wrappers
 - Mock API at module level: `vi.mock('../../../api/endpoints/invoices', ...)`
@@ -218,6 +232,7 @@ Both the Vite dev server and production Apache proxy API requests to the Grails 
 - Use `data-testid` attributes: `{feature}-page`, `{feature}-form`, `{feature}-submit-button`, `{feature}-table`
 - Handle session expiry in LXC mode before asserting
 - Integration tests live in `e2e/integration/` and follow `*.integration.spec.ts` naming (only run against LXC backend)
+- **14 mock E2E test files** in `e2e/` and **14 integration test files** in `e2e/integration/` (5 numbered + 9 non-numbered)
 
 ### Test Credentials (LXC Backend)
 
@@ -245,9 +260,21 @@ cd /path/to/soupmarkets-web
 source env-variables.sh && ./gradlew assembleDeployToSoupfinance
 ```
 
-**Database** (LXC MariaDB): Host `soupmarkets-mariadb`, DB `soupbroker_soupfinance`, User `soupbroker`
+**Database** (LXC MariaDB): Host `soupmarkets-mariadb` (10.115.213.114), DB `soupbroker_seed_source`, User `soupbroker` / Password `soupbroker`
 
 **Request flow:** Browser → Vite dev server (5173) → proxy `/rest/*` → LXC Backend (10.115.213.183:9090) → MariaDB (10.115.213.114:3306)
+
+**LXC Backend systemd service:** `/etc/systemd/system/soupmarkets.service` — runs with `GRAILS_ENV=test`, Java 21, port 9090
+
+### LXC Troubleshooting
+
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| Login returns 401 "Invalid username or password" but credentials are correct | Stale MariaDB connection pool (backend logs show `Connection is closed`) | `lxc exec soupfinance-backend -- systemctl restart soupmarkets.service` |
+| 401 after fresh backend restart | Missing `soupfinance-web` ApiConsumer in `api_consumer` DB table | Insert record: `name='soupfinance-web'`, `secret` matching `.env.lxc.local` value |
+| Backend won't start | Gradle lock files or port conflict | Check `lxc exec soupfinance-backend -- journalctl -u soupmarkets.service -n 50` |
+
+**ApiConsumer requirement:** The `api_consumer` table must have a record with `name` matching `VITE_API_CONSUMER_ID` and `secret` matching `VITE_API_CONSUMER_SECRET` from `.env.lxc.local`. Without this, ALL API requests through the proxy fail with 401.
 
 ---
 

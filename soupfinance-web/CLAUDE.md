@@ -68,9 +68,12 @@ Features: `accounting`, `auth`, `bills`, `clients`, `corporate`, `dashboard`, `i
 ### API Layer (`src/api/`)
 - **client.ts**: Axios instance with X-Auth-Token authentication, auto-401 redirect, response normalization utilities
 - **auth.ts**: Login/logout, token management, OTP verification
-- **endpoints/{domain}.ts**: Domain-specific API functions (invoices, bills, vendors, etc.)
+- **endpoints/{domain}.ts**: Domain-specific API functions (invoices, bills, vendors, clients, ledger, corporate, reports, settings, domainData)
 - **endpoints/email.ts**: Email service for sending invoices/bills/reports with PDF attachments
 - **endpoints/registration.ts**: Tenant registration (uses `/account/*` proxy, not `/rest/*`)
+- **endpoints/clients.ts**: Client + AccountServices APIs (invoices reference `accountServices.id` as FK, client metadata from `Client` entity)
+- **endpoints/domainData.ts**: Shared domain data lookups (currencies, countries, etc.)
+- **endpoints/settings.ts**: Account and app settings endpoints
 
 Key patterns:
 - Backend uses `application/json` content type (migrated from form-urlencoded 2026-01)
@@ -78,6 +81,7 @@ Key patterns:
 - Registration endpoints go through `/account/*` proxy which injects `Api-Authorization` header
 - Backend identifies the app via the `Api-Authorization` header injected by the proxy (ApiAuthenticatorInterceptor resolves the ApiConsumer name)
 - **CSRF tokens required** for all POST/PUT/DELETE — see CSRF flow below
+- **Client vs AccountServices**: Invoices reference `accountServices.id` as FK; use `Client` entity (`/rest/client/index.json`) for dropdown display, save `accountServices.id` as the FK value
 
 ### CSRF Token Flow (CRITICAL for mutations)
 All create/update/delete operations require a CSRF token from the backend:
@@ -204,8 +208,10 @@ const testUsers = getTestUsers();
 await mockLoginApi(page, true, testUsers.admin);
 ```
 
-### E2E Integration Tests (Numbered Ordering)
-Integration tests in `e2e/integration/` use numbered prefixes to control execution order (run serially with `workers: 1`):
+### E2E Integration Tests (Numbered + Feature-based)
+Integration tests in `e2e/integration/` run against the real LXC backend (serial, `workers: 1`):
+
+**Numbered (CRUD order, run first):**
 ```
 01-auth.integration.spec.ts       # Login/auth must run first
 02-vendors.integration.spec.ts    # Vendor CRUD
@@ -213,7 +219,21 @@ Integration tests in `e2e/integration/` use numbered prefixes to control executi
 04-bills.integration.spec.ts      # Bill CRUD
 05-payments.integration.spec.ts   # Payment recording
 ```
-These test against the real LXC backend. Use `backendTestUsers` from `e2e/fixtures.ts` for credentials.
+
+**Feature-based (additional coverage):**
+```
+accounting.integration.spec.ts    # Accounting/voucher workflows
+api-health.integration.spec.ts   # Backend health checks
+auth.integration.spec.ts         # Extended auth scenarios
+bills.integration.spec.ts        # Bill page tests
+dashboard.integration.spec.ts    # Dashboard data tests
+invoices.integration.spec.ts     # Invoice page tests
+ledger.integration.spec.ts       # Chart of accounts, transactions
+reports.integration.spec.ts      # Finance reports
+settings.integration.spec.ts     # Settings pages
+```
+
+Use `backendTestUsers` from `e2e/fixtures.ts` for credentials. **768 unit tests** across 26 test files (2026-02-05).
 
 ### E2E Token Retrieval (CRITICAL)
 The auth store uses **dual-storage** - ALWAYS check both:
@@ -386,6 +406,23 @@ This prevents the proxy from intercepting frontend routes like `/accounting/tran
 | **Production** | Server Apache config | `/etc/apache2/sites-available/app-soupfinance-com.conf` |
 
 **NEVER commit credentials to the repo.** Development credentials go in `.env.lxc.local` which is git-ignored via `*.local` pattern.
+
+## LXC Backend Troubleshooting
+
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| Login returns 401 but credentials are correct | Stale MariaDB connection pool | `lxc exec soupfinance-backend -- systemctl restart soupmarkets.service` |
+| ALL API requests return 401 | Missing ApiConsumer record in DB | Insert `soupfinance-web` into `api_consumer` table with secret matching `.env.lxc.local` |
+| Backend returns 302 instead of JSON | Missing CSRF token in POST/PUT request | Fetch CSRF token via `getCsrfToken()` first |
+| Backend logs show `Connection is closed` | MariaDB connection pool exhausted | Restart backend service |
+
+**LXC Database:** `soupbroker_seed_source` on `10.115.213.114:3306`, user `soupbroker` / password `soupbroker`
+
+**Check backend health:**
+```bash
+lxc exec soupfinance-backend -- systemctl status soupmarkets.service
+lxc exec soupfinance-backend -- journalctl -u soupmarkets.service -n 30
+```
 
 ## Related Projects
 
