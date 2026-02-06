@@ -4,24 +4,28 @@
  *
  * ARCHITECTURE (2026-02-05 refactored):
  * Uses the backend domain model:
- *   - accountServices (FK) replaces "client" as the invoice recipient
+ *   - accountServices (FK) is the invoice recipient on the backend
  *   - invoiceDate replaces issueDate
  *   - paymentDate replaces dueDate
  *   - invoiceItemList replaces items
  *
- * The Account Services dropdown is populated from:
- *   1. Existing invoices (unique accountServices seen before)
- *   2. Broker KYC clients (with account services lookup)
+ * Changed (2026-02-06): Client dropdown pattern
+ * The form shows a Client dropdown populated from /rest/client/index.json.
+ * When a client is selected, the system resolves their accountServices FK
+ * and sets it on the invoice before saving. This allows client metadata
+ * (name, email, address) to be managed separately from the AccountServices.
  *
  * Added: data-testid attributes for E2E testing
  * Changed (2026-02-01): Added tax rate dropdown from domain data API
  * Changed (2026-02-01): Added service description autocomplete for line items
  * Changed (2026-02-05): Replaced invoiceClient with accountServices
+ * Changed (2026-02-06): Replaced accountServices dropdown with Client dropdown
  */
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getInvoice, createInvoice, updateInvoice, sendInvoice, listInvoices } from '../../api/endpoints/invoices';
+import { getInvoice, createInvoice, updateInvoice, sendInvoice } from '../../api/endpoints/invoices';
+import { listClients } from '../../api/endpoints/clients';
 import { listTaxRates, listInvoiceServices } from '../../api/endpoints/domainData';
 import { useFormatCurrency } from '../../stores';
 import type { InvoiceItem } from '../../types';
@@ -36,12 +40,6 @@ interface LineItem {
   discountPercent: number;
 }
 
-// Account services option for dropdown
-interface AccountServicesOption {
-  id: string;
-  displayName: string;
-}
-
 export function InvoiceFormPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -50,7 +48,8 @@ export function InvoiceFormPage() {
   const isEdit = !!id;
 
   // Form state — uses backend field names
-  const [accountServicesId, setAccountServicesId] = useState('');
+  // Changed: selectedClientId drives the dropdown; accountServicesId is resolved from client
+  const [selectedClientId, setSelectedClientId] = useState('');
   const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
   const [paymentDate, setPaymentDate] = useState('');
   const [notes, setNotes] = useState('');
@@ -60,26 +59,15 @@ export function InvoiceFormPage() {
   ]);
   const [formError, setFormError] = useState<string | null>(null);
 
-  // Fetch existing invoices to extract known account services for dropdown
-  const { data: existingInvoices } = useQuery({
-    queryKey: ['invoices-for-form'],
-    queryFn: () => listInvoices({ max: 100 }),
+  // Changed: Fetch clients from /rest/client/index.json for the dropdown
+  const { data: clients } = useQuery({
+    queryKey: ['clients-for-invoice'],
+    queryFn: () => listClients({ max: 100 }),
   });
 
-  // Build unique account services options from existing invoices
-  const accountServicesOptions: AccountServicesOption[] = useMemo(() => {
-    if (!existingInvoices) return [];
-    const seen = new Map<string, string>();
-    for (const inv of existingInvoices) {
-      if (inv.accountServices?.id && !seen.has(inv.accountServices.id)) {
-        seen.set(inv.accountServices.id, inv.accountServices.serialised || inv.accountServices.id);
-      }
-    }
-    return Array.from(seen.entries()).map(([asId, displayName]) => ({
-      id: asId,
-      displayName,
-    }));
-  }, [existingInvoices]);
+  // Changed: Resolve accountServicesId from selected client's accountServices FK
+  const selectedClient = clients?.find((c) => c.id === selectedClientId);
+  const resolvedAccountServicesId = selectedClient?.accountServices?.id || '';
 
   // Fetch tax rates for dropdown
   const { data: taxRates } = useQuery({
@@ -100,10 +88,10 @@ export function InvoiceFormPage() {
     enabled: isEdit,
   });
 
-  // Populate form when invoice data loads
+  // Populate form when invoice data loads (edit mode)
+  // Changed: Resolve selectedClientId from invoice's accountServices FK
   useEffect(() => {
     if (invoice) {
-      setAccountServicesId(invoice.accountServices?.id || '');
       setInvoiceDate(invoice.invoiceDate || '');
       setPaymentDate(invoice.paymentDate || '');
       setNotes(invoice.notes || '');
@@ -122,6 +110,19 @@ export function InvoiceFormPage() {
       }
     }
   }, [invoice]);
+
+  // Changed: When clients load and we're editing, find which client owns this invoice's accountServices
+  useEffect(() => {
+    if (invoice && clients && !selectedClientId) {
+      const invoiceAsId = invoice.accountServices?.id;
+      if (invoiceAsId) {
+        const owningClient = clients.find((c) => c.accountServices?.id === invoiceAsId);
+        if (owningClient) {
+          setSelectedClientId(owningClient.id);
+        }
+      }
+    }
+  }, [invoice, clients, selectedClientId]);
 
   // Create mutation (draft)
   const createMutation = useMutation({
@@ -211,9 +212,15 @@ export function InvoiceFormPage() {
   };
 
   // Build form data for submission (uses backend field names)
+  // Changed: Validates client selection and resolves accountServices.id from client
   const buildFormData = () => {
-    if (!accountServicesId) {
-      setFormError('Please select an account');
+    if (!selectedClientId) {
+      setFormError('Please select a client');
+      return null;
+    }
+    if (!resolvedAccountServicesId) {
+      // Edge case: client exists but has no accountServices linked
+      setFormError('Selected client has no account services. Please choose a different client.');
       return null;
     }
     if (!invoiceDate) {
@@ -229,9 +236,9 @@ export function InvoiceFormPage() {
       return null;
     }
 
-    // Build form data with backend FK format
+    // Build form data — resolve accountServices.id from selected client
     const formData: Record<string, unknown> = {
-      'accountServices.id': accountServicesId,
+      'accountServices.id': resolvedAccountServicesId,
       invoiceDate,
       paymentDate,
       notes,
@@ -354,24 +361,28 @@ export function InvoiceFormPage() {
             <h2 className="text-lg font-bold text-text-light dark:text-text-dark">Invoice Details</h2>
           </div>
           <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Account Services (replaces Client dropdown) */}
+            {/* Changed: Client dropdown — resolves accountServices automatically */}
             <div>
               <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                Account <span className="text-danger">*</span>
+                Client <span className="text-danger">*</span>
               </label>
               <select
-                value={accountServicesId}
-                onChange={(e) => setAccountServicesId(e.target.value)}
+                value={selectedClientId}
+                onChange={(e) => setSelectedClientId(e.target.value)}
                 className="w-full h-12 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-3 text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/50"
-                data-testid="invoice-account-select"
+                data-testid="invoice-client-select"
               >
-                <option value="">Select an account</option>
-                {accountServicesOptions.map((as) => (
-                  <option key={as.id} value={as.id}>
-                    {as.displayName}
+                <option value="">Select a client</option>
+                {clients?.map((client) => (
+                  <option key={client.id} value={client.id}>
+                    {client.name}
                   </option>
                 ))}
               </select>
+              {/* NOTE: Show warning if selected client has no accountServices */}
+              {selectedClientId && !resolvedAccountServicesId && (
+                <p className="text-xs text-danger mt-1">This client has no linked account services.</p>
+              )}
             </div>
 
             {/* Invoice Number (read-only for existing) */}

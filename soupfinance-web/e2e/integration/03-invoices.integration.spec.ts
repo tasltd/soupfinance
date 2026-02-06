@@ -9,15 +9,17 @@
  * - Edit invoice form navigation
  * - Delete invoice flow
  *
- * DOMAIN MODEL (2026-02-05):
+ * DOMAIN MODEL (2026-02-05, updated 2026-02-06):
  * The backend uses `accountServices` (soupbroker.kyc.AccountServices) as the invoice
  * recipient. Each AccountServices belongs to a broker KYC Client.
  *
- * The InvoiceFormPage populates the Account dropdown from unique accountServices
- * found in existing invoices (since /rest/accountServices/index.json is not available).
+ * The InvoiceFormPage shows a Client dropdown populated from /rest/client/index.json.
+ * When a Client is selected, the form auto-resolves the client's accountServices.id
+ * to set on the invoice before saving. This allows client metadata to be managed
+ * independently of the accountServices instance.
  *
  * Field mapping (backend → frontend):
- *   accountServices → Account dropdown (data-testid="invoice-account-select")
+ *   accountServices → resolved from selected Client (data-testid="invoice-client-select")
  *   invoiceDate     → Invoice Date (data-testid="invoice-date-input")
  *   paymentDate     → Due Date (data-testid="invoice-due-date-input")
  *   purchaseOrderNumber → PO Number (data-testid="invoice-po-number-input")
@@ -25,7 +27,7 @@
  * Execution order: Runs after vendor tests (02-vendors).
  *
  * TestIDs used (from InvoiceFormPage, InvoiceListPage, InvoiceDetailPage):
- *   Form: invoice-form-page, invoice-form-heading, invoice-account-select,
+ *   Form: invoice-form-page, invoice-form-heading, invoice-client-select,
  *         invoice-date-input, invoice-due-date-input, invoice-po-number-input,
  *         invoice-notes-textarea, invoice-add-item-button, invoice-items-table,
  *         invoice-item-description-{n}, invoice-item-quantity-{n},
@@ -40,7 +42,7 @@
  *         invoice-link-{id}, invoice-status-{id}, invoice-edit-{id}
  *   Detail: invoice-detail-page, invoice-detail-heading, invoice-detail-status,
  *           invoice-info-card, invoice-amount-card, invoice-items-card,
- *           invoice-payments-card, invoice-number, invoice-account,
+ *           invoice-payments-card, invoice-number, invoice-client,
  *           invoice-date, invoice-due-date, invoice-subtotal,
  *           invoice-tax, invoice-total, invoice-paid, invoice-balance-due,
  *           invoice-edit-button, invoice-delete-button, invoice-send-button,
@@ -56,8 +58,8 @@ import { backendTestUsers, takeScreenshot } from '../fixtures';
 /** ID of an existing invoice from the backend (used for detail/edit/delete tests) */
 let existingInvoiceId: string;
 
-/** Whether the account services dropdown has options (for create tests) */
-let accountServicesAvailable = false;
+/** Whether the client dropdown has options (for create tests) */
+let clientsAvailable = false;
 
 // Unique suffix to avoid collisions across test runs
 const testRunId = Date.now();
@@ -154,8 +156,8 @@ test.describe('Invoice Integration Tests', () => {
     await expect(page.getByTestId('invoice-form-page')).toBeVisible({ timeout: 15000 });
     await expect(page.getByTestId('invoice-form-heading')).toHaveText('New Invoice');
 
-    // Verify form fields are present (updated for domain model)
-    await expect(page.getByTestId('invoice-account-select')).toBeVisible();
+    // Changed: Client dropdown instead of Account (Client → auto-resolves accountServices)
+    await expect(page.getByTestId('invoice-client-select')).toBeVisible();
     await expect(page.getByTestId('invoice-date-input')).toBeVisible();
     await expect(page.getByTestId('invoice-due-date-input')).toBeVisible();
     await expect(page.getByTestId('invoice-po-number-input')).toBeVisible();
@@ -181,35 +183,33 @@ test.describe('Invoice Integration Tests', () => {
   });
 
   // =========================================================================
-  // 3. Check Account Services Availability for Invoice Creation
+  // 3. Check Client Availability for Invoice Creation
   // =========================================================================
 
-  test('detect account services availability for create flow', async ({ page }) => {
-    // Navigate to form and wait for account services dropdown to populate
+  test('detect client availability for create flow', async ({ page }) => {
+    // Changed: Now fetches clients from /rest/client/index.json instead of extracting from invoices
     await page.goto('/invoices/new');
     await expect(page.getByTestId('invoice-form-page')).toBeVisible({ timeout: 15000 });
 
-    // Wait for the invoices query to populate the account dropdown
-    // The form fetches existing invoices to extract known account services
+    // Wait for the clients query to populate the dropdown
     await page.waitForTimeout(5000);
 
-    const accountSelect = page.getByTestId('invoice-account-select');
-    const options = accountSelect.locator('option');
+    const clientSelect = page.getByTestId('invoice-client-select');
+    const options = clientSelect.locator('option');
     const optionCount = await options.count();
 
-    // First option is "Select an account" placeholder
-    accountServicesAvailable = optionCount > 1;
-    console.log(`[Invoice Test] Account dropdown options: ${optionCount} (available: ${accountServicesAvailable})`);
+    // First option is "Select a client" placeholder
+    clientsAvailable = optionCount > 1;
+    console.log(`[Invoice Test] Client dropdown options: ${optionCount} (available: ${clientsAvailable})`);
 
-    if (accountServicesAvailable) {
-      // Log the available account services
+    if (clientsAvailable) {
+      // Log the available clients
       for (let i = 1; i < optionCount; i++) {
         const text = await options.nth(i).textContent();
-        console.log(`[Invoice Test]   Account option ${i}: ${text}`);
+        console.log(`[Invoice Test]   Client option ${i}: ${text}`);
       }
     } else {
-      console.log('[Invoice Test] No account services in dropdown — existing invoices may not have been loaded yet');
-      console.log('[Invoice Test] The form populates from unique accountServices found in existing invoices');
+      console.log('[Invoice Test] No clients in dropdown — /rest/client/index.json may have returned empty');
     }
 
     // This test always passes — it's a discovery/probe test
@@ -251,11 +251,11 @@ test.describe('Invoice Integration Tests', () => {
     // Verify info card with domain fields
     await expect(page.getByTestId('invoice-info-card')).toBeVisible();
 
-    // Check domain-specific fields
-    const accountField = page.getByTestId('invoice-account');
-    if (await accountField.isVisible().catch(() => false)) {
-      const accountText = await accountField.textContent();
-      console.log(`[Invoice Test] Account: ${accountText}`);
+    // Changed: invoice-client (was invoice-account) — now labeled "Client" in detail page
+    const clientField = page.getByTestId('invoice-client');
+    if (await clientField.isVisible().catch(() => false)) {
+      const clientText = await clientField.textContent();
+      console.log(`[Invoice Test] Client: ${clientText}`);
     }
 
     const dateField = page.getByTestId('invoice-date');
@@ -400,29 +400,29 @@ test.describe('Invoice Integration Tests', () => {
   });
 
   // =========================================================================
-  // 9. Form Validation - Missing Account
+  // 9. Form Validation - Missing Client
   // =========================================================================
 
-  test('form validation shows error for missing account', async ({ page }) => {
+  test('form validation shows error for missing client', async ({ page }) => {
     await page.goto('/invoices/new');
     await expect(page.getByTestId('invoice-form-page')).toBeVisible({ timeout: 15000 });
 
-    // Fill a line item but don't select an account
+    // Fill a line item but don't select a client
     await page.getByTestId('invoice-item-description-0').fill('Test Service');
     await page.getByTestId('invoice-item-quantity-0').fill('1');
     await page.getByTestId('invoice-item-unitPrice-0').fill('100');
     await page.getByTestId('invoice-due-date-input').fill(dueDate);
 
-    // Submit without selecting an account
+    // Submit without selecting a client
     await page.getByTestId('invoice-form-save-draft-button').click();
 
-    // Should show validation error for missing account
+    // Changed: Should show validation error for missing client (was "account")
     await expect(page.getByTestId('invoice-form-error-message')).toBeVisible({ timeout: 5000 });
     const errorText = await page.getByTestId('invoice-form-error-message').textContent();
-    expect(errorText?.toLowerCase()).toContain('account');
+    expect(errorText?.toLowerCase()).toContain('client');
     console.log(`[Invoice Test] Validation error: ${errorText}`);
 
-    await takeScreenshot(page, 'integration-03-invoices-validation-account');
+    await takeScreenshot(page, 'integration-03-invoices-validation-client');
   });
 
   // =========================================================================
@@ -635,9 +635,9 @@ test.describe('Invoice Integration Tests', () => {
     await page.goto('/invoices/new');
     await expect(page.getByTestId('invoice-form-page')).toBeVisible({ timeout: 15000 });
 
-    // Verify key elements are visible on mobile (updated for domain model)
+    // Changed: invoice-client-select (was invoice-account-select) — Client dropdown
     await expect(page.getByTestId('invoice-form-heading')).toBeVisible();
-    await expect(page.getByTestId('invoice-account-select')).toBeVisible();
+    await expect(page.getByTestId('invoice-client-select')).toBeVisible();
     await expect(page.getByTestId('invoice-item-description-0')).toBeVisible();
     await expect(page.getByTestId('invoice-form-save-draft-button')).toBeVisible();
 
@@ -645,37 +645,37 @@ test.describe('Invoice Integration Tests', () => {
   });
 
   // =========================================================================
-  // 17. Invoice Create with Account Services
+  // 17. Invoice Create with Client Selection
   // =========================================================================
 
-  test('create invoice via form when account services are available', async ({ page }) => {
-    test.skip(!accountServicesAvailable, 'No account services available in dropdown (no existing invoices to extract from)');
+  test('create invoice via form when clients are available', async ({ page }) => {
+    test.skip(!clientsAvailable, 'No clients available in dropdown');
 
-    // This test only runs if account services are available in the dropdown
+    // Changed: Now selects a Client (which auto-resolves accountServices for the invoice FK)
     await page.goto('/invoices/new');
     await expect(page.getByTestId('invoice-form-page')).toBeVisible({ timeout: 15000 });
 
-    // Wait for account services dropdown to populate from existing invoices
+    // Wait for clients dropdown to populate from /rest/client/index.json
     await page.waitForTimeout(5000);
 
-    // Select the first real account
-    const accountSelect = page.getByTestId('invoice-account-select');
-    const options = accountSelect.locator('option');
+    // Select the first real client
+    const clientSelect = page.getByTestId('invoice-client-select');
+    const options = clientSelect.locator('option');
     const optionCount = await options.count();
-    console.log(`[Invoice Test] Account dropdown options: ${optionCount}`);
+    console.log(`[Invoice Test] Client dropdown options: ${optionCount}`);
 
     if (optionCount <= 1) {
-      // Only "Select an account" placeholder
-      console.log('[Invoice Test] No accounts in dropdown — cannot create invoice');
+      // Only "Select a client" placeholder
+      console.log('[Invoice Test] No clients in dropdown — cannot create invoice');
       return;
     }
 
-    // Select the first real account
+    // Select the first real client
     const firstOptionValue = await options.nth(1).getAttribute('value');
     if (firstOptionValue) {
-      await accountSelect.selectOption(firstOptionValue);
+      await clientSelect.selectOption(firstOptionValue);
       const selectedText = await options.nth(1).textContent();
-      console.log(`[Invoice Test] Selected account: ${selectedText} (ID: ${firstOptionValue})`);
+      console.log(`[Invoice Test] Selected client: ${selectedText} (ID: ${firstOptionValue})`);
     }
 
     // Fill form with backend field names
@@ -870,8 +870,8 @@ test.describe('Invoice Integration Tests', () => {
     }
     console.log(`[Invoice Test] Column headers: ${headerTexts.join(' | ')}`);
 
-    // Should have "Account" column (not "Client")
-    expect(headerTexts.some(h => h.toLowerCase().includes('account'))).toBeTruthy();
+    // Changed: Should have "Client" column (was "Account")
+    expect(headerTexts.some(h => h.toLowerCase().includes('client'))).toBeTruthy();
 
     await takeScreenshot(page, 'integration-03-invoices-list-table');
   });

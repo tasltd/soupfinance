@@ -207,8 +207,8 @@ describe('InvoiceListPage', () => {
       await screen.findByTestId('invoice-list-table');
 
       expect(screen.getByText('Invoice #')).toBeInTheDocument();
-      // Changed: 'Client' → 'Account' (matches InvoiceListPage table header)
-      expect(screen.getByText('Account')).toBeInTheDocument();
+      // Changed: 'Account' → 'Client' (matches InvoiceListPage table header)
+      expect(screen.getByText('Client')).toBeInTheDocument();
       // Changed: 'Date' → 'Invoice Date' (matches InvoiceListPage table header)
       expect(screen.getByText('Invoice Date')).toBeInTheDocument();
       expect(screen.getByText('Due Date')).toBeInTheDocument();

@@ -61,7 +61,8 @@ export function InvoiceListPage() {
               <thead className="text-xs text-subtle-text uppercase bg-background-light dark:bg-background-dark">
                 <tr>
                   <th className="px-6 py-3 text-left">Invoice #</th>
-                  <th className="px-6 py-3 text-left">Account</th>
+                  {/* Changed: Label from Account to Client */}
+                  <th className="px-6 py-3 text-left">Client</th>
                   <th className="px-6 py-3 text-left">Invoice Date</th>
                   <th className="px-6 py-3 text-left">Due Date</th>
                   <th className="px-6 py-3 text-right">Amount</th>

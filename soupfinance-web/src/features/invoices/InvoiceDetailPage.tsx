@@ -224,8 +224,9 @@ export function InvoiceDetailPage() {
               <p className="font-medium text-text-light dark:text-text-dark" data-testid="invoice-number">{String(invoice.number)}</p>
             </div>
             <div>
-              <p className="text-sm text-subtle-text">Account</p>
-              <p className="font-medium text-text-light dark:text-text-dark" data-testid="invoice-account">{invoice.accountServices?.serialised || 'N/A'}</p>
+              {/* Changed: Label from Account to Client */}
+              <p className="text-sm text-subtle-text">Client</p>
+              <p className="font-medium text-text-light dark:text-text-dark" data-testid="invoice-client">{invoice.accountServices?.serialised || 'N/A'}</p>
             </div>
             <div>
               <p className="text-sm text-subtle-text">Invoice Date</p>

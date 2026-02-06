@@ -247,8 +247,8 @@ describe('InvoiceDetailPage', () => {
 
       expect(await screen.findByTestId('invoice-info-card')).toBeInTheDocument();
       expect(screen.getByTestId('invoice-number')).toHaveTextContent('2024100');
-      // Changed: invoice-client → invoice-account (component uses accountServices)
-      expect(screen.getByTestId('invoice-account')).toHaveTextContent('Test Client Inc');
+      // Changed: invoice-account → invoice-client (component shows client label)
+      expect(screen.getByTestId('invoice-client')).toHaveTextContent('Test Client Inc');
       // Changed: invoice-issue-date → invoice-date (component uses invoiceDate)
       expect(screen.getByTestId('invoice-date')).toHaveTextContent('2024-03-01');
       expect(screen.getByTestId('invoice-due-date')).toHaveTextContent('2024-03-31');
@@ -262,8 +262,8 @@ describe('InvoiceDetailPage', () => {
 
       renderInvoiceDetailPage();
 
-      // Changed: invoice-client → invoice-account
-      expect(await screen.findByTestId('invoice-account')).toHaveTextContent('N/A');
+      // Changed: invoice-account → invoice-client
+      expect(await screen.findByTestId('invoice-client')).toHaveTextContent('N/A');
     });
 
     it('renders amount summary card with correct values', async () => {
