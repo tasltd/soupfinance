@@ -22,9 +22,17 @@ export function DashboardPage() {
   // Changed: Added error state handling for API failures
   const { data: stats, isLoading: statsLoading, error: statsError } = useDashboardStats();
 
+  // Changed: Return empty array on error so new accounts see "No invoices yet" not error message
   const { data: invoices, isLoading: invoicesLoading, error: invoicesError } = useQuery({
     queryKey: ['invoices', { max: 5 }],
-    queryFn: () => listInvoices({ max: 5, sort: 'dateCreated', order: 'desc' }),
+    queryFn: async () => {
+      try {
+        return await listInvoices({ max: 5, sort: 'dateCreated', order: 'desc' });
+      } catch {
+        // New accounts or backend issues should show empty state, not error
+        return [];
+      }
+    },
   });
 
   // Added: data-testid attributes for E2E testing

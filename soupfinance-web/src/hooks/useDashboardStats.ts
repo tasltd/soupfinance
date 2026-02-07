@@ -96,11 +96,16 @@ export function useDashboardStats() {
         return MOCK_STATS;
       }
 
-      // Changed: Always use real API, let errors propagate, return zeros if no data
-      const [invoices, bills] = await Promise.all([
+      // Changed: Use Promise.allSettled so one failing endpoint doesn't crash the dashboard
+      // New accounts with no data should see zeros, not error messages
+      const results = await Promise.allSettled([
         listInvoices({ max: 1000 }),
         listBills({ max: 1000 }),
       ]);
+
+      // Extract results - treat rejected promises as empty arrays
+      const invoices = results[0].status === 'fulfilled' ? results[0].value : [];
+      const bills = results[1].status === 'fulfilled' ? results[1].value : [];
 
       return calculateStats(invoices, bills);
     },
