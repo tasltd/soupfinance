@@ -280,12 +280,19 @@ export function ConfirmEmailPage() {
           {validationErrors.confirmPassword && touched.confirmPassword && (
             <span className="text-xs text-danger">{validationErrors.confirmPassword}</span>
           )}
-          {/* Password match indicator */}
-          {confirmPassword && password && touched.confirmPassword && password === confirmPassword && (
-            <span className="text-xs text-success flex items-center gap-1">
-              <span className="material-symbols-outlined text-sm">check_circle</span>
-              Passwords match
-            </span>
+          {/* Real-time password match indicator - shows as soon as user types in confirm field */}
+          {confirmPassword && password && (
+            password === confirmPassword ? (
+              <span className="text-xs text-success flex items-center gap-1">
+                <span className="material-symbols-outlined text-sm">check_circle</span>
+                Passwords match
+              </span>
+            ) : (
+              <span className="text-xs text-danger flex items-center gap-1">
+                <span className="material-symbols-outlined text-sm">cancel</span>
+                Passwords do not match
+              </span>
+            )
           )}
         </div>
 

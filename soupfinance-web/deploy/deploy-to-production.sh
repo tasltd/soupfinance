@@ -99,7 +99,8 @@ echo "[5/5] Verifying deployment..."
 VERIFY_FAILED=0
 
 # Check HTTPS (Cloudflare Full SSL connects on 443)
-HTTPS_STATUS=$(ssh $SSH_OPTS ${SERVER_USER}@${SERVER} "curl -s -o /dev/null -w '%{http_code}' --max-time 10 -H 'Host: ${DOMAIN}' https://127.0.0.1/ --insecure 2>/dev/null || echo '000'")
+# NOTE: --resolve forces SNI to match the domain, avoiding 421 Misdirected Request
+HTTPS_STATUS=$(ssh $SSH_OPTS ${SERVER_USER}@${SERVER} "curl -s -o /dev/null -w '%{http_code}' --max-time 10 --resolve ${DOMAIN}:443:127.0.0.1 https://${DOMAIN}/ --insecure 2>/dev/null || echo '000'")
 if [ "$HTTPS_STATUS" = "200" ]; then
     echo "  HTTPS (port 443): OK (status $HTTPS_STATUS)"
 else
@@ -108,7 +109,7 @@ else
 fi
 
 # Check HTTP
-HTTP_STATUS=$(ssh $SSH_OPTS ${SERVER_USER}@${SERVER} "curl -s -o /dev/null -w '%{http_code}' --max-time 10 -H 'Host: ${DOMAIN}' http://127.0.0.1/ 2>/dev/null || echo '000'")
+HTTP_STATUS=$(ssh $SSH_OPTS ${SERVER_USER}@${SERVER} "curl -s -o /dev/null -w '%{http_code}' --max-time 10 --resolve ${DOMAIN}:80:127.0.0.1 http://${DOMAIN}/ 2>/dev/null || echo '000'")
 if [ "$HTTP_STATUS" = "200" ]; then
     echo "  HTTP  (port 80):  OK (status $HTTP_STATUS)"
 else
