@@ -60,11 +60,13 @@ const mockBillPayments = [
   },
 ];
 
+// Changed: Mock data mirrors Grails domain structure (number, accountServices.serialised)
 const mockUnpaidInvoices = [
   {
     id: 'inv-unpaid-001',
+    number: 10,
     invoiceNumber: 'INV-2024-010',
-    client: { id: 'client-001', name: 'ABC Corp' },
+    accountServices: { id: 'as-001', class: 'soupbroker.kyc.AccountServices', serialised: 'Direct Account : Corporate(ABC Corp)' },
     total: 5000.0,
     amountDue: 3000.0,
     status: 'SENT',
@@ -72,8 +74,9 @@ const mockUnpaidInvoices = [
   },
   {
     id: 'inv-unpaid-002',
+    number: 11,
     invoiceNumber: 'INV-2024-011',
-    client: { id: 'client-002', name: 'XYZ Ltd' },
+    accountServices: { id: 'as-002', class: 'soupbroker.kyc.AccountServices', serialised: 'Direct Account : Corporate(XYZ Ltd)' },
     total: 2000.0,
     amountDue: 2000.0,
     status: 'OVERDUE',

@@ -67,21 +67,22 @@ Features: `accounting`, `auth`, `bills`, `clients`, `corporate`, `dashboard`, `i
 
 ### API Layer (`src/api/`)
 - **client.ts**: Axios instance with X-Auth-Token authentication, auto-401 redirect, response normalization utilities
-- **auth.ts**: Login/logout, token management, OTP verification
-- **endpoints/{domain}.ts**: Domain-specific API functions (invoices, bills, vendors, clients, ledger, corporate, reports, settings, domainData)
+- **auth.ts**: Two auth flows: (1) Admin login via `POST /rest/api/login` (JSON), (2) Corporate 2FA via `POST /client/authenticate.json` + `POST /client/verifyCode.json` (FormData). Token management with dual-storage (rememberMe → localStorage, default → sessionStorage)
+- **endpoints/{domain}.ts**: Domain-specific API functions (invoices, bills, vendors, clients, ledger, corporate, reports, settings, domainData). **Note:** `payments` feature has no dedicated endpoint file — uses bill/voucher endpoints
 - **endpoints/email.ts**: Email service for sending invoices/bills/reports with PDF attachments
 - **endpoints/registration.ts**: Tenant registration (uses `/account/*` proxy, not `/rest/*`)
 - **endpoints/clients.ts**: Client + AccountServices APIs (invoices reference `accountServices.id` as FK, client metadata from `Client` entity)
-- **endpoints/domainData.ts**: Shared domain data lookups (currencies, countries, etc.)
-- **endpoints/settings.ts**: Account and app settings endpoints
+- **endpoints/domainData.ts**: Shared domain data lookups — tax rates and payment terms are **hardcoded** (no backend endpoint); service descriptions from `/rest/serviceDescription/index.json`
+- **endpoints/settings.ts**: 6 sub-APIs: `agentApi` (staff CRUD), `accountBankDetailsApi` (bank accounts), `accountPersonApi` (directors/signatories), `rolesApi` (`/sbRole/index.json`), `banksApi` (`/bank/index.json`), `accountSettingsApi` (`/account/current.json`)
 
 Key patterns:
-- Backend uses `application/json` content type (migrated from form-urlencoded 2026-01)
+- Backend uses `application/json` content type (migrated from form-urlencoded 2026-01). **Exception:** OTP endpoints (`/client/authenticate.json`, `/client/verifyCode.json`) still use FormData
 - Foreign keys: Use nested objects `{ vendor: { id: "uuid" } }` not `vendor.id`
 - Registration endpoints go through `/account/*` proxy which injects `Api-Authorization` header
 - Backend identifies the app via the `Api-Authorization` header injected by the proxy (ApiAuthenticatorInterceptor resolves the ApiConsumer name)
 - **CSRF tokens required** for all POST/PUT/DELETE — see CSRF flow below
 - **Client vs AccountServices**: Invoices reference `accountServices.id` as FK; use `Client` entity (`/rest/client/index.json`) for dropdown display, save `accountServices.id` as the FK value
+- **Token storage caveat**: `client.ts` request interceptor (line 42) reads auth token from `localStorage` only. When `rememberMe=false`, the token is in `sessionStorage`. Use `getAccessToken()` from `auth.ts` for proper dual-storage reads
 
 ### CSRF Token Flow (CRITICAL for mutations)
 All create/update/delete operations require a CSRF token from the backend:
@@ -131,29 +132,32 @@ Validation behavior:
 
 ### State Management (`src/stores/`)
 Zustand stores with persistence:
-- **authStore**: Authentication state, token validation, remember-me support
+- **authStore**: Authentication state, token validation, remember-me support, `setAuthenticated()` for OTP flow
 - **uiStore**: Dark mode, sidebar state
-- **accountStore**: Tenant settings (currency, company info)
+- **accountStore**: Tenant settings (currency, company info). Exports currency utilities:
+  - Hooks: `useCurrencySymbol()`, `useFormatCurrency()`, `useCurrencyConfig()`
+  - Non-React: `formatCurrency(amount)`, `getCurrencySymbol()`
+  - Supports 12 currencies (USD, GHS, GBP, EUR, NGN, KES, ZAR, XOF, XAF, TZS, UGX, RWF)
 
 ### Hooks (`src/hooks/`)
-- **usePdf**: Frontend PDF generation using html2pdf.js for invoices, bills, reports
+- **usePdf**: Frontend PDF generation using html2pdf.js for invoices, bills, reports (templates in `src/utils/pdf/templates.ts`)
 - **useEmailSend**: Combines PDF generation with email API sending
 - **useDashboardStats**: Dashboard metrics and data
 - **useLedgerAccounts**: Chart of accounts queries
 - **useTransactions**: Ledger transaction queries
 
-### Type Definitions (`src/types/index.ts`)
+### Type Definitions (`src/types/`)
 All domain types mirror soupmarkets-web Grails domain classes:
-- `BaseEntity`: Common fields (id, archived, dateCreated, tenantId)
-- `PaginatedResponse<T>`: Standard pagination wrapper
-- Domain types: `Invoice`, `Bill`, `Vendor`, `Corporate`, `LedgerAccount`, etc.
+- **`index.ts`**: `BaseEntity`, `PaginatedResponse<T>`, and domain types: `Invoice`, `Bill`, `Vendor`, `Corporate`, `LedgerAccount`, etc.
+- **`settings.ts`**: `Agent`, `AgentFormData`, `AccountBankDetails`, `AccountPerson`, `AccountSettings`, `SbRole`, `Bank`, `SOUPFINANCE_ROLES` constants, `SOUPFINANCE_ROLE_LABELS` mapping
 
 ### Routing (`src/App.tsx`)
 - `ProtectedRoute`: Requires authentication, validates token on mount, shows loading during `isInitialized` check
 - `PublicRoute`: Redirects to dashboard if already authenticated, waits for initialization
 - Routes follow REST conventions: `/invoices`, `/invoices/new`, `/invoices/:id`, `/invoices/:id/edit`
 - Accounting routes use type-based URLs: `/accounting/voucher/payment`, `/accounting/voucher/receipt`, `/accounting/journal-entry/:id`
-- Public (unauthenticated) routes: `/login`, `/register`, `/verify`, `/confirm-email`, `/forgot-password`, `/reset-password`
+- Onboarding routes: `/onboarding/company`, `/onboarding/directors`, `/onboarding/documents`, `/onboarding/status`
+- Public (unauthenticated) routes: `/login`, `/register`, `/verify`, `/confirm-email`, `/resend-confirmation`, `/forgot-password`, `/reset-password`
 
 ## Code Quality
 

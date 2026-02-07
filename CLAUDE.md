@@ -104,7 +104,8 @@ hooks/                 # usePdf, useEmailSend, useDashboardStats, useLedgerAccou
 i18n/                  # 4 languages (en, de, fr, nl), 12 namespaces
 schemas/               # Zod runtime validation (dev: throw, prod: log only)
 stores/                # Zustand: authStore, uiStore, accountStore (currency/company settings)
-types/                 # TypeScript interfaces mirroring Grails domains
+types/                 # TypeScript interfaces mirroring Grails domains (index.ts + settings.ts)
+utils/pdf/             # PDF generation templates (invoice, bill, report layouts)
 utils/                 # frontendLogger (sends errors to /rest/frontendLog/batch.json), logger
 App.tsx                # Routes + providers (ProtectedRoute, PublicRoute wrappers)
 ```
@@ -114,14 +115,18 @@ App.tsx                # Routes + providers (ProtectedRoute, PublicRoute wrapper
 | Pattern | Detail |
 |---------|--------|
 | **Auth Header** | `X-Auth-Token: {token}` (NOT Bearer) |
-| **Login** | POST `/rest/api/login` with JSON body |
-| **Data Content-Type** | `application/json` for all requests |
+| **Admin Login** | POST `/rest/api/login` with JSON body `{ username, password }` |
+| **Corporate 2FA** | OTP flow: POST `/client/authenticate.json` (FormData) → POST `/client/verifyCode.json` (FormData) |
+| **Data Content-Type** | `application/json` for all CRUD requests; OTP endpoints (`/client/*`) use FormData |
+| **Token Storage** | Dual-storage: `rememberMe=true` → localStorage, `false` → sessionStorage. **Caveat:** `client.ts` interceptor reads ONLY `localStorage` — see `auth.ts:getAccessToken()` for dual-storage reads |
 | **Token Validation** | GET `/rest/user/current.json` on app mount |
 | **Invoice Clients** | `/rest/client/*` for Client entities (KYC clients); invoices reference `accountServices.id` as FK |
 | **CSRF Token** | **REQUIRED** for all POST/PUT/DELETE - fetch from `create.json`/`edit.json` first |
 | **Foreign Keys** | Use nested objects `{ vendor: { id: "uuid" } }` not `vendor.id` |
 | **Registration** | Goes through `/account/*` proxy (not `/rest/*`) |
 | **App Identification** | Backend identifies the app via the `Api-Authorization` header injected by the proxy (ApiAuthenticatorInterceptor resolves the ApiConsumer name) |
+| **Settings APIs** | `settings.ts` exports 6 sub-APIs: `agentApi`, `accountBankDetailsApi`, `accountPersonApi`, `rolesApi`, `banksApi`, `accountSettingsApi` |
+| **Domain Data** | Tax rates and payment terms are **hardcoded** in `domainData.ts` (no backend endpoint); service descriptions fetched from `/rest/serviceDescription/index.json` |
 
 #### Grails REST URL Pattern
 
@@ -200,6 +205,8 @@ Both the Vite dev server and production Apache proxy API requests to the Grails 
 - REST-style: `/invoices`, `/invoices/new`, `/invoices/:id`, `/invoices/:id/edit`
 - `ProtectedRoute`: Requires auth, validates token on mount, shows loading while initializing
 - `PublicRoute`: Redirects to dashboard if authenticated
+- Public (unauthenticated) routes: `/login`, `/register`, `/verify`, `/confirm-email`, `/resend-confirmation`, `/forgot-password`, `/reset-password`
+- Onboarding: `/onboarding/company`, `/onboarding/directors`, `/onboarding/documents`, `/onboarding/status`
 - Settings nested: `/settings/users`, `/settings/bank-accounts`, `/settings/account`
 
 ---
