@@ -14,7 +14,7 @@
  */
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import apiClient from '../api/client';
+import axios from 'axios';
 import type { AccountSettings } from '../types/settings';
 
 // Currency configuration mapping
@@ -72,8 +72,25 @@ export const useAccountStore = create<AccountState>()(
         set({ isLoading: true, error: null });
 
         try {
-          const response = await apiClient.get<AccountSettings>('/account/current.json');
-          const settings = response.data;
+          // Fix: Call /account/index.json (NOT /account/current.json which returns 404).
+          // The AccountController uses JSESSIONID cookie auth (set during login).
+          // The browser automatically forwards the JSESSIONID through the Vite/Apache proxy.
+          // Response is an array — take the first element (single-tenant user has one account).
+          const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token');
+          const response = await axios.get<AccountSettings[]>('/account/index.json', {
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              ...(token && { 'X-Auth-Token': token }),
+            },
+            timeout: 30000,
+          });
+          // Changed: Backend returns array of accounts; take first element
+          const accounts = response.data;
+          if (!Array.isArray(accounts) || accounts.length === 0) {
+            throw new Error('No account settings found');
+          }
+          const settings = accounts[0];
 
           // Changed: Currency comes from account settings (set during registration)
           // If no currency is set, warn and fall back to DEFAULT config

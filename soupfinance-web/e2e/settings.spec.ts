@@ -812,17 +812,24 @@ test.describe('Settings - Account Settings', () => {
 
     await mockTokenValidationApi(page, true);
 
-    // Mock account settings
-    await page.route('**/rest/account/current.json*', (route) => {
+    // Mock account settings (returns array — backend returns list of accounts)
+    await page.route('**/account/index.json*', (route) => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify(mockAccountSettings),
+        body: JSON.stringify([mockAccountSettings]),
       });
     });
 
-    // Mock update
-    await page.route('**/rest/account/update*', (route) => {
+    // Mock edit (CSRF token fetch) and update
+    await page.route('**/account/edit/*', (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ ...mockAccountSettings, SYNCHRONIZER_TOKEN: 'mock-token', SYNCHRONIZER_URI: '/account/update' }),
+      });
+    });
+    await page.route('**/account/update/*', (route) => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -911,7 +918,7 @@ test.describe('Settings - Account Settings', () => {
 
     await mockTokenValidationApi(page, true);
 
-    await page.route('**/rest/account/current.json*', (route) => {
+    await page.route('**/account/index.json*', (route) => {
       route.fulfill({
         status: 500,
         contentType: 'application/json',
@@ -966,8 +973,8 @@ test.describe('Settings Navigation', () => {
       await page.route('**/rest/accountBankDetails/index.json*', (route) => {
         route.fulfill({ status: 200, body: JSON.stringify(mockBankAccounts) });
       });
-      await page.route('**/rest/account/current.json*', (route) => {
-        route.fulfill({ status: 200, body: JSON.stringify(mockAccountSettings) });
+      await page.route('**/account/index.json*', (route) => {
+        route.fulfill({ status: 200, body: JSON.stringify([mockAccountSettings]) });
       });
     }
 

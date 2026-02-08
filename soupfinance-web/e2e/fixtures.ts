@@ -355,17 +355,19 @@ export async function mockTokenValidationApi(
 
   // Added (2026-01-30): Mock account settings endpoint for currency formatting
   // The accountStore fetches this on authentication to get tenant currency settings
-  await page.route('**/rest/account/current.json*', (route) => {
+  // Fix: Account endpoint is at /account/index.json (returns array, not single object)
+  await page.route('**/account/index.json*', (route) => {
     if (success) {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({
+        // Changed: Backend returns array of accounts (single-tenant user has one)
+        body: JSON.stringify([{
           id: 'account-001',
           name: 'Test Company',
           currency: 'USD',
           dateCreated: '2024-01-01T00:00:00Z',
-        }),
+        }]),
       });
     } else {
       route.fulfill({
