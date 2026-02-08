@@ -33,7 +33,9 @@ function createMockBill(overrides: Partial<Bill> = {}): Bill {
     id: 'bill-123',
     billNumber: 'BILL-2024-001',
     vendor: { id: 'vendor-1', name: 'Acme Supplies' },
+    billDate: '2024-01-15',
     issueDate: '2024-01-15',
+    paymentDate: '2024-02-15',
     dueDate: '2024-02-15',
     status: 'DRAFT' as BillStatus,
     subtotal: 1000,
@@ -44,7 +46,7 @@ function createMockBill(overrides: Partial<Bill> = {}): Bill {
     dateCreated: '2024-01-15T10:00:00Z',
     lastUpdated: '2024-01-15T10:00:00Z',
     ...overrides,
-  };
+  } as Bill;
 }
 
 function createQueryClient() {

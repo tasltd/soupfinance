@@ -359,8 +359,8 @@ export function InvoiceDetailPage() {
                   <tr key={payment.id} className="border-b border-border-light dark:border-border-dark">
                     <td className="px-6 py-4 text-text-light dark:text-text-dark">{payment.paymentDate}</td>
                     <td className="px-6 py-4 text-text-light dark:text-text-dark">
-                      <span className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${getPaymentMethodStyle(payment.paymentMethod)}`}>
-                        {getPaymentMethodLabel(payment.paymentMethod)}
+                      <span className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${getPaymentMethodStyle(payment.paymentMethod?.name || '')}`}>
+                        {getPaymentMethodLabel(payment.paymentMethod?.name || '')}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-subtle-text">{payment.reference || '-'}</td>

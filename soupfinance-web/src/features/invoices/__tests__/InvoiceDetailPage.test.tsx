@@ -107,13 +107,14 @@ function createMockPayment(overrides: Partial<InvoicePayment> = {}): InvoicePaym
     id: 'pay-1',
     paymentDate: '2024-02-01',
     amount: 500,
-    paymentMethod: 'BANK_TRANSFER',
+    // Changed: PaymentMethod is now a domain class FK object
+    paymentMethod: { id: 'pm-bt', name: 'BANK_TRANSFER' },
     reference: 'REF-001',
     invoice: { id: 'inv-123' },
     dateCreated: '2024-02-01T10:00:00Z',
     lastUpdated: '2024-02-01T10:00:00Z',
     ...overrides,
-  };
+  } as InvoicePayment;
 }
 
 function createQueryClient() {
@@ -418,7 +419,7 @@ describe('InvoiceDetailPage', () => {
           id: 'pay-1',
           paymentDate: '2024-02-01',
           amount: 500,
-          paymentMethod: 'BANK_TRANSFER',
+          paymentMethod: { id: 'pm-bt', name: 'BANK_TRANSFER' },
           reference: 'TRX-001',
         }),
       ];
@@ -437,8 +438,8 @@ describe('InvoiceDetailPage', () => {
     it('renders multiple payments', async () => {
       const mockInvoice = createMockInvoice();
       const mockPayments = [
-        createMockPayment({ id: 'pay-1', paymentDate: '2024-02-01', amount: 300, paymentMethod: 'CASH' }),
-        createMockPayment({ id: 'pay-2', paymentDate: '2024-02-15', amount: 200, paymentMethod: 'CARD' }),
+        createMockPayment({ id: 'pay-1', paymentDate: '2024-02-01', amount: 300, paymentMethod: { id: 'pm-cash', name: 'CASH' } }),
+        createMockPayment({ id: 'pay-2', paymentDate: '2024-02-15', amount: 200, paymentMethod: { id: 'pm-card', name: 'CARD' } }),
       ];
       vi.mocked(getInvoice).mockResolvedValue(mockInvoice);
       vi.mocked(listInvoicePayments).mockResolvedValue(mockPayments);

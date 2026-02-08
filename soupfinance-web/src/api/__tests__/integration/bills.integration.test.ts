@@ -409,7 +409,8 @@ describe('Bills API Integration', () => {
         bill: { id: 'bill-uuid' },
         amount: 1500.00,
         paymentDate: '2026-01-25',
-        paymentMethod: 'CHEQUE' as const,
+        // Changed: PaymentMethod is now a domain class FK object
+        paymentMethod: { id: 'pm-cheque-uuid', name: 'CHEQUE' },
         reference: 'CHQ-98765',
       };
 
@@ -435,7 +436,7 @@ describe('Bills API Integration', () => {
       const postData = mockAxiosInstance.post.mock.calls[0][1] as Record<string, unknown>;
       expect(postData.bill).toEqual({ id: 'bill-uuid' });
       expect(postData.amount).toBe(1500.00);
-      expect(postData.paymentMethod).toBe('CHEQUE');
+      expect(postData.paymentMethod).toEqual({ id: 'pm-cheque-uuid', name: 'CHEQUE' });
       expect(postData.reference).toBe('CHQ-98765');
       expect(postData.SYNCHRONIZER_TOKEN).toBeUndefined();
 

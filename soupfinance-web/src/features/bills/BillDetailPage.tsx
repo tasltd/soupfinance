@@ -291,7 +291,7 @@ export function BillDetailPage() {
                 {payments.map((payment) => (
                   <tr key={payment.id} className="border-b border-border-light dark:border-border-dark">
                     <td className="px-6 py-4 text-text-light dark:text-text-dark">{payment.paymentDate}</td>
-                    <td className="px-6 py-4 text-text-light dark:text-text-dark">{payment.paymentMethod}</td>
+                    <td className="px-6 py-4 text-text-light dark:text-text-dark">{payment.paymentMethod?.name || '-'}</td>
                     <td className="px-6 py-4 text-subtle-text">{payment.reference || '-'}</td>
                     <td className="px-6 py-4 text-right font-medium text-success">{formatCurrency(payment.amount)}</td>
                   </tr>

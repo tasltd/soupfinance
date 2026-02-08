@@ -75,7 +75,8 @@ function createMockPayment(overrides: Partial<BillPayment> = {}): BillPayment {
     bill: { id: 'bill-123' },
     amount: 500,
     paymentDate: '2024-02-01',
-    paymentMethod: 'BANK_TRANSFER',
+    // Changed: PaymentMethod is now a domain class FK object
+    paymentMethod: { id: 'pm-bt', name: 'BANK_TRANSFER' },
     reference: 'PAY-001',
     notes: 'Partial payment',
     dateCreated: '2024-02-01T10:00:00Z',
@@ -88,7 +89,9 @@ function createMockBill(overrides: Partial<Bill> = {}): Bill {
     id: 'bill-123',
     billNumber: 'BILL-2024-001',
     vendor: { id: 'vendor-1', name: 'Acme Supplies' },
+    billDate: '2024-01-15',
     issueDate: '2024-01-15',
+    paymentDate: '2024-02-15',
     dueDate: '2024-02-15',
     status: 'PENDING' as BillStatus,
     subtotal: 1500,
@@ -102,7 +105,7 @@ function createMockBill(overrides: Partial<Bill> = {}): Bill {
     dateCreated: '2024-01-15T10:00:00Z',
     lastUpdated: '2024-01-15T10:00:00Z',
     ...overrides,
-  };
+  } as Bill;
 }
 
 function createQueryClient() {

@@ -322,14 +322,12 @@ function safeString(value: unknown): string {
 }
 
 /**
- * Transform raw payment response to ensure all fields are primitive values.
- * The backend may return paymentMethod as a Grails enum object {id, class, serialised}
- * instead of a plain string.
+ * Transform raw payment response to ensure fields are correct types.
+ * Changed: paymentMethod is now a domain class FK object (not coerced to string)
  */
 function transformPayment(raw: InvoicePayment): InvoicePayment {
   return {
     ...raw,
-    paymentMethod: safeString(raw.paymentMethod) as InvoicePayment['paymentMethod'],
     paymentDate: formatDateField(raw.paymentDate) || raw.paymentDate,
     reference: raw.reference ? safeString(raw.reference) : raw.reference,
     notes: raw.notes ? safeString(raw.notes) : raw.notes,

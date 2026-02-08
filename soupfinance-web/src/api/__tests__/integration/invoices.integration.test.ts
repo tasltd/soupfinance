@@ -477,7 +477,8 @@ describe('Invoices API Integration', () => {
         invoice: { id: 'invoice-uuid' },
         amount: 750.00,
         paymentDate: '2026-01-25',
-        paymentMethod: 'BANK_TRANSFER' as const,
+        // Changed: PaymentMethod is now a domain class FK object
+        paymentMethod: { id: 'pm-bt-uuid', name: 'BANK_TRANSFER' },
         reference: 'TXN-12345',
       };
 
@@ -503,7 +504,7 @@ describe('Invoices API Integration', () => {
       const postData = mockAxiosInstance.post.mock.calls[0][1] as Record<string, unknown>;
       expect(postData.invoice).toEqual({ id: 'invoice-uuid' });
       expect(postData.amount).toBe(750.00);
-      expect(postData.paymentMethod).toBe('BANK_TRANSFER');
+      expect(postData.paymentMethod).toEqual({ id: 'pm-bt-uuid', name: 'BANK_TRANSFER' });
       expect(postData.SYNCHRONIZER_TOKEN).toBeUndefined();
 
       expect(result.id).toBe('payment-uuid');

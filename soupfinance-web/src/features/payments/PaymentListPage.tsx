@@ -206,8 +206,8 @@ export function PaymentListPage() {
                           </Link>
                         </td>
                         <td className="px-6 py-4">
-                          <span className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${getPaymentMethodStyle(payment.paymentMethod)}`}>
-                            {getPaymentMethodLabel(payment.paymentMethod)}
+                          <span className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${getPaymentMethodStyle(payment.paymentMethod?.name || '')}`}>
+                            {getPaymentMethodLabel(payment.paymentMethod?.name || '')}
                           </span>
                         </td>
                         <td className="px-6 py-4 text-subtle-text">
@@ -236,8 +236,8 @@ export function PaymentListPage() {
                           </Link>
                         </td>
                         <td className="px-6 py-4">
-                          <span className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${getPaymentMethodStyle(payment.paymentMethod)}`}>
-                            {getPaymentMethodLabel(payment.paymentMethod)}
+                          <span className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${getPaymentMethodStyle(payment.paymentMethod?.name || '')}`}>
+                            {getPaymentMethodLabel(payment.paymentMethod?.name || '')}
                           </span>
                         </td>
                         <td className="px-6 py-4 text-subtle-text">
