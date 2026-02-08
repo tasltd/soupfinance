@@ -9,13 +9,14 @@ import { mockTokenValidationApi, takeScreenshot } from './fixtures';
 // Mock Data
 // ===========================================================================
 
+// Fix: paymentMethod is a domain object with id+name (not a string enum)
 const mockInvoicePayments = [
   {
     id: 'ip-001',
     invoice: { id: 'inv-001', invoiceNumber: 'INV-2024-001' },
     amount: 2500.0,
     paymentDate: '2024-10-15',
-    paymentMethod: 'BANK_TRANSFER',
+    paymentMethod: { id: 'pm-1', name: 'Bank Transfer' },
     reference: 'TRF-12345',
     dateCreated: '2024-10-15T10:00:00Z',
   },
@@ -24,7 +25,7 @@ const mockInvoicePayments = [
     invoice: { id: 'inv-002', invoiceNumber: 'INV-2024-002' },
     amount: 1500.0,
     paymentDate: '2024-10-16',
-    paymentMethod: 'CASH',
+    paymentMethod: { id: 'pm-2', name: 'Cash' },
     reference: null,
     dateCreated: '2024-10-16T11:00:00Z',
   },
@@ -33,19 +34,20 @@ const mockInvoicePayments = [
     invoice: { id: 'inv-003', invoiceNumber: 'INV-2024-003' },
     amount: 3200.0,
     paymentDate: '2024-10-17',
-    paymentMethod: 'CHEQUE',
+    paymentMethod: { id: 'pm-3', name: 'Cheque' },
     reference: 'CHK-789',
     dateCreated: '2024-10-17T09:30:00Z',
   },
 ];
 
+// Fix: paymentMethod is a domain object with id+name (not a string enum)
 const mockBillPayments = [
   {
     id: 'bp-001',
     bill: { id: 'bill-001', billNumber: 'BILL-2024-001' },
     amount: 850.0,
     paymentDate: '2024-10-14',
-    paymentMethod: 'BANK_TRANSFER',
+    paymentMethod: { id: 'pm-1', name: 'Bank Transfer' },
     reference: 'PAY-001',
     dateCreated: '2024-10-14T10:00:00Z',
   },
@@ -54,7 +56,7 @@ const mockBillPayments = [
     bill: { id: 'bill-002', billNumber: 'BILL-2024-002' },
     amount: 450.0,
     paymentDate: '2024-10-15',
-    paymentMethod: 'CARD',
+    paymentMethod: { id: 'pm-4', name: 'Card' },
     reference: 'CARD-456',
     dateCreated: '2024-10-15T14:00:00Z',
   },
@@ -195,6 +197,34 @@ test.describe('Payment Management', () => {
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify(unpaidBills),
+      });
+    });
+
+    // Fix: Mock payment methods endpoint — PaymentFormPage fetches /rest/paymentMethod/index.json
+    await page.route('**/rest/paymentMethod/index.json*', (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([
+          { id: 'pm-1', name: 'Bank Transfer' },
+          { id: 'pm-2', name: 'Cash' },
+          { id: 'pm-3', name: 'Cheque' },
+          { id: 'pm-4', name: 'Card' },
+          { id: 'pm-5', name: 'Mobile Money' },
+          { id: 'pm-6', name: 'Other' },
+        ]),
+      });
+    });
+
+    // Mock bank/cash accounts for deposit dropdown
+    await page.route('**/rest/ledgerAccount/index.json*', (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([
+          { id: 'acct-1', name: 'Main Bank Account', code: '1000' },
+          { id: 'acct-2', name: 'Cash on Hand', code: '1010' },
+        ]),
       });
     });
 
@@ -574,7 +604,8 @@ test.describe('Payment Management', () => {
       await page.getByTestId('select-document').selectOption('inv-unpaid-001');
       await page.getByTestId('amount-input').fill('1500');
       await page.getByTestId('date-input').fill('2024-10-20');
-      await page.getByTestId('method-select').selectOption('CHEQUE');
+      // Fix: Select by label — option values are domain IDs (pm-3), not enum strings
+      await page.getByTestId('method-select').selectOption({ label: 'Cheque' });
       await page.getByTestId('reference-input').fill('CHK-12345');
       await page.getByTestId('notes-input').fill('Partial payment for services');
 

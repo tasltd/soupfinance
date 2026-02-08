@@ -15,7 +15,7 @@
  *
  * Field mapping (backend -> frontend):
  *   vendor     -> Vendor dropdown (data-testid="bill-vendor-select")
- *   issueDate  -> Issue Date (data-testid="bill-issue-date-input")
+ *   issueDate  -> Issue Date (data-testid="bill-date-input")
  *   dueDate    -> Due Date (data-testid="bill-due-date-input")
  *   notes      -> Notes (data-testid="bill-notes-textarea")
  *   items[]    -> Line items with description, qty, unitPrice, taxRate
@@ -25,7 +25,7 @@
  *
  * TestIDs used (from BillFormPage, BillListPage, BillDetailPage):
  *   Form: bill-form-page, bill-form-heading, bill-vendor-select,
- *         bill-issue-date-input, bill-due-date-input, bill-notes-textarea,
+ *         bill-date-input, bill-due-date-input, bill-notes-textarea,
  *         bill-add-item-button, bill-items-card, bill-items-table,
  *         bill-item-description-{n}, bill-item-quantity-{n},
  *         bill-item-unitPrice-{n}, bill-item-taxRate-{n},
@@ -152,7 +152,7 @@ test.describe('Bill Integration Tests', () => {
 
     // Verify form fields are present
     await expect(page.getByTestId('bill-vendor-select')).toBeVisible();
-    await expect(page.getByTestId('bill-issue-date-input')).toBeVisible();
+    await expect(page.getByTestId('bill-date-input')).toBeVisible();
     await expect(page.getByTestId('bill-due-date-input')).toBeVisible();
     await expect(page.getByTestId('bill-notes-textarea')).toBeVisible();
 
@@ -384,7 +384,7 @@ test.describe('Bill Integration Tests', () => {
     await expect(page.getByTestId('bill-form-page')).toBeVisible({ timeout: 15000 });
 
     // Fill line item and dates but don't select a vendor
-    await page.getByTestId('bill-issue-date-input').fill(today);
+    await page.getByTestId('bill-date-input').fill(today);
     await page.getByTestId('bill-due-date-input').fill(dueDate);
     await page.getByTestId('bill-item-description-0').fill('Test Expense');
     await page.getByTestId('bill-item-quantity-0').fill('1');
@@ -411,7 +411,7 @@ test.describe('Bill Integration Tests', () => {
     await expect(page.getByTestId('bill-form-page')).toBeVisible({ timeout: 15000 });
 
     // Fill issue date but clear due date
-    await page.getByTestId('bill-issue-date-input').fill(today);
+    await page.getByTestId('bill-date-input').fill(today);
     await page.getByTestId('bill-due-date-input').fill(''); // Clear due date
     await page.getByTestId('bill-item-description-0').fill('Test Expense');
     await page.getByTestId('bill-item-quantity-0').fill('1');
@@ -667,7 +667,7 @@ test.describe('Bill Integration Tests', () => {
     }
 
     // Fill form fields
-    await page.getByTestId('bill-issue-date-input').fill(today);
+    await page.getByTestId('bill-date-input').fill(today);
     await page.getByTestId('bill-due-date-input').fill(dueDate);
     await page.getByTestId('bill-notes-textarea').fill(`Integration test bill ${testRunId}`);
     await page.getByTestId('bill-item-description-0').fill('Consulting Services');

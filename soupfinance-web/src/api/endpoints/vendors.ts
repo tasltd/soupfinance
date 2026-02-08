@@ -46,6 +46,9 @@ export async function createVendor(data: Partial<Vendor>): Promise<Vendor> {
   const csrf = await getCsrfToken('vendor');
 
   // Step 2: Pass CSRF token as URL query params (Grails withForm reads from request params, not JSON body)
+  // NOTE: This requires the Vite proxy to forward session cookies (JSESSIONID) properly.
+  // Without cookies, Grails creates separate Hibernate sessions causing PaymentMethod proxy conflicts.
+  // The cookieDomainRewrite config in vite.config.ts ensures cookies are forwarded correctly.
   const response = await apiClient.post<Vendor>(
     `${BASE_URL}/save.json?${csrfQueryString(csrf)}`,
     data

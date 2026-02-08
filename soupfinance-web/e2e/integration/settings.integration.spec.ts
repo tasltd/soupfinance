@@ -10,12 +10,18 @@ import { backendTestUsers, takeScreenshot } from '../fixtures';
 
 const API_BASE = 'http://10.115.213.183:9090';
 
-// Helper to login as admin
+// Changed: Login with remember-me for reliable token persistence
 async function loginAsAdmin(page: any) {
   await page.goto('/login');
-  await page.getByTestId('login-email-input').waitFor({ state: 'visible' });
+  await page.getByTestId('login-email-input').waitFor({ state: 'visible', timeout: 10000 });
   await page.getByTestId('login-email-input').fill(backendTestUsers.admin.username);
   await page.getByTestId('login-password-input').fill(backendTestUsers.admin.password);
+
+  const rememberCheckbox = page.getByTestId('login-remember-checkbox');
+  if (await rememberCheckbox.isVisible().catch(() => false)) {
+    await rememberCheckbox.check();
+  }
+
   await page.getByTestId('login-submit-button').click();
   await expect(page).toHaveURL(/\/dashboard/, { timeout: 15000 });
 }
@@ -34,7 +40,8 @@ test.describe('Settings Integration Tests', () => {
 
   test.describe('Settings Page Navigation', () => {
     test('settings page loads', async ({ page }) => {
-      await page.waitForLoadState('networkidle');
+      // Changed: Use domcontentloaded — some settings API calls can be slow
+      await page.waitForLoadState('domcontentloaded');
 
       // Navigate to settings via sidebar or menu
       const settingsLink = page.getByRole('link', { name: /settings/i }).first();
@@ -51,7 +58,13 @@ test.describe('Settings Integration Tests', () => {
 
     test('settings has multiple sections', async ({ page }) => {
       await page.goto('/settings');
-      await page.waitForLoadState('networkidle');
+      // Changed: Use domcontentloaded — some settings API calls can be slow
+      await page.waitForLoadState('domcontentloaded');
+      // Fix: Wait for auth verification to complete before checking content
+      await page.waitForFunction(
+        () => !document.body.textContent?.includes('Verifying authentication'),
+        { timeout: 20000 }
+      ).catch(() => {});
 
       // Check for actual settings sections from SettingsLayout
       const sections = ['users', 'bank accounts', 'account settings'];
@@ -134,7 +147,13 @@ test.describe('Settings Integration Tests', () => {
 
     test('users settings page loads', async ({ page }) => {
       await page.goto('/settings/users');
-      await page.waitForLoadState('networkidle');
+      // Changed: Use domcontentloaded — some settings API calls can be slow
+      await page.waitForLoadState('domcontentloaded');
+      // Fix: Wait for auth verification to complete before checking content
+      await page.waitForFunction(
+        () => !document.body.textContent?.includes('Verifying authentication'),
+        { timeout: 20000 }
+      ).catch(() => {});
 
       // May show users list or access denied
       const heading = page.getByRole('heading', { name: /user/i });
@@ -152,7 +171,13 @@ test.describe('Settings Integration Tests', () => {
     test('account settings page loads', async ({ page }) => {
       // Navigate to /settings/account (not /settings/company)
       await page.goto('/settings/account');
-      await page.waitForLoadState('networkidle');
+      // Changed: Use domcontentloaded — some settings API calls can be slow
+      await page.waitForLoadState('domcontentloaded');
+      // Fix: Wait for auth verification to complete before checking content
+      await page.waitForFunction(
+        () => !document.body.textContent?.includes('Verifying authentication'),
+        { timeout: 20000 }
+      ).catch(() => {});
 
       // Settings page may have different headings or just content
       const hasHeading = await page.getByRole('heading', { name: /settings|account/i }).first().isVisible({ timeout: 15000 }).catch(() => false);
@@ -166,7 +191,13 @@ test.describe('Settings Integration Tests', () => {
 
     test('account settings shows editable fields', async ({ page }) => {
       await page.goto('/settings/account');
-      await page.waitForLoadState('networkidle');
+      // Changed: Use domcontentloaded — some settings API calls can be slow
+      await page.waitForLoadState('domcontentloaded');
+      // Fix: Wait for auth verification to complete before checking content
+      await page.waitForFunction(
+        () => !document.body.textContent?.includes('Verifying authentication'),
+        { timeout: 20000 }
+      ).catch(() => {});
 
       // Check for editable fields - match actual fields in AccountSettingsPage
       const fields = ['name', 'currency', 'address', 'website'];
@@ -186,7 +217,13 @@ test.describe('Settings Integration Tests', () => {
     test('bank accounts page loads', async ({ page }) => {
       // Navigate to bank accounts settings
       await page.goto('/settings/bank-accounts');
-      await page.waitForLoadState('networkidle');
+      // Changed: Use domcontentloaded — some settings API calls can be slow
+      await page.waitForLoadState('domcontentloaded');
+      // Fix: Wait for auth verification to complete before checking content
+      await page.waitForFunction(
+        () => !document.body.textContent?.includes('Verifying authentication'),
+        { timeout: 20000 }
+      ).catch(() => {});
 
       // Bank accounts page may have different headings or just content
       const hasHeading = await page.getByRole('heading', { name: /settings|bank/i }).first().isVisible({ timeout: 15000 }).catch(() => false);
@@ -200,7 +237,13 @@ test.describe('Settings Integration Tests', () => {
 
     test('bank accounts shows list or empty state', async ({ page }) => {
       await page.goto('/settings/bank-accounts');
-      await page.waitForLoadState('networkidle');
+      // Changed: Use domcontentloaded — some settings API calls can be slow
+      await page.waitForLoadState('domcontentloaded');
+      // Fix: Wait for auth verification to complete before checking content
+      await page.waitForFunction(
+        () => !document.body.textContent?.includes('Verifying authentication'),
+        { timeout: 20000 }
+      ).catch(() => {});
 
       // Should show either bank accounts table or empty state
       const hasTable = await page.locator('table').isVisible().catch(() => false);
@@ -216,7 +259,13 @@ test.describe('Settings Integration Tests', () => {
     test('dark mode toggle in top nav', async ({ page }) => {
       // Dark mode toggle is in the top nav, not settings
       await page.goto('/dashboard');
-      await page.waitForLoadState('networkidle');
+      // Changed: Use domcontentloaded — some settings API calls can be slow
+      await page.waitForLoadState('domcontentloaded');
+      // Fix: Wait for auth verification to complete before checking content
+      await page.waitForFunction(
+        () => !document.body.textContent?.includes('Verifying authentication'),
+        { timeout: 20000 }
+      ).catch(() => {});
 
       // Look for dark mode toggle in top navigation
       const darkModeToggle = page.getByRole('button', { name: /dark|light|theme/i })
