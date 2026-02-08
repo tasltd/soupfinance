@@ -19,6 +19,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | E2E against LXC | `cd soupfinance-web && npm run test:e2e:lxc` |
 | E2E all (LXC) | `cd soupfinance-web && npm run test:e2e:lxc:all` |
 | E2E integration only | `cd soupfinance-web && npx playwright test --config=playwright.lxc.config.ts e2e/integration/` |
+| E2E integration (alt) | `cd soupfinance-web && npx playwright test --config=playwright.integration.config.ts` |
 | E2E report | `cd soupfinance-web && npm run test:e2e:report` |
 | E2E LXC report | `cd soupfinance-web && npm run test:e2e:lxc:report` |
 | Test coverage | `cd soupfinance-web && npm run test:coverage` |
@@ -39,7 +40,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `soupfinance-web/` | React 19 + TypeScript + Vite 7 + TailwindCSS v4 | Main app — see `soupfinance-web/CLAUDE.md` for detailed patterns |
 | `soupfinance-landing/` | Static HTML marketing site | www.soupfinance.com — see `soupfinance-landing/CLAUDE.md` |
 | `backend/` | LXC container with Grails WAR | Local development backend |
-| `soupfinance-designs/` | HTML mockups (114 screens) | Design reference only |
+| `soupfinance-designs/` | HTML mockups (43 screens) | Design reference only |
 | `plans/` | Architecture plans and backend change requests | Implementation plans |
 | `prd/` | Product Requirements Documents | Modular PRD (see `PRD.md` for index) |
 | `docs/` | User journeys, validation reports | Reference documentation |
@@ -302,7 +303,7 @@ source env-variables.sh && ./gradlew assembleDeployToSoupfinance
 
 ## Implementing Features
 
-1. Check `soupfinance-designs/` for HTML mockups (114 screens covering all UI states)
+1. Check `soupfinance-designs/` for HTML mockups (43 screens covering all UI states)
 2. Use existing feature modules as templates (copy invoice patterns for new entities)
 3. Follow design system: primary `#f24a0d`, font Manrope, icons Material Symbols Outlined
 4. Include dark mode variants (`dark:` prefix)

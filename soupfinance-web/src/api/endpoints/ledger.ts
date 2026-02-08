@@ -246,12 +246,13 @@ export async function createVoucher(data: CreateVoucherRequest): Promise<Voucher
   const csrf = await getCsrfToken('voucher');
 
   // Step 2: Build JSON body with nested objects for foreign keys
+  // Fix: Use correct field names from CreateVoucherRequest (transactionDate, notes)
   const body: Record<string, unknown> = {
     voucherType: data.voucherType,
     voucherTo: data.voucherTo,
-    voucherDate: data.voucherDate,
+    transactionDate: data.transactionDate,
     amount: data.amount,
-    description: data.description,
+    notes: data.notes,
     reference: data.reference,
     beneficiaryName: data.beneficiaryName,
   };
@@ -263,6 +264,8 @@ export async function createVoucher(data: CreateVoucherRequest): Promise<Voucher
   if (data.cashAccountId) body.cashAccount = { id: data.cashAccountId };
   if (data.expenseAccountId) body.expenseAccount = { id: data.expenseAccountId };
   if (data.incomeAccountId) body.incomeAccount = { id: data.incomeAccountId };
+  // Added: PaymentMethod is a domain class FK (delegated to LedgerTransaction)
+  if (data.paymentMethodId) body.paymentMethod = { id: data.paymentMethodId };
 
   // Pass CSRF token as URL query params (Grails withForm reads from request params, not JSON body)
   const response = await apiClient.post<Voucher>(

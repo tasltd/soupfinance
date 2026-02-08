@@ -206,6 +206,8 @@ test.describe('Tenant Registration', () => {
       // Fill in all required fields
       await page.getByTestId('registration-company-name-input').fill(mockTenantRegistration.companyName);
       await page.getByTestId('registration-business-type-services').click();
+      // Changed: Country selection auto-sets currency (GH → GHS)
+      await page.getByTestId('registration-country-select').selectOption('GH');
       await page.getByTestId('registration-admin-first-name').fill(mockTenantRegistration.adminFirstName);
       await page.getByTestId('registration-admin-last-name').fill(mockTenantRegistration.adminLastName);
       await page.getByTestId('registration-email-input').fill(mockTenantRegistration.email);
@@ -240,6 +242,8 @@ test.describe('Tenant Registration', () => {
 
       // Fill in form
       await page.getByTestId('registration-company-name-input').fill(mockTenantRegistration.companyName);
+      // Changed: Country selection auto-sets currency (GH → GHS)
+      await page.getByTestId('registration-country-select').selectOption('GH');
       await page.getByTestId('registration-admin-first-name').fill(mockTenantRegistration.adminFirstName);
       await page.getByTestId('registration-admin-last-name').fill(mockTenantRegistration.adminLastName);
       await page.getByTestId('registration-email-input').fill(mockTenantRegistration.email);
@@ -264,6 +268,8 @@ test.describe('Tenant Registration', () => {
 
       // Fill in form
       await page.getByTestId('registration-company-name-input').fill('Existing Company');
+      // Changed: Country selection auto-sets currency (GH → GHS)
+      await page.getByTestId('registration-country-select').selectOption('GH');
       await page.getByTestId('registration-admin-first-name').fill('Jane');
       await page.getByTestId('registration-admin-last-name').fill('Smith');
       await page.getByTestId('registration-email-input').fill('existing@company.com');

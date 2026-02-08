@@ -2,16 +2,20 @@
  * Account Settings Page
  * PURPOSE: Configure company account settings and preferences
  */
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { accountSettingsApi } from '../../api/endpoints/settings';
 import type { AccountSettings, BusinessLicenceCategory } from '../../types/settings';
+// Changed: Import shared currency data from domainData (single source of truth)
+import { DEFAULT_CURRENCIES, listCurrencies } from '../../api/endpoints/domainData';
+import type { Currency as DomainCurrency } from '../../api/endpoints/domainData';
 import { logger } from '../../utils/logger';
 
 // Form validation schema
+// Changed: Added startOfFiscalYear for fiscal year configuration
 const settingsSchema = z.object({
   name: z.string().min(1, 'Company name is required'),
   currency: z.string().optional(),
@@ -24,6 +28,7 @@ const settingsSchema = z.object({
   emailSubjectPrefix: z.string().optional(),
   smsIdPrefix: z.string().optional(),
   slogan: z.string().optional(),
+  startOfFiscalYear: z.string().optional(),
 });
 
 type SettingsFormValues = z.infer<typeof settingsSchema>;
@@ -38,18 +43,16 @@ const BUSINESS_CATEGORIES: { value: BusinessLicenceCategory; label: string }[] =
   { value: 'PRIMARY_DEALER', label: 'Primary Dealer' },
 ];
 
-const CURRENCIES = [
-  { value: 'GHS', label: 'GHS - Ghana Cedi' },
-  { value: 'USD', label: 'USD - US Dollar' },
-  { value: 'EUR', label: 'EUR - Euro' },
-  { value: 'GBP', label: 'GBP - British Pound' },
-  { value: 'NGN', label: 'NGN - Nigerian Naira' },
-  { value: 'KES', label: 'KES - Kenyan Shilling' },
-  { value: 'ZAR', label: 'ZAR - South African Rand' },
-];
+// Removed: Hardcoded CURRENCIES list - now loaded from shared domainData source
 
 export default function AccountSettingsPage() {
   const queryClient = useQueryClient();
+
+  // Changed: Load currencies from shared domainData source (loads from backend when available)
+  const [currencies, setCurrencies] = useState<DomainCurrency[]>(DEFAULT_CURRENCIES);
+  useEffect(() => {
+    listCurrencies().then(setCurrencies);
+  }, []);
 
   // Fetch current settings
   const { data: currentSettings, isLoading, error } = useQuery({
@@ -79,6 +82,7 @@ export default function AccountSettingsPage() {
       emailSubjectPrefix: '',
       smsIdPrefix: '',
       slogan: '',
+      startOfFiscalYear: '',
     },
   });
 
@@ -97,6 +101,7 @@ export default function AccountSettingsPage() {
         emailSubjectPrefix: currentSettings.emailSubjectPrefix || '',
         smsIdPrefix: currentSettings.smsIdPrefix || '',
         slogan: currentSettings.slogan || '',
+        startOfFiscalYear: currentSettings.startOfFiscalYear || '',
       });
     }
   }, [currentSettings, reset]);
@@ -118,6 +123,7 @@ export default function AccountSettingsPage() {
         emailSubjectPrefix: data.emailSubjectPrefix,
         smsIdPrefix: data.smsIdPrefix,
         slogan: data.slogan,
+        startOfFiscalYear: data.startOfFiscalYear,
       };
       return accountSettingsApi.update(updateData);
     },
@@ -216,8 +222,8 @@ export default function AccountSettingsPage() {
                 {...register('currency')}
                 className="w-full h-10 px-3 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-background-dark text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none"
               >
-                {CURRENCIES.map((curr) => (
-                  <option key={curr.value} value={curr.value}>
+                {currencies.map((curr) => (
+                  <option key={curr.code} value={curr.code}>
                     {curr.label}
                   </option>
                 ))}
@@ -268,6 +274,21 @@ export default function AccountSettingsPage() {
               />
             </div>
 
+            {/* Added: Start of Fiscal Year */}
+            <div>
+              <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
+                Start of Fiscal Year
+              </label>
+              <input
+                {...register('startOfFiscalYear')}
+                type="date"
+                className="w-full h-10 px-3 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-background-dark text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none"
+              />
+              <p className="text-subtle-text text-xs mt-1">
+                The date your financial year begins (used for reports)
+              </p>
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
                 Website
@@ -291,6 +312,34 @@ export default function AccountSettingsPage() {
             Branding & Communication
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Added: Logo upload placeholder */}
+            <div>
+              <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
+                Company Logo
+              </label>
+              <div className="w-full h-24 rounded-lg border-2 border-dashed border-border-light dark:border-border-dark flex items-center justify-center gap-2 text-subtle-text hover:border-primary/50 cursor-pointer transition-colors">
+                <span className="material-symbols-outlined text-2xl">image</span>
+                <span className="text-sm">Upload logo (coming soon)</span>
+              </div>
+              <p className="text-subtle-text text-xs mt-1">
+                Displayed on invoices and reports. PNG or SVG recommended.
+              </p>
+            </div>
+
+            {/* Added: Favicon upload placeholder */}
+            <div>
+              <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
+                Favicon
+              </label>
+              <div className="w-full h-24 rounded-lg border-2 border-dashed border-border-light dark:border-border-dark flex items-center justify-center gap-2 text-subtle-text hover:border-primary/50 cursor-pointer transition-colors">
+                <span className="material-symbols-outlined text-2xl">bookmark</span>
+                <span className="text-sm">Upload favicon (coming soon)</span>
+              </div>
+              <p className="text-subtle-text text-xs mt-1">
+                Browser tab icon. ICO or PNG, 32x32px recommended.
+              </p>
+            </div>
+
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
                 Company Slogan

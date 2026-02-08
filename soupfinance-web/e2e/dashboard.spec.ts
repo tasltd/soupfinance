@@ -164,10 +164,11 @@ test.describe('Dashboard', () => {
       const table = page.getByTestId('dashboard-invoices-table');
       await expect(table).toBeVisible();
 
-      // Check that invoice numbers are displayed
-      await expect(page.locator('text=INV-2024-001')).toBeVisible();
-      await expect(page.locator('text=INV-2024-002')).toBeVisible();
-      await expect(page.locator('text=INV-2024-003')).toBeVisible();
+      // Changed: Invoice numbers are now integers (Grails domain `number` field)
+      // Dashboard renders String(invoice.number) → "1", "2", "3"
+      await expect(table.locator('td', { hasText: '1' }).first()).toBeVisible();
+      await expect(table.locator('td', { hasText: '2' }).first()).toBeVisible();
+      await expect(table.locator('td', { hasText: '3' }).first()).toBeVisible();
 
       // Check that client names are displayed
       await expect(page.locator('text=Acme Corp')).toBeVisible();

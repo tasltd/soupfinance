@@ -154,6 +154,7 @@ export type InvoiceStatus = 'DRAFT' | 'SENT' | 'VIEWED' | 'PARTIAL' | 'PAID' | '
 export interface Invoice extends BaseEntity {
   // Backend fields (from /rest/invoice/)
   number: number;
+  numberPrefix?: string; // Added: Invoice number prefix (e.g., "INV-")
   accountServices: { id: string; serialised?: string; class?: string };
   invoiceDate: string;
   paymentDate: string;
@@ -162,6 +163,9 @@ export interface Invoice extends BaseEntity {
   exchangeRate?: number;
   notes?: string;
   purchaseOrderNumber?: string;
+  salesOrderNumber?: string; // Added: Sales order number reference
+  // Added: Optional closing remarks (from backend Invoice.compliments)
+  compliments?: string;
   quickReference?: string;
   invoiceItemList?: InvoiceItem[];
   invoicePaymentList?: InvoicePayment[] | null;
@@ -213,7 +217,10 @@ export interface InvoicePayment extends BaseEntity {
   invoice: { id: string };
   amount: number;
   paymentDate: string;
-  paymentMethod: 'CASH' | 'BANK_TRANSFER' | 'CHEQUE' | 'CARD' | 'OTHER';
+  // Changed: PaymentMethod is a domain class FK, not a string enum
+  paymentMethod?: { id: string; name?: string; serialised?: string; class?: string };
+  payInAccount?: { id: string; name?: string; code?: string }; // Added: Bank/cash account for deposit
+  currency?: string; // Added: Payment currency
   reference?: string;
   notes?: string;
 }
@@ -225,10 +232,18 @@ export interface InvoicePayment extends BaseEntity {
 export type BillStatus = 'DRAFT' | 'PENDING' | 'PARTIAL' | 'PAID' | 'OVERDUE' | 'CANCELLED';
 
 export interface Bill extends BaseEntity {
-  billNumber: string;
-  vendor: { id: string; name?: string };
-  issueDate: string;
-  dueDate: string;
+  number?: number; // Added: Bill number (backend field)
+  numberPrefix?: string; // Added: Bill number prefix
+  billNumber: string; // Display-friendly bill number
+  vendor: { id: string; name?: string; serialised?: string; class?: string };
+  billDate: string; // Changed: Backend uses billDate (not issueDate)
+  issueDate: string; // NOTE: Legacy alias kept for backward compatibility
+  paymentDate: string; // Changed: Backend uses paymentDate (not dueDate)
+  dueDate: string; // NOTE: Legacy alias kept for backward compatibility
+  currency?: string; // Added: Transaction currency
+  exchangeRate?: number; // Added: Exchange rate when currency != account default
+  purchaseOrderNumber?: string; // Added: PO number reference
+  salesOrderNumber?: string; // Added: SO number reference
   status: BillStatus;
   subtotal: number;
   taxAmount: number;
@@ -237,6 +252,7 @@ export interface Bill extends BaseEntity {
   amountDue: number;
   notes?: string;
   items?: BillItem[];
+  billItemList?: BillItem[]; // Added: Backend field name for bill items
 }
 
 export interface BillItem extends BaseEntity {
@@ -252,9 +268,24 @@ export interface BillPayment extends BaseEntity {
   bill: { id: string };
   amount: number;
   paymentDate: string;
-  paymentMethod: 'CASH' | 'BANK_TRANSFER' | 'CHEQUE' | 'CARD' | 'OTHER';
+  // Changed: PaymentMethod is a domain class FK, not a string enum
+  paymentMethod?: { id: string; name?: string; serialised?: string; class?: string };
+  payOutAccount?: { id: string; name?: string; code?: string }; // Added: Bank/cash account for payment
+  paymentReceipt?: string; // Added: File upload reference for payment receipt
+  currency?: string; // Added: Payment currency
   reference?: string;
   notes?: string;
+}
+
+// =============================================================================
+// Finance Types - Payment Method (domain class, not enum)
+// Mirrors: soupbroker.finance.PaymentMethod
+// =============================================================================
+
+// Added: PaymentMethod is a domain class with id+name, NOT an enum
+export interface PaymentMethod extends BaseEntity {
+  name: string;
+  account?: { id: string; serialised?: string; class?: string };
 }
 
 // =============================================================================
@@ -291,8 +322,13 @@ export interface LedgerAccount extends BaseEntity {
   number?: string; // Added: account number for reporting
   description?: string;
   ledgerGroup: LedgerGroup;
-  ledgerAccountCategory?: { id: string; name?: string }; // Added: category reference
-  parentAccount?: { id: string; name?: string };
+  ledgerAccountCategory?: { id: string; name?: string; class?: string }; // Added: category reference
+  parentAccount?: { id: string; name?: string; class?: string }; // Added: class field for Grails FK
+  currency?: string; // Added: Account currency
+  cashFlow?: string; // Added: Cash flow classification
+  hiddenAccount?: boolean; // Added: Hide from account lists
+  editable?: boolean; // Added: Can be edited
+  deletable?: boolean; // Added: Can be deleted
   isActive: boolean;
   balance: number;
 }
@@ -357,6 +393,10 @@ export interface Voucher extends BaseEntity {
   amount: number;
   description: string;
   reference?: string;
+  // Changed: PaymentMethod is a domain class FK (delegated from LedgerTransaction)
+  paymentMethod?: { id: string; name?: string; serialised?: string; class?: string };
+  currency?: string; // Added: Transaction currency
+  exchangeRate?: number; // Added: Exchange rate
 
   // Bank/cash account for the payment/receipt
   // Changed: Added code for account lookups in transaction register
@@ -402,9 +442,9 @@ export interface JournalEntry {
 export interface CreateVoucherRequest {
   voucherType: VoucherType;
   voucherTo: VoucherTo;
-  voucherDate: string;
+  transactionDate: string; // Changed: Backend uses transactionDate (not voucherDate)
   amount: number;
-  description: string;
+  notes: string; // Changed: Backend uses notes (not description)
   reference?: string;
   beneficiaryName?: string;
   clientId?: string;
@@ -413,6 +453,10 @@ export interface CreateVoucherRequest {
   cashAccountId: string; // Bank or cash account
   expenseAccountId?: string; // For payment vouchers
   incomeAccountId?: string; // For receipt vouchers
+  // Changed: PaymentMethod is a domain class FK, send ID for binding
+  paymentMethodId?: string;
+  currency?: string; // Added: Transaction currency
+  exchangeRate?: number; // Added: Exchange rate when currency != account default
 }
 
 // Added: Create journal entry request payload (multi-line)
@@ -434,12 +478,16 @@ export interface CreateJournalEntryRequest {
 
 export interface Vendor extends BaseEntity {
   name: string;
+  symbol?: string; // Added: Unique short code/symbol
   email?: string;
   phoneNumber?: string;
-  address?: string;
+  address?: string; // Residential address
+  postalAddress?: string; // Added: Separate postal address
   taxIdentificationNumber?: string;
   paymentTerms?: number; // days
   notes?: string;
+  ledgerAccount?: { id: string; name?: string; code?: string }; // Added: Linked ledger account
+  vendorType?: string; // Added: Vendor type classification
 }
 
 // =============================================================================

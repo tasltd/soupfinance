@@ -28,6 +28,9 @@ const userSchema = z.object({
   username: z.string().min(3, 'Username must be at least 3 characters'),
   password: z.string().optional(),
   roles: z.array(z.string()).min(1, 'At least one role is required'),
+  // Added: Account status toggles (gap analysis §4.13)
+  archived: z.boolean().optional(),
+  disabled: z.boolean().optional(),
   // Account Person fields
   enableAccountPerson: z.boolean().optional(),
   isDirector: z.boolean().optional(),
@@ -104,6 +107,8 @@ export default function UserFormPage() {
       username: '',
       password: '',
       roles: [SOUPFINANCE_ROLES.USER],
+      archived: false,
+      disabled: false,
       enableAccountPerson: false,
       isDirector: true,
       isSignatory: false,
@@ -137,6 +142,8 @@ export default function UserFormPage() {
         username: existingUser.userAccess?.username || '',
         password: '', // Don't pre-fill password
         roles,
+        archived: existingUser.archived ?? false,
+        disabled: existingUser.disabled ?? false,
         enableAccountPerson: Boolean(existingUser.accountPerson?.id),
         isDirector: linkedAccountPerson?.director ?? true,
         isSignatory: linkedAccountPerson?.signatory ?? false,
@@ -150,6 +157,7 @@ export default function UserFormPage() {
   // Create/Update mutation
   const saveMutation = useMutation({
     mutationFn: async (data: UserFormValues) => {
+      // Changed: Include archived/disabled status in form data
       const agentData: AgentFormData = {
         firstName: data.firstName,
         lastName: data.lastName,
@@ -161,6 +169,8 @@ export default function UserFormPage() {
         username: data.username,
         password: data.password,
         roles: data.roles,
+        archived: data.archived,
+        disabled: data.disabled,
       };
 
       let agent;
@@ -546,6 +556,43 @@ export default function UserFormPage() {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Added: Account Status section (only shown when editing) */}
+        {isEdit && (
+          <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-6">
+            <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-4">
+              Account Status
+            </h3>
+            <div className="space-y-4">
+              <label className="flex items-center justify-between p-3 rounded-lg border border-border-light dark:border-border-dark hover:bg-primary/5 cursor-pointer">
+                <div>
+                  <span className="font-medium text-text-light dark:text-text-dark text-sm">Disable Account</span>
+                  <p className="text-subtle-text text-xs mt-0.5">
+                    Prevents this user from logging in. Does not delete their data.
+                  </p>
+                </div>
+                <input
+                  {...register('disabled')}
+                  type="checkbox"
+                  className="w-4 h-4 text-danger border-border-light dark:border-border-dark rounded focus:ring-danger"
+                />
+              </label>
+              <label className="flex items-center justify-between p-3 rounded-lg border border-border-light dark:border-border-dark hover:bg-primary/5 cursor-pointer">
+                <div>
+                  <span className="font-medium text-text-light dark:text-text-dark text-sm">Archive Account</span>
+                  <p className="text-subtle-text text-xs mt-0.5">
+                    Hides this user from active lists. Can be restored later.
+                  </p>
+                </div>
+                <input
+                  {...register('archived')}
+                  type="checkbox"
+                  className="w-4 h-4 text-warning border-border-light dark:border-border-dark rounded focus:ring-warning"
+                />
+              </label>
+            </div>
           </div>
         )}
 

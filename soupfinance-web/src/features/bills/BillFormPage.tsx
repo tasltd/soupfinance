@@ -15,7 +15,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getBill, createBill, updateBill } from '../../api/endpoints/bills';
 import { listVendors } from '../../api/endpoints/vendors';
-import { listTaxRates, listBillServices } from '../../api/endpoints/domainData';
+import { listTaxRates, listBillServices, DEFAULT_CURRENCIES } from '../../api/endpoints/domainData';
 import { useFormatCurrency } from '../../stores';
 import type { BillItem } from '../../types';
 
@@ -36,10 +36,17 @@ export function BillFormPage() {
   const isEdit = !!id;
 
   // Added: Form state
+  // Changed: Use backend field names — billDate (not issueDate), paymentDate (not dueDate)
   const [vendorId, setVendorId] = useState('');
-  const [issueDate, setIssueDate] = useState(new Date().toISOString().split('T')[0]);
-  const [dueDate, setDueDate] = useState('');
+  const [billDate, setBillDate] = useState(new Date().toISOString().split('T')[0]);
+  const [paymentDate, setPaymentDate] = useState('');
   const [notes, setNotes] = useState('');
+  // Added: Missing SSR fields (gap analysis §2.2)
+  const [purchaseOrderNumber, setPurchaseOrderNumber] = useState('');
+  const [salesOrderNumber, setSalesOrderNumber] = useState('');
+  const [currency, setCurrency] = useState('');
+  const [exchangeRate, setExchangeRate] = useState<number | ''>('');
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [lineItems, setLineItems] = useState<LineItem[]>([
     { description: '', quantity: 1, unitPrice: 0, taxRate: 0 },
   ]);
@@ -71,15 +78,25 @@ export function BillFormPage() {
   });
 
   // Added: Populate form when bill data loads
+  // Changed: Use backend field names (billDate, paymentDate) with fallbacks
   useEffect(() => {
     if (bill) {
       setVendorId(bill.vendor?.id || '');
-      setIssueDate(bill.issueDate || '');
-      setDueDate(bill.dueDate || '');
+      setBillDate(bill.billDate || bill.issueDate || '');
+      setPaymentDate(bill.paymentDate || bill.dueDate || '');
       setNotes(bill.notes || '');
-      if (bill.items && bill.items.length > 0) {
+      setPurchaseOrderNumber(bill.purchaseOrderNumber || '');
+      setSalesOrderNumber(bill.salesOrderNumber || '');
+      if (bill.currency) setCurrency(bill.currency);
+      if (bill.exchangeRate) setExchangeRate(bill.exchangeRate);
+      // Auto-expand advanced if advanced fields have values
+      if (bill.purchaseOrderNumber || bill.salesOrderNumber || bill.currency || bill.exchangeRate) {
+        setShowAdvanced(true);
+      }
+      const items = bill.items || bill.billItemList;
+      if (items && items.length > 0) {
         setLineItems(
-          bill.items.map((item: BillItem) => ({
+          items.map((item: BillItem) => ({
             id: item.id,
             description: item.description,
             quantity: item.quantity,
@@ -138,6 +155,24 @@ export function BillFormPage() {
     );
   };
 
+  // Added: Handle service/product selection - auto-fills description from selected service
+  const handleServiceSelect = (index: number, serviceId: string) => {
+    const service = serviceDescriptions?.find((s) => s.id === serviceId);
+    if (service) {
+      setLineItems((prev) =>
+        prev.map((item, i) =>
+          i === index
+            ? {
+                ...item,
+                description: service.name,
+                ...(service.defaultTaxRate != null && { taxRate: service.defaultTaxRate }),
+              }
+            : item
+        )
+      );
+    }
+  };
+
   // Added: Add new line item
   const addLineItem = () => {
     setLineItems((prev) => [
@@ -163,11 +198,11 @@ export function BillFormPage() {
       setFormError('Please select a vendor');
       return;
     }
-    if (!issueDate) {
-      setFormError('Please enter an issue date');
+    if (!billDate) {
+      setFormError('Please enter a bill date');
       return;
     }
-    if (!dueDate) {
+    if (!paymentDate) {
       setFormError('Please enter a due date');
       return;
     }
@@ -176,16 +211,21 @@ export function BillFormPage() {
       return;
     }
 
-    // Added: Build form data with foreign key format
+    // Changed: Build form data with correct backend field names
     const formData: Record<string, unknown> = {
       'vendor.id': vendorId,
-      issueDate,
-      dueDate,
+      billDate, // Changed: Backend uses billDate (not issueDate)
+      paymentDate, // Changed: Backend uses paymentDate (not dueDate)
       notes,
       subtotal,
       taxAmount,
       totalAmount,
       status: isEdit ? undefined : 'DRAFT',
+      // Added: New fields from gap analysis
+      ...(purchaseOrderNumber && { purchaseOrderNumber }),
+      ...(salesOrderNumber && { salesOrderNumber }),
+      ...(currency && { currency }),
+      ...(exchangeRate !== '' && { exchangeRate }),
     };
 
     // Added: Include line items as indexed fields (Grails binding format)
@@ -309,29 +349,29 @@ export function BillFormPage() {
               </select>
             </div>
 
-            {/* Issue Date */}
+            {/* Changed: Bill Date (backend: billDate, previously misnamed as issueDate) */}
             <div>
               <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                Issue Date <span className="text-danger">*</span>
+                Bill Date <span className="text-danger">*</span>
               </label>
               <input
                 type="date"
-                value={issueDate}
-                onChange={(e) => setIssueDate(e.target.value)}
+                value={billDate}
+                onChange={(e) => setBillDate(e.target.value)}
                 className="w-full h-12 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-3 text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/50"
-                data-testid="bill-issue-date-input"
+                data-testid="bill-date-input"
               />
             </div>
 
-            {/* Due Date */}
+            {/* Changed: Payment Date (backend: paymentDate, previously misnamed as dueDate) */}
             <div>
               <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
                 Due Date <span className="text-danger">*</span>
               </label>
               <input
                 type="date"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
+                value={paymentDate}
+                onChange={(e) => setPaymentDate(e.target.value)}
                 className="w-full h-12 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-3 text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/50"
                 data-testid="bill-due-date-input"
               />
@@ -350,6 +390,88 @@ export function BillFormPage() {
                 placeholder="Add notes about this bill..."
                 data-testid="bill-notes-textarea"
               />
+            </div>
+
+            {/* Added: Collapsible Advanced Options (PO/SO, currency/exchange rate) - gap analysis §2.2 */}
+            <div className="md:col-span-2">
+              <button
+                type="button"
+                onClick={() => setShowAdvanced(!showAdvanced)}
+                className="flex items-center gap-1 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+                data-testid="bill-advanced-toggle"
+              >
+                <span className="material-symbols-outlined text-base transition-transform" style={{ transform: showAdvanced ? 'rotate(90deg)' : 'rotate(0)' }}>
+                  chevron_right
+                </span>
+                Advanced Options
+              </button>
+              {showAdvanced && (
+                <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded-lg border border-border-light dark:border-border-dark bg-background-light/50 dark:bg-background-dark/50" data-testid="bill-advanced-section">
+                  {/* PO Number */}
+                  <div>
+                    <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
+                      PO Number
+                    </label>
+                    <input
+                      type="text"
+                      value={purchaseOrderNumber}
+                      onChange={(e) => setPurchaseOrderNumber(e.target.value)}
+                      className="w-full h-12 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-3 text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/50"
+                      placeholder="Purchase order number"
+                      data-testid="bill-po-number-input"
+                    />
+                  </div>
+                  {/* SO Number */}
+                  <div>
+                    <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
+                      SO Number
+                    </label>
+                    <input
+                      type="text"
+                      value={salesOrderNumber}
+                      onChange={(e) => setSalesOrderNumber(e.target.value)}
+                      className="w-full h-12 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-3 text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/50"
+                      placeholder="Sales order number"
+                      data-testid="bill-so-number-input"
+                    />
+                  </div>
+                  {/* Currency */}
+                  <div>
+                    <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
+                      Currency
+                    </label>
+                    <select
+                      value={currency}
+                      onChange={(e) => setCurrency(e.target.value)}
+                      className="w-full h-12 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-3 text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/50"
+                      data-testid="bill-currency-select"
+                    >
+                      <option value="">Account default</option>
+                      {DEFAULT_CURRENCIES.map((c) => (
+                        <option key={c.code} value={c.code}>{c.code} - {c.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  {/* Exchange Rate */}
+                  {currency && (
+                    <div>
+                      <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
+                        Exchange Rate
+                      </label>
+                      <input
+                        type="number"
+                        value={exchangeRate}
+                        onChange={(e) => setExchangeRate(e.target.value ? parseFloat(e.target.value) : '')}
+                        className="w-full h-12 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-3 text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/50"
+                        placeholder="1.00"
+                        min="0"
+                        step="0.0001"
+                        data-testid="bill-exchange-rate-input"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -372,7 +494,9 @@ export function BillFormPage() {
             <table className="w-full text-sm" data-testid="bill-items-table">
               <thead className="text-xs text-subtle-text uppercase bg-background-light dark:bg-background-dark">
                 <tr>
-                  <th className="px-6 py-3 text-left">Description</th>
+                  {/* Added: Service/Product reference dropdown column before Description */}
+                  <th className="px-4 py-3 text-left w-44">Service/Product</th>
+                  <th className="px-4 py-3 text-left">Description</th>
                   <th className="px-4 py-3 text-right w-24">Qty</th>
                   <th className="px-4 py-3 text-right w-32">Unit Price</th>
                   <th className="px-4 py-3 text-right w-24">Tax %</th>
@@ -385,24 +509,31 @@ export function BillFormPage() {
                   const lineAmount = item.quantity * item.unitPrice * (1 + item.taxRate / 100);
                   return (
                     <tr key={index} className="border-b border-border-light dark:border-border-dark">
-                      <td className="px-6 py-3">
-                        {/* Changed (2026-02-01): Added datalist for service description autocomplete */}
+                      {/* Added: Service/Product dropdown - auto-fills description when selected */}
+                      <td className="px-4 py-3">
+                        <select
+                          onChange={(e) => handleServiceSelect(index, e.target.value)}
+                          className="w-full h-10 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-2 text-text-light dark:text-text-dark focus:border-primary focus:ring-1 focus:ring-primary/50 text-sm"
+                          data-testid={`bill-item-service-${index}`}
+                          defaultValue=""
+                        >
+                          <option value="">Select...</option>
+                          {serviceDescriptions?.map((service) => (
+                            <option key={service.id} value={service.id}>
+                              {service.name}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="px-4 py-3">
                         <input
                           type="text"
-                          list="bill-service-descriptions"
                           value={item.description}
                           onChange={(e) => updateLineItem(index, 'description', e.target.value)}
                           className="w-full h-10 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-3 text-text-light dark:text-text-dark focus:border-primary focus:ring-1 focus:ring-primary/50"
                           placeholder="Item description"
                           data-testid={`bill-item-description-${index}`}
                         />
-                        <datalist id="bill-service-descriptions">
-                          {serviceDescriptions?.map((service) => (
-                            <option key={service.id} value={service.name}>
-                              {service.description}
-                            </option>
-                          ))}
-                        </datalist>
                       </td>
                       <td className="px-4 py-3">
                         <input

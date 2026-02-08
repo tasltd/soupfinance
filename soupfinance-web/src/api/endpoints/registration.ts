@@ -61,7 +61,9 @@ export interface TenantRegistration {
   adminLastName: string;
   /** Admin email - used for login and confirmation */
   email: string;
-  /** Base currency for the tenant (optional, defaults to USD) */
+  /** Country of operation - determines default currency */
+  country?: string;
+  /** Base currency for the tenant (auto-set from country, editable in settings) */
   currency?: string;
 }
 

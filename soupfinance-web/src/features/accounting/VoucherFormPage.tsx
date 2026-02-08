@@ -23,17 +23,23 @@ import { Textarea } from '../../components/forms/Textarea';
 import { Radio, type RadioOption } from '../../components/forms/Radio';
 import { createVoucher } from '../../api/endpoints/ledger';
 import { useLedgerAccounts } from '../../hooks/useLedgerAccounts';
+import { usePaymentMethods } from '../../hooks/usePaymentMethods';
+import { DEFAULT_CURRENCIES } from '../../api/endpoints/domainData';
 import type { CreateVoucherRequest, VoucherType, VoucherTo } from '../../types';
 
 // Added: Zod schema for voucher form validation
+// Changed: Renamed voucherDate→transactionDate, description→notes to match backend domain
 // Note: Zod 4 uses 'message' instead of 'required_error' for enum validation
 const voucherFormSchema = z.object({
   voucherType: z.enum(['PAYMENT', 'RECEIPT', 'DEPOSIT'], {
     message: 'Voucher type is required',
   }),
-  voucherDate: z.string().min(1, 'Date is required'),
+  transactionDate: z.string().min(1, 'Date is required'),
   reference: z.string().optional(),
-  description: z.string().min(1, 'Description is required'),
+  notes: z.string().min(1, 'Description is required'),
+  paymentMethod: z.string().optional(),
+  currency: z.string().optional(),
+  exchangeRate: z.number().optional(),
   voucherTo: z.enum(['CLIENT', 'VENDOR', 'STAFF', 'OTHER'], {
     message: 'Beneficiary/Payer type is required',
   }),
@@ -102,6 +108,9 @@ export function VoucherFormPage() {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { data: accounts, isLoading: _accountsLoading } = useLedgerAccounts();
 
+  // Added: Fetch payment methods from backend (domain class, not enum)
+  const { data: paymentMethods } = usePaymentMethods();
+
   // Changed: Get initial voucher type from URL path or query param
   // Supports both /accounting/voucher/payment and /accounting/voucher?type=payment
   const getInitialVoucherType = (): VoucherType => {
@@ -137,9 +146,12 @@ export function VoucherFormPage() {
     resolver: standardSchemaResolver(voucherFormSchema),
     defaultValues: {
       voucherType: initialVoucherType,
-      voucherDate: format(new Date(), 'yyyy-MM-dd'),
+      transactionDate: format(new Date(), 'yyyy-MM-dd'),
       reference: '',
-      description: '',
+      notes: '',
+      paymentMethod: '',
+      currency: '',
+      exchangeRate: undefined,
       voucherTo: initialVoucherTo,
       beneficiaryName: '',
       clientId: '',
@@ -221,8 +233,16 @@ export function VoucherFormPage() {
     [accounts]
   );
 
+  // Added: Payment method options from backend domain records
+  const paymentMethodOptions: SelectOption[] = useMemo(() =>
+    (paymentMethods || []).map((pm) => ({
+      value: pm.id,
+      label: pm.name,
+    })),
+    [paymentMethods]
+  );
+
   // Added: Clear conditional fields when voucher type changes
-  /* eslint-disable-next-line -- Clearing form fields on type change is required */
   useEffect(() => {
     if (isPaymentType) {
       setValue('incomeAccountId', '');
@@ -232,7 +252,6 @@ export function VoucherFormPage() {
   }, [isPaymentType, setValue]);
 
   // Added: Clear party-specific fields when beneficiary type changes
-  /* eslint-disable-next-line -- Clearing form fields on type change is required */
   useEffect(() => {
     setValue('clientId', '');
     setValue('vendorId', '');
@@ -248,13 +267,13 @@ export function VoucherFormPage() {
     setSubmitError(null);
 
     try {
-      // Added: Transform form data to API request format
+      // Changed: Transform form data to API request format with correct backend field names
       const request: CreateVoucherRequest = {
         voucherType: data.voucherType as VoucherType,
         voucherTo: data.voucherTo as VoucherTo,
-        voucherDate: data.voucherDate,
+        transactionDate: data.transactionDate,
         amount: data.amount,
-        description: data.description,
+        notes: data.notes,
         reference: data.reference,
         beneficiaryName: data.beneficiaryName,
         clientId: data.clientId || undefined,
@@ -263,6 +282,10 @@ export function VoucherFormPage() {
         cashAccountId: data.cashAccountId,
         expenseAccountId: data.expenseAccountId || undefined,
         incomeAccountId: data.incomeAccountId || undefined,
+        // Changed: Send paymentMethod as FK ID (domain class, not string)
+        ...(data.paymentMethod && { paymentMethodId: data.paymentMethod }),
+        ...(data.currency && { currency: data.currency }),
+        ...(data.exchangeRate && { exchangeRate: data.exchangeRate }),
       };
 
       await createVoucher(request);
@@ -416,11 +439,12 @@ export function VoucherFormPage() {
         </div>
         <div className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Changed: voucherDate → transactionDate to match backend */}
             <DatePicker
-              label="Voucher Date"
+              label="Transaction Date"
               required
-              {...register('voucherDate')}
-              error={errors.voucherDate?.message}
+              {...register('transactionDate')}
+              error={errors.transactionDate?.message}
               data-testid="voucher-date-input"
             />
             <Input
@@ -430,19 +454,26 @@ export function VoucherFormPage() {
               error={errors.reference?.message}
               data-testid="voucher-reference-input"
             />
-            <div className="md:col-span-1">
-              {/* Added: Spacer for layout alignment */}
-            </div>
+            {/* Changed: Payment method dropdown from backend domain records (not hardcoded enum) */}
+            <Select
+              label="Payment Method"
+              options={paymentMethodOptions}
+              placeholder="Select method..."
+              {...register('paymentMethod')}
+              error={errors.paymentMethod?.message}
+              data-testid="voucher-payment-method-select"
+            />
           </div>
           <div className="mt-6">
+            {/* Changed: description → notes to match backend */}
             <Textarea
-              label="Description"
+              label="Notes"
               required
               placeholder="Describe the purpose of this voucher..."
               rows={2}
-              {...register('description')}
-              error={errors.description?.message}
-              data-testid="voucher-description-input"
+              {...register('notes')}
+              error={errors.notes?.message}
+              data-testid="voucher-notes-input"
             />
           </div>
         </div>
@@ -655,6 +686,37 @@ export function VoucherFormPage() {
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Added: Currency and exchange rate fields */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium text-text-light dark:text-text-dark">Currency</label>
+              <select
+                {...register('currency')}
+                className="h-12 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark px-4 text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none"
+                data-testid="voucher-currency-select"
+              >
+                <option value="">Default (Account Currency)</option>
+                {DEFAULT_CURRENCIES.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.code} - {c.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {watch('currency') && (
+              <Input
+                label="Exchange Rate"
+                type="number"
+                step="0.0001"
+                placeholder="1.0000"
+                {...register('exchangeRate', { valueAsNumber: true })}
+                error={errors.exchangeRate?.message}
+                helperText="Rate to convert to base currency"
+                data-testid="voucher-exchange-rate-input"
+              />
+            )}
           </div>
         </div>
       </div>

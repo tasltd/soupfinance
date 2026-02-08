@@ -13,23 +13,42 @@
  * - Admin name (first name, last name)
  * - Admin email
  */
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { registerTenant } from '../../api/endpoints/registration';
 import type { TenantRegistration, BusinessType } from '../../api/endpoints/registration';
+// Changed: Import shared country/currency data from domainData (single source of truth)
+import {
+  DEFAULT_COUNTRIES,
+  getCountryRegions,
+  getCurrencyForCountry,
+  listCountries,
+} from '../../api/endpoints/domainData';
+import type { Country } from '../../api/endpoints/domainData';
 import { Logo } from '../../components/Logo';
 
 export function RegistrationPage() {
   const navigate = useNavigate();
 
+  // Changed: Load country list from backend utility controller (falls back to defaults)
+  const [countries, setCountries] = useState<Country[]>(DEFAULT_COUNTRIES);
+  const countryRegions = getCountryRegions(countries);
+
+  useEffect(() => {
+    listCountries().then(setCountries);
+  }, []);
+
   // Form state - matches TenantRegistration interface
+  // Changed: Country selection auto-maps to currency (editable later in settings)
   const [formData, setFormData] = useState<TenantRegistration>({
     companyName: '',
     businessType: 'SERVICES',
     adminFirstName: '',
     adminLastName: '',
     email: '',
+    country: '',
+    currency: '',
   });
 
   // Error state for validation
@@ -71,7 +90,19 @@ export function RegistrationPage() {
   // Form field change handler
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+
+    // Changed: Country selection auto-maps to default currency via shared lookup
+    if (name === 'country') {
+      const mappedCurrency = getCurrencyForCountry(value, countries);
+      setFormData((prev) => ({
+        ...prev,
+        country: value,
+        currency: mappedCurrency || '',
+      }));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
+
     // Clear validation error on field change
     if (validationErrors[name]) {
       setValidationErrors((prev) => {
@@ -94,6 +125,11 @@ export function RegistrationPage() {
     // Business type - required
     if (!formData.businessType) {
       errors.businessType = 'Please select a business type';
+    }
+
+    // Changed: Country is required - determines default currency for the account
+    if (!formData.country) {
+      errors.country = 'Please select your country';
     }
 
     // Admin first name - required
@@ -317,6 +353,46 @@ export function RegistrationPage() {
           {validationErrors.businessType && (
             <span className="text-xs text-danger" data-testid="registration-business-type-error">
               {validationErrors.businessType}
+            </span>
+          )}
+        </label>
+
+        {/* Changed: Country selection - determines default currency (editable later in settings) */}
+        <label className="flex flex-col gap-2">
+          <span className="text-sm font-medium text-text-light dark:text-text-dark">
+            Country <span className="text-danger">*</span>
+          </span>
+          <select
+            name="country"
+            value={formData.country}
+            onChange={handleChange}
+            data-testid="registration-country-select"
+            className={`h-12 px-4 rounded-lg border ${
+              validationErrors.country
+                ? 'border-danger focus:border-danger focus:ring-danger/20'
+                : 'border-border-light dark:border-border-dark focus:border-primary focus:ring-primary/20'
+            } bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark focus:ring-2 focus:outline-none`}
+          >
+            <option value="">Select your country</option>
+            {countryRegions.map((region) => (
+              <optgroup key={region} label={region}>
+                {countries.filter(c => c.region === region).map((country) => (
+                  <option key={country.code} value={country.code}>
+                    {country.name}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+          {validationErrors.country && (
+            <span className="text-xs text-danger" data-testid="registration-country-error">
+              {validationErrors.country}
+            </span>
+          )}
+          {/* Show auto-mapped currency as helpful feedback */}
+          {formData.country && formData.currency && (
+            <span className="text-xs text-subtle-text">
+              Default currency: <strong>{formData.currency}</strong> (can be changed later in settings)
             </span>
           )}
         </label>

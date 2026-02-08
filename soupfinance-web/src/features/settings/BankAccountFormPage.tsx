@@ -2,7 +2,7 @@
  * Bank Account Form Page
  * PURPOSE: Create or edit company bank accounts with ledger account linking
  */
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
@@ -10,6 +10,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { accountBankDetailsApi, banksApi } from '../../api/endpoints/settings';
 import type { AccountBankDetailsFormData } from '../../types/settings';
+// Changed: Import shared currency data from domainData (single source of truth)
+import { DEFAULT_CURRENCIES, listCurrencies } from '../../api/endpoints/domainData';
+import type { Currency as DomainCurrency } from '../../api/endpoints/domainData';
 import { logger } from '../../utils/logger';
 import apiClient from '../../api/client';
 
@@ -42,6 +45,12 @@ export default function BankAccountFormPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const isEdit = Boolean(id);
+
+  // Changed: Load currencies from shared domainData source
+  const [currencies, setCurrencies] = useState<DomainCurrency[]>(DEFAULT_CURRENCIES);
+  useEffect(() => {
+    listCurrencies().then(setCurrencies);
+  }, []);
 
   // Fetch existing bank account data if editing
   const { data: existingAccount, isLoading: isLoadingAccount } = useQuery({
@@ -283,10 +292,11 @@ export default function BankAccountFormPage() {
                 {...register('currency')}
                 className="w-full h-10 px-3 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-background-dark text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none"
               >
-                <option value="GHS">GHS - Ghana Cedi</option>
-                <option value="USD">USD - US Dollar</option>
-                <option value="EUR">EUR - Euro</option>
-                <option value="GBP">GBP - British Pound</option>
+                {currencies.map((curr) => (
+                  <option key={curr.code} value={curr.code}>
+                    {curr.label}
+                  </option>
+                ))}
               </select>
             </div>
           </div>

@@ -89,6 +89,9 @@ export interface AgentFormData {
   username: string;
   password?: string;
   roles: string[]; // Role authorities (e.g., ['ROLE_ADMIN', 'ROLE_USER'])
+  // Added: Account status toggles
+  archived?: boolean;
+  disabled?: boolean;
   // For auto-creating AccountPerson when staff is admin
   createAsAccountPerson?: boolean;
   isDirector?: boolean;

@@ -20,6 +20,8 @@ const navItems: NavItem[] = [
   { label: 'Bills', icon: 'receipt', path: '/bills' },
   // Added: Vendors navigation item
   { label: 'Vendors', icon: 'storefront', path: '/vendors' },
+  // Added: Clients navigation item (gap analysis §4.5 - was only reachable via invoice form)
+  { label: 'Clients', icon: 'people', path: '/clients' },
   { label: 'Payments', icon: 'payments', path: '/payments' },
   {
     label: 'Ledger',

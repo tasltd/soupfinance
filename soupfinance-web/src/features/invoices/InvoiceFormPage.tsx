@@ -25,10 +25,11 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getInvoice, createInvoice, updateInvoice, sendInvoice } from '../../api/endpoints/invoices';
-import { listClients } from '../../api/endpoints/clients';
+import { listClients, createClient } from '../../api/endpoints/clients';
 import { listTaxRates, listInvoiceServices } from '../../api/endpoints/domainData';
 import { useFormatCurrency } from '../../stores';
-import type { InvoiceItem } from '../../types';
+import { DEFAULT_CURRENCIES } from '../../api/endpoints/domainData';
+import type { InvoiceItem, ClientType } from '../../types';
 
 // Line item type for form state (without id for new items)
 interface LineItem {
@@ -54,10 +55,26 @@ export function InvoiceFormPage() {
   const [paymentDate, setPaymentDate] = useState('');
   const [notes, setNotes] = useState('');
   const [purchaseOrderNumber, setPurchaseOrderNumber] = useState('');
+  // Added: Missing SSR fields (gap analysis §2.1)
+  const [salesOrderNumber, setSalesOrderNumber] = useState('');
+  const [currency, setCurrency] = useState('');
+  const [exchangeRate, setExchangeRate] = useState<number | ''>('');
+  // Added: Compliments field from backend Invoice domain (optional closing remarks)
+  const [compliments, setCompliments] = useState('');
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [lineItems, setLineItems] = useState<LineItem[]>([
     { description: '', quantity: 1, unitPrice: 0, taxRate: 0, discountPercent: 0 },
   ]);
   const [formError, setFormError] = useState<string | null>(null);
+
+  // Added: Inline client creation state
+  const [showNewClientForm, setShowNewClientForm] = useState(false);
+  const [newClientType, setNewClientType] = useState<ClientType>('INDIVIDUAL');
+  const [newClientFirstName, setNewClientFirstName] = useState('');
+  const [newClientLastName, setNewClientLastName] = useState('');
+  const [newClientCompanyName, setNewClientCompanyName] = useState('');
+  const [newClientEmail, setNewClientEmail] = useState('');
+  const [newClientError, setNewClientError] = useState<string | null>(null);
 
   // Changed: Fetch clients from /rest/client/index.json for the dropdown
   const { data: clients } = useQuery({
@@ -92,10 +109,20 @@ export function InvoiceFormPage() {
   // Changed: Resolve selectedClientId from invoice's accountServices FK
   useEffect(() => {
     if (invoice) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Populating form fields from loaded invoice data
       setInvoiceDate(invoice.invoiceDate || '');
       setPaymentDate(invoice.paymentDate || '');
       setNotes(invoice.notes || '');
       setPurchaseOrderNumber(invoice.purchaseOrderNumber || '');
+      // Added: Populate new fields from existing invoice
+      setSalesOrderNumber(invoice.salesOrderNumber || '');
+      setCompliments(invoice.compliments || '');
+      if (invoice.currency) setCurrency(invoice.currency);
+      if (invoice.exchangeRate) setExchangeRate(invoice.exchangeRate);
+      // Auto-expand advanced section if advanced fields have values
+      if (invoice.salesOrderNumber || invoice.currency || invoice.exchangeRate || invoice.compliments) {
+        setShowAdvanced(true);
+      }
       if (invoice.invoiceItemList && invoice.invoiceItemList.length > 0) {
         setLineItems(
           invoice.invoiceItemList.map((item: InvoiceItem) => ({
@@ -118,6 +145,7 @@ export function InvoiceFormPage() {
       if (invoiceAsId) {
         const owningClient = clients.find((c) => c.accountServices?.id === invoiceAsId);
         if (owningClient) {
+          // eslint-disable-next-line react-hooks/set-state-in-effect -- Resolving client from invoice's accountServices FK
           setSelectedClientId(owningClient.id);
         }
       }
@@ -171,6 +199,72 @@ export function InvoiceFormPage() {
     },
   });
 
+  // Added: Inline client creation mutation
+  const createClientMutation = useMutation({
+    mutationFn: (data: Record<string, unknown>) => createClient(data),
+    onSuccess: (newClient) => {
+      // Auto-select the newly created client
+      setSelectedClientId(newClient.id);
+      // Refresh clients list so the new client appears in dropdown
+      queryClient.invalidateQueries({ queryKey: ['clients-for-invoice'] });
+      // Reset and close the form
+      resetNewClientForm();
+    },
+    onError: (error: Error) => {
+      setNewClientError(error.message || 'Failed to create client');
+    },
+  });
+
+  // Added: Reset new client form fields
+  const resetNewClientForm = () => {
+    setShowNewClientForm(false);
+    setNewClientType('INDIVIDUAL');
+    setNewClientFirstName('');
+    setNewClientLastName('');
+    setNewClientCompanyName('');
+    setNewClientEmail('');
+    setNewClientError(null);
+  };
+
+  // Added: Handle inline client creation
+  const handleCreateClient = () => {
+    setNewClientError(null);
+
+    if (newClientType === 'INDIVIDUAL') {
+      if (!newClientFirstName.trim() || !newClientLastName.trim()) {
+        setNewClientError('First name and last name are required');
+        return;
+      }
+    } else {
+      if (!newClientCompanyName.trim()) {
+        setNewClientError('Company name is required');
+        return;
+      }
+    }
+
+    if (!newClientEmail.trim()) {
+      setNewClientError('Email is required');
+      return;
+    }
+
+    const payload: Record<string, unknown> = {
+      clientType: newClientType,
+      email: newClientEmail.trim(),
+    };
+
+    if (newClientType === 'INDIVIDUAL') {
+      payload.firstName = newClientFirstName.trim();
+      payload.lastName = newClientLastName.trim();
+      // Backend expects name field for display
+      payload.name = `${newClientFirstName.trim()} ${newClientLastName.trim()}`;
+    } else {
+      payload.companyName = newClientCompanyName.trim();
+      payload.name = newClientCompanyName.trim();
+    }
+
+    createClientMutation.mutate(payload);
+  };
+
   // Calculate totals
   const subtotal = lineItems.reduce((sum, item) => {
     return sum + item.quantity * item.unitPrice;
@@ -196,6 +290,25 @@ export function InvoiceFormPage() {
         i === index ? { ...item, [field]: value } : item
       )
     );
+  };
+
+  // Added: Handle service/product selection - auto-fills description from selected service
+  const handleServiceSelect = (index: number, serviceId: string) => {
+    const service = serviceDescriptions?.find((s) => s.id === serviceId);
+    if (service) {
+      setLineItems((prev) =>
+        prev.map((item, i) =>
+          i === index
+            ? {
+                ...item,
+                description: service.name,
+                // Auto-fill tax rate if service has a default
+                ...(service.defaultTaxRate != null && { taxRate: service.defaultTaxRate }),
+              }
+            : item
+        )
+      );
+    }
   };
 
   const addLineItem = () => {
@@ -243,6 +356,12 @@ export function InvoiceFormPage() {
       paymentDate,
       notes,
       purchaseOrderNumber,
+      // Added: New fields from gap analysis
+      ...(salesOrderNumber && { salesOrderNumber }),
+      ...(currency && { currency }),
+      ...(exchangeRate !== '' && { exchangeRate }),
+      // Added: Compliments field (optional closing remarks on invoice)
+      ...(compliments && { compliments }),
     };
 
     // Include line items as indexed fields (Grails binding format)
@@ -361,27 +480,150 @@ export function InvoiceFormPage() {
             <h2 className="text-lg font-bold text-text-light dark:text-text-dark">Invoice Details</h2>
           </div>
           <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Changed: Client dropdown — resolves accountServices automatically */}
-            <div>
+            {/* Changed: Client dropdown with inline "New Client" creation */}
+            <div className="md:col-span-2">
               <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
                 Client <span className="text-danger">*</span>
               </label>
-              <select
-                value={selectedClientId}
-                onChange={(e) => setSelectedClientId(e.target.value)}
-                className="w-full h-12 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-3 text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/50"
-                data-testid="invoice-client-select"
-              >
-                <option value="">Select a client</option>
-                {clients?.map((client) => (
-                  <option key={client.id} value={client.id}>
-                    {client.name}
-                  </option>
-                ))}
-              </select>
+              <div className="flex gap-2">
+                <select
+                  value={selectedClientId}
+                  onChange={(e) => setSelectedClientId(e.target.value)}
+                  className="flex-1 h-12 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-3 text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/50"
+                  data-testid="invoice-client-select"
+                >
+                  <option value="">Select a client</option>
+                  {clients?.map((client) => (
+                    <option key={client.id} value={client.id}>
+                      {client.name}
+                    </option>
+                  ))}
+                </select>
+                {/* Added: New Client button to open inline creation form */}
+                <button
+                  type="button"
+                  onClick={() => setShowNewClientForm(!showNewClientForm)}
+                  className={`h-12 px-4 rounded-lg font-bold text-sm flex items-center gap-1 whitespace-nowrap transition-colors ${
+                    showNewClientForm
+                      ? 'bg-danger/10 text-danger hover:bg-danger/20'
+                      : 'bg-primary/10 text-primary hover:bg-primary/20'
+                  }`}
+                  data-testid="invoice-new-client-button"
+                >
+                  <span className="material-symbols-outlined text-base">
+                    {showNewClientForm ? 'close' : 'person_add'}
+                  </span>
+                  {showNewClientForm ? 'Cancel' : 'New Client'}
+                </button>
+              </div>
               {/* NOTE: Show warning if selected client has no accountServices */}
               {selectedClientId && !resolvedAccountServicesId && (
                 <p className="text-xs text-danger mt-1">This client has no linked account services.</p>
+              )}
+
+              {/* Added: Inline client creation form */}
+              {showNewClientForm && (
+                <div className="mt-3 p-4 rounded-lg border border-primary/30 bg-primary/5" data-testid="invoice-new-client-form">
+                  <h3 className="text-sm font-bold text-text-light dark:text-text-dark mb-3">Quick Add Client</h3>
+
+                  {/* Client type toggle */}
+                  <div className="flex gap-2 mb-3">
+                    <button
+                      type="button"
+                      onClick={() => setNewClientType('INDIVIDUAL')}
+                      className={`flex-1 h-9 rounded-lg text-xs font-medium flex items-center justify-center gap-1 transition-colors ${
+                        newClientType === 'INDIVIDUAL'
+                          ? 'bg-primary text-white'
+                          : 'bg-white dark:bg-background-dark text-subtle-text border border-border-light dark:border-border-dark'
+                      }`}
+                      data-testid="new-client-type-individual"
+                    >
+                      <span className="material-symbols-outlined text-sm">person</span>
+                      Individual
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setNewClientType('CORPORATE')}
+                      className={`flex-1 h-9 rounded-lg text-xs font-medium flex items-center justify-center gap-1 transition-colors ${
+                        newClientType === 'CORPORATE'
+                          ? 'bg-primary text-white'
+                          : 'bg-white dark:bg-background-dark text-subtle-text border border-border-light dark:border-border-dark'
+                      }`}
+                      data-testid="new-client-type-corporate"
+                    >
+                      <span className="material-symbols-outlined text-sm">business</span>
+                      Corporate
+                    </button>
+                  </div>
+
+                  {/* Fields based on type */}
+                  <div className="space-y-2">
+                    {newClientType === 'INDIVIDUAL' ? (
+                      <div className="grid grid-cols-2 gap-2">
+                        <input
+                          type="text"
+                          value={newClientFirstName}
+                          onChange={(e) => setNewClientFirstName(e.target.value)}
+                          placeholder="First name *"
+                          className="h-10 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-3 text-sm text-text-light dark:text-text-dark placeholder:text-subtle-text focus:border-primary focus:ring-1 focus:ring-primary/50"
+                          data-testid="new-client-first-name"
+                        />
+                        <input
+                          type="text"
+                          value={newClientLastName}
+                          onChange={(e) => setNewClientLastName(e.target.value)}
+                          placeholder="Last name *"
+                          className="h-10 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-3 text-sm text-text-light dark:text-text-dark placeholder:text-subtle-text focus:border-primary focus:ring-1 focus:ring-primary/50"
+                          data-testid="new-client-last-name"
+                        />
+                      </div>
+                    ) : (
+                      <input
+                        type="text"
+                        value={newClientCompanyName}
+                        onChange={(e) => setNewClientCompanyName(e.target.value)}
+                        placeholder="Company name *"
+                        className="w-full h-10 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-3 text-sm text-text-light dark:text-text-dark placeholder:text-subtle-text focus:border-primary focus:ring-1 focus:ring-primary/50"
+                        data-testid="new-client-company-name"
+                      />
+                    )}
+
+                    <input
+                      type="email"
+                      value={newClientEmail}
+                      onChange={(e) => setNewClientEmail(e.target.value)}
+                      placeholder="Email address *"
+                      className="w-full h-10 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-3 text-sm text-text-light dark:text-text-dark placeholder:text-subtle-text focus:border-primary focus:ring-1 focus:ring-primary/50"
+                      data-testid="new-client-email"
+                    />
+                  </div>
+
+                  {/* Error message */}
+                  {newClientError && (
+                    <p className="text-xs text-danger mt-2">{newClientError}</p>
+                  )}
+
+                  {/* Create button */}
+                  <button
+                    type="button"
+                    onClick={handleCreateClient}
+                    disabled={createClientMutation.isPending}
+                    className="mt-3 h-9 w-full rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90 disabled:opacity-50 flex items-center justify-center gap-1"
+                    data-testid="new-client-create-button"
+                  >
+                    {createClientMutation.isPending ? (
+                      <>
+                        <span className="material-symbols-outlined text-sm animate-spin">progress_activity</span>
+                        Creating...
+                      </>
+                    ) : (
+                      <>
+                        <span className="material-symbols-outlined text-sm">add</span>
+                        Create & Select
+                      </>
+                    )}
+                  </button>
+                </div>
               )}
             </div>
 
@@ -444,6 +686,21 @@ export function InvoiceFormPage() {
               />
             </div>
 
+            {/* Added: Sales Order Number (gap analysis §2.1) */}
+            <div>
+              <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
+                SO Number
+              </label>
+              <input
+                type="text"
+                value={salesOrderNumber}
+                onChange={(e) => setSalesOrderNumber(e.target.value)}
+                className="w-full h-12 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-3 text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/50"
+                placeholder="Sales order number"
+                data-testid="invoice-so-number-input"
+              />
+            </div>
+
             {/* Notes */}
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
@@ -457,6 +714,74 @@ export function InvoiceFormPage() {
                 placeholder="Add notes to appear on the invoice..."
                 data-testid="invoice-notes-textarea"
               />
+            </div>
+
+            {/* Added: Collapsible Advanced Options (currency/exchange rate) - gap analysis §4.1 */}
+            <div className="md:col-span-2">
+              <button
+                type="button"
+                onClick={() => setShowAdvanced(!showAdvanced)}
+                className="flex items-center gap-1 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+                data-testid="invoice-advanced-toggle"
+              >
+                <span className="material-symbols-outlined text-base transition-transform" style={{ transform: showAdvanced ? 'rotate(90deg)' : 'rotate(0)' }}>
+                  chevron_right
+                </span>
+                Advanced Options
+              </button>
+              {showAdvanced && (
+                <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded-lg border border-border-light dark:border-border-dark bg-background-light/50 dark:bg-background-dark/50" data-testid="invoice-advanced-section">
+                  {/* Currency */}
+                  <div>
+                    <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
+                      Currency
+                    </label>
+                    <select
+                      value={currency}
+                      onChange={(e) => setCurrency(e.target.value)}
+                      className="w-full h-12 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-3 text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/50"
+                      data-testid="invoice-currency-select"
+                    >
+                      <option value="">Account default</option>
+                      {DEFAULT_CURRENCIES.map((c) => (
+                        <option key={c.code} value={c.code}>{c.code} - {c.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  {/* Exchange Rate - only show when currency differs from account default */}
+                  {currency && (
+                    <div>
+                      <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
+                        Exchange Rate
+                      </label>
+                      <input
+                        type="number"
+                        value={exchangeRate}
+                        onChange={(e) => setExchangeRate(e.target.value ? parseFloat(e.target.value) : '')}
+                        className="w-full h-12 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-3 text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/50"
+                        placeholder="1.00"
+                        min="0"
+                        step="0.0001"
+                        data-testid="invoice-exchange-rate-input"
+                      />
+                    </div>
+                  )}
+                  {/* Added: Compliments (optional closing remarks on invoice) */}
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
+                      Compliments
+                    </label>
+                    <textarea
+                      value={compliments}
+                      onChange={(e) => setCompliments(e.target.value)}
+                      rows={2}
+                      className="w-full rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark p-3 text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/50"
+                      placeholder="Closing remarks or thank you message..."
+                      data-testid="invoice-compliments-textarea"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -479,7 +804,9 @@ export function InvoiceFormPage() {
             <table className="w-full text-sm" data-testid="invoice-items-table">
               <thead className="text-xs text-subtle-text uppercase bg-background-light dark:bg-background-dark">
                 <tr>
-                  <th className="px-6 py-3 text-left">Description</th>
+                  {/* Added: Service/Product reference dropdown column before Description */}
+                  <th className="px-4 py-3 text-left w-44">Service/Product</th>
+                  <th className="px-4 py-3 text-left">Description</th>
                   <th className="px-4 py-3 text-right w-20">Qty</th>
                   <th className="px-4 py-3 text-right w-28">Unit Price</th>
                   <th className="px-4 py-3 text-right w-20">Disc %</th>
@@ -495,23 +822,31 @@ export function InvoiceFormPage() {
                   const lineAmount = afterDiscount + (afterDiscount * item.taxRate) / 100;
                   return (
                     <tr key={index} className="border-b border-border-light dark:border-border-dark">
-                      <td className="px-6 py-3">
+                      {/* Added: Service/Product dropdown - auto-fills description when selected */}
+                      <td className="px-4 py-3">
+                        <select
+                          onChange={(e) => handleServiceSelect(index, e.target.value)}
+                          className="w-full h-10 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-2 text-text-light dark:text-text-dark focus:border-primary focus:ring-1 focus:ring-primary/50 text-sm"
+                          data-testid={`invoice-item-service-${index}`}
+                          defaultValue=""
+                        >
+                          <option value="">Select...</option>
+                          {serviceDescriptions?.map((service) => (
+                            <option key={service.id} value={service.id}>
+                              {service.name}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="px-4 py-3">
                         <input
                           type="text"
-                          list="service-descriptions"
                           value={item.description}
                           onChange={(e) => updateLineItem(index, 'description', e.target.value)}
                           className="w-full h-10 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-3 text-text-light dark:text-text-dark focus:border-primary focus:ring-1 focus:ring-primary/50"
                           placeholder="Item description"
                           data-testid={`invoice-item-description-${index}`}
                         />
-                        <datalist id="service-descriptions">
-                          {serviceDescriptions?.map((service) => (
-                            <option key={service.id} value={service.name}>
-                              {service.description}
-                            </option>
-                          ))}
-                        </datalist>
                       </td>
                       <td className="px-4 py-3">
                         <input

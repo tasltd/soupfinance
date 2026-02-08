@@ -120,33 +120,49 @@ export const mockUsers = {
 // Mock Invoice Data
 // ===========================================================================
 
+// Changed: Mock invoices now match Grails Invoice domain structure
+// - number (int) instead of invoiceNumber
+// - accountServices (FK) instead of client
+// - invoiceItemList with quantity/unitPrice so transformInvoice computes correct totals
+// - invoicePaymentList for PAID invoices
 export const mockInvoices = [
   {
     id: 'inv-001',
-    invoiceNumber: 'INV-2024-001',
-    client: { id: 'client-1', name: 'Acme Corp' },
-    issueDate: '2024-01-15',
-    dueDate: '2024-02-15',
-    totalAmount: 2500.0,
+    number: 1,
+    accountServices: { id: 'as-001', serialised: 'Acme Corp', class: 'soupbroker.AccountServices' },
+    invoiceDate: '2024-01-15T00:00:00Z',
+    paymentDate: '2024-02-15T00:00:00Z',
     status: 'SENT',
+    invoiceItemList: [
+      { id: 'ii-001', quantity: 5, unitPrice: 500.0, description: 'Consulting Services' },
+    ],
+    invoicePaymentList: [],
   },
   {
     id: 'inv-002',
-    invoiceNumber: 'INV-2024-002',
-    client: { id: 'client-2', name: 'TechStart Inc' },
-    issueDate: '2024-01-20',
-    dueDate: '2024-02-20',
-    totalAmount: 4750.5,
+    number: 2,
+    accountServices: { id: 'as-002', serialised: 'TechStart Inc', class: 'soupbroker.AccountServices' },
+    invoiceDate: '2024-01-20T00:00:00Z',
+    paymentDate: '2024-02-20T00:00:00Z',
     status: 'PAID',
+    invoiceItemList: [
+      { id: 'ii-002', quantity: 1, unitPrice: 4750.5, description: 'Software License' },
+    ],
+    invoicePaymentList: [
+      { id: 'ip-001', amount: 4750.5, paymentDate: '2024-02-01', paymentMethod: 'BANK_TRANSFER' },
+    ],
   },
   {
     id: 'inv-003',
-    invoiceNumber: 'INV-2024-003',
-    client: { id: 'client-3', name: 'Global Solutions' },
-    issueDate: '2024-01-10',
-    dueDate: '2024-01-25',
-    totalAmount: 1200.0,
+    number: 3,
+    accountServices: { id: 'as-003', serialised: 'Global Solutions', class: 'soupbroker.AccountServices' },
+    invoiceDate: '2024-01-10T00:00:00Z',
+    paymentDate: '2024-01-25T00:00:00Z',
     status: 'OVERDUE',
+    invoiceItemList: [
+      { id: 'ii-003', quantity: 4, unitPrice: 300.0, description: 'Support Services' },
+    ],
+    invoicePaymentList: [],
   },
 ];
 

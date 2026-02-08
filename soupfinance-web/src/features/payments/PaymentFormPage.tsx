@@ -13,11 +13,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { listInvoices, recordInvoicePayment } from '../../api/endpoints/invoices';
 import { listBills, recordBillPayment } from '../../api/endpoints/bills';
 import { useFormatCurrency, useCurrencySymbol } from '../../stores';
+import { useLedgerAccounts } from '../../hooks/useLedgerAccounts';
+import { usePaymentMethods } from '../../hooks/usePaymentMethods';
 import type { Invoice, Bill, InvoicePayment, BillPayment } from '../../types';
 
 // Added: Payment type for form toggle
 type PaymentType = 'invoice' | 'bill';
-type PaymentMethod = 'CASH' | 'BANK_TRANSFER' | 'CHEQUE' | 'CARD' | 'OTHER';
 
 export function PaymentFormPage() {
   const navigate = useNavigate();
@@ -37,9 +38,12 @@ export function PaymentFormPage() {
   const [selectedId, setSelectedId] = useState(preselectedInvoiceId || preselectedBillId || '');
   const [amount, setAmount] = useState('');
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('BANK_TRANSFER');
+  // Changed: Payment method is now a domain class FK ID (not a string enum)
+  const [paymentMethodId, setPaymentMethodId] = useState('');
   const [reference, setReference] = useState('');
   const [notes, setNotes] = useState('');
+  // Added: Bank/cash account for deposit (invoice) or payment source (bill)
+  const [bankAccountId, setBankAccountId] = useState('');
   const [formError, setFormError] = useState('');
 
   // Added: Fetch invoices for dropdown (only unpaid/partial)
@@ -66,6 +70,15 @@ export function PaymentFormPage() {
     (bill) => bill.status !== 'PAID' && (bill.amountDue || 0) > 0
   );
 
+  // Added: Fetch bank/cash accounts for payInAccount/payOutAccount selection
+  const { data: ledgerAccounts } = useLedgerAccounts();
+  const bankCashAccounts = (ledgerAccounts || []).filter(
+    (account) => account.ledgerGroup === 'ASSET'
+  );
+
+  // Added: Fetch payment methods from backend (domain class, not enum)
+  const { data: paymentMethodRecords } = usePaymentMethods();
+
   // Added: Get selected item details for amount validation
   const selectedInvoice = unpaidInvoices?.find((inv) => inv.id === selectedId);
   const selectedBill = unpaidBills?.find((bill) => bill.id === selectedId);
@@ -74,9 +87,9 @@ export function PaymentFormPage() {
     : selectedBill?.amountDue;
 
   // Added: Update selected ID when switching payment type
-  /* eslint-disable-next-line -- Resetting state on payment type change is required */
   useEffect(() => {
     if (paymentType === 'invoice' && !preselectedInvoiceId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Resetting selection on payment type change
       setSelectedId('');
     } else if (paymentType === 'bill' && !preselectedBillId) {
       setSelectedId('');
@@ -139,23 +152,26 @@ export function PaymentFormPage() {
     }
 
     // Submit based on payment type
+    // Changed: Send paymentMethod.id as FK reference (domain class, not string)
     if (paymentType === 'invoice') {
       invoicePaymentMutation.mutate({
         'invoice.id': selectedId,
         amount: paymentAmount,
         paymentDate,
-        paymentMethod,
+        ...(paymentMethodId && { 'paymentMethod.id': paymentMethodId }),
         reference: reference || undefined,
         notes: notes || undefined,
+        ...(bankAccountId && { 'payInAccount.id': bankAccountId }),
       } as unknown as Partial<InvoicePayment>);
     } else {
       billPaymentMutation.mutate({
         'bill.id': selectedId,
         amount: paymentAmount,
         paymentDate,
-        paymentMethod,
+        ...(paymentMethodId && { 'paymentMethod.id': paymentMethodId }),
         reference: reference || undefined,
         notes: notes || undefined,
+        ...(bankAccountId && { 'payOutAccount.id': bankAccountId }),
       } as unknown as Partial<BillPayment>);
     }
   };
@@ -317,22 +333,47 @@ export function PaymentFormPage() {
               />
             </div>
 
-            {/* Payment Method */}
+            {/* Changed: Payment method dropdown from backend domain records (not hardcoded enum) */}
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium text-text-light dark:text-text-dark">Payment Method *</label>
+              <label className="text-sm font-medium text-text-light dark:text-text-dark">Payment Method</label>
               <select
-                value={paymentMethod}
-                onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
+                value={paymentMethodId}
+                onChange={(e) => setPaymentMethodId(e.target.value)}
                 className="h-12 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-4 text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/50"
                 data-testid="method-select"
-                required
               >
-                <option value="BANK_TRANSFER">Bank Transfer</option>
-                <option value="CASH">Cash</option>
-                <option value="CHEQUE">Cheque</option>
-                <option value="CARD">Card</option>
-                <option value="OTHER">Other</option>
+                <option value="">Select payment method...</option>
+                {(paymentMethodRecords || []).map((pm) => (
+                  <option key={pm.id} value={pm.id}>
+                    {pm.name}
+                  </option>
+                ))}
               </select>
+            </div>
+
+            {/* Added: Bank/Cash Account selection */}
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium text-text-light dark:text-text-dark">
+                {paymentType === 'invoice' ? 'Deposit To (Bank/Cash Account)' : 'Pay From (Bank/Cash Account)'}
+              </label>
+              <select
+                value={bankAccountId}
+                onChange={(e) => setBankAccountId(e.target.value)}
+                className="h-12 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-4 text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/50"
+                data-testid="bank-account-select"
+              >
+                <option value="">Select bank/cash account...</option>
+                {bankCashAccounts.map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.code} - {account.name}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-subtle-text">
+                {paymentType === 'invoice'
+                  ? 'Account where the payment will be deposited'
+                  : 'Account from which the payment will be made'}
+              </p>
             </div>
 
             {/* Reference */}

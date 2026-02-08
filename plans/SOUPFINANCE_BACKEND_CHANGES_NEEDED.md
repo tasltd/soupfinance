@@ -541,4 +541,268 @@ After all fixes:
 
 ---
 
-*Updated February 7, 2026: Issue #8 partially resolved — `application_url` was NULL on production ApiConsumer, fixed via DB update. ApiConsumer record confirmed existing (id: 1bfaee30-b348-4255-8e15-9fcdd344f43d). Production server topology mapped (proxy: 65.20.112.224, backend: 140.82.32.141). Updated from SoupFinance E2E integration testing, registration bug investigation, and deep backend code analysis.*
+## Issue 9: VendorType Enum Missing SUPPLIER Value (SERVICES Tenants)
+
+**Priority:** MEDIUM — Affects vendor classification for SERVICES-based tenants
+
+**File:** `src/main/groovy/soupbroker/VendorType.groovy`
+
+**Current Values:**
+```groovy
+enum VendorType implements Serializable {
+    BANK, BROKER, FUND_MANAGER, CUSTODIAN, TRADER, PROVIDER, FINANCE_HOUSE,
+    SAVINGS_AND_LOANS, FINANCE_HOUSES, MICROFINANCE_INSTITUTION,
+    MICROCREDIT_INSTITUTION, RURAL_AND_COMMUNITY_BANK,
+    FINANCE_AND_LEASING_COMPANY, MORTGAGE_FINANCE
+}
+```
+
+**Problem:** All current values are trading/financial-institution-oriented. For SERVICES-based tenants (like SoupFinance), vendors are typically suppliers, contractors, or service providers — none of which map to the existing enum values.
+
+The `Vendor.groovy` domain class documentation (line 33-37) mentions "SUPPLIER" as a vendor type, but the enum doesn't include it.
+
+**Recommended Fix:** Add SERVICES-appropriate values to the enum:
+```groovy
+enum VendorType implements Serializable {
+    // Existing trading-oriented types
+    BANK, BROKER, FUND_MANAGER, CUSTODIAN, TRADER, PROVIDER, FINANCE_HOUSE,
+    SAVINGS_AND_LOANS, FINANCE_HOUSES, MICROFINANCE_INSTITUTION,
+    MICROCREDIT_INSTITUTION, RURAL_AND_COMMUNITY_BANK,
+    FINANCE_AND_LEASING_COMPANY, MORTGAGE_FINANCE,
+    // Added: SERVICES-appropriate types
+    SUPPLIER, CONTRACTOR, SERVICE_PROVIDER, CONSULTANT, OTHER
+}
+```
+
+**Impact:** SoupFinance SPA needs the `vendorType` field added to VendorFormPage.tsx. The dropdown should show human-friendly labels. Frontend can filter to show only SERVICES-relevant types based on license category.
+
+---
+
+## Issue 10: Vendor Field Name Mismatch — `address` vs `residentialAddress`
+
+**Priority:** LOW — Frontend field naming inconsistency, no data loss
+
+**Backend Domain (`Vendor.groovy` line 108):**
+- `residentialAddress` — Physical/residential address
+- `postalAddress` (line 113) — Postal/mailing address
+
+**SPA (`VendorFormPage.tsx`):**
+- Sends `address` — backend silently ignores (no `address` property on Vendor)
+
+**Recommended Fix (SPA side):** Change form field name from `address` to `residentialAddress` in VendorFormPage.tsx payload. Also add `postalAddress` as a second address field.
+
+**No backend changes needed** — the domain already has both fields.
+
+---
+
+## Issue 11: Bill Field Name Mismatches — `issueDate`/`dueDate` vs `billDate`/`paymentDate`
+
+**Priority:** HIGH — Bill dates may be silently dropped on save
+
+**Backend Domain (`Bill.groovy`):**
+- `billDate` — Date the bill was issued
+- `paymentDate` — Date payment is due
+
+**SPA (`BillFormPage.tsx`):**
+- Sends `issueDate` — backend expects `billDate`
+- Sends `dueDate` — backend expects `paymentDate`
+
+**Impact:** Bills saved from the SPA may have NULL dates because the field names don't match the domain properties. Grails data binding silently ignores unrecognized property names.
+
+**Recommended Fix (SPA side):** Change SPA field names to match backend domain:
+- `issueDate` → `billDate`
+- `dueDate` → `paymentDate`
+
+**No backend changes needed** — the domain already uses the correct names.
+
+---
+
+## Issue 12: Client Contact Chain Not Created from SPA Form
+
+**Priority:** HIGH — Client email/phone saved as flat strings, Contact chain not created
+
+**Backend Domain (`Client.groovy`):**
+- Client has `hasMany: [clientContactList: ClientContact]`
+- `addToContacts(Contact)` method (line 182) sets `sourceId`, `sourceName`, `sourceProperty`, `priority=PRIMARY`
+- `getContacts()` (line 149): collects via `clientContactList.collect{it.contact}`
+- `getEmailContacts()` (line 160): `contacts.collect{it.specContact}.findAll{it instanceof EmailContact}`
+- `getPhoneContacts()` (line 171): same pattern for `PhoneContact`
+
+**Contact Chain (3-entity pattern):**
+```
+Client → ClientContact (join table) → Contact → EmailContact/PhoneContact (polymorphic subclass)
+```
+
+- `Contact.groovy`: Base class with `priority`, `sourceName`, `sourceProperty`, `sourceId`, `archived`
+- `EmailContact` / `PhoneContact`: Subclasses of Contact (table-per-subclass inheritance)
+- `ClientContact.groovy`: Join table `{client: Client, contact: Contact, archived: boolean}`
+
+**SPA (`ClientFormPage.tsx`):**
+- Saves `email` and `phone` as flat string fields on Client
+- Client.groovy has convenience fields `email` (line 219) and `phoneNumber` (line 225) — both `nullable: true, bindable: true`
+- But these flat fields do NOT create the proper Contact → EmailContact/PhoneContact → ClientContact chain
+- Any system that queries `client.emailContacts` or `client.phoneContacts` will find nothing
+
+**Impact:** Other parts of the system that use `client.getEmailContacts()` or `client.getPhoneContacts()` (e.g., invoice emailing, notifications) will find no contacts because the Contact chain was never created.
+
+**Recommended Fix (Backend — ClientController or ClientService):**
+
+On client save/update, if `email` or `phoneNumber` params are provided, auto-create the Contact chain:
+
+```groovy
+// In ClientController.save() or ClientService, after client.save():
+if (params.email) {
+    EmailContact emailContact = new EmailContact(emailAddress: params.email)
+    emailContact.save(failOnError: true)
+    client.addToContacts(emailContact)  // Uses Client.addToContacts() which sets sourceId/sourceName
+}
+if (params.phoneNumber) {
+    PhoneContact phoneContact = new PhoneContact(phoneNumber: params.phoneNumber)
+    phoneContact.save(failOnError: true)
+    client.addToContacts(phoneContact)
+}
+```
+
+**Alternative (SPA side):** SPA could make separate API calls to create Contact entities after client save, but this is fragile and duplicates business logic. Backend-side is preferred.
+
+**No SPA changes needed** if backend handles Contact chain creation from flat fields.
+
+---
+
+## Issue 13: PaymentMethod is a Domain Class, Not an Enum (SPA Mismatch)
+
+**Priority:** HIGH — Affects Voucher form and Payment form
+
+**Backend Domain (`PaymentMethod.groovy`):**
+
+```groovy
+class PaymentMethod extends SbDomain implements Auditable, MultiTenant<PaymentMethod> {
+    Account account
+    String name   // e.g., "Cash", "Bank Transfer", "Cheque"
+}
+```
+
+`LedgerTransaction.groovy` (line 142):
+```groovy
+PaymentMethod paymentMethod  // Domain class FK, not a string/enum
+```
+
+**SPA (VoucherFormPage.tsx):**
+- Sends `paymentMethod: 'CASH'` as a plain string
+- Uses hardcoded options: CASH, BANK_TRANSFER, CHEQUE, CARD, OTHER
+
+**SPA (PaymentFormPage.tsx):**
+- Passes through the same string pattern from the payment form
+
+**Problem:** `PaymentMethod` is a full Grails domain class with `id` and `name`. Grails data binding expects:
+- `paymentMethod.id: <uuid>` for FK binding, OR
+- A UUID string that resolves to a PaymentMethod record
+
+Sending `paymentMethod: 'CASH'` will **silently fail** — Grails cannot convert the string 'CASH' to a `PaymentMethod` domain instance. The field is silently ignored during data binding.
+
+**Recommended Fix (SPA side):**
+1. Fetch available PaymentMethod records from `GET /rest/paymentMethod/index.json`
+2. Show a dropdown populated with tenant-configured payment methods (by `name`)
+3. Send `'paymentMethod.id': selectedPaymentMethod.id` in the form data (Grails FK pattern)
+
+```typescript
+// Example: Fetch and use PaymentMethod records
+const { data: paymentMethods } = useQuery({
+  queryKey: ['payment-methods'],
+  queryFn: () => apiClient.get('/rest/paymentMethod/index.json'),
+});
+
+// In form submission
+const formData = new FormData();
+formData.append('paymentMethod.id', selectedPaymentMethodId);
+```
+
+**No backend changes needed** — the domain is correct; the SPA needs to use the FK pattern.
+
+**Note:** Some tenants may not have PaymentMethod records configured. The SPA should handle the empty dropdown case gracefully, and the field should remain optional (it's nullable on LedgerTransaction via common constraints).
+
+---
+
+## Issue 14: Invoice Missing `compliments` Field (Minor)
+
+**Priority:** LOW — Optional field, cosmetic gap
+
+**Backend Domain (`Invoice.groovy` line 129-130):**
+```groovy
+String compliments   // Optional closing remarks, stored as TEXT
+```
+
+**SPA (InvoiceFormPage.tsx):**
+- Does not have a `compliments` field
+
+**Impact:** Minor — this is an optional field for adding closing remarks to invoices (e.g., "Thank you for your business"). Not critical for MVP.
+
+**Recommended Fix (SPA side):** Add an optional textarea field in the invoice form for `compliments`.
+
+---
+
+## Phase 1B Gap Analysis — Audit Summary (February 7, 2026)
+
+All frontend form changes from the SSR→SPA gap analysis Phase 1B have been audited against the backend Grails domain classes. Below is the status of each field:
+
+### Fields Confirmed Matching Backend
+
+| Form | Field | Backend Source | Status |
+|------|-------|---------------|--------|
+| Invoice | `invoiceDate` | `Invoice.invoiceDate` (Date) | MATCH |
+| Invoice | `paymentDate` | `Invoice.paymentDate` (Date) | MATCH |
+| Invoice | `salesOrderNumber` | `Invoice.salesOrderNumber` (String) | MATCH |
+| Invoice | `currency` | `Invoice.currency` (java.util.Currency) | MATCH |
+| Invoice | `exchangeRate` | `Invoice.exchangeRate` (double) | MATCH |
+| Bill | `billDate` | `Bill.billDate` (Date) | MATCH (was `issueDate`) |
+| Bill | `paymentDate` | `Bill.paymentDate` (Date) | MATCH (was `dueDate`) |
+| Bill | `purchaseOrderNumber` | `Bill.purchaseOrderNumber` (String) | MATCH |
+| Bill | `salesOrderNumber` | `Bill.salesOrderNumber` (String) | MATCH |
+| Bill | `currency` | `Bill.currency` (java.util.Currency) | MATCH |
+| Bill | `exchangeRate` | `Bill.exchangeRate` (double) | MATCH |
+| Voucher | `transactionDate` | `LedgerTransaction.transactionDate` (Date) | MATCH (was `voucherDate`) |
+| Voucher | `notes` | `LedgerTransaction.notes` (String) | MATCH (was `description`) |
+| Voucher | `currency` | `LedgerTransaction.currency` (Currency) | MATCH |
+| Voucher | `exchangeRate` | `LedgerTransaction.exchangeRate` (double) | MATCH |
+| Payment | `payInAccount.id` | `InvoicePayment.payInAccount` (LedgerAccount FK) | MATCH |
+| Payment | `payOutAccount.id` | `BillPayment.payOutAccount` (LedgerAccount FK) | MATCH |
+| Settings | `startOfFiscalYear` | `Account.startOfFiscalYear` (String) | MATCH |
+| Settings | logo placeholder | `Account.logo` (SoupBrokerFile) | CORRECT (needs upload endpoint) |
+| Settings | favicon placeholder | `Account.favicon` (SoupBrokerFile) | CORRECT (needs upload endpoint) |
+| User | `archived` | `Agent.archived` (boolean) | MATCH |
+| User | `disabled` | `Agent.disabled` (Boolean) | MATCH |
+| Ledger | `parentAccount` display | `LedgerAccount.parentAccount` (FK) | MATCH |
+| Ledger | `currency` display | `LedgerAccount.currency` (Currency) | MATCH |
+
+### Fields With Issues
+
+| Form | Field | Issue | Fix Location |
+|------|-------|-------|-------------|
+| Voucher | `paymentMethod` | Domain class FK, SPA sends string | SPA (Issue #13) |
+| Payment | `paymentMethod` | Domain class FK, SPA sends string | SPA (Issue #13) |
+| Invoice | `compliments` | Missing from SPA form | SPA (Issue #14) |
+
+---
+
+## Investigation Summary (Updated February 7, 2026)
+
+| Issue | Status | Root Cause |
+|-------|--------|------------|
+| #1 Bill endpoints fail | ROOT CAUSE FOUND | `LazyInitializationException` on `Bill.billItemList` during GSON rendering. Fix: custom GSON template. |
+| #2 Vendor update doesn't persist | DISPROVEN | Live testing confirms PUT works correctly. |
+| #3 Vendor delete doesn't remove | ROOT CAUSE FOUND (By Design) | `DeleteInterceptor` forwards to approval workflow. |
+| #4 Account balance 302 | PENDING | Not investigated yet |
+| #5 Finance reports 302/timeout | PENDING | Not investigated yet |
+| #6 edit.json missing CSRF | PENDING (Low priority) | May be intentional |
+| #7 Agent NULL tenantId | ROOT CAUSE FOUND | Fix: wrap Agent creation in `Tenants.withId(account.id)`. |
+| #8 Registration emails not sent | PARTIALLY RESOLVED | `application_url` was NULL, fixed via DB update. |
+| #9 VendorType missing SUPPLIER | NEW | Enum lacks SERVICES-appropriate values. Fix: add SUPPLIER, CONTRACTOR, etc. |
+| #10 Vendor address field mismatch | NEW (SPA fix) | SPA sends `address`, domain expects `residentialAddress`. No backend change needed. |
+| #11 Bill date field mismatches | RESOLVED (SPA fix) | SPA fixed: `issueDate`→`billDate`, `dueDate`→`paymentDate`. |
+| #12 Client Contact chain missing | NEW (Backend fix) | SPA saves flat email/phone but Contact → ClientContact chain not created. Fix: auto-create chain in backend on save. |
+| #13 PaymentMethod FK mismatch | NEW (SPA fix) | PaymentMethod is a domain class, SPA sends string. Fix: fetch records, send FK ID. |
+| #14 Invoice compliments missing | NEW (SPA fix, low priority) | Optional field not in SPA form. |
+
+---
+
+*Updated February 7, 2026: Added Issues #13-#14 from Phase 1B audit. Issue #11 now RESOLVED (SPA field names fixed). Issue #13 requires SPA to fetch PaymentMethod domain records and send FK IDs instead of plain strings. Full audit confirms 22 fields match backend domains correctly. 3 fields need SPA-side fixes (Issues #13, #14).*

@@ -7,7 +7,8 @@
  * - Account Persons (directors, signatories)
  * - Account configuration
  */
-import apiClient, { toQueryString } from '../client';
+// Changed: Added CSRF token imports for mutation operations (POST/PUT/DELETE)
+import apiClient, { toQueryString, getCsrfToken, getCsrfTokenForEdit, csrfQueryString } from '../client';
 import type {
   Agent,
   AgentFormData,
@@ -98,27 +99,39 @@ export const agentApi = {
 
   /**
    * Create new agent/staff member
+   * Changed: Added CSRF token for Grails withForm protection
    */
   create: async (data: AgentFormData): Promise<Agent> => {
+    const csrf = await getCsrfToken('agent');
     const transformed = transformAgentData(data);
-    const response = await apiClient.post<Agent>('/agent/save.json', transformed);
+    const response = await apiClient.post<Agent>(
+      `/agent/save.json?${csrfQueryString(csrf)}`,
+      transformed
+    );
     return response.data;
   },
 
   /**
    * Update existing agent
+   * Changed: Added CSRF token for Grails withForm protection
    */
   update: async (id: string, data: AgentFormData): Promise<Agent> => {
+    const csrf = await getCsrfTokenForEdit('agent', id);
     const transformed = { id, ...transformAgentData(data) };
-    const response = await apiClient.put<Agent>('/agent/update.json', transformed);
+    const response = await apiClient.put<Agent>(
+      `/agent/update.json?${csrfQueryString(csrf)}`,
+      transformed
+    );
     return response.data;
   },
 
   /**
    * Delete agent (soft delete - archives)
+   * Changed: Added CSRF token for Grails withForm protection
    */
   delete: async (id: string): Promise<void> => {
-    await apiClient.delete(`/agent/delete/${id}.json`);
+    const csrf = await getCsrfTokenForEdit('agent', id);
+    await apiClient.delete(`/agent/delete/${id}.json?${csrfQueryString(csrf)}`);
   },
 
   /**
@@ -184,11 +197,13 @@ export const accountBankDetailsApi = {
 
   /**
    * Create new bank account
+   * Changed: Added CSRF token for Grails withForm protection
    */
   create: async (data: AccountBankDetailsFormData): Promise<AccountBankDetails> => {
+    const csrf = await getCsrfToken('accountBankDetails');
     const transformed = transformBankDetailsData(data);
     const response = await apiClient.post<AccountBankDetails>(
-      '/accountBankDetails/save.json',
+      `/accountBankDetails/save.json?${csrfQueryString(csrf)}`,
       transformed
     );
     return response.data;
@@ -196,11 +211,13 @@ export const accountBankDetailsApi = {
 
   /**
    * Update existing bank account
+   * Changed: Added CSRF token for Grails withForm protection
    */
   update: async (id: string, data: AccountBankDetailsFormData): Promise<AccountBankDetails> => {
+    const csrf = await getCsrfTokenForEdit('accountBankDetails', id);
     const transformed = { id, ...transformBankDetailsData(data) };
     const response = await apiClient.put<AccountBankDetails>(
-      '/accountBankDetails/update.json',
+      `/accountBankDetails/update.json?${csrfQueryString(csrf)}`,
       transformed
     );
     return response.data;
@@ -208,9 +225,11 @@ export const accountBankDetailsApi = {
 
   /**
    * Delete bank account
+   * Changed: Added CSRF token for Grails withForm protection
    */
   delete: async (id: string): Promise<void> => {
-    await apiClient.delete(`/accountBankDetails/delete/${id}.json`);
+    const csrf = await getCsrfTokenForEdit('accountBankDetails', id);
+    await apiClient.delete(`/accountBankDetails/delete/${id}.json?${csrfQueryString(csrf)}`);
   },
 };
 
@@ -261,11 +280,13 @@ export const accountPersonApi = {
 
   /**
    * Create new account person
+   * Changed: Added CSRF token for Grails withForm protection
    */
   create: async (data: AccountPersonFormData): Promise<AccountPerson> => {
+    const csrf = await getCsrfToken('accountPerson');
     const transformed = transformAccountPersonData(data);
     const response = await apiClient.post<AccountPerson>(
-      '/accountPerson/save.json',
+      `/accountPerson/save.json?${csrfQueryString(csrf)}`,
       transformed
     );
     return response.data;
@@ -273,11 +294,13 @@ export const accountPersonApi = {
 
   /**
    * Update existing account person
+   * Changed: Added CSRF token for Grails withForm protection
    */
   update: async (id: string, data: AccountPersonFormData): Promise<AccountPerson> => {
+    const csrf = await getCsrfTokenForEdit('accountPerson', id);
     const transformed = { id, ...transformAccountPersonData(data) };
     const response = await apiClient.put<AccountPerson>(
-      '/accountPerson/update.json',
+      `/accountPerson/update.json?${csrfQueryString(csrf)}`,
       transformed
     );
     return response.data;
@@ -285,9 +308,11 @@ export const accountPersonApi = {
 
   /**
    * Delete account person
+   * Changed: Added CSRF token for Grails withForm protection
    */
   delete: async (id: string): Promise<void> => {
-    await apiClient.delete(`/accountPerson/delete/${id}.json`);
+    const csrf = await getCsrfTokenForEdit('accountPerson', id);
+    await apiClient.delete(`/accountPerson/delete/${id}.json?${csrfQueryString(csrf)}`);
   },
 };
 
@@ -334,9 +359,14 @@ export const accountSettingsApi = {
 
   /**
    * Update account settings
+   * Changed: Added CSRF token for Grails withForm protection
    */
   update: async (data: Partial<AccountSettings>): Promise<AccountSettings> => {
-    const response = await apiClient.put<AccountSettings>('/account/update.json', data);
+    const csrf = await getCsrfTokenForEdit('account', 'current');
+    const response = await apiClient.put<AccountSettings>(
+      `/account/update.json?${csrfQueryString(csrf)}`,
+      data
+    );
     return response.data;
   },
 };

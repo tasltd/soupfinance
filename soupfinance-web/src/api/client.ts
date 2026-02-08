@@ -38,8 +38,9 @@ const apiClient = axios.create({
 // Note: Api-Authorization header is injected by the proxy, not here
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    // Attach user auth token (identifies the logged-in user)
-    const token = localStorage.getItem('access_token');
+    // Fix: Check both localStorage (rememberMe) and sessionStorage (default login)
+    // Auth uses dual-storage: localStorage for rememberMe=true, sessionStorage for default
+    const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token');
     if (token) {
       config.headers['X-Auth-Token'] = token;
     }
@@ -101,9 +102,11 @@ apiClient.interceptors.response.use(
     if (status === 401) {
       logger.auth('session_expired');
 
-      // Clear stored credentials
+      // Fix: Clear stored credentials from both storages (dual-storage pattern)
       localStorage.removeItem('access_token');
       localStorage.removeItem('user');
+      sessionStorage.removeItem('access_token');
+      sessionStorage.removeItem('user');
 
       // Redirect to login if not already there
       if (window.location.pathname !== '/login') {

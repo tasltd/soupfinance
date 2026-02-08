@@ -60,26 +60,39 @@ const mockBillPayments = [
   },
 ];
 
-// Changed: Mock data mirrors Grails domain structure (number, accountServices.serialised)
+// Changed: Mock data mirrors Grails domain structure with invoiceItemList/invoicePaymentList
+// transformInvoice() computes totalAmount from invoiceItemList and amountDue from payments
 const mockUnpaidInvoices = [
   {
     id: 'inv-unpaid-001',
     number: 10,
-    invoiceNumber: 'INV-2024-010',
     accountServices: { id: 'as-001', class: 'soupbroker.kyc.AccountServices', serialised: 'Direct Account : Corporate(ABC Corp)' },
-    total: 5000.0,
-    amountDue: 3000.0,
+    invoiceDate: '2024-10-01T00:00:00Z',
+    paymentDate: '2024-11-01T00:00:00Z',
     status: 'SENT',
+    // Fix: invoiceItemList needed so transformInvoice computes totalAmount = 5000
+    invoiceItemList: [
+      { id: 'ii-u1', quantity: 1, unitPrice: 5000.0, description: 'Consulting Services' },
+    ],
+    // Fix: partial payment of 2000, so amountDue = 5000 - 2000 = 3000
+    invoicePaymentList: [
+      { id: 'ip-u1', amount: 2000.0, paymentDate: '2024-10-15T00:00:00Z', paymentMethod: 'BANK_TRANSFER' },
+    ],
     dateCreated: '2024-10-01T10:00:00Z',
   },
   {
     id: 'inv-unpaid-002',
     number: 11,
-    invoiceNumber: 'INV-2024-011',
     accountServices: { id: 'as-002', class: 'soupbroker.kyc.AccountServices', serialised: 'Direct Account : Corporate(XYZ Ltd)' },
-    total: 2000.0,
-    amountDue: 2000.0,
+    invoiceDate: '2024-10-05T00:00:00Z',
+    paymentDate: '2024-11-05T00:00:00Z',
     status: 'OVERDUE',
+    // Fix: invoiceItemList needed so transformInvoice computes totalAmount = 2000
+    invoiceItemList: [
+      { id: 'ii-u2', quantity: 4, unitPrice: 500.0, description: 'Design Work' },
+    ],
+    // No payments yet, so amountDue = 2000
+    invoicePaymentList: [],
     dateCreated: '2024-10-05T10:00:00Z',
   },
 ];
@@ -448,10 +461,10 @@ test.describe('Payment Management', () => {
       // Wait for invoice dropdown to load
       await expect(page.getByTestId('select-document')).toBeVisible();
 
-      // Verify invoices are in dropdown
+      // Changed: Verify invoices are in dropdown (uses number + accountServices.serialised)
       const select = page.getByTestId('select-document');
-      await expect(select).toContainText('INV-2024-010');
-      await expect(select).toContainText('INV-2024-011');
+      await expect(select).toContainText('ABC Corp');
+      await expect(select).toContainText('XYZ Ltd');
 
       await takeScreenshot(page, 'payment-form-invoice-dropdown');
     });

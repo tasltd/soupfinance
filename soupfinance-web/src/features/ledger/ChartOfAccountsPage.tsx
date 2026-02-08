@@ -137,10 +137,12 @@ export function ChartOfAccountsPage() {
                 {isExpanded && (
                   <div className="border-t border-border-light dark:border-border-dark">
                     <table className="w-full text-sm" data-testid={`coa-table-${group.toLowerCase()}`}>
+                      {/* Changed: Added currency and parent account columns */}
                       <thead className="text-xs text-subtle-text uppercase bg-background-light dark:bg-background-dark">
                         <tr>
                           <th className="px-6 py-3 text-left">Code</th>
                           <th className="px-6 py-3 text-left">Name</th>
+                          <th className="px-6 py-3 text-left">Currency</th>
                           <th className="px-6 py-3 text-right">Balance</th>
                           <th className="px-6 py-3 text-center">Status</th>
                         </tr>
@@ -155,7 +157,21 @@ export function ChartOfAccountsPage() {
                               data-testid={`coa-account-${account.id}`}
                             >
                               <td className="px-6 py-4 font-mono text-text-light dark:text-text-dark">{account.code}</td>
-                              <td className="px-6 py-4 text-text-light dark:text-text-dark">{account.name}</td>
+                              <td className="px-6 py-4 text-text-light dark:text-text-dark">
+                                <div>
+                                  {account.name}
+                                  {/* Added: Show parent account if exists */}
+                                  {account.parentAccount?.name && (
+                                    <span className="text-xs text-subtle-text ml-1">
+                                      (under {account.parentAccount.name})
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+                              {/* Added: Currency column */}
+                              <td className="px-6 py-4 text-subtle-text font-mono text-xs">
+                                {account.currency || '-'}
+                              </td>
                               <td className="px-6 py-4 text-right font-medium text-text-light dark:text-text-dark">
                                 {formatCurrency(account.balance)}
                               </td>

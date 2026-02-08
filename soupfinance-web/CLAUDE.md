@@ -29,6 +29,9 @@ npm run test:e2e:lxc:report  # Open LXC test report
 # Run specific integration test file against LXC
 npx playwright test --config=playwright.lxc.config.ts e2e/integration/02-vendors.integration.spec.ts
 
+# Alternative: integration-specific config (uses port 5181, separate report)
+npx playwright test --config=playwright.integration.config.ts
+
 # Deployment
 ./deploy/deploy-to-production.sh   # Deploy to app.soupfinance.com
 ```
@@ -37,7 +40,6 @@ npx playwright test --config=playwright.lxc.config.ts e2e/integration/02-vendors
 
 | File | Purpose | Git-tracked? |
 |------|---------|:---:|
-| `.env` | Default (no backend, mock mode) | Yes |
 | `.env.lxc` | LXC backend proxy target | Yes |
 | `.env.lxc.local` | API Consumer credentials for LXC | **No** (git-ignored via `*.local`) |
 | `.env.test` | E2E test environment | Yes |
@@ -237,7 +239,15 @@ reports.integration.spec.ts      # Finance reports
 settings.integration.spec.ts     # Settings pages
 ```
 
-Use `backendTestUsers` from `e2e/fixtures.ts` for credentials. **768 unit tests** across 26 test files (2026-02-05).
+Use `backendTestUsers` from `e2e/fixtures.ts` for credentials. **768 unit tests** across 26 test files (2026-02-07).
+
+### Playwright Config Inventory
+
+| Config | Port | Backend | Use Case |
+|--------|------|---------|----------|
+| `playwright.config.ts` | 5180 | Mocked routes | Default E2E, `npm run test:e2e` |
+| `playwright.lxc.config.ts` | 5180 | Real LXC backend | `npm run test:e2e:lxc`, serial workers |
+| `playwright.integration.config.ts` | 5181 | Real LXC backend | Dedicated integration, separate report dir |
 
 ### E2E Token Retrieval (CRITICAL)
 The auth store uses **dual-storage** - ALWAYS check both:
@@ -364,7 +374,8 @@ Apache injects `Api-Authorization: Basic {credentials}` header for all proxied r
 | Service | Port | Notes |
 |---------|------|-------|
 | Vite dev server | 5173 | Default development |
-| E2E tests | 5180 | Dedicated for Playwright |
+| E2E tests (mock + LXC) | 5180 | Dedicated for Playwright |
+| E2E integration tests | 5181 | `playwright.integration.config.ts` |
 | Storybook | 6006 | Component documentation |
 | LXC Backend | 9090 | Grails backend proxy |
 

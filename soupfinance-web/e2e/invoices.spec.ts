@@ -6,7 +6,7 @@
  * This is required because the app validates the auth token on page load
  */
 import { test, expect } from '@playwright/test';
-import { mockInvoicesApi, mockInvoices, takeScreenshot, mockTokenValidationApi } from './fixtures';
+import { mockInvoicesApi, mockInvoices, mockDashboardApi, takeScreenshot, mockTokenValidationApi } from './fixtures';
 
 // Helper to set up authenticated state
 async function setupAuth(page: any) {
@@ -28,6 +28,39 @@ async function setupAuth(page: any) {
   });
   // Mock token validation API - required for authenticated pages
   await mockTokenValidationApi(page, true);
+}
+
+// Added: Mock additional APIs needed by the invoice form page
+// InvoiceFormPage calls listClients, listInvoiceServices, and getInvoice (edit mode)
+async function mockInvoiceFormDeps(page: any) {
+  // Mock client list for dropdown
+  await page.route('**/rest/client/index.json*', (route: any) => {
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([
+        { id: 'client-1', name: 'Acme Corp', accountServices: { id: 'as-001' } },
+      ]),
+    });
+  });
+
+  // Mock service descriptions for autocomplete
+  await page.route('**/rest/serviceDescription/index.json*', (route: any) => {
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([]),
+    });
+  });
+
+  // Mock invoice items for edit mode
+  await page.route('**/rest/invoiceItem/index.json*', (route: any) => {
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([]),
+    });
+  });
 }
 
 test.describe('Invoice Management', () => {
@@ -151,6 +184,9 @@ test.describe('Invoice Management', () => {
     });
 
     test('new invoice form has correct buttons', async ({ page }) => {
+      // Added: Mock form dependencies so page doesn't hang on unmocked API calls
+      await mockInvoiceFormDeps(page);
+
       await page.goto('/invoices/new');
 
       // Verify form buttons
@@ -163,6 +199,8 @@ test.describe('Invoice Management', () => {
 
     test('cancel button returns to invoice list', async ({ page }) => {
       await mockInvoicesApi(page);
+      // Added: Mock form dependencies so page doesn't hang on unmocked API calls
+      await mockInvoiceFormDeps(page);
 
       await page.goto('/invoices/new');
       await takeScreenshot(page, 'invoices-new-before-cancel');
@@ -213,6 +251,8 @@ test.describe('Invoice Management', () => {
   test.describe('Edit Invoice', () => {
     test('clicking edit navigates to edit form', async ({ page }) => {
       await mockInvoicesApi(page, mockInvoices);
+      // Added: Mock form dependencies for edit page
+      await mockInvoiceFormDeps(page);
 
       await page.goto('/invoices');
 
@@ -240,14 +280,8 @@ test.describe('Invoice Management', () => {
         });
       });
 
-      // Mock clients list for the form
-      await page.route('**/rest/invoiceClient/index.json*', (route) => {
-        route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify([{ id: 'client-1', name: 'Acme Corp' }]),
-        });
-      });
+      // Added: Mock form dependencies (clients, service descriptions, invoice items)
+      await mockInvoiceFormDeps(page);
 
       await page.goto('/invoices/inv-001/edit');
 
@@ -292,10 +326,10 @@ test.describe('Invoice Management', () => {
       // Wait for table
       await expect(page.getByTestId('invoice-list-loading')).not.toBeVisible({ timeout: 5000 });
 
-      // Verify invoice links are present
+      // Changed: Invoice number is now Grails `number` field (int), displayed as string
       const invoiceLink = page.getByTestId('invoice-link-inv-001');
       await expect(invoiceLink).toBeVisible();
-      await expect(invoiceLink).toHaveText('INV-2024-001');
+      await expect(invoiceLink).toHaveText('1');
     });
 
     test('invoice amounts are properly formatted', async ({ page }) => {
@@ -346,7 +380,8 @@ test.describe('Invoice Management', () => {
 
   test.describe('Navigation from Invoices', () => {
     test('can navigate to dashboard from invoices', async ({ page }) => {
-      await mockInvoicesApi(page);
+      // Added: Mock both invoice and dashboard APIs for cross-page navigation
+      await mockDashboardApi(page);
 
       await page.goto('/invoices');
       await expect(page.getByTestId('invoice-list-page')).toBeVisible();

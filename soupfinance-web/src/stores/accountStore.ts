@@ -75,8 +75,13 @@ export const useAccountStore = create<AccountState>()(
           const response = await apiClient.get<AccountSettings>('/account/current.json');
           const settings = response.data;
 
-          // Determine currency config from account settings
-          const currencyCode = settings.currency?.toUpperCase() || 'USD';
+          // Changed: Currency comes from account settings (set during registration)
+          // If no currency is set, warn and fall back to DEFAULT config
+          const rawCurrency = settings.currency?.toUpperCase();
+          if (!rawCurrency) {
+            console.warn('[AccountStore] No currency set for this account. Each account should set currency during registration. Falling back to DEFAULT.');
+          }
+          const currencyCode = rawCurrency || 'USD';
           const currencyConfig = CURRENCIES[currencyCode] || CURRENCIES.DEFAULT;
 
           set({
