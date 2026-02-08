@@ -6,6 +6,13 @@
 
 If Apache only has `<VirtualHost *:80>`, Cloudflare requests return 404 for all SPA routes.
 
+## CRITICAL: ProxyPass and RewriteCond Paths MUST Have Trailing Slashes
+
+See `soupfinance-deployment.md` rules #2 and #3 for full details. Quick summary:
+- `ProxyPass /client/` (CORRECT) vs `ProxyPass /client` (WRONG - catches /clients/new)
+- `RewriteCond !^/client/` (CORRECT) vs `RewriteCond !^/client` (WRONG)
+- The canonical Apache config is `deploy/apache-soupfinance.conf` (NOT `app-soupfinance-com.conf`)
+
 ## VirtualHost Requirements Checklist
 
 | Domain | Port 80 | Port 443 | Document Root |

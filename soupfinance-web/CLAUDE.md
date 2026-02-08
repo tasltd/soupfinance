@@ -34,6 +34,9 @@ npx playwright test --config=playwright.integration.config.ts
 
 # Deployment
 ./deploy/deploy-to-production.sh   # Deploy to app.soupfinance.com
+# CRITICAL: The canonical Apache config is deploy/apache-soupfinance.conf
+# Do NOT edit deploy/app-soupfinance-com.conf — it is NOT deployed
+# See .claude/rules/soupfinance-deployment.md for full deployment rules
 ```
 
 ## Environment Setup
