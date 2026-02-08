@@ -193,7 +193,8 @@ test.describe('Vendor Integration Tests', () => {
 
     await page.goto('/vendors');
 
-    // Wait for table to load
+    // Wait for page to render, then for loading to finish
+    await expect(page.getByTestId('vendor-list-page')).toBeVisible({ timeout: 15000 });
     await expect(page.getByTestId('vendor-list-loading')).not.toBeVisible({ timeout: 30000 });
     await expect(page.getByTestId('vendor-list-table')).toBeVisible({ timeout: 5000 });
 
@@ -242,6 +243,8 @@ test.describe('Vendor Integration Tests', () => {
     test.skip(!persistentVendorId, 'Persistent vendor was not created');
 
     await page.goto('/vendors');
+    // Fix: wait for page render before checking loading state
+    await expect(page.getByTestId('vendor-list-page')).toBeVisible({ timeout: 15000 });
     await expect(page.getByTestId('vendor-list-loading')).not.toBeVisible({ timeout: 30000 });
     await expect(page.getByTestId('vendor-list-table')).toBeVisible({ timeout: 5000 });
 
@@ -268,6 +271,8 @@ test.describe('Vendor Integration Tests', () => {
 
     // Navigate to edit form from list (search first since list is paginated)
     await page.goto('/vendors');
+    // Fix: wait for page render before checking loading state
+    await expect(page.getByTestId('vendor-list-page')).toBeVisible({ timeout: 15000 });
     await expect(page.getByTestId('vendor-list-loading')).not.toBeVisible({ timeout: 30000 });
     await expect(page.getByTestId('vendor-list-table')).toBeVisible({ timeout: 5000 });
     await page.getByTestId('vendor-search-input').fill(String(testRunId));
@@ -382,6 +387,8 @@ test.describe('Vendor Integration Tests', () => {
     test.skip(!persistentVendorId, 'Persistent vendor was not created');
 
     await page.goto('/vendors');
+    // Fix: wait for page render before checking loading state
+    await expect(page.getByTestId('vendor-list-page')).toBeVisible({ timeout: 15000 });
     await expect(page.getByTestId('vendor-list-loading')).not.toBeVisible({ timeout: 30000 });
     await expect(page.getByTestId('vendor-list-table')).toBeVisible({ timeout: 5000 });
 
@@ -439,6 +446,8 @@ test.describe('Vendor Integration Tests', () => {
     test.skip(!deletableVendorId, 'Deletable vendor was not created');
 
     await page.goto('/vendors');
+    // Fix: wait for page render before checking loading state
+    await expect(page.getByTestId('vendor-list-page')).toBeVisible({ timeout: 15000 });
     await expect(page.getByTestId('vendor-list-loading')).not.toBeVisible({ timeout: 30000 });
     await expect(page.getByTestId('vendor-list-table')).toBeVisible({ timeout: 5000 });
 
@@ -494,6 +503,8 @@ test.describe('Vendor Integration Tests', () => {
     test.skip(!persistentVendorId, 'Persistent vendor was not created');
 
     await page.goto('/vendors');
+    // Fix: wait for page render before checking loading state
+    await expect(page.getByTestId('vendor-list-page')).toBeVisible({ timeout: 15000 });
     await expect(page.getByTestId('vendor-list-loading')).not.toBeVisible({ timeout: 30000 });
     await expect(page.getByTestId('vendor-list-table')).toBeVisible({ timeout: 5000 });
 

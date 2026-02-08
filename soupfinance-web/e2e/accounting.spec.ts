@@ -712,7 +712,8 @@ test.describe('Accounting Module', () => {
       await expect(page.getByTestId('voucher-details-section')).toBeVisible();
       await expect(page.getByTestId('voucher-date-input')).toBeVisible();
       await expect(page.getByTestId('voucher-reference-input')).toBeVisible();
-      await expect(page.getByTestId('voucher-description-input')).toBeVisible();
+      // Fix: Component uses voucher-notes-input (not voucher-description-input)
+      await expect(page.getByTestId('voucher-notes-input')).toBeVisible();
       await expect(page.getByTestId('voucher-cash-account-select')).toBeVisible();
       await expect(page.getByTestId('voucher-expense-account-select')).toBeVisible();
       await expect(page.getByTestId('voucher-amount-input')).toBeVisible();

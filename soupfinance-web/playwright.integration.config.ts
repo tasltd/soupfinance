@@ -65,14 +65,12 @@ export default defineConfig({
   outputDir: 'test-results-integration/',
 
   // Start dev server pointing to real LXC backend
-  // IMPORTANT: Use VITE_PROXY_TARGET (not VITE_API_URL) - this is what vite.config.ts reads
+  // Fix: Use --mode lxc so Vite loads .env.lxc + .env.lxc.local (API consumer credentials)
+  // Without --mode lxc, Vite uses default mode and doesn't read LXC env files
   webServer: {
-    command: `VITE_PROXY_TARGET=${LXC_BACKEND_URL} npm run dev -- --port ${INTEGRATION_TEST_PORT}`,
+    command: `npm run dev:lxc -- --port ${INTEGRATION_TEST_PORT}`,
     url: `http://localhost:${INTEGRATION_TEST_PORT}`,
     reuseExistingServer: false,
     timeout: 120 * 1000,
-    env: {
-      VITE_PROXY_TARGET: LXC_BACKEND_URL,
-    },
   },
 });

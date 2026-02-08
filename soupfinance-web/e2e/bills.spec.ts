@@ -589,7 +589,7 @@ test.describe('Bill Management', () => {
 
       // Verify empty form fields
       await expect(page.getByTestId('bill-vendor-select')).toBeVisible();
-      await expect(page.getByTestId('bill-issue-date-input')).toBeVisible();
+      await expect(page.getByTestId('bill-date-input')).toBeVisible();
       await expect(page.getByTestId('bill-due-date-input')).toBeVisible();
 
       await takeScreenshot(page, 'bills-form-empty');
@@ -822,7 +822,7 @@ test.describe('Bill Management', () => {
 
       // Verify existing data is loaded
       await expect(page.getByTestId('bill-vendor-select')).toContainText('Acme Corp');
-      await expect(page.getByTestId('bill-issue-date-input')).toHaveValue('2026-01-15');
+      await expect(page.getByTestId('bill-date-input')).toHaveValue('2026-01-15');
       await expect(page.getByTestId('bill-due-date-input')).toHaveValue('2026-02-14');
 
       await takeScreenshot(page, 'bills-edit-form-loaded');

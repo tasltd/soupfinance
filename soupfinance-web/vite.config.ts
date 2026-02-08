@@ -44,6 +44,10 @@ export default defineConfig(({ mode }) => {
   const proxyConfig: ProxyOptions = {
     target: apiTarget,
     changeOrigin: true,
+    // Fix: Rewrite cookie domains so browser stores them for the proxy origin (localhost).
+    // Without this, the Grails JSESSIONID cookie may not be properly forwarded,
+    // causing CSRF token/Hibernate session mismatches on save operations.
+    cookieDomainRewrite: '',
     // Add API consumer authentication header if configured
     ...(apiAuthHeader && {
       configure: (proxy) => {

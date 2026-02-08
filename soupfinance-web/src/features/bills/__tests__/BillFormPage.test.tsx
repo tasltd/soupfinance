@@ -22,6 +22,16 @@ vi.mock('../../../api/endpoints/vendors', () => ({
   listVendors: vi.fn(),
 }));
 
+// Fix: Added domainData mock — component imports listTaxRates, listBillServices, DEFAULT_CURRENCIES
+vi.mock('../../../api/endpoints/domainData', async () => {
+  const actual = await vi.importActual('../../../api/endpoints/domainData');
+  return {
+    ...actual,
+    listTaxRates: vi.fn(),
+    listBillServices: vi.fn(),
+  };
+});
+
 // Mock useNavigate
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async () => {
@@ -34,6 +44,8 @@ vi.mock('react-router-dom', async () => {
 
 import { getBill, createBill, updateBill } from '../../../api/endpoints/bills';
 import { listVendors } from '../../../api/endpoints/vendors';
+// Fix: Import domainData mocks — component needs tax rates for dropdown options
+import { listTaxRates, listBillServices } from '../../../api/endpoints/domainData';
 
 // ============================================================================
 // Test Helpers
@@ -130,6 +142,14 @@ describe('BillFormPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockNavigate.mockClear();
+    // Fix: Provide default tax rates so dropdown options render in tests
+    vi.mocked(listTaxRates).mockResolvedValue([
+      { id: 'tax-none', name: 'No Tax', rate: 0, description: 'Tax exempt', isDefault: true },
+      { id: 'tax-vat-5', name: 'VAT 5%', rate: 5, description: 'Reduced VAT rate' },
+      { id: 'tax-wht-10', name: 'WHT 10%', rate: 10, description: 'Withholding Tax 10%' },
+      { id: 'tax-vat-15', name: 'VAT 15%', rate: 15, description: 'Standard VAT rate' },
+    ]);
+    vi.mocked(listBillServices).mockResolvedValue([]);
   });
 
   describe('rendering (create mode)', () => {
@@ -177,7 +197,7 @@ describe('BillFormPage', () => {
 
       await screen.findByTestId('bill-form-page');
 
-      expect(screen.getByTestId('bill-issue-date-input')).toBeInTheDocument();
+      expect(screen.getByTestId('bill-date-input')).toBeInTheDocument();
       expect(screen.getByTestId('bill-due-date-input')).toBeInTheDocument();
     });
 
@@ -271,9 +291,12 @@ describe('BillFormPage', () => {
         createMockVendor({ id: 'vendor-1', name: 'Acme Supplies' }),
         createMockVendor({ id: 'vendor-2', name: 'Office Depot' }),
       ];
+      // Fix: Use billDate/paymentDate (backend field names) — component prioritizes these over issueDate/dueDate
       const mockBill = createMockBill({
         vendor: { id: 'vendor-1', name: 'Acme Supplies' },
+        billDate: '2024-03-01',
         issueDate: '2024-03-01',
+        paymentDate: '2024-03-31',
         dueDate: '2024-03-31',
         notes: 'Existing notes',
       });
@@ -293,7 +316,7 @@ describe('BillFormPage', () => {
       const vendorSelect = screen.getByTestId('bill-vendor-select') as HTMLSelectElement;
       expect(vendorSelect.value).toBe('vendor-1');
 
-      const issueDateInput = screen.getByTestId('bill-issue-date-input') as HTMLInputElement;
+      const issueDateInput = screen.getByTestId('bill-date-input') as HTMLInputElement;
       expect(issueDateInput.value).toBe('2024-03-01');
 
       const dueDateInput = screen.getByTestId('bill-due-date-input') as HTMLInputElement;
@@ -586,7 +609,7 @@ describe('BillFormPage', () => {
       await user.selectOptions(vendorSelect, 'vendor-1');
 
       // Set dates
-      const issueDateInput = screen.getByTestId('bill-issue-date-input');
+      const issueDateInput = screen.getByTestId('bill-date-input');
       const dueDateInput = screen.getByTestId('bill-due-date-input');
       await user.clear(issueDateInput);
       await user.type(issueDateInput, '2024-03-01');

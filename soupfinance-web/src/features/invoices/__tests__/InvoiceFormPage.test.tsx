@@ -31,11 +31,16 @@ vi.mock('../../../api/endpoints/clients', () => ({
   listClients: vi.fn(),
 }));
 
-// Changed: Component imports listTaxRates and listInvoiceServices from domainData
-vi.mock('../../../api/endpoints/domainData', () => ({
-  listTaxRates: vi.fn(),
-  listInvoiceServices: vi.fn(),
-}));
+// Changed: Component imports listTaxRates, listInvoiceServices, and DEFAULT_CURRENCIES from domainData
+// Fix: Added DEFAULT_CURRENCIES to mock — component uses it for currency dropdown
+vi.mock('../../../api/endpoints/domainData', async () => {
+  const actual = await vi.importActual('../../../api/endpoints/domainData');
+  return {
+    ...actual,
+    listTaxRates: vi.fn(),
+    listInvoiceServices: vi.fn(),
+  };
+});
 
 // Mock the stores for currency formatting
 vi.mock('../../../stores', () => ({

@@ -93,8 +93,10 @@ test.describe('Ledger Integration Tests', () => {
       const token = await getAuthToken(page);
 
       // 0. Fetch CSRF token from create.json (required by Grails withForm protection)
+      // Changed: Add maxRedirects: 0 to prevent following 302 to https://localhost:9090
       const csrfResponse = await page.request.get(`${API_BASE}/rest/ledgerAccount/create.json`, {
         headers: { 'X-Auth-Token': token },
+        maxRedirects: 0,
       });
 
       let csrfToken = '';
@@ -171,8 +173,10 @@ test.describe('Ledger Integration Tests', () => {
     test('GET /rest/ledgerTransaction/index.json - returns transactions', async ({ page }) => {
       const token = await getAuthToken(page);
 
+      // Changed: Add maxRedirects: 0 to prevent following 302 to https://localhost:9090
       const response = await page.request.get(`${API_BASE}/rest/ledgerTransaction/index.json`, {
         headers: { 'X-Auth-Token': token },
+        maxRedirects: 0,
       });
 
       console.log('Ledger transactions status:', response.status());
@@ -184,7 +188,8 @@ test.describe('Ledger Integration Tests', () => {
 
     test('transactions page loads', async ({ page }) => {
       await page.goto('/ledger/transactions');
-      await page.waitForLoadState('networkidle');
+      // Changed: Use domcontentloaded instead of networkidle — transactions API can be very slow
+      await page.waitForLoadState('domcontentloaded');
 
       // Check if session expired
       const isLoginPage = await page.getByText(/session expired|sign in|welcome back/i).first().isVisible({ timeout: 3000 }).catch(() => false);

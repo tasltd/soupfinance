@@ -101,7 +101,7 @@ components/
 └── ErrorBoundary.tsx  # Global React error boundary
 features/              # Page components by domain (auth, dashboard, invoices, bills, vendors,
 │                      #   payments, ledger, accounting, reports, clients, corporate, settings)
-hooks/                 # usePdf, useEmailSend, useDashboardStats, useLedgerAccounts, useTransactions
+hooks/                 # usePdf, useEmailSend, useDashboardStats, useLedgerAccounts, useTransactions, usePaymentMethods
 i18n/                  # 4 languages (en, de, fr, nl), 12 namespaces
 schemas/               # Zod runtime validation (dev: throw, prod: log only)
 stores/                # Zustand: authStore, uiStore, accountStore (currency/company settings)
@@ -122,12 +122,13 @@ App.tsx                # Routes + providers (ProtectedRoute, PublicRoute wrapper
 | **Token Storage** | Dual-storage: `rememberMe=true` → localStorage, `false` → sessionStorage. **Caveat:** `client.ts` interceptor reads ONLY `localStorage` — see `auth.ts:getAccessToken()` for dual-storage reads |
 | **Token Validation** | GET `/rest/user/current.json` on app mount |
 | **Invoice Clients** | `/rest/client/*` for Client entities (KYC clients); invoices reference `accountServices.id` as FK |
-| **CSRF Token** | **REQUIRED** for all POST/PUT/DELETE - fetch from `create.json`/`edit.json` first |
+| **CSRF Token** | **REQUIRED** for POST (save) — fetch from `create.json` first. PUT (update) and DELETE do NOT require CSRF tokens |
 | **Foreign Keys** | Use nested objects `{ vendor: { id: "uuid" } }` not `vendor.id` |
 | **Registration** | Goes through `/account/*` proxy (not `/rest/*`) |
 | **App Identification** | Backend identifies the app via the `Api-Authorization` header injected by the proxy (ApiAuthenticatorInterceptor resolves the ApiConsumer name) |
 | **Settings APIs** | `settings.ts` exports 6 sub-APIs: `agentApi`, `accountBankDetailsApi`, `accountPersonApi`, `rolesApi`, `banksApi`, `accountSettingsApi` |
-| **Domain Data** | Tax rates and payment terms are **hardcoded** in `domainData.ts` (no backend endpoint); service descriptions fetched from `/rest/serviceDescription/index.json` |
+| **Domain Data** | Tax rates and payment terms are **hardcoded** in `domainData.ts` (no backend endpoint); service descriptions from `/rest/serviceDescription/index.json`; payment methods from `/rest/paymentMethod/index.json` (dynamic, domain class FK) |
+| **PaymentMethod** | Domain class FK (`{ id, name, serialised?, class? }`), NOT a string enum. Use `usePaymentMethods()` hook. Send `paymentMethodId` in create requests |
 
 #### Grails REST URL Pattern
 
@@ -144,10 +145,10 @@ DELETE /rest/{controller}/delete/{id}.json   # Delete (soft)
 #### CSRF Token Flow
 
 1. GET `/rest/{controller}/create.json` → response includes `SYNCHRONIZER_TOKEN` + `SYNCHRONIZER_URI`
-2. Include both in subsequent POST/PUT/DELETE JSON body
-3. For updates: call `edit.json` instead of `create.json`
+2. Pass CSRF as URL query params (Grails `withForm` reads from request params, not JSON body)
+3. **Only POST (save) operations require CSRF tokens** — PUT (update) and DELETE do NOT
 4. Without token, POST returns 302 redirect (not JSON)
-5. Use `getCsrfToken()` / `getCsrfTokenForEdit()` helpers from `client.ts`
+5. Use `getCsrfToken()` helper from `client.ts`; `csrfQueryString(csrf)` for URL params
 
 #### File/Image Upload
 
@@ -240,7 +241,8 @@ Both the Vite dev server and production Apache proxy API requests to the Grails 
 - Use `data-testid` attributes: `{feature}-page`, `{feature}-form`, `{feature}-submit-button`, `{feature}-table`
 - Handle session expiry in LXC mode before asserting
 - Integration tests live in `e2e/integration/` and follow `*.integration.spec.ts` naming (only run against LXC backend)
-- **14 mock E2E test files** in `e2e/` and **14 integration test files** in `e2e/integration/` (5 numbered + 9 non-numbered)
+- **14 mock E2E test files** in `e2e/` (326 tests, all passing) and **14 integration test files** in `e2e/integration/` (5 numbered + 9 non-numbered, 162/173 pass)
+- Integration test patterns: never `networkidle` (use `domcontentloaded` + auth wait), `maxRedirects: 0` on direct API calls, `safeApiGet` wrapper for crash resilience
 
 ### Test Credentials (LXC Backend)
 

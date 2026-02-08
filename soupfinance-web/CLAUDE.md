@@ -65,16 +65,17 @@ src/features/{feature}/
 └── index.ts                    # Barrel exports
 ```
 
-Features: `accounting`, `auth`, `bills`, `clients`, `corporate`, `dashboard`, `invoices`, `ledger`, `payments`, `reports`, `settings`, `vendors`
+Features: `accounting` (vouchers, journal entries, transaction register), `auth`, `bills`, `clients`, `corporate` (KYC), `dashboard`, `invoices`, `ledger` (chart of accounts), `payments` (record payments against invoices/bills), `reports`, `settings`, `vendors`
 
 ### API Layer (`src/api/`)
 - **client.ts**: Axios instance with X-Auth-Token authentication, auto-401 redirect, response normalization utilities
 - **auth.ts**: Two auth flows: (1) Admin login via `POST /rest/api/login` (JSON), (2) Corporate 2FA via `POST /client/authenticate.json` + `POST /client/verifyCode.json` (FormData). Token management with dual-storage (rememberMe → localStorage, default → sessionStorage)
 - **endpoints/{domain}.ts**: Domain-specific API functions (invoices, bills, vendors, clients, ledger, corporate, reports, settings, domainData). **Note:** `payments` feature has no dedicated endpoint file — uses bill/voucher endpoints
-- **endpoints/email.ts**: Email service for sending invoices/bills/reports with PDF attachments
+- **endpoints/email.ts**: Email service — `emailApi.sendInvoice()`, `sendBill()`, `sendReport()` with PDF attachments (base64-encoded Blobs)
 - **endpoints/registration.ts**: Tenant registration (uses `/account/*` proxy, not `/rest/*`)
 - **endpoints/clients.ts**: Client + AccountServices APIs (invoices reference `accountServices.id` as FK, client metadata from `Client` entity)
-- **endpoints/domainData.ts**: Shared domain data lookups — tax rates and payment terms are **hardcoded** (no backend endpoint); service descriptions from `/rest/serviceDescription/index.json`
+- **endpoints/ledger.ts**: Ledger accounts, transactions, vouchers (payment/receipt/deposit), journal entries (multi-line). CSRF only needed for POST/save; PUT/DELETE do not require CSRF
+- **endpoints/domainData.ts**: Shared domain data lookups — tax rates and payment terms are **hardcoded** (no backend endpoint); service descriptions from `/rest/serviceDescription/index.json`; **payment methods** from `/rest/paymentMethod/index.json` (domain class, dynamic)
 - **endpoints/settings.ts**: 6 sub-APIs: `agentApi` (staff CRUD), `accountBankDetailsApi` (bank accounts), `accountPersonApi` (directors/signatories), `rolesApi` (`/sbRole/index.json`), `banksApi` (`/bank/index.json`), `accountSettingsApi` (`/account/current.json`)
 
 Key patterns:
@@ -82,25 +83,24 @@ Key patterns:
 - Foreign keys: Use nested objects `{ vendor: { id: "uuid" } }` not `vendor.id`
 - Registration endpoints go through `/account/*` proxy which injects `Api-Authorization` header
 - Backend identifies the app via the `Api-Authorization` header injected by the proxy (ApiAuthenticatorInterceptor resolves the ApiConsumer name)
-- **CSRF tokens required** for all POST/PUT/DELETE — see CSRF flow below
+- **CSRF tokens required** for POST (save) only — PUT (update) and DELETE do NOT need CSRF. See flow below
 - **Client vs AccountServices**: Invoices reference `accountServices.id` as FK; use `Client` entity (`/rest/client/index.json`) for dropdown display, save `accountServices.id` as the FK value
 - **Token storage caveat**: `client.ts` request interceptor (line 42) reads auth token from `localStorage` only. When `rememberMe=false`, the token is in `sessionStorage`. Use `getAccessToken()` from `auth.ts` for proper dual-storage reads
+- **PaymentMethod is a domain class FK** (`{ id, name, serialised?, class? }`), NOT a string enum. Use `usePaymentMethods()` hook for dropdowns. Send `paymentMethodId` (not object) in create requests. Display with `payment.paymentMethod?.name || '-'`
 
-### CSRF Token Flow (CRITICAL for mutations)
-All create/update/delete operations require a CSRF token from the backend:
+### CSRF Token Flow (CRITICAL for POST/save only)
+Only POST (create/save) operations require a CSRF token. PUT (update) and DELETE do NOT:
 ```typescript
 // 1. Fetch CSRF token (for new entity)
 const csrf = await getCsrfToken('vendor'); // GET /rest/vendor/create.json
 
-// 2. Include in request body
-await apiClient.post('/vendor/save.json', {
+// 2. Pass CSRF as URL query params (Grails withForm reads from request params, not JSON body)
+await apiClient.post(`/vendor/save.json?${csrfQueryString(csrf)}`, {
   name: 'Acme Corp',
-  SYNCHRONIZER_TOKEN: csrf.SYNCHRONIZER_TOKEN,
-  SYNCHRONIZER_URI: csrf.SYNCHRONIZER_URI,
 });
 
-// For updates, use getCsrfTokenForEdit(controller, id) instead
-const csrf = await getCsrfTokenForEdit('vendor', vendorId); // GET /rest/vendor/edit/{id}.json
+// Updates do NOT need CSRF:
+await apiClient.put(`/vendor/update/${id}.json`, { name: 'New Name', id });
 ```
 Without CSRF token, POST returns 302 redirect (not JSON error).
 
@@ -143,10 +143,11 @@ Zustand stores with persistence:
 
 ### Hooks (`src/hooks/`)
 - **usePdf**: Frontend PDF generation using html2pdf.js for invoices, bills, reports (templates in `src/utils/pdf/templates.ts`)
-- **useEmailSend**: Combines PDF generation with email API sending
-- **useDashboardStats**: Dashboard metrics and data
-- **useLedgerAccounts**: Chart of accounts queries
-- **useTransactions**: Ledger transaction queries
+- **useEmailSend**: Combines PDF generation with email API — `sendInvoice()`, `sendBill()`, `sendTrialBalance()`, `sendProfitLoss()`, `sendBalanceSheet()`, `sendAgingReport()`
+- **useDashboardStats**: Dashboard metrics; uses `Promise.allSettled()` so new accounts show zeros not errors
+- **useLedgerAccounts**: Chart of accounts queries with `getMockAccounts()` for tests
+- **useTransactions**: Unified transaction register (journal entries + vouchers) with `UnifiedTransaction` type
+- **usePaymentMethods**: Fetches `PaymentMethod` domain objects from `/rest/paymentMethod/index.json` (5-min staleTime)
 
 ### Type Definitions (`src/types/`)
 All domain types mirror soupmarkets-web Grails domain classes:
@@ -239,7 +240,45 @@ reports.integration.spec.ts      # Finance reports
 settings.integration.spec.ts     # Settings pages
 ```
 
-Use `backendTestUsers` from `e2e/fixtures.ts` for credentials. **768 unit tests** across 26 test files (2026-02-07).
+Use `backendTestUsers` from `e2e/fixtures.ts` for credentials. **768 unit tests** across 26 test files. **326 mock E2E tests** (all passing, 2026-02-08). **162/173 integration tests** pass against LXC backend (2 failed: backend bugs, 9 skipped). See `e2e/integration/INTEGRATION-TEST-RESULTS.md` for detailed results.
+
+### Integration Test Patterns (CRITICAL)
+
+These patterns are required for stable integration tests against the LXC backend:
+
+```typescript
+// 1. NEVER use networkidle — backend is too slow on seed DB (3145+ accounts)
+await page.waitForLoadState('domcontentloaded');
+
+// 2. Auth verification wait — page shows "Verifying authentication..." before content renders
+await page.waitForFunction(
+  () => !document.body.textContent?.includes('Verifying authentication'),
+  { timeout: 20000 }
+).catch(() => {});
+
+// 3. Always maxRedirects: 0 on direct API calls — Grails redirects to https://localhost:9090
+const response = await page.request.get(`${API_BASE}/rest/endpoint/index.json`, {
+  headers: { 'X-Auth-Token': token },
+  maxRedirects: 0,
+});
+
+// 4. Use remember-me in login helpers — stores token in localStorage (survives navigation)
+const rememberCheckbox = page.getByTestId('login-remember-checkbox');
+if (await rememberCheckbox.isVisible().catch(() => false)) {
+  await rememberCheckbox.check();
+}
+
+// 5. Wrap API calls in try/catch — backend crashes from heavy report queries
+async function safeApiGet(page, url, token, timeout = 30000) {
+  try {
+    return await page.request.get(url, {
+      headers: { 'X-Auth-Token': token }, timeout, maxRedirects: 0,
+    });
+  } catch { return null; }
+}
+```
+
+**Known backend issues:** Vendor CRUD has Hibernate proxy bug (6 test failures). PaymentMethod uses domain display names ("Bank Transfer") not enum values ("BANK_TRANSFER") — select by `{ label: 'Bank Transfer' }`. Restart backend between heavy report test batches.
 
 ### Playwright Config Inventory
 
@@ -282,6 +321,24 @@ await page.getByTestId('bill-item-taxRate-0').selectOption('10');
 await expect(page.locator('text=$25,000.00')).toBeVisible(); // NOT $25000.00
 ```
 
+### E2E Mock Data Patterns (CRITICAL)
+Mock data MUST mirror Grails domain structure because `transformInvoice()` and similar functions process raw API responses:
+```typescript
+// Invoice mock must include invoiceItemList/invoicePaymentList for correct total computation
+const mockInvoice = {
+  id: 'inv-001', number: 10,
+  accountServices: { id: 'as-001', class: 'soupbroker.kyc.AccountServices', serialised: 'Direct Account : Corporate(ABC Corp)' },
+  invoiceItemList: [{ id: 'ii-1', quantity: 1, unitPrice: 5000.0 }],
+  invoicePaymentList: [{ id: 'ip-1', amount: 2000.0 }],
+};
+// After transformInvoice(): totalAmount=5000, amountPaid=2000, amountDue=3000
+```
+
+Form pages need mocks for ALL API endpoints they call. If `page.goto` times out, check for unmocked endpoints:
+- Invoice form: `/rest/client/index.json`, `/rest/serviceDescription/index.json`, `/rest/invoiceItem/index.json`
+- Dashboard: `/rest/invoice/index.json`, `/rest/bill/index.json`
+- Always mock `mockTokenValidationApi(page, true)` for auth + account settings (currency)
+
 ## Key Conventions
 
 ### Documentation & Planning
@@ -322,8 +379,8 @@ GET    /rest/{domain}/show/{id}.json  # Read
 GET    /rest/{domain}/create.json     # Get CSRF token (for new)
 GET    /rest/{domain}/edit/{id}.json  # Get CSRF token (for update)
 POST   /rest/{domain}/save.json       # Create (requires CSRF)
-PUT    /rest/{domain}/update/{id}.json # Update (requires CSRF)
-DELETE /rest/{domain}/delete/{id}.json # Delete/soft-delete (requires CSRF)
+PUT    /rest/{domain}/update/{id}.json # Update (NO CSRF needed)
+DELETE /rest/{domain}/delete/{id}.json # Delete/soft-delete (NO CSRF needed)
 ```
 Some controllers have module prefixes: `/rest/finance/bill/*`, `/rest/trading/vendor/*`, `/rest/kyc/corporate/*`
 
@@ -428,8 +485,14 @@ This prevents the proxy from intercepting frontend routes like `/accounting/tran
 |---------|-------|-----|
 | Login returns 401 but credentials are correct | Stale MariaDB connection pool | `lxc exec soupfinance-backend -- systemctl restart soupmarkets.service` |
 | ALL API requests return 401 | Missing ApiConsumer record in DB | Insert `soupfinance-web` into `api_consumer` table with secret matching `.env.lxc.local` |
-| Backend returns 302 instead of JSON | Missing CSRF token in POST/PUT request | Fetch CSRF token via `getCsrfToken()` first |
+| Backend returns 302 instead of JSON | Missing CSRF token in POST request | Fetch CSRF token via `getCsrfToken()` first (only needed for POST/save) |
 | Backend logs show `Connection is closed` | MariaDB connection pool exhausted | Restart backend service |
+| `ENOSPC: System limit for number of file watchers reached` | inotify watcher limit too low | `sudo sysctl -w fs.inotify.max_user_watches=524288` or use `CHOKIDAR_USEPOLLING=true` |
+| Vendor save fails on 2nd creation (500) | Hibernate PaymentMethod proxy two-session bug | Backend Issue #15 — needs fix in VendorController.save() |
+| Bill endpoints return 500/403 | LazyInitializationException on billItemList | Backend Issue #1 — needs custom GSON template for Bill |
+| Report queries crash backend (socket hang up) | Income statement on 3145+ accounts exhausts memory (~60s query) | Restart backend; use `safeApiGet` in tests; avoid concurrent heavy reports |
+| Tests fail with ECONNREFUSED 127.0.0.1:9090 | Grails returns 302 redirect to `https://localhost:9090` | Use `maxRedirects: 0` on all direct API calls |
+| Backend takes ~60-90s to start | Grails cold start with large seed DB | Wait for full startup: `curl -sf http://localhost:9090/rest/api/login` returns 405 when ready |
 
 **LXC Database:** `soupbroker_seed_source` on `10.115.213.114:3306`, user `soupbroker` / password `soupbroker`
 
