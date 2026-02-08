@@ -85,7 +85,7 @@ Key patterns:
 - Backend identifies the app via the `Api-Authorization` header injected by the proxy (ApiAuthenticatorInterceptor resolves the ApiConsumer name)
 - **CSRF tokens required** for POST (save) only — PUT (update) and DELETE do NOT need CSRF. See flow below
 - **Client vs AccountServices**: Invoices reference `accountServices.id` as FK; use `Client` entity (`/rest/client/index.json`) for dropdown display, save `accountServices.id` as the FK value
-- **Token storage caveat**: `client.ts` request interceptor (line 42) reads auth token from `localStorage` only. When `rememberMe=false`, the token is in `sessionStorage`. Use `getAccessToken()` from `auth.ts` for proper dual-storage reads
+- **Token storage**: `client.ts` request interceptor checks both `localStorage` and `sessionStorage` for auth token (dual-storage pattern)
 - **PaymentMethod is a domain class FK** (`{ id, name, serialised?, class? }`), NOT a string enum. Use `usePaymentMethods()` hook for dropdowns. Send `paymentMethodId` (not object) in create requests. Display with `payment.paymentMethod?.name || '-'`
 
 ### CSRF Token Flow (CRITICAL for POST/save only)
@@ -240,7 +240,7 @@ reports.integration.spec.ts      # Finance reports
 settings.integration.spec.ts     # Settings pages
 ```
 
-Use `backendTestUsers` from `e2e/fixtures.ts` for credentials. **768 unit tests** across 26 test files. **326 mock E2E tests** (all passing, 2026-02-08). **162/173 integration tests** pass against LXC backend (2 failed: backend bugs, 9 skipped). See `e2e/integration/INTEGRATION-TEST-RESULTS.md` for detailed results.
+Use `backendTestUsers` from `e2e/fixtures.ts` for credentials. **768 unit tests** across 26 test files. **326 mock E2E tests** (all passing, 2026-02-08). **159/170 integration tests** pass against LXC backend (6 failed: backend Hibernate proxy bug in vendor CRUD, 5 skipped). See `e2e/integration/INTEGRATION-TEST-RESULTS.md` for detailed results.
 
 ### Integration Test Patterns (CRITICAL)
 

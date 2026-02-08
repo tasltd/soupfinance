@@ -82,9 +82,10 @@ export function InvoiceFormPage() {
     queryFn: () => listClients({ max: 100 }),
   });
 
-  // Changed: Resolve accountServicesId from selected client's accountServices FK
+  // Fix: Resolve accountServicesId through client's portfolioList (not direct accountServices)
+  // Client → portfolioList[0] → accountServices.id
   const selectedClient = clients?.find((c) => c.id === selectedClientId);
-  const resolvedAccountServicesId = selectedClient?.accountServices?.id || '';
+  const resolvedAccountServicesId = selectedClient?.portfolioList?.[0]?.accountServices?.id || '';
 
   // Fetch tax rates for dropdown
   const { data: taxRates } = useQuery({
@@ -143,7 +144,8 @@ export function InvoiceFormPage() {
     if (invoice && clients && !selectedClientId) {
       const invoiceAsId = invoice.accountServices?.id;
       if (invoiceAsId) {
-        const owningClient = clients.find((c) => c.accountServices?.id === invoiceAsId);
+        // Fix: Resolve through portfolioList (not direct accountServices)
+        const owningClient = clients.find((c) => c.portfolioList?.some((p) => p.accountServices?.id === invoiceAsId));
         if (owningClient) {
           // eslint-disable-next-line react-hooks/set-state-in-effect -- Resolving client from invoice's accountServices FK
           setSelectedClientId(owningClient.id);
@@ -349,9 +351,9 @@ export function InvoiceFormPage() {
       return null;
     }
 
-    // Build form data — resolve accountServices.id from selected client
+    // Fix: Use nested object FK (dot-notation doesn't bind in JSON body)
     const formData: Record<string, unknown> = {
-      'accountServices.id': resolvedAccountServicesId,
+      accountServices: { id: resolvedAccountServicesId },
       invoiceDate,
       paymentDate,
       notes,

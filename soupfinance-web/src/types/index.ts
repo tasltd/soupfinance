@@ -127,7 +127,16 @@ export interface Client extends BaseEntity {
   contactPerson?: string;
   registrationNumber?: string;
   taxNumber?: string;
-  // FK to AccountServices (for invoice reference)
+  // Fix: Client has portfolioList (hasMany: ClientPortfolio), each with accountServices FK
+  // Resolve accountServicesId via: client.portfolioList[0].accountServices.id
+  portfolioList?: Array<{
+    id: string;
+    accountServices?: { id: string; serialised?: string; class?: string };
+    serialised?: string;
+    class?: string;
+  }>;
+  // NOTE: accountServices is NOT a direct field on Client in the backend.
+  // Kept for backward compatibility but portfolioList is the correct resolution path.
   accountServices?: { id: string; serialised?: string; class?: string };
 }
 

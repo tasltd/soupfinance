@@ -114,11 +114,16 @@ function createMockInvoice(overrides: Partial<Invoice> = {}): Invoice {
  * The form shows clients from listClients() and resolves their accountServices FK.
  */
 function createMockClient(overrides: Partial<Client> = {}): Client {
+  // Fix: Include portfolioList with nested accountServices (matches backend response)
+  const asId = (overrides.accountServices as { id: string } | undefined)?.id || 'as-123';
+  const asSer = (overrides.accountServices as { serialised?: string } | undefined)?.serialised || 'Acme Corporation';
   return {
     id: 'client-1',
     name: 'Acme Corporation',
     clientType: 'INDIVIDUAL' as ClientType,
-    accountServices: { id: 'as-123', serialised: 'Acme Corporation' },
+    // Fix: accountServicesId resolves via portfolioList[0].accountServices.id
+    portfolioList: [{ id: 'portfolio-1', accountServices: { id: asId, serialised: asSer } }],
+    accountServices: { id: asId, serialised: asSer },
     dateCreated: '2024-01-01T00:00:00Z',
     lastUpdated: '2024-01-01T00:00:00Z',
     ...overrides,

@@ -211,9 +211,9 @@ export function BillFormPage() {
       return;
     }
 
-    // Changed: Build form data with correct backend field names
+    // Fix: Use nested object FK (dot-notation doesn't bind in JSON body)
     const formData: Record<string, unknown> = {
-      'vendor.id': vendorId,
+      vendor: { id: vendorId },
       billDate, // Changed: Backend uses billDate (not issueDate)
       paymentDate, // Changed: Backend uses paymentDate (not dueDate)
       notes,
@@ -228,15 +228,15 @@ export function BillFormPage() {
       ...(exchangeRate !== '' && { exchangeRate }),
     };
 
-    // Added: Include line items as indexed fields (Grails binding format)
+    // Fix: Use billItemList (Grails hasMany property name), not items
     lineItems.forEach((item, index) => {
-      formData[`items[${index}].description`] = item.description;
-      formData[`items[${index}].quantity`] = item.quantity;
-      formData[`items[${index}].unitPrice`] = item.unitPrice;
-      formData[`items[${index}].taxRate`] = item.taxRate;
-      formData[`items[${index}].amount`] = item.quantity * item.unitPrice * (1 + item.taxRate / 100);
+      formData[`billItemList[${index}].description`] = item.description;
+      formData[`billItemList[${index}].quantity`] = item.quantity;
+      formData[`billItemList[${index}].unitPrice`] = item.unitPrice;
+      formData[`billItemList[${index}].taxRate`] = item.taxRate;
+      formData[`billItemList[${index}].amount`] = item.quantity * item.unitPrice * (1 + item.taxRate / 100);
       if (item.id) {
-        formData[`items[${index}].id`] = item.id;
+        formData[`billItemList[${index}].id`] = item.id;
       }
     });
 

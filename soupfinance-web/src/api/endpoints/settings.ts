@@ -135,8 +135,9 @@ export const agentApi = {
   update: async (id: string, data: AgentFormData): Promise<Agent> => {
     const csrf = await getCsrfTokenForEdit('agent', id);
     const transformed = { id, ...transformAgentData(data) };
+    // Fix: Include /{id} in update URL (standard Grails CRUD pattern)
     const response = await apiClient.put<Agent>(
-      `/agent/update.json?${csrfQueryString(csrf)}`,
+      `/agent/update/${id}.json?${csrfQueryString(csrf)}`,
       transformed
     );
     return response.data;
@@ -233,8 +234,9 @@ export const accountBankDetailsApi = {
   update: async (id: string, data: AccountBankDetailsFormData): Promise<AccountBankDetails> => {
     const csrf = await getCsrfTokenForEdit('accountBankDetails', id);
     const transformed = { id, ...transformBankDetailsData(data) };
+    // Fix: Include /{id} in update URL (standard Grails CRUD pattern)
     const response = await apiClient.put<AccountBankDetails>(
-      `/accountBankDetails/update.json?${csrfQueryString(csrf)}`,
+      `/accountBankDetails/update/${id}.json?${csrfQueryString(csrf)}`,
       transformed
     );
     return response.data;
@@ -316,8 +318,9 @@ export const accountPersonApi = {
   update: async (id: string, data: AccountPersonFormData): Promise<AccountPerson> => {
     const csrf = await getCsrfTokenForEdit('accountPerson', id);
     const transformed = { id, ...transformAccountPersonData(data) };
+    // Fix: Include /{id} in update URL (standard Grails CRUD pattern)
     const response = await apiClient.put<AccountPerson>(
-      `/accountPerson/update.json?${csrfQueryString(csrf)}`,
+      `/accountPerson/update/${id}.json?${csrfQueryString(csrf)}`,
       transformed
     );
     return response.data;

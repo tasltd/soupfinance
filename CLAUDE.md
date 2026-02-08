@@ -119,7 +119,7 @@ App.tsx                # Routes + providers (ProtectedRoute, PublicRoute wrapper
 | **Admin Login** | POST `/rest/api/login` with JSON body `{ username, password }` |
 | **Corporate 2FA** | OTP flow: POST `/client/authenticate.json` (FormData) → POST `/client/verifyCode.json` (FormData) |
 | **Data Content-Type** | `application/json` for all CRUD requests; OTP endpoints (`/client/*`) use FormData |
-| **Token Storage** | Dual-storage: `rememberMe=true` → localStorage, `false` → sessionStorage. **Caveat:** `client.ts` interceptor reads ONLY `localStorage` — see `auth.ts:getAccessToken()` for dual-storage reads |
+| **Token Storage** | Dual-storage: `rememberMe=true` → localStorage, `false` → sessionStorage. `client.ts` interceptor checks both storages |
 | **Token Validation** | GET `/rest/user/current.json` on app mount |
 | **Invoice Clients** | `/rest/client/*` for Client entities (KYC clients); invoices reference `accountServices.id` as FK |
 | **CSRF Token** | **REQUIRED** for POST (save) — fetch from `create.json` first. PUT (update) and DELETE do NOT require CSRF tokens |
@@ -241,7 +241,7 @@ Both the Vite dev server and production Apache proxy API requests to the Grails 
 - Use `data-testid` attributes: `{feature}-page`, `{feature}-form`, `{feature}-submit-button`, `{feature}-table`
 - Handle session expiry in LXC mode before asserting
 - Integration tests live in `e2e/integration/` and follow `*.integration.spec.ts` naming (only run against LXC backend)
-- **14 mock E2E test files** in `e2e/` (326 tests, all passing) and **14 integration test files** in `e2e/integration/` (5 numbered + 9 non-numbered, 162/173 pass)
+- **14 mock E2E test files** in `e2e/` (326 tests, all passing) and **14 integration test files** in `e2e/integration/` (5 numbered + 9 non-numbered, 159/170 pass, 6 fail from backend Hibernate bug, 5 skipped)
 - Integration test patterns: never `networkidle` (use `domcontentloaded` + auth wait), `maxRedirects: 0` on direct API calls, `safeApiGet` wrapper for crash resilience
 
 ### Test Credentials (LXC Backend)
