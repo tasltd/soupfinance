@@ -63,7 +63,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | **Design System** | [.claude/rules/soupfinance-design-system.md](.claude/rules/soupfinance-design-system.md) | Tailwind v4 tokens, Manrope font, Material Symbols icons |
 | **API JSON Only** | [.claude/rules/soupfinance-api-json.md](.claude/rules/soupfinance-api-json.md) | Use `application/json` for all requests, NOT form-urlencoded |
 | **E2E Testing** | [.claude/rules/e2e-testing-patterns.md](.claude/rules/e2e-testing-patterns.md) | Token from sessionStorage (not localStorage), dual-storage strategy |
-| **Deployment** | [.claude/rules/soupfinance-deployment.md](.claude/rules/soupfinance-deployment.md) | SSH key `crypttransact_rsa` required, NOT id_rsa |
+| **Deployment** | [.claude/rules/soupfinance-deployment.md](.claude/rules/soupfinance-deployment.md) | Canonical config = `deploy/apache-soupfinance.conf`; trailing slashes required |
 | **Deployment Restrictions** | [.claude/rules/deployment-restrictions.md](.claude/rules/deployment-restrictions.md) | **NEVER** deploy to Soupmarkets prod IPs; only soupfinance frontend/landing |
 | **Cloudflare SSL** | [.claude/rules/cloudflare-ssl-configuration.md](.claude/rules/cloudflare-ssl-configuration.md) | Apache MUST have SSL VirtualHost on port 443 for Cloudflare |
 | **Server VHosts** | [.claude/rules/production-server-vhosts.md](.claude/rules/production-server-vhosts.md) | All Apache VHost configs for 65.20.112.224, proxy routes, SSL certs |
@@ -179,7 +179,7 @@ Invoices reference `accountServices.id` as the foreign key, but client metadata 
 | `Client` | `/rest/client/index.json` | KYC entity with name, email, phone, address |
 | `AccountServices` | `/rest/accountServices/show/:id.json` | Brokerage account; invoice FK target |
 
-Frontend pattern: List `Client` entities for dropdown, but save `accountServices.id` as the invoice FK.
+Frontend pattern: List `Client` entities for dropdown, but save `accountServices.id` as the invoice FK. Resolution chain: `client.portfolioList[0].accountServices.id` (NOT `client.accountServices.id` — that field doesn't exist on the backend domain).
 
 #### API Quirks
 
@@ -193,9 +193,11 @@ Both the Vite dev server and production Apache proxy API requests to the Grails 
 
 | Path | Target | Notes |
 |------|--------|-------|
-| `/rest/*` | Backend (Grails) | Main API |
+| `/rest/` | Backend (Grails) | Main API |
 | `^/account/` | Backend | Tenant registration (regex to avoid matching `/accounting/*`) |
-| `/client/*` | Backend | Public client APIs |
+| `/client/` | Backend | Public client APIs |
+
+**CRITICAL (Apache Production):** All ProxyPass paths MUST have trailing slashes (`/client/` not `/client`). Without trailing slashes, Apache prefix-matches SPA routes like `/clients/new` to the backend, causing 404. See `.claude/rules/soupfinance-deployment.md` for full details.
 
 | Environment | Where credentials live |
 |-------------|----------------------|
@@ -296,10 +298,13 @@ source env-variables.sh && ./gradlew assembleDeployToSoupfinance
 | Backend API | tas.soupmarkets.com (via Apache proxy) |
 | Deploy Dir | /var/www/soupfinance |
 | SSH Key | `~/.ssh/crypttransact_rsa` (NOT id_rsa) |
+| Apache Config (canonical) | `soupfinance-web/deploy/apache-soupfinance.conf` |
 
 **CRITICAL:** Sites only accessible via domain names, NEVER via direct IP. **NEVER** deploy to Soupmarkets production IPs (140.82.32.141, tas.soupmarkets.com, edge.soupmarkets.com).
 
-**Production architecture:** Client → Cloudflare (DNS/SSL) → Apache (65.20.112.224) → Static files OR proxy `/rest/*` `/account/*` to tas.soupmarkets.com
+**CRITICAL:** The canonical Apache config is `deploy/apache-soupfinance.conf`. Do NOT edit `deploy/app-soupfinance-com.conf` — it is a stale copy that is never deployed. The deploy script uploads `apache-soupfinance.conf` to the server. All ProxyPass paths and RewriteCond exclusions MUST use trailing slashes.
+
+**Production architecture:** Client → Cloudflare (DNS/SSL) → Apache (65.20.112.224) → Static files OR proxy `/rest/` `/account/` `/client/` to tas.soupmarkets.com
 
 ---
 

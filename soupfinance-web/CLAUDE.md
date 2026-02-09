@@ -87,7 +87,7 @@ Key patterns:
 - Registration endpoints go through `/account/*` proxy which injects `Api-Authorization` header
 - Backend identifies the app via the `Api-Authorization` header injected by the proxy (ApiAuthenticatorInterceptor resolves the ApiConsumer name)
 - **CSRF tokens required** for POST (save) only — PUT (update) and DELETE do NOT need CSRF. See flow below
-- **Client vs AccountServices**: Invoices reference `accountServices.id` as FK; use `Client` entity (`/rest/client/index.json`) for dropdown display, save `accountServices.id` as the FK value
+- **Client vs AccountServices**: Invoices reference `accountServices.id` as FK; use `Client` entity (`/rest/client/index.json`) for dropdown display. Resolution: `client.portfolioList[0].accountServices.id` (NOT `client.accountServices.id`)
 - **Token storage**: `client.ts` request interceptor checks both `localStorage` and `sessionStorage` for auth token (dual-storage pattern)
 - **PaymentMethod is a domain class FK** (`{ id, name, serialised?, class? }`), NOT a string enum. Use `usePaymentMethods()` hook for dropdowns. Send `paymentMethodId` (not object) in create requests. Display with `payment.paymentMethod?.name || '-'`
 
@@ -413,21 +413,32 @@ Tailwind v4 uses the Vite plugin (`@tailwindcss/vite`) — there is **no `tailwi
 
 ### Deploy Commands
 ```bash
-# Frontend deployment
+# Frontend deployment (builds, deploys files, updates Apache config, validates SPA routes)
 ./deploy/deploy-to-production.sh
 
 # Manual SSH access
 ssh -i ~/.ssh/crypttransact_rsa root@65.20.112.224
 ```
 
+### Canonical Apache Config (CRITICAL)
+
+The deploy script uploads **`deploy/apache-soupfinance.conf`** to the server. This is the ONLY config file that matters. Do NOT edit `deploy/app-soupfinance-com.conf` — it is a stale copy.
+
+All ProxyPass paths and RewriteCond exclusions MUST use trailing slashes:
+- `ProxyPass /client/` (CORRECT) vs `ProxyPass /client` (WRONG — catches `/clients/new`)
+- `RewriteCond !^/client/` (CORRECT) vs `RewriteCond !^/client` (WRONG)
+
+See `.claude/rules/soupfinance-deployment.md` for full rules.
+
 ### Architecture
 ```
 Client -> Cloudflare (DNS/SSL) -> Apache (65.20.112.224) -> Static files
                                                         -> /rest/* proxy to tas.soupmarkets.com
                                                         -> /account/* proxy to tas.soupmarkets.com
+                                                        -> /client/* proxy to tas.soupmarkets.com
 ```
 
-Apache injects `Api-Authorization: Basic {credentials}` header for all proxied requests.
+Apache injects `Api-Authorization: Basic {credentials}` header for all proxied requests. The deploy script validates SPA routes, API proxy, trailing slashes, and Api-Authorization presence after deployment, auto-rolling back on failure.
 
 ## Port Configuration
 

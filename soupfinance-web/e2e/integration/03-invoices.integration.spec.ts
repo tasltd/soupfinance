@@ -48,8 +48,11 @@
  *           invoice-edit-button, invoice-delete-button, invoice-send-button,
  *           invoice-cancel-button, invoice-download-pdf-button
  */
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { backendTestUsers, takeScreenshot } from '../fixtures';
+
+// LXC backend base URL for direct API calls
+const API_BASE = 'http://10.115.213.183:9090';
 
 // ===========================================================================
 // Shared State (persists across serial tests)
@@ -76,7 +79,14 @@ const dueDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().sp
  * Login as admin via the real login form.
  * Checks "remember me" to store token in localStorage for reliable persistence.
  */
-async function loginAsAdmin(page: ReturnType<typeof test.page> extends Promise<infer T> ? T : never) {
+// Added: Helper to get auth token from page storage
+async function getAuthToken(page: Page): Promise<string> {
+  return await page.evaluate(() =>
+    localStorage.getItem('access_token') || sessionStorage.getItem('access_token') || ''
+  );
+}
+
+async function loginAsAdmin(page: Page) {
   await page.goto('/login');
   await page.getByTestId('login-email-input').waitFor({ state: 'visible', timeout: 10000 });
   await page.getByTestId('login-email-input').fill(backendTestUsers.admin.username);
@@ -187,12 +197,35 @@ test.describe('Invoice Integration Tests', () => {
   // =========================================================================
 
   test('detect client availability for create flow', async ({ page }) => {
-    // Changed: Now fetches clients from /rest/client/index.json instead of extracting from invoices
+    // Fix: Probe client API directly first, then check dropdown with longer wait
+    // The /rest/client/index.json endpoint requires max parameter (403 without it)
+    const token = await getAuthToken(page);
+    let apiClientsExist = false;
+
+    if (token) {
+      try {
+        const apiResponse = await page.request.get(
+          `${API_BASE}/rest/client/index.json?max=10`,
+          { headers: { 'X-Auth-Token': token }, maxRedirects: 0, timeout: 15000 }
+        );
+        if (apiResponse.ok()) {
+          const clients = await apiResponse.json().catch(() => []);
+          apiClientsExist = Array.isArray(clients) && clients.length > 0;
+          console.log(`[Invoice Test] API probe: ${clients.length} clients found via direct API`);
+        } else {
+          console.log(`[Invoice Test] API probe: /rest/client/index.json returned ${apiResponse.status()}`);
+        }
+      } catch (e) {
+        console.log(`[Invoice Test] API probe failed: ${e}`);
+      }
+    }
+
     await page.goto('/invoices/new');
     await expect(page.getByTestId('invoice-form-page')).toBeVisible({ timeout: 15000 });
 
-    // Wait for the clients query to populate the dropdown
-    await page.waitForTimeout(5000);
+    // Wait for the clients query to populate the dropdown — longer wait if API confirms clients exist
+    const waitTime = apiClientsExist ? 10000 : 5000;
+    await page.waitForTimeout(waitTime);
 
     const clientSelect = page.getByTestId('invoice-client-select');
     const options = clientSelect.locator('option');
@@ -202,17 +235,24 @@ test.describe('Invoice Integration Tests', () => {
     clientsAvailable = optionCount > 1;
     console.log(`[Invoice Test] Client dropdown options: ${optionCount} (available: ${clientsAvailable})`);
 
+    // If API has clients but dropdown is empty, try waiting even longer (network/proxy lag)
+    if (!clientsAvailable && apiClientsExist) {
+      console.log('[Invoice Test] API has clients but dropdown empty — waiting 10s more for proxy...');
+      await page.waitForTimeout(10000);
+      const retryCount = await options.count();
+      clientsAvailable = retryCount > 1;
+      console.log(`[Invoice Test] Retry: dropdown options: ${retryCount} (available: ${clientsAvailable})`);
+    }
+
     if (clientsAvailable) {
-      // Log the available clients
-      for (let i = 1; i < optionCount; i++) {
+      for (let i = 1; i < Math.min(await options.count(), 6); i++) {
         const text = await options.nth(i).textContent();
         console.log(`[Invoice Test]   Client option ${i}: ${text}`);
       }
     } else {
-      console.log('[Invoice Test] No clients in dropdown — /rest/client/index.json may have returned empty');
+      console.log('[Invoice Test] No clients in dropdown — /rest/client/index.json may return empty via proxy');
     }
 
-    // This test always passes — it's a discovery/probe test
     expect(true).toBeTruthy();
   });
 
