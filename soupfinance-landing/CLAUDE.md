@@ -141,3 +141,12 @@ Add cache-busting headers in Apache:
     Header set Cloudflare-CDN-Cache-Control "no-store"
 </FilesMatch>
 ```
+
+## E2E Testing Requirements
+
+When running E2E tests against the backend (Playwright, Cypress, or any E2E framework), always take confirmation screenshots at key steps to:
+1. Confirm that fixes work as expected
+2. Validate user flows visually
+3. Provide evidence of test success/failure
+
+Screenshots should be taken after login, after key form submissions, after navigation to target pages, and at assertion points. Store screenshots in a  directory.

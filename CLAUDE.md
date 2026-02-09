@@ -217,6 +217,16 @@ Both the Vite dev server and production Apache proxy API requests to the Grails 
 
 ## Testing
 
+### E2E Test Screenshots
+
+When running E2E tests against the backend (Playwright, Cypress, or any E2E framework), always take confirmation screenshots at key steps to:
+1. Confirm that fixes work as expected
+2. Validate user flows visually
+3. Provide evidence of test success/failure
+
+Screenshots should be taken after login, after key form submissions, after navigation to target pages, and at assertion points. Store screenshots in a `test-results/` directory.
+
+
 ### Unit Tests (Vitest + React Testing Library)
 
 **768 tests** across **26 test files** (as of 2026-02-05).
