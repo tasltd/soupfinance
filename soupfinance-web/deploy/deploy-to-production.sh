@@ -184,7 +184,9 @@ else
 fi
 
 # Fix: Check trailing slashes are present on all ProxyPass directives
-TRAILING_SLASH_CHECK=$(ssh $SSH_OPTS ${SERVER_USER}@${SERVER} "grep 'ProxyPass ' ${APACHE_CONF} | grep -v '#' | grep -cv '/$'")
+# NOTE: grep -cv returns exit code 1 when 0 lines match (all have trailing slash = success)
+# The || true prevents set -e from aborting on this expected "no match" case
+TRAILING_SLASH_CHECK=$(ssh $SSH_OPTS ${SERVER_USER}@${SERVER} "grep 'ProxyPass ' ${APACHE_CONF} | grep -v '#' | grep -cv '/$' || true")
 if [ "$TRAILING_SLASH_CHECK" = "0" ]; then
     echo "  ProxyPass trailing slashes: OK (all paths have trailing slashes)"
 else
