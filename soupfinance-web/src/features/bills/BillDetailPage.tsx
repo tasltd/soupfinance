@@ -178,12 +178,12 @@ export function BillDetailPage() {
               <p className="font-medium text-text-light dark:text-text-dark">{bill.vendor?.name || 'N/A'}</p>
             </div>
             <div>
-              <p className="text-sm text-subtle-text">Issue Date</p>
-              <p className="font-medium text-text-light dark:text-text-dark">{bill.issueDate}</p>
+              <p className="text-sm text-subtle-text">Bill Date</p>
+              <p className="font-medium text-text-light dark:text-text-dark">{bill.billDate}</p>
             </div>
             <div>
               <p className="text-sm text-subtle-text">Due Date</p>
-              <p className="font-medium text-text-light dark:text-text-dark">{bill.dueDate}</p>
+              <p className="font-medium text-text-light dark:text-text-dark">{bill.paymentDate}</p>
             </div>
             {bill.notes && (
               <div className="col-span-2">
@@ -229,7 +229,7 @@ export function BillDetailPage() {
         <div className="px-6 py-4 border-b border-border-light dark:border-border-dark">
           <h2 className="text-lg font-bold text-text-light dark:text-text-dark">Line Items</h2>
         </div>
-        {bill.items && bill.items.length > 0 ? (
+        {bill.billItemList && bill.billItemList.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full text-sm" data-testid="bill-items-table">
               <thead className="text-xs text-subtle-text uppercase bg-background-light dark:bg-background-dark">
@@ -242,7 +242,7 @@ export function BillDetailPage() {
                 </tr>
               </thead>
               <tbody>
-                {bill.items.map((item, index) => (
+                {bill.billItemList.map((item, index) => (
                   <tr key={item.id || index} className="border-b border-border-light dark:border-border-dark">
                     <td className="px-6 py-4 text-text-light dark:text-text-dark">{item.description}</td>
                     <td className="px-6 py-4 text-right text-text-light dark:text-text-dark">{item.quantity}</td>

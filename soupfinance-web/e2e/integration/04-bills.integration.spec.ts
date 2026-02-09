@@ -14,11 +14,11 @@
  * The BillFormPage populates the vendor dropdown from the listVendors API.
  *
  * Field mapping (backend -> frontend):
- *   vendor     -> Vendor dropdown (data-testid="bill-vendor-select")
- *   issueDate  -> Issue Date (data-testid="bill-date-input")
- *   dueDate    -> Due Date (data-testid="bill-due-date-input")
- *   notes      -> Notes (data-testid="bill-notes-textarea")
- *   items[]    -> Line items with description, qty, unitPrice, taxRate
+ *   vendor       -> Vendor dropdown (data-testid="bill-vendor-select")
+ *   billDate     -> Issue Date (data-testid="bill-date-input")
+ *   paymentDate  -> Due Date (data-testid="bill-due-date-input")
+ *   notes        -> Notes (data-testid="bill-notes-textarea")
+ *   items[]      -> Line items with description, qty, unitPrice, taxRate
  *
  * Execution order: Runs after invoice tests (03-invoices).
  * Depends on vendors from 02-vendors (for create flow).

@@ -130,8 +130,8 @@ test.describe('Bill Integration Tests', () => {
       // 1. Create bill
       const billData = new URLSearchParams({
         billNumber: `BILL-TEST-${Date.now()}`,
-        issueDate: new Date().toISOString().split('T')[0],
-        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        billDate: new Date().toISOString().split('T')[0],
+        paymentDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         status: 'PENDING',
         subtotal: '1000.00',
         taxAmount: '100.00',

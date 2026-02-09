@@ -40,7 +40,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `soupfinance-web/` | React 19 + TypeScript + Vite 7 + TailwindCSS v4 | Main app — see `soupfinance-web/CLAUDE.md` for detailed patterns |
 | `soupfinance-landing/` | Static HTML marketing site | www.soupfinance.com — see `soupfinance-landing/CLAUDE.md` |
 | `backend/` | LXC container with Grails WAR | Local development backend |
-| `soupfinance-designs/` | HTML mockups (43 screens) | Design reference only |
+| `soupfinance-designs/` | HTML mockups (114 screens) | Design reference only |
 | `plans/` | Architecture plans and backend change requests | Implementation plans |
 | `prd/` | Product Requirements Documents | Modular PRD (see `PRD.md` for index) |
 | `docs/` | User journeys, validation reports | Reference documentation |
@@ -67,6 +67,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | **Deployment Restrictions** | [.claude/rules/deployment-restrictions.md](.claude/rules/deployment-restrictions.md) | **NEVER** deploy to Soupmarkets prod IPs; only soupfinance frontend/landing |
 | **Cloudflare SSL** | [.claude/rules/cloudflare-ssl-configuration.md](.claude/rules/cloudflare-ssl-configuration.md) | Apache MUST have SSL VirtualHost on port 443 for Cloudflare |
 | **Server VHosts** | [.claude/rules/production-server-vhosts.md](.claude/rules/production-server-vhosts.md) | All Apache VHost configs for 65.20.112.224, proxy routes, SSL certs |
+| **Domain Source of Truth** | [.claude/rules/grails-domain-source-of-truth.md](.claude/rules/grails-domain-source-of-truth.md) | ALL frontend types MUST mirror Grails domain classes exactly |
 
 ---
 
@@ -82,6 +83,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | Email Confirm | `POST /account/confirmEmail.json` | Sets password, enables user |
 | List Clients | `GET /rest/client/index.json` | KYC Client entities (name, email, phone) |
 | Client Account | `GET /rest/accountServices/show/:id.json` | AccountServices (the invoice FK target) |
+
+### Tenant Resolution (CRITICAL)
+
+The `Account` domain IS the tenant — `account.id` = `tenant_id`. Registration creates Account + Agent + SbUser, and `tenant_id` MUST be set on both Agent and SbUser to `account.id`. If `sb_user.tenant_id` is NULL, login works but ALL data queries fail with `TenantNotFoundException` (500 errors).
+
+The `SoupDiscriminatorTenantResolver` resolves tenants via: session → `sb_user.tenant_id` → hostname match. The `AccountController` needs `@WithoutTenant` annotation since Account is the root tenant entity. See `plans/soupfinance-tenant-resolution-fix.md` for the full backend fix plan.
+
+### Two API Clients (CRITICAL)
+
+The frontend uses two Axios instances in `soupfinance-web/src/api/client.ts`:
+
+| Client | baseURL | Use Case |
+|--------|---------|----------|
+| `apiClient` | `/rest` | All REST endpoints (`/rest/vendor/`, `/rest/invoice/`, etc.) |
+| `accountClient` | `''` (empty) | `/account/*` endpoints (NOT under `/rest/`) |
+
+**NEVER use `apiClient` for `/account/` endpoints** — it produces `/rest/account/...` which returns 403 on production. Both clients share the same interceptors (X-Auth-Token auth, 401 redirect, logging).
 
 ---
 
@@ -296,7 +314,9 @@ source env-variables.sh && ./gradlew assembleDeployToSoupfinance
 | 401 after fresh backend restart | Missing `soupfinance-web` ApiConsumer in `api_consumer` DB table | Insert record: `name='soupfinance-web'`, `secret` matching `.env.lxc.local` value |
 | Backend won't start | Gradle lock files or port conflict | Check `lxc exec soupfinance-backend -- journalctl -u soupmarkets.service -n 50` |
 
-**ApiConsumer requirement:** The `api_consumer` table must have a record with `name` matching `VITE_API_CONSUMER_ID` and `secret` matching `VITE_API_CONSUMER_SECRET` from `.env.lxc.local`. Without this, ALL API requests through the proxy fail with 401.
+**ApiConsumer requirement:** The `api_consumer` table must have a record with `name` matching `VITE_API_CONSUMER_ID` and `secret` matching `VITE_API_CONSUMER_SECRET` from `.env.lxc.local`. The `tenant_id` column must be set to `ff8081817217e9f3017217f19ccc0000` (not NULL). The secret is compared directly (no hashing). Without a valid ApiConsumer record, ALL API requests through the proxy fail with 401.
+
+**Password hash format:** `{bcrypt}$2a$10$...` (68 chars). Raw `$2b$10$...` without the `{bcrypt}` prefix causes login failure. After DB password changes, restart backend to clear Hibernate's cached hashes. Backend startup takes ~100-145s on the seed DB.
 
 ---
 
@@ -320,7 +340,7 @@ source env-variables.sh && ./gradlew assembleDeployToSoupfinance
 
 ## Implementing Features
 
-1. Check `soupfinance-designs/` for HTML mockups (43 screens covering all UI states)
+1. Check `soupfinance-designs/` for HTML mockups (114 screens covering all UI states)
 2. Use existing feature modules as templates (copy invoice patterns for new entities)
 3. Follow design system: primary `#f24a0d`, font Manrope, icons Material Symbols Outlined
 4. Include dark mode variants (`dark:` prefix)

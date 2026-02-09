@@ -167,9 +167,9 @@ describe('Invoices API Integration', () => {
     it('creates invoice with JSON body and CSRF in URL query string', async () => {
       // Arrange
       const newInvoice = {
-        invoiceNumber: 'INV-003',
-        issueDate: '2026-01-20',
-        dueDate: '2026-02-20',
+        number: 3,
+        invoiceDate: '2026-01-20',
+        paymentDate: '2026-02-20',
         client: { id: 'client-uuid-123' },
         totalAmount: 2500.00,
         notes: 'Test invoice',
@@ -201,7 +201,7 @@ describe('Invoices API Integration', () => {
 
       // Assert - verify JSON body contains entity data only (no CSRF in body)
       const postData = mockAxiosInstance.post.mock.calls[0][1] as Record<string, unknown>;
-      expect(postData.invoiceNumber).toBe('INV-003');
+      expect(postData.number).toBe(3);
       expect(postData.client).toEqual({ id: 'client-uuid-123' });
       expect(postData.totalAmount).toBe(2500.00);
       expect(postData.notes).toBe('Test invoice');
@@ -237,7 +237,7 @@ describe('Invoices API Integration', () => {
       const invoiceId = 'invoice-uuid-789';
       const updateData = {
         notes: 'Updated notes',
-        dueDate: '2026-03-15',
+        paymentDate: '2026-03-15',
       };
 
       const mockResponse = { id: invoiceId, ...updateData, status: 'DRAFT' };

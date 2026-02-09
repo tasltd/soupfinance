@@ -245,10 +245,8 @@ export interface Bill extends BaseEntity {
   numberPrefix?: string; // Added: Bill number prefix
   billNumber: string; // Display-friendly bill number
   vendor: { id: string; name?: string; serialised?: string; class?: string };
-  billDate: string; // Changed: Backend uses billDate (not issueDate)
-  issueDate: string; // NOTE: Legacy alias kept for backward compatibility
-  paymentDate: string; // Changed: Backend uses paymentDate (not dueDate)
-  dueDate: string; // NOTE: Legacy alias kept for backward compatibility
+  billDate: string; // Changed: Backend field name (was previously misnamed as issueDate)
+  paymentDate: string; // Changed: Backend field name (was previously misnamed as dueDate)
   currency?: string; // Added: Transaction currency
   exchangeRate?: number; // Added: Exchange rate when currency != account default
   purchaseOrderNumber?: string; // Added: PO number reference
@@ -260,8 +258,7 @@ export interface Bill extends BaseEntity {
   amountPaid: number;
   amountDue: number;
   notes?: string;
-  items?: BillItem[];
-  billItemList?: BillItem[]; // Added: Backend field name for bill items
+  billItemList?: BillItem[]; // Changed: Backend field name (was previously aliased as items)
 }
 
 export interface BillItem extends BaseEntity {

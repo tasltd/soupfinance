@@ -71,7 +71,7 @@ src/features/{feature}/
 Features: `accounting` (vouchers, journal entries, transaction register), `auth`, `bills`, `clients`, `corporate` (KYC), `dashboard`, `invoices`, `ledger` (chart of accounts), `payments` (record payments against invoices/bills), `reports`, `settings`, `vendors`
 
 ### API Layer (`src/api/`)
-- **client.ts**: Axios instance with X-Auth-Token authentication, auto-401 redirect, response normalization utilities
+- **client.ts**: Two Axios instances: `apiClient` (baseURL `/rest`) for REST endpoints, `accountClient` (baseURL `''`) for `/account/*` endpoints. Both have X-Auth-Token auth, auto-401 redirect, and response normalization utilities. **CRITICAL**: AccountController is NOT under `/rest/` — using `apiClient` for `/account/` produces `/rest/account/...` which returns 403 on production
 - **auth.ts**: Two auth flows: (1) Admin login via `POST /rest/api/login` (JSON), (2) Corporate 2FA via `POST /client/authenticate.json` + `POST /client/verifyCode.json` (FormData). Token management with dual-storage (rememberMe → localStorage, default → sessionStorage)
 - **endpoints/{domain}.ts**: Domain-specific API functions (invoices, bills, vendors, clients, ledger, corporate, reports, settings, domainData). **Note:** `payments` feature has no dedicated endpoint file — uses bill/voucher endpoints
 - **endpoints/email.ts**: Email service — `emailApi.sendInvoice()`, `sendBill()`, `sendReport()` with PDF attachments (base64-encoded Blobs)
@@ -79,7 +79,7 @@ Features: `accounting` (vouchers, journal entries, transaction register), `auth`
 - **endpoints/clients.ts**: Client + AccountServices APIs (invoices reference `accountServices.id` as FK, client metadata from `Client` entity)
 - **endpoints/ledger.ts**: Ledger accounts, transactions, vouchers (payment/receipt/deposit), journal entries (multi-line). CSRF only needed for POST/save; PUT/DELETE do not require CSRF
 - **endpoints/domainData.ts**: Shared domain data lookups — tax rates and payment terms are **hardcoded** (no backend endpoint); service descriptions from `/rest/serviceDescription/index.json`; **payment methods** from `/rest/paymentMethod/index.json` (domain class, dynamic)
-- **endpoints/settings.ts**: 6 sub-APIs: `agentApi` (staff CRUD), `accountBankDetailsApi` (bank accounts), `accountPersonApi` (directors/signatories), `rolesApi` (`/sbRole/index.json`), `banksApi` (`/bank/index.json`), `accountSettingsApi` (`/account/current.json`)
+- **endpoints/settings.ts**: 6 sub-APIs: `agentApi` (staff CRUD), `accountBankDetailsApi` (bank accounts), `accountPersonApi` (directors/signatories), `rolesApi` (`/sbRole/index.json`), `banksApi` (`/bank/index.json`), `accountSettingsApi` (`/account/index.json` — returns array, take first element)
 
 Key patterns:
 - Backend uses `application/json` content type (migrated from form-urlencoded 2026-01). **Exception:** OTP endpoints (`/client/authenticate.json`, `/client/verifyCode.json`) still use FormData
@@ -508,7 +508,7 @@ This prevents the proxy from intercepting frontend routes like `/accounting/tran
 | Symptom | Cause | Fix |
 |---------|-------|-----|
 | Login returns 401 but credentials are correct | Stale MariaDB connection pool | `lxc exec soupfinance-backend -- systemctl restart soupmarkets.service` |
-| ALL API requests return 401 | Missing ApiConsumer record in DB | Insert `soupfinance-web` into `api_consumer` table with secret matching `.env.lxc.local` |
+| ALL API requests return 401 | Missing ApiConsumer record in DB or `tenant_id` is NULL | Insert `soupfinance-web` into `api_consumer` table with secret matching `.env.lxc.local`; ensure `tenant_id = 'ff8081817217e9f3017217f19ccc0000'` |
 | Backend returns 302 instead of JSON | Missing CSRF token in POST request | Fetch CSRF token via `getCsrfToken()` first (only needed for POST/save) |
 | Backend logs show `Connection is closed` | MariaDB connection pool exhausted | Restart backend service |
 | `ENOSPC: System limit for number of file watchers reached` | inotify watcher limit too low | `sudo sysctl -w fs.inotify.max_user_watches=524288` or use `CHOKIDAR_USEPOLLING=true` |
@@ -516,7 +516,13 @@ This prevents the proxy from intercepting frontend routes like `/accounting/tran
 | Bill endpoints return 500/403 | LazyInitializationException on billItemList | Backend Issue #1 — needs custom GSON template for Bill |
 | Report queries crash backend (socket hang up) | Income statement on 3145+ accounts exhausts memory (~60s query) | Restart backend; use `safeApiGet` in tests; avoid concurrent heavy reports |
 | Tests fail with ECONNREFUSED 127.0.0.1:9090 | Grails returns 302 redirect to `https://localhost:9090` | Use `maxRedirects: 0` on all direct API calls |
-| Backend takes ~60-90s to start | Grails cold start with large seed DB | Wait for full startup: `curl -sf http://localhost:9090/rest/api/login` returns 405 when ready |
+| Backend takes ~100-145s to start | Grails cold start with large seed DB | Wait for full startup: `curl -sf http://localhost:9090/rest/api/login` returns 405 when ready |
+| Login works but ALL data queries return 500 | `sb_user.tenant_id` is NULL (TenantNotFoundException) | Set tenant_id to the user's Account ID in DB; see `plans/soupfinance-tenant-resolution-fix.md` |
+| Login fails after DB password reset | Hibernate caches password hashes from startup | Restart backend: `lxc exec soupfinance-backend -- systemctl restart soupmarkets.service` |
+
+**Password hash format:** Spring Security DelegatingPasswordEncoder requires `{bcrypt}$2a$10$...` prefix (68 chars total). Raw `$2b$10$...` without prefix causes login failure. After DB password changes, restart backend to clear Hibernate's cached hashes.
+
+**ApiConsumer secret:** Compared directly (no MD5). `.env.lxc.local` sends raw secret, DB stores raw secret. The `api_consumer.tenant_id` must be set (not NULL) — value `ff8081817217e9f3017217f19ccc0000` for the Demo/seed tenant.
 
 **LXC Database:** `soupbroker_seed_source` on `10.115.213.114:3306`, user `soupbroker` / password `soupbroker`
 

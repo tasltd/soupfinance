@@ -84,8 +84,8 @@ export function BillListPage() {
                       </Link>
                     </td>
                     <td className="px-6 py-4 text-text-light dark:text-text-dark">{bill.vendor?.name || 'N/A'}</td>
-                    <td className="px-6 py-4 text-subtle-text">{bill.issueDate}</td>
-                    <td className="px-6 py-4 text-subtle-text">{bill.dueDate}</td>
+                    <td className="px-6 py-4 text-subtle-text">{bill.billDate}</td>
+                    <td className="px-6 py-4 text-subtle-text">{bill.paymentDate}</td>
                     <td className="px-6 py-4 text-right font-medium text-text-light dark:text-text-dark">
                       {formatCurrency(bill.totalAmount)}
                     </td>

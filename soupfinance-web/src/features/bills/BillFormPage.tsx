@@ -82,8 +82,8 @@ export function BillFormPage() {
   useEffect(() => {
     if (bill) {
       setVendorId(bill.vendor?.id || '');
-      setBillDate(bill.billDate || bill.issueDate || '');
-      setPaymentDate(bill.paymentDate || bill.dueDate || '');
+      setBillDate(bill.billDate || '');
+      setPaymentDate(bill.paymentDate || '');
       setNotes(bill.notes || '');
       setPurchaseOrderNumber(bill.purchaseOrderNumber || '');
       setSalesOrderNumber(bill.salesOrderNumber || '');
@@ -93,7 +93,7 @@ export function BillFormPage() {
       if (bill.purchaseOrderNumber || bill.salesOrderNumber || bill.currency || bill.exchangeRate) {
         setShowAdvanced(true);
       }
-      const items = bill.items || bill.billItemList;
+      const items = bill.billItemList;
       if (items && items.length > 0) {
         setLineItems(
           items.map((item: BillItem) => ({

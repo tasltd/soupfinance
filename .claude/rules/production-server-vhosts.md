@@ -141,7 +141,8 @@ Apache matches incoming requests to VHosts by:
 ## App VHost: app.soupfinance.com
 
 **Config file**: `/etc/apache2/sites-available/app-soupfinance-com.conf`
-**Local copy**: `soupfinance-web/deploy/app-soupfinance-com.conf`
+**Local copy (canonical)**: `soupfinance-web/deploy/apache-soupfinance.conf` (deploy script uploads this file)
+**NOTE**: `soupfinance-web/deploy/app-soupfinance-com.conf` is a STALE COPY — do NOT edit it
 **Enabled via**: Symlink in `sites-enabled/`
 
 ### Purpose
@@ -181,14 +182,14 @@ RewriteBase /
 RewriteRule ^index\.html$ - [L]                    # index.html → serve directly
 RewriteCond %{REQUEST_FILENAME} !-f                # NOT a real file
 RewriteCond %{REQUEST_FILENAME} !-d                # NOT a real directory
-RewriteCond %{REQUEST_URI} !^/rest                 # NOT API
-RewriteCond %{REQUEST_URI} !^/application          # NOT health check
-RewriteCond %{REQUEST_URI} !^/client               # NOT client API
-RewriteCond %{REQUEST_URI} !^/account              # NOT registration API
+RewriteCond %{REQUEST_URI} !^/rest/                # NOT API (trailing slash required)
+RewriteCond %{REQUEST_URI} !^/application/         # NOT health check
+RewriteCond %{REQUEST_URI} !^/client/              # NOT client API (prevents /clients/new match)
+RewriteCond %{REQUEST_URI} !^/account/             # NOT registration API (prevents /accounting match)
 RewriteRule . /index.html [L]                      # Serve SPA entry point
 ```
 
-**RULE**: If you add a new proxy path (e.g., `/webhook`), you MUST also add a `RewriteCond %{REQUEST_URI} !^/webhook` exclusion in BOTH port 80 and port 443 blocks.
+**RULE**: If you add a new proxy path (e.g., `/webhook/`), you MUST also add a `RewriteCond %{REQUEST_URI} !^/webhook/` exclusion (with trailing slash) in BOTH port 80 and port 443 blocks.
 
 ### Proxy Routes
 
@@ -208,7 +209,7 @@ RewriteRule . /index.html [L]                      # Serve SPA entry point
 | `X-Forwarded-Host` | `app.soupfinance.com` | Tell backend the original domain |
 | `X-Real-IP` | `%{REMOTE_ADDR}s` | Client IP (port 80 only) |
 
-### Full Config (Authoritative)
+### Full Config (Authoritative — mirrors `deploy/apache-soupfinance.conf`)
 
 ```apache
 <VirtualHost *:80>
@@ -224,10 +225,10 @@ RewriteRule . /index.html [L]                      # Serve SPA entry point
         RewriteRule ^index\.html$ - [L]
         RewriteCond %{REQUEST_FILENAME} !-f
         RewriteCond %{REQUEST_FILENAME} !-d
-        RewriteCond %{REQUEST_URI} !^/rest
-        RewriteCond %{REQUEST_URI} !^/application
-        RewriteCond %{REQUEST_URI} !^/client
-        RewriteCond %{REQUEST_URI} !^/account
+        RewriteCond %{REQUEST_URI} !^/rest/
+        RewriteCond %{REQUEST_URI} !^/application/
+        RewriteCond %{REQUEST_URI} !^/client/
+        RewriteCond %{REQUEST_URI} !^/account/
         RewriteRule . /index.html [L]
     </Directory>
 
@@ -237,14 +238,14 @@ RewriteRule . /index.html [L]                      # Serve SPA entry point
 
     RequestHeader set Api-Authorization "Basic {BASE64_CREDENTIALS}"
 
-    ProxyPass /rest https://tas.soupmarkets.com/rest
-    ProxyPassReverse /rest https://tas.soupmarkets.com/rest
-    ProxyPass /application https://tas.soupmarkets.com/application
-    ProxyPassReverse /application https://tas.soupmarkets.com/application
-    ProxyPass /client https://tas.soupmarkets.com/client
-    ProxyPassReverse /client https://tas.soupmarkets.com/client
-    ProxyPass /account https://tas.soupmarkets.com/account
-    ProxyPassReverse /account https://tas.soupmarkets.com/account
+    ProxyPass /rest/ https://tas.soupmarkets.com/rest/
+    ProxyPassReverse /rest/ https://tas.soupmarkets.com/rest/
+    ProxyPass /application/ https://tas.soupmarkets.com/application/
+    ProxyPassReverse /application/ https://tas.soupmarkets.com/application/
+    ProxyPass /client/ https://tas.soupmarkets.com/client/
+    ProxyPassReverse /client/ https://tas.soupmarkets.com/client/
+    ProxyPass /account/ https://tas.soupmarkets.com/account/
+    ProxyPassReverse /account/ https://tas.soupmarkets.com/account/
 
     RequestHeader set X-Forwarded-Proto "https"
     RequestHeader set X-Forwarded-Host "app.soupfinance.com"
@@ -270,10 +271,10 @@ RewriteRule . /index.html [L]                      # Serve SPA entry point
         RewriteRule ^index\.html$ - [L]
         RewriteCond %{REQUEST_FILENAME} !-f
         RewriteCond %{REQUEST_FILENAME} !-d
-        RewriteCond %{REQUEST_URI} !^/rest
-        RewriteCond %{REQUEST_URI} !^/application
-        RewriteCond %{REQUEST_URI} !^/client
-        RewriteCond %{REQUEST_URI} !^/account
+        RewriteCond %{REQUEST_URI} !^/rest/
+        RewriteCond %{REQUEST_URI} !^/application/
+        RewriteCond %{REQUEST_URI} !^/client/
+        RewriteCond %{REQUEST_URI} !^/account/
         RewriteRule . /index.html [L]
     </Directory>
 
@@ -283,14 +284,14 @@ RewriteRule . /index.html [L]                      # Serve SPA entry point
 
     RequestHeader set Api-Authorization "Basic {BASE64_CREDENTIALS}"
 
-    ProxyPass /rest https://tas.soupmarkets.com/rest
-    ProxyPassReverse /rest https://tas.soupmarkets.com/rest
-    ProxyPass /application https://tas.soupmarkets.com/application
-    ProxyPassReverse /application https://tas.soupmarkets.com/application
-    ProxyPass /client https://tas.soupmarkets.com/client
-    ProxyPassReverse /client https://tas.soupmarkets.com/client
-    ProxyPass /account https://tas.soupmarkets.com/account
-    ProxyPassReverse /account https://tas.soupmarkets.com/account
+    ProxyPass /rest/ https://tas.soupmarkets.com/rest/
+    ProxyPassReverse /rest/ https://tas.soupmarkets.com/rest/
+    ProxyPass /application/ https://tas.soupmarkets.com/application/
+    ProxyPassReverse /application/ https://tas.soupmarkets.com/application/
+    ProxyPass /client/ https://tas.soupmarkets.com/client/
+    ProxyPassReverse /client/ https://tas.soupmarkets.com/client/
+    ProxyPass /account/ https://tas.soupmarkets.com/account/
+    ProxyPassReverse /account/ https://tas.soupmarkets.com/account/
 
     RequestHeader set X-Forwarded-Proto "https"
     RequestHeader set X-Forwarded-Host "app.soupfinance.com"
@@ -600,16 +601,16 @@ React Router uses client-side URLs like `/invoices`, `/login`, `/settings/users`
 
 ### Adding a New Proxy Path (Checklist)
 
-When adding a new proxy path (e.g., `/webhook`):
+When adding a new proxy path (e.g., `/webhook/`):
 
-1. Add `RewriteCond %{REQUEST_URI} !^/webhook` to **port 80 Directory block**
-2. Add `RewriteCond %{REQUEST_URI} !^/webhook` to **port 443 Directory block**
-3. Add `ProxyPass /webhook https://tas.soupmarkets.com/webhook` to **port 80**
-4. Add `ProxyPassReverse /webhook https://tas.soupmarkets.com/webhook` to **port 80**
-5. Add `ProxyPass /webhook https://tas.soupmarkets.com/webhook` to **port 443**
-6. Add `ProxyPassReverse /webhook https://tas.soupmarkets.com/webhook` to **port 443**
+1. Add `RewriteCond %{REQUEST_URI} !^/webhook/` to **port 80 Directory block** (trailing slash!)
+2. Add `RewriteCond %{REQUEST_URI} !^/webhook/` to **port 443 Directory block** (trailing slash!)
+3. Add `ProxyPass /webhook/ https://tas.soupmarkets.com/webhook/` to **port 80** (trailing slash!)
+4. Add `ProxyPassReverse /webhook/ https://tas.soupmarkets.com/webhook/` to **port 80**
+5. Add `ProxyPass /webhook/ https://tas.soupmarkets.com/webhook/` to **port 443** (trailing slash!)
+6. Add `ProxyPassReverse /webhook/ https://tas.soupmarkets.com/webhook/` to **port 443**
 7. Test: `apache2ctl configtest && systemctl reload apache2`
-8. Update local copy: `soupfinance-web/deploy/app-soupfinance-com.conf`
+8. Update canonical config: `soupfinance-web/deploy/apache-soupfinance.conf` (NOT `app-soupfinance-com.conf`)
 9. Commit the local copy change
 
 **HARD RULE**: Both VHost blocks (80 and 443) MUST have identical rewrite exclusions and proxy routes. They diverge only in SSL directives.
@@ -773,13 +774,16 @@ cd soupfinance-landing
 ### Deploy VHost Config Change
 
 ```bash
-# 1. Edit local copy
-vim soupfinance-web/deploy/app-soupfinance-com.conf
+# 1. Edit canonical config (NOT app-soupfinance-com.conf which is stale)
+vim soupfinance-web/deploy/apache-soupfinance.conf
 
-# 2. Push to server
+# 2. Deploy using the deploy script (preferred — includes validation)
+cd soupfinance-web && ./deploy/deploy-to-production.sh
+
+# OR manual push:
 scp -i ~/.ssh/crypttransact_rsa \
-    soupfinance-web/deploy/app-soupfinance-com.conf \
-    root@65.20.112.224:/etc/apache2/sites-available/
+    soupfinance-web/deploy/apache-soupfinance.conf \
+    root@65.20.112.224:/etc/apache2/sites-available/app-soupfinance-com.conf
 
 # 3. Test and reload (NEVER restart — reload is zero-downtime)
 ssh -i ~/.ssh/crypttransact_rsa root@65.20.112.224 \

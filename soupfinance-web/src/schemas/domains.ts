@@ -122,11 +122,12 @@ export const billItemSchema = baseEntitySchema.extend({
   amount: z.number(),
 });
 
+// Changed: billDate/paymentDate/billItemList match backend domain field names
 export const billSchema = baseEntitySchema.extend({
   billNumber: z.string(),
   vendor: fkReferenceSchema,
-  issueDate: z.string(),
-  dueDate: z.string(),
+  billDate: z.string(),
+  paymentDate: z.string(),
   status: billStatusSchema,
   subtotal: z.number(),
   taxAmount: z.number(),
@@ -134,7 +135,7 @@ export const billSchema = baseEntitySchema.extend({
   amountPaid: z.number(),
   amountDue: z.number(),
   notes: optionalString,
-  items: z.array(billItemSchema).optional(),
+  billItemList: z.array(billItemSchema).optional(),
 });
 
 export type Bill = z.infer<typeof billSchema>;

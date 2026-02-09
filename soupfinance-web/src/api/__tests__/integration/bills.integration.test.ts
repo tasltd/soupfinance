@@ -92,14 +92,14 @@ describe('Bills API Integration', () => {
       const { listBills } = await import('../../endpoints/bills');
 
       // Act
-      await listBills({ max: 10, offset: 20, sort: 'dueDate', order: 'asc' });
+      await listBills({ max: 10, offset: 20, sort: 'paymentDate', order: 'asc' });
 
       // Assert
       const callUrl = mockAxiosInstance.get.mock.calls[0][0] as string;
       expect(callUrl).toContain('/bill/index.json?');
       expect(callUrl).toContain('max=10');
       expect(callUrl).toContain('offset=20');
-      expect(callUrl).toContain('sort=dueDate');
+      expect(callUrl).toContain('sort=paymentDate');
       expect(callUrl).toContain('order=asc');
     });
 
@@ -158,8 +158,8 @@ describe('Bills API Integration', () => {
       // Arrange
       const newBill = {
         billNumber: 'BILL-003',
-        issueDate: '2026-01-15',
-        dueDate: '2026-02-15',
+        billDate: '2026-01-15',
+        paymentDate: '2026-02-15',
         vendor: { id: 'vendor-uuid-456' },
         totalAmount: 5000.00,
         notes: 'Office equipment',
@@ -226,7 +226,7 @@ describe('Bills API Integration', () => {
       const billId = 'bill-uuid-789';
       const updateData = {
         notes: 'Updated bill notes',
-        dueDate: '2026-03-01',
+        paymentDate: '2026-03-01',
       };
 
       const mockResponse = { id: billId, ...updateData, status: 'PENDING' };

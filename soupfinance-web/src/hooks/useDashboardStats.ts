@@ -57,9 +57,9 @@ function calculateStats(invoices: Invoice[], bills: Bill[]): DashboardStats {
   // Calculate expenses MTD (sum of bills)
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  // Changed: Use issueDate (Bill type has issueDate, not billDate)
+  // Changed: Use billDate (backend field name, was previously misnamed as issueDate)
   const billsMTD = bills.filter(bill => {
-    const billDate = new Date(bill.issueDate || bill.dateCreated || '');
+    const billDate = new Date(bill.billDate || bill.dateCreated || '');
     return billDate >= startOfMonth;
   });
   const expensesMTD = billsMTD.reduce((sum, bill) => sum + (bill.totalAmount || 0), 0);

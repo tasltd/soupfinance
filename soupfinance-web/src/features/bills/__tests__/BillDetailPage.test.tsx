@@ -90,9 +90,7 @@ function createMockBill(overrides: Partial<Bill> = {}): Bill {
     billNumber: 'BILL-2024-001',
     vendor: { id: 'vendor-1', name: 'Acme Supplies' },
     billDate: '2024-01-15',
-    issueDate: '2024-01-15',
     paymentDate: '2024-02-15',
-    dueDate: '2024-02-15',
     status: 'PENDING' as BillStatus,
     subtotal: 1500,
     taxAmount: 150,
@@ -101,7 +99,7 @@ function createMockBill(overrides: Partial<Bill> = {}): Bill {
     amountDue: 1100,
     notes: 'Monthly supplies order',
     // Component uses 'items' not 'lineItems'
-    items: [createMockLineItem()],
+    billItemList: [createMockLineItem()],
     dateCreated: '2024-01-15T10:00:00Z',
     lastUpdated: '2024-01-15T10:00:00Z',
     ...overrides,
@@ -214,8 +212,8 @@ describe('BillDetailPage', () => {
     it('renders the bill info card with vendor details', async () => {
       const mockBill = createMockBill({
         vendor: { id: 'v-1', name: 'Premium Vendors Inc' },
-        issueDate: '2024-03-01',
-        dueDate: '2024-03-31',
+        billDate: '2024-03-01',
+        paymentDate: '2024-03-31',
       });
       vi.mocked(getBill).mockResolvedValue(mockBill);
       vi.mocked(listBillPayments).mockResolvedValue([]);
@@ -272,7 +270,7 @@ describe('BillDetailPage', () => {
 
     it('renders line items table when items exist', async () => {
       const mockBill = createMockBill({
-        items: [
+        billItemList: [
           createMockLineItem({ id: 'item-1', description: 'Service A', quantity: 5, unitPrice: 100, amount: 500 }),
           createMockLineItem({ id: 'item-2', description: 'Service B', quantity: 2, unitPrice: 250, amount: 500 }),
         ],
@@ -289,7 +287,7 @@ describe('BillDetailPage', () => {
     });
 
     it('renders empty state when no line items', async () => {
-      const mockBill = createMockBill({ items: [] });
+      const mockBill = createMockBill({ billItemList: [] });
       vi.mocked(getBill).mockResolvedValue(mockBill);
       vi.mocked(listBillPayments).mockResolvedValue([]);
 

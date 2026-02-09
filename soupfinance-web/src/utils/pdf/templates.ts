@@ -437,7 +437,7 @@ export function generateBillHtml(
           <div class="document-info">
             <div class="document-title">BILL</div>
             <div class="document-number">${escapeHtml(bill.billNumber)}</div>
-            <div class="document-date">Date: ${escapeHtml(bill.issueDate)}</div>
+            <div class="document-date">Date: ${escapeHtml(bill.billDate)}</div>
             <div class="status-badge ${statusClass}">${escapeHtml(bill.status)}</div>
           </div>
         </div>
@@ -450,7 +450,7 @@ export function generateBillHtml(
           <div class="party">
             <div class="party-label">Payment Due</div>
             <div class="party-details">
-              <strong>Due Date:</strong> ${escapeHtml(bill.dueDate)}
+              <strong>Due Date:</strong> ${escapeHtml(bill.paymentDate)}
             </div>
           </div>
         </div>
@@ -466,7 +466,7 @@ export function generateBillHtml(
             </tr>
           </thead>
           <tbody>
-            ${(bill.items || []).map(item => `
+            ${(bill.billItemList || []).map(item => `
               <tr>
                 <td>${escapeHtml(item.description)}</td>
                 <td class="text-right">${item.quantity}</td>

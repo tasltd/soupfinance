@@ -1,8 +1,8 @@
 # SoupFinance User Journeys
 
-**Version**: 3.0
+**Version**: 3.1
 **Created**: 2026-01-20
-**Updated**: 2026-01-30
+**Updated**: 2026-02-09
 **Status**: ARCHITECTURE REFACTOR COMPLETE
 
 This document describes all user journeys in the SoupFinance corporate accounting platform, mapping UI flows to API endpoints and backend services.
@@ -69,21 +69,21 @@ The following sections are **DEPRECATED** and have been replaced:
 
 ## 1. Authentication Flow
 
-### 1.1 Login Journey (2FA with OTP)
+### 1.1 Login Journey (Username/Password)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                           LOGIN FLOW (2FA)                                  │
+│                      LOGIN FLOW (Username/Password)                         │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
-│  ┌──────────┐    ┌──────────────┐    ┌──────────────┐    ┌──────────────┐  │
-│  │  Login   │───▶│ Enter Phone/ │───▶│  Enter OTP   │───▶│  Dashboard   │  │
-│  │   Page   │    │    Email     │    │    Code      │    │    Page      │  │
-│  └──────────┘    └──────────────┘    └──────────────┘    └──────────────┘  │
-│       │                 │                   │                   │          │
-│       ▼                 ▼                   ▼                   ▼          │
-│  /login          POST /rest/          POST /rest/         GET /rest/      │
-│                  otp/request.json     otp/verify.json     dashboard.json   │
+│  ┌──────────┐    ┌──────────────┐    ┌──────────────┐                      │
+│  │  Login   │───▶│ Enter User/  │───▶│  Dashboard   │                      │
+│  │   Page   │    │   Password   │    │    Page      │                      │
+│  └──────────┘    └──────────────┘    └──────────────┘                      │
+│       │                 │                   │                               │
+│       ▼                 ▼                   ▼                               │
+│  /login          POST /api/login      GET /rest/                           │
+│                                       user/current.json                    │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -93,19 +93,17 @@ The following sections are **DEPRECATED** and have been replaced:
 
 | Step | User Action | API Endpoint | Description |
 |------|-------------|--------------|-------------|
-| 1 | Enter phone/email | - | User enters contact information |
-| 2 | Click "Send OTP" | `POST /rest/otp/request.json` | System sends OTP to phone/email |
-| 3 | Enter OTP code | - | User enters received 6-digit code |
-| 4 | Click "Verify" | `POST /rest/otp/verify.json` | Validates OTP, returns auth token |
-| 5 | Redirect | - | Navigate to `/dashboard` |
+| 1 | Enter username/email | - | User enters credentials |
+| 2 | Enter password | - | User enters password |
+| 3 | Click "Sign In" | `POST /api/login` | Validates credentials, returns `access_token` and `roles` |
+| 4 | Redirect | - | Navigate to `/dashboard` |
 
 **API Functions**:
-- `requestOTP(contact: string)` → Sends OTP to user
-- `verifyOTP(code: string)` → Validates OTP, returns `AuthUser` with `access_token`
+- `login({ username, password, rememberMe })` → Returns `AuthUser` with `access_token`
 
 **Auth Storage**:
-- Token stored in `localStorage` as `auth_token`
-- User data stored via Zustand `authStore`
+- Token stored as `access_token` in `sessionStorage` (default) or `localStorage` (if rememberMe=true)
+- User data stored via custom auth store (React Context)
 
 ---
 
@@ -117,7 +115,7 @@ The following sections are **DEPRECATED** and have been replaced:
 | 2 | Click "Logout" | - | Clears local auth state |
 | 3 | Redirect | - | Navigate to `/login` |
 
-**API Function**: `logout()` → Clears `localStorage` and Zustand store
+**API Function**: `logout()` → Clears `sessionStorage`/`localStorage` auth token and user state
 
 ---
 
@@ -298,9 +296,12 @@ The following sections are **DEPRECATED** and have been replaced:
 ```
 
 **API Endpoints**:
-- `GET /rest/financeReports/dashboardStats.json` → KPI metrics
+- `GET /rest/invoice/index.json?max=1000` → Fetch invoices (stats computed client-side by `useDashboardStats` hook)
+- `GET /rest/bill/index.json?max=1000` → Fetch bills (stats computed client-side)
 - `GET /rest/invoice/index.json?max=5&sort=dateCreated&order=desc` → Recent invoices
 - `GET /rest/bill/index.json?max=5&sort=dateCreated&order=desc` → Recent bills
+
+> **Note**: Dashboard KPIs are calculated client-side from invoice/bill data. There is no `/rest/financeReports/dashboardStats.json` endpoint.
 
 **Dashboard Metrics**:
 | Metric | Source |
@@ -327,7 +328,7 @@ The following sections are **DEPRECATED** and have been replaced:
 ├─────────────────────────────────────────────────────────────────────────────┤
 │  [Search...] [Status ▼] [Date Range] [+ New Invoice]                        │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│  Invoice #  │ Client      │ Issue Date │ Due Date  │ Amount   │ Status     │
+│  Invoice #  │ Client      │ Inv. Date  │ Due Date  │ Amount   │ Status     │
 │─────────────┼─────────────┼────────────┼───────────┼──────────┼────────────│
 │  INV-0001   │ Acme Corp   │ 2026-01-15 │ 2026-02-14│ $5,000   │ ● SENT     │
 │  INV-0002   │ Beta Inc    │ 2026-01-14 │ 2026-02-13│ $3,200   │ ● PAID     │
@@ -409,14 +410,15 @@ The following sections are **DEPRECATED** and have been replaced:
 | 3 | Save draft | `POST /rest/invoice/save.json` (status=DRAFT) |
 | 4 | Save & send | `POST /rest/invoice/save.json` + `POST /rest/invoice/send/{id}.json` |
 
-**Invoice Data Model**:
+**Invoice Data Model** (matches Grails domain `soupbroker.finance.Invoice`):
 ```typescript
 interface Invoice {
   id: string;
-  invoiceNumber: string;      // Auto-generated: INV-YYYY-NNNN
-  client: { id: string };     // FK to Client
-  issueDate: string;          // ISO date
-  dueDate: string;            // ISO date
+  number: number;             // Auto-generated invoice number
+  numberPrefix?: string;      // Prefix (e.g., "INV")
+  accountServices: { id: string }; // FK to AccountServices (invoice recipient)
+  invoiceDate: string;        // ISO date (backend field name)
+  paymentDate: string;        // ISO date (backend field name, i.e. due date)
   status: InvoiceStatus;
   subtotal: number;           // Calculated
   taxAmount: number;          // Calculated
@@ -426,18 +428,18 @@ interface Invoice {
   amountDue: number;          // totalAmount - amountPaid
   notes?: string;
   terms?: string;
-  items: InvoiceItem[];
+  invoiceItemList: InvoiceItem[];  // Backend hasMany field name
 }
 
 interface InvoiceItem {
   id: string;
   invoice: { id: string };
-  description: string;
+  serviceDescription: { id: string }; // FK to ServiceDescription
   quantity: number;
   unitPrice: number;
   taxRate: number;            // Percentage (e.g., 10 for 10%)
   discountPercent: number;    // Percentage
-  amount: number;             // Calculated: qty * price * (1 + tax) * (1 - discount)
+  amount: number;             // Calculated
 }
 ```
 
@@ -497,7 +499,7 @@ interface InvoiceItem {
 | Cancel | `POST /rest/invoice/cancel/{id}.json` | Status → CANCELLED |
 | Record Payment | `POST /rest/invoicePayment/save.json` | Updates amountPaid |
 | Delete | `DELETE /rest/invoice/delete/{id}.json` | Soft delete |
-| Download PDF | `GET /rest/invoice/pdf/{id}.json` | PDF download |
+| Download PDF | Client-side generation via `jspdf` | PDF generated in browser |
 
 ---
 
@@ -608,14 +610,14 @@ interface InvoiceItem {
 | 2 | Fill form | - |
 | 3 | Save | `POST /rest/bill/save.json` |
 
-**Bill Data Model**:
+**Bill Data Model** (matches Grails domain `soupbroker.finance.Bill`):
 ```typescript
 interface Bill {
   id: string;
   billNumber: string;         // Auto or vendor's number
   vendor: { id: string };     // FK to Vendor
-  issueDate: string;
-  dueDate: string;
+  billDate: string;           // Backend field name (i.e. issue date)
+  paymentDate: string;        // Backend field name (i.e. due date)
   status: BillStatus;
   subtotal: number;
   taxAmount: number;
@@ -623,7 +625,7 @@ interface Bill {
   amountPaid: number;
   amountDue: number;
   notes?: string;
-  items: BillItem[];
+  billItemList: BillItem[];   // Backend hasMany field name
 }
 ```
 
@@ -1396,18 +1398,21 @@ interface TrialBalanceItem {
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/rest/otp/request.json` | Request OTP |
-| POST | `/rest/otp/verify.json` | Verify OTP |
+| POST | `/api/login` | Login with username/password, returns `access_token` and `roles` |
+| GET | `/rest/user/current.json` | Get current authenticated user |
 
-### Registration APIs
+### Registration APIs (Tenant Registration)
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/rest/corporate/save.json` | Register corporate |
-| GET | `/rest/user/checkEmail.json` | Check email exists |
-| GET | `/rest/user/checkPhone.json` | Check phone exists |
+| POST | `/account/register.json` | Register new tenant (no password, email confirmation) |
+| GET | `/account/index.json` | List accounts (JSESSIONID auth) |
+| GET | `/account/edit/{id}.json` | Get account edit form + CSRF |
+| PUT | `/account/update/{id}.json` | Update account settings |
 
-### Corporate KYC APIs
+### Corporate KYC APIs [DEPRECATED]
+
+> These endpoints are from the old Corporate architecture. SoupFinance now uses Tenant Registration instead.
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -1415,13 +1420,6 @@ interface TrialBalanceItem {
 | GET | `/rest/corporate/show/{id}.json` | Get corporate by ID |
 | PUT | `/rest/corporate/update/{id}.json` | Update corporate |
 | POST | `/rest/corporate/submitKyc/{id}.json` | Submit KYC |
-| GET | `/rest/corporateAccountPerson/index.json` | List directors |
-| POST | `/rest/corporateAccountPerson/save.json` | Add director |
-| PUT | `/rest/corporateAccountPerson/update/{id}.json` | Update director |
-| DELETE | `/rest/corporateAccountPerson/delete/{id}.json` | Delete director |
-| GET | `/rest/corporateDocuments/index.json` | List documents |
-| POST | `/rest/corporateDocuments/save.json` | Upload document |
-| DELETE | `/rest/corporateDocuments/delete/{id}.json` | Delete document |
 
 ### Invoice APIs
 
@@ -1509,7 +1507,8 @@ interface TrialBalanceItem {
 | GET | `/rest/financeReports/agedPayables.json` | A/P Aging |
 | GET | `/rest/financeReports/accountBalances.json` | Account Balances |
 | GET | `/rest/financeReports/accountTransactions.json` | Account Transactions |
-| GET | `/rest/financeReports/dashboardStats.json` | Dashboard KPIs |
+
+> **Note**: Dashboard KPIs are computed client-side from invoice/bill data (no dedicated API endpoint).
 
 ---
 
@@ -1554,7 +1553,7 @@ interface TrialBalanceItem {
 
 ---
 
-**Document Version**: 1.0
-**Generated**: 2026-01-20
+**Document Version**: 3.1
+**Generated**: 2026-02-09
 **Total Routes**: 34
 **Total API Endpoints**: 70+

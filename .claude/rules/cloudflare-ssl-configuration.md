@@ -59,16 +59,16 @@ Both domains MUST have **two VirtualHosts**:
         RewriteRule ^index\.html$ - [L]
         RewriteCond %{REQUEST_FILENAME} !-f
         RewriteCond %{REQUEST_FILENAME} !-d
-        RewriteCond %{REQUEST_URI} !^/rest
-        RewriteCond %{REQUEST_URI} !^/account
-        RewriteCond %{REQUEST_URI} !^/client
+        RewriteCond %{REQUEST_URI} !^/rest/
+        RewriteCond %{REQUEST_URI} !^/account/
+        RewriteCond %{REQUEST_URI} !^/client/
         RewriteRule . /index.html [L]
     </Directory>
 
-    # API Proxy
+    # API Proxy (trailing slashes required — see soupfinance-deployment.md)
     SSLProxyEngine On
-    ProxyPass /rest https://tas.soupmarkets.com/rest
-    ProxyPassReverse /rest https://tas.soupmarkets.com/rest
+    ProxyPass /rest/ https://tas.soupmarkets.com/rest/
+    ProxyPassReverse /rest/ https://tas.soupmarkets.com/rest/
     # ... other proxy rules ...
 </VirtualHost>
 ```

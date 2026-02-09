@@ -71,9 +71,7 @@ function createMockBill(overrides: Partial<Bill> = {}): Bill {
     billNumber: 'BILL-2024-001',
     vendor: { id: 'vendor-1', name: 'Acme Supplies' },
     billDate: '2024-01-15',
-    issueDate: '2024-01-15',
     paymentDate: '2024-02-15',
-    dueDate: '2024-02-15',
     status: 'DRAFT' as BillStatus,
     subtotal: 1000,
     taxAmount: 100,
@@ -81,7 +79,7 @@ function createMockBill(overrides: Partial<Bill> = {}): Bill {
     amountPaid: 0,
     amountDue: 1100,
     notes: 'Test bill notes',
-    items: [
+    billItemList: [
       {
         id: 'item-1',
         bill: { id: 'bill-123' },
@@ -291,13 +289,11 @@ describe('BillFormPage', () => {
         createMockVendor({ id: 'vendor-1', name: 'Acme Supplies' }),
         createMockVendor({ id: 'vendor-2', name: 'Office Depot' }),
       ];
-      // Fix: Use billDate/paymentDate (backend field names) — component prioritizes these over issueDate/dueDate
+      // Fix: Use billDate/paymentDate (backend field names) — component prioritizes these over legacy names
       const mockBill = createMockBill({
         vendor: { id: 'vendor-1', name: 'Acme Supplies' },
         billDate: '2024-03-01',
-        issueDate: '2024-03-01',
         paymentDate: '2024-03-31',
-        dueDate: '2024-03-31',
         notes: 'Existing notes',
       });
       vi.mocked(listVendors).mockResolvedValue(mockVendors);
@@ -329,7 +325,7 @@ describe('BillFormPage', () => {
     it('populates existing line items', async () => {
       const mockVendors = [createMockVendor()];
       const mockBill = createMockBill({
-        items: [
+        billItemList: [
           { id: 'item-1', bill: { id: 'bill-123' }, description: 'Item A', quantity: 2, unitPrice: 100, taxRate: 5, amount: 210 },
           { id: 'item-2', bill: { id: 'bill-123' }, description: 'Item B', quantity: 3, unitPrice: 50, taxRate: 10, amount: 165 },
         ],
