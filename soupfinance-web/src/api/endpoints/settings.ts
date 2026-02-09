@@ -8,8 +8,8 @@
  * - Account configuration
  */
 // Changed: Added CSRF token imports for mutation operations (POST/PUT/DELETE)
-import axios from 'axios';
-import apiClient, { toQueryString, getCsrfToken, getCsrfTokenForEdit, csrfQueryString } from '../client';
+// Fix: Use shared accountClient from client.ts (has proper interceptors for 401/logging)
+import apiClient, { accountClient, toQueryString, getCsrfToken, getCsrfTokenForEdit, csrfQueryString } from '../client';
 import type {
   Agent,
   AgentFormData,
@@ -21,22 +21,6 @@ import type {
   SbRole,
   Bank,
 } from '../../types/settings';
-
-// Fix: Separate axios client for /account/* endpoints (NOT under /rest/)
-// The account controller lives at /account/*, not /rest/account/*.
-// Using apiClient (baseURL: '/rest') would produce /rest/account/... which returns 403 on production.
-// This client uses empty baseURL so requests go directly to /account/*.
-const accountClient = axios.create({
-  baseURL: '',
-  headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-  timeout: 30000,
-});
-
-// Fix: Helper to get auth token for account client requests
-function getAuthHeaders(): Record<string, string> {
-  const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token');
-  return token ? { 'X-Auth-Token': token } : {};
-}
 
 // ============================================================================
 // Common Types
@@ -372,14 +356,11 @@ export const accountSettingsApi = {
   /**
    * Get current account settings
    * Fix: Uses /account/index.json (NOT /account/current.json which returns 404).
-   * The AccountController uses JSESSIONID cookie auth (set during login), not X-Auth-Token.
-   * The browser automatically forwards the JSESSIONID through the Vite/Apache proxy.
+   * Auth is handled by the shared accountClient interceptor (X-Auth-Token from dual-storage).
    * Response is an array — take the first element (single-tenant user has one account).
    */
   get: async (): Promise<AccountSettings> => {
-    const response = await accountClient.get<AccountSettings[]>('/account/index.json', {
-      headers: getAuthHeaders(),
-    });
+    const response = await accountClient.get<AccountSettings[]>('/account/index.json');
     // Changed: Backend returns array of accounts; take first element
     const accounts = response.data;
     if (!Array.isArray(accounts) || accounts.length === 0) {
@@ -392,16 +373,14 @@ export const accountSettingsApi = {
    * Update account settings
    * Fix: Uses /account/edit/{id}.json for CSRF and /account/update/{id}.json for save.
    * The AccountController uses standard Grails CRUD with ID in the path.
-   * Changed: Added CSRF token for Grails withForm protection
    */
   update: async (data: Partial<AccountSettings>): Promise<AccountSettings> => {
     if (!data.id) {
       throw new Error('Account ID is required for update');
     }
-    // Fix: Get CSRF token from /account/edit/{id}.json (not /account/edit/current.json which 404s)
+    // Fix: Get CSRF token from /account/edit/{id}.json
     const editResponse = await accountClient.get<Record<string, unknown>>(
-      `/account/edit/${data.id}.json`,
-      { headers: getAuthHeaders() }
+      `/account/edit/${data.id}.json`
     );
     const editData = editResponse.data;
     const token = (editData.SYNCHRONIZER_TOKEN || (editData.account as Record<string, unknown>)?.SYNCHRONIZER_TOKEN) as string || '';
@@ -411,8 +390,7 @@ export const accountSettingsApi = {
     // Fix: Use /account/update/{id}.json (standard Grails CRUD pattern)
     const response = await accountClient.put<AccountSettings>(
       `/account/update/${data.id}.json?${csrfParams.toString()}`,
-      data,
-      { headers: getAuthHeaders() }
+      data
     );
     return response.data;
   },

@@ -118,6 +118,75 @@ apiClient.interceptors.response.use(
   }
 );
 
+// Fix: Shared client for /account/* endpoints (NOT under /rest/).
+// AccountController lives at /account/*, not /rest/account/*.
+// Using apiClient (baseURL: '/rest') would produce /rest/account/... which returns 403 on production.
+// This client reuses the same interceptors (auth, 401 handling, logging) as apiClient.
+export const accountClient = axios.create({
+  baseURL: '',
+  headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+  timeout: 30000,
+});
+
+// Added: Apply the same request interceptor (auth token + logging) to accountClient
+accountClient.interceptors.request.use(
+  (config: InternalAxiosRequestConfig) => {
+    const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token');
+    if (token) {
+      config.headers['X-Auth-Token'] = token;
+    }
+    config.metadata = { startTime: Date.now() };
+    const method = config.method?.toUpperCase() || 'GET';
+    const url = config.url || '';
+    logger.api(method, url);
+    return config;
+  },
+  (error) => {
+    logger.error('Request interceptor error', error);
+    return Promise.reject(error);
+  }
+);
+
+// Added: Apply the same response interceptor (401 redirect + logging) to accountClient
+accountClient.interceptors.response.use(
+  (response: AxiosResponse) => {
+    const duration = response.config.metadata?.startTime
+      ? Date.now() - response.config.metadata.startTime
+      : undefined;
+    const method = response.config.method?.toUpperCase() || 'GET';
+    const url = response.config.url || '';
+    logger.api(method, url, response.status, duration);
+    return response;
+  },
+  (error: AxiosError) => {
+    const duration = error.config?.metadata?.startTime
+      ? Date.now() - error.config.metadata.startTime
+      : undefined;
+    const method = error.config?.method?.toUpperCase() || 'GET';
+    const url = error.config?.url || '';
+    const status = error.response?.status;
+    if (status) {
+      logger.api(method, url, status, duration);
+    }
+    logger.error(`API Error: ${method} ${url}`, {
+      status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+    });
+    if (status === 401) {
+      logger.auth('session_expired');
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('user');
+      sessionStorage.removeItem('access_token');
+      sessionStorage.removeItem('user');
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 export default apiClient;
 
 /**
