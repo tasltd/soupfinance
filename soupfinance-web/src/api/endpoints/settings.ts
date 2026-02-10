@@ -355,25 +355,20 @@ export const banksApi = {
 export const accountSettingsApi = {
   /**
    * Get current account settings
-   * Changed: Uses agent → tenant_id → account/show flow.
-   * Flow: 1) GET /rest/agent/index.json → get agent with account.id (= tenant_id)
-   *       2) GET /account/show/{accountId}.json → get account settings
-   * The agent endpoint works under /rest/ (token auth enabled).
-   * The account/show endpoint needs backend filter chain fix for production.
+   * Changed: Uses tenantId from auth store (populated by /rest/user/current.json during token validation).
+   * Flow: authStore.validateToken() → /rest/user/current.json → tenantId stored on user
+   *       → accountSettingsApi.get() reads tenantId → GET /account/show/{tenantId}.json
+   * No extra API call needed — tenantId is already available from auth validation.
    */
   get: async (): Promise<AccountSettings> => {
-    // Step 1: Get current user's agent to find the account (tenant) ID
-    const agentResponse = await apiClient.get<Agent[]>('/agent/index.json?max=1');
-    const agents = agentResponse.data;
-    if (!Array.isArray(agents) || agents.length === 0) {
-      throw new Error('No agent found for current user');
+    // Changed: Read tenantId from auth store (set during validateToken from /rest/user/current.json)
+    const { useAuthStore } = await import('../../stores/authStore');
+    const tenantId = useAuthStore.getState().user?.tenantId;
+    if (!tenantId) {
+      throw new Error('No tenant ID found. User session may not be fully initialized.');
     }
-    const accountId = agents[0].account?.id;
-    if (!accountId) {
-      throw new Error('Agent has no account ID. Account may not be set up correctly.');
-    }
-    // Step 2: Fetch account settings using the account ID
-    const response = await accountClient.get<AccountSettings>(`/account/show/${accountId}.json`);
+    // Fetch account settings using the tenant ID (= account ID)
+    const response = await accountClient.get<AccountSettings>(`/account/show/${tenantId}.json`);
     return response.data;
   },
 

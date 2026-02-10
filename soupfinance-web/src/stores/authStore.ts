@@ -103,9 +103,18 @@ export const useAuthStore = create<AuthState>()(
         }
 
         try {
-          // Added: Make a lightweight API call to verify token is valid
-          // Use /rest/user/current.json or similar endpoint that requires auth
-          await apiClient.get('/user/current.json');
+          // Changed: Capture response from /rest/user/current.json to get tenantId
+          // SbUserController.current() returns { username, email, roles, tenantId, agentId }
+          const response = await apiClient.get<AuthUser>('/user/current.json');
+          const serverUser = response.data;
+
+          // Changed: Enrich stored user with tenantId from server response
+          if (serverUser?.tenantId) {
+            const currentUser = get().user;
+            if (currentUser && !currentUser.tenantId) {
+              set({ user: { ...currentUser, tenantId: serverUser.tenantId } });
+            }
+          }
           return true;
         } catch (error) {
           // Added: Token is invalid, clear auth state
@@ -135,8 +144,10 @@ export const useAuthStore = create<AuthState>()(
         const isValid = await get().validateToken();
 
         if (isValid) {
+          // Changed: Prefer enriched user from store (validateToken adds tenantId from server)
+          // The stale `user` from localStorage lacks tenantId — use store version instead
           set({
-            user,
+            user: get().user || user,
             isAuthenticated: true,
             isLoading: false,
             isInitialized: true,

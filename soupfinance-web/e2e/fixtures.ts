@@ -330,6 +330,8 @@ export async function mockTokenValidationApi(
 ) {
   if (isLxcMode()) return;
 
+  // Changed: Include tenantId in user/current response — accountSettingsApi.get() reads it
+  // SbUserController.current() returns tenantId (= account ID) which is the tenant identifier
   await page.route('**/rest/user/current.json*', (route) => {
     if (success) {
       route.fulfill({
@@ -339,6 +341,8 @@ export async function mockTokenValidationApi(
           username: 'admin',
           email: 'admin@soupfinance.com',
           roles: ['ROLE_ADMIN', 'ROLE_USER'],
+          tenantId: 'account-001',
+          agentId: 'agent-001',
         }),
       });
     } else {
@@ -353,34 +357,7 @@ export async function mockTokenValidationApi(
     }
   });
 
-  // Changed: Mock agent endpoint for account settings flow (agent → tenant_id → account/show)
-  // accountSettingsApi.get() calls /rest/agent/index.json first to get the account ID
-  await page.route('**/rest/agent/index.json*', (route) => {
-    if (success) {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([{
-          id: 'agent-001',
-          firstName: 'Admin',
-          lastName: 'User',
-          account: { id: 'account-001', name: 'Test Company' },
-        }]),
-      });
-    } else {
-      route.fulfill({
-        status: 401,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          error: 'Unauthorized',
-          message: 'Not authenticated',
-        }),
-      });
-    }
-  });
-
-  // Changed: Mock account/show endpoint (replaces /account/index.json)
-  // accountSettingsApi.get() calls /account/show/{id}.json after getting agent
+  // Changed: Mock account/show endpoint — accountSettingsApi.get() uses tenantId from auth store
   await page.route('**/account/show/*.json*', (route) => {
     if (success) {
       route.fulfill({
