@@ -13,8 +13,9 @@ export function TopNav() {
   const { darkMode, toggleDarkMode, setMobileSidebarOpen, notificationsOpen, setNotificationsOpen } =
     useUIStore();
 
+  // Changed: Reduced mobile padding from px-6 to px-4 to match MainLayout content padding
   return (
-    <header className="flex items-center justify-between whitespace-nowrap border-b border-border-light dark:border-border-dark px-6 lg:px-8 py-3 bg-surface-light dark:bg-surface-dark sticky top-0 z-10">
+    <header className="flex items-center justify-between whitespace-nowrap border-b border-border-light dark:border-border-dark px-4 sm:px-6 lg:px-8 py-3 bg-surface-light dark:bg-surface-dark sticky top-0 z-10">
       {/* Left: Mobile menu button */}
       <div className="flex items-center gap-4">
         <button

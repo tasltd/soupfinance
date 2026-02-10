@@ -20,7 +20,8 @@ export function MainLayout() {
         <TopNav />
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto">
+        {/* Changed: Added overflow-x-hidden to prevent page-level horizontal scroll on mobile */}
+        <main className="flex-1 overflow-y-auto overflow-x-hidden">
           {/* Changed: Reduced mobile padding from p-6 to p-4 for more content space on small screens */}
           <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
             <Outlet />
