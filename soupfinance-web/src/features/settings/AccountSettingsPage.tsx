@@ -55,12 +55,15 @@ export default function AccountSettingsPage() {
   }, []);
 
   // Fetch current settings
+  // Changed: Added retry and better error handling for account settings loading
   const { data: currentSettings, isLoading, error } = useQuery({
     queryKey: ['accountSettings'],
     queryFn: () => {
       logger.info('Fetching account settings');
       return accountSettingsApi.get();
     },
+    retry: 2,
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 5000),
   });
 
   const {
@@ -149,13 +152,20 @@ export default function AccountSettingsPage() {
   }
 
   if (error) {
+    // Changed: Show actual error details and suggest common fixes
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return (
-      <div className="p-12 text-center bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark">
+      <div className="p-8 sm:p-12 text-center bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark">
         <span className="material-symbols-outlined text-6xl text-danger/50 mb-4 block">error</span>
         <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">
           Failed to load account settings
         </h3>
-        <p className="text-subtle-text mb-4">There was an error loading your account settings.</p>
+        <p className="text-subtle-text mb-2">There was an error loading your account settings.</p>
+        <p className="text-subtle-text text-xs mb-4 max-w-md mx-auto">
+          {errorMessage === 'No account settings found'
+            ? 'Your account may not be fully set up yet. Please contact support if this persists.'
+            : 'Please check your connection and try again.'}
+        </p>
         <button
           onClick={() => queryClient.invalidateQueries({ queryKey: ['accountSettings'] })}
           className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm"
@@ -380,7 +390,8 @@ export default function AccountSettingsPage() {
         </div>
 
         {/* Form Actions */}
-        <div className="flex justify-between items-center">
+        {/* Changed: Stack vertically on mobile for better touch targets */}
+        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
           <div>
             {isDirty && (
               <span className="text-sm text-warning">You have unsaved changes</span>
@@ -398,7 +409,7 @@ export default function AccountSettingsPage() {
             <button
               type="submit"
               disabled={!isDirty || isSubmitting || saveMutation.isPending}
-              className="h-10 px-6 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90 disabled:opacity-50 flex items-center gap-2"
+              className="h-10 px-6 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90 disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {(isSubmitting || saveMutation.isPending) && (
                 <span className="material-symbols-outlined text-lg animate-spin">progress_activity</span>

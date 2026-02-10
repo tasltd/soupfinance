@@ -105,3 +105,12 @@ html.dark ::-webkit-scrollbar-track {
 html.dark ::-webkit-scrollbar-thumb {
   background: var(--color-border-dark);
 }
+
+/* Added: Hide scrollbar utility for horizontal scroll containers (tabs, etc.) */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}

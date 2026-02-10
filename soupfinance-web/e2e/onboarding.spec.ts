@@ -606,9 +606,9 @@ test.describe('Corporate Onboarding Flow', () => {
     });
 
     test('shows loading state while fetching documents', async ({ page }) => {
-      // Added: Set up delayed API response
+      // Changed: Increased delay from 1s to 3s for reliable loading state detection
       await page.route(`**/rest/corporateDocuments/index*`, async (route) => {
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        await new Promise((resolve) => setTimeout(resolve, 3000));
         route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -618,8 +618,8 @@ test.describe('Corporate Onboarding Flow', () => {
 
       await page.goto(BASE_URL_DOCUMENTS);
 
-      // Added: Should show loading spinner
-      await expect(page.locator('.animate-spin').first()).toBeVisible();
+      // Changed: Added timeout to handle race condition with page load
+      await expect(page.locator('.animate-spin').first()).toBeVisible({ timeout: 3000 });
       await takeScreenshot(page, 'onboarding-documents-loading');
     });
   });
@@ -775,9 +775,9 @@ test.describe('Corporate Onboarding Flow', () => {
     });
 
     test('shows loading state while fetching data', async ({ page }) => {
-      // Added: Set up delayed API response
+      // Changed: Increased delay from 1s to 3s for reliable loading state detection
       await page.route(`**/rest/corporate/show/${CORPORATE_ID}*`, async (route) => {
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        await new Promise((resolve) => setTimeout(resolve, 3000));
         route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -789,8 +789,8 @@ test.describe('Corporate Onboarding Flow', () => {
 
       await page.goto(BASE_URL_STATUS);
 
-      // Added: Should show loading spinner
-      await expect(page.locator('.animate-spin').first()).toBeVisible();
+      // Changed: Added timeout to handle race condition with page load
+      await expect(page.locator('.animate-spin').first()).toBeVisible({ timeout: 3000 });
       await takeScreenshot(page, 'onboarding-status-loading');
     });
   });

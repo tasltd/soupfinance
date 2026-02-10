@@ -49,7 +49,8 @@ export default function SettingsLayout() {
       </div>
 
       {/* Sub-navigation Tabs */}
-      <nav className="flex flex-wrap gap-2 border-b border-border-light dark:border-border-dark pb-4">
+      {/* Changed: Scrollable tabs on mobile instead of wrapping (prevents text truncation) */}
+      <nav className="flex gap-2 overflow-x-auto border-b border-border-light dark:border-border-dark pb-4 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-hide">
         {settingsNavItems.map((item) => {
           const isActive = location.pathname.startsWith(item.path);
           return (
@@ -57,7 +58,7 @@ export default function SettingsLayout() {
               key={item.path}
               to={item.path}
               className={`
-                flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors
+                flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0
                 ${
                   isActive
                     ? 'bg-primary text-white'
@@ -65,7 +66,7 @@ export default function SettingsLayout() {
                 }
               `}
             >
-              <span className="material-symbols-outlined text-lg">{item.icon}</span>
+              <span className="material-symbols-outlined text-lg hidden sm:inline">{item.icon}</span>
               {item.label}
             </NavLink>
           );

@@ -57,40 +57,41 @@ export function InvoiceListPage() {
           </div>
         ) : invoices?.length ? (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm" data-testid="invoice-list-table">
+            {/* Changed: Added min-w for proper horizontal scroll on mobile */}
+            <table className="w-full min-w-[700px] text-sm" data-testid="invoice-list-table">
               <thead className="text-xs text-subtle-text uppercase bg-background-light dark:bg-background-dark">
                 <tr>
-                  <th className="px-6 py-3 text-left">Invoice #</th>
+                  <th className="px-4 sm:px-6 py-3 text-left">Invoice #</th>
                   {/* Changed: Label from Account to Client */}
-                  <th className="px-6 py-3 text-left">Client</th>
-                  <th className="px-6 py-3 text-left">Invoice Date</th>
-                  <th className="px-6 py-3 text-left">Due Date</th>
-                  <th className="px-6 py-3 text-right">Amount</th>
-                  <th className="px-6 py-3 text-center">Status</th>
-                  <th className="px-6 py-3 text-center">Actions</th>
+                  <th className="px-4 sm:px-6 py-3 text-left">Client</th>
+                  <th className="px-4 sm:px-6 py-3 text-left">Invoice Date</th>
+                  <th className="px-4 sm:px-6 py-3 text-left">Due Date</th>
+                  <th className="px-4 sm:px-6 py-3 text-right">Amount</th>
+                  <th className="px-4 sm:px-6 py-3 text-center">Status</th>
+                  <th className="px-4 sm:px-6 py-3 text-center">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {invoices.map((invoice) => (
                   <tr key={invoice.id} className="border-b border-border-light dark:border-border-dark hover:bg-primary/5" data-testid={`invoice-row-${invoice.id}`}>
-                    <td className="px-6 py-4">
+                    <td className="px-4 sm:px-6 py-4">
                       <Link to={`/invoices/${invoice.id}`} className="font-medium text-primary hover:underline" data-testid={`invoice-link-${invoice.id}`}>
                         {String(invoice.number)}
                       </Link>
                     </td>
-                    <td className="px-6 py-4 text-text-light dark:text-text-dark">{invoice.accountServices?.serialised || 'N/A'}</td>
-                    <td className="px-6 py-4 text-subtle-text">{invoice.invoiceDate}</td>
-                    <td className="px-6 py-4 text-subtle-text">{invoice.paymentDate}</td>
-                    <td className="px-6 py-4 text-right font-medium text-text-light dark:text-text-dark">
+                    <td className="px-4 sm:px-6 py-4 text-text-light dark:text-text-dark">{invoice.accountServices?.serialised || 'N/A'}</td>
+                    <td className="px-4 sm:px-6 py-4 text-subtle-text">{invoice.invoiceDate}</td>
+                    <td className="px-4 sm:px-6 py-4 text-subtle-text">{invoice.paymentDate}</td>
+                    <td className="px-4 sm:px-6 py-4 text-right font-medium text-text-light dark:text-text-dark">
                       {formatCurrency(invoice.totalAmount)}
                     </td>
-                    <td className="px-6 py-4 text-center">
+                    <td className="px-4 sm:px-6 py-4 text-center">
                       {/* Fix: invoice.status is optional, default to DRAFT */}
                       <span className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${getStatusStyle(invoice.status || 'DRAFT')}`} data-testid={`invoice-status-${invoice.id}`}>
                         {invoice.status || 'DRAFT'}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-center">
+                    <td className="px-4 sm:px-6 py-4 text-center">
                       <Link to={`/invoices/${invoice.id}/edit`} className="text-primary hover:underline text-sm" data-testid={`invoice-edit-${invoice.id}`}>
                         Edit
                       </Link>

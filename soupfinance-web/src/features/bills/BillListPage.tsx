@@ -62,42 +62,43 @@ export function BillListPage() {
           </div>
         ) : bills?.length ? (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm" data-testid="bill-list-table">
+            {/* Changed: Added min-w for proper horizontal scroll on mobile */}
+            <table className="w-full min-w-[800px] text-sm" data-testid="bill-list-table">
               <thead className="text-xs text-subtle-text uppercase bg-background-light dark:bg-background-dark">
                 <tr>
-                  <th className="px-6 py-3 text-left">Bill #</th>
-                  <th className="px-6 py-3 text-left">Vendor</th>
-                  <th className="px-6 py-3 text-left">Issue Date</th>
-                  <th className="px-6 py-3 text-left">Due Date</th>
-                  <th className="px-6 py-3 text-right">Amount</th>
-                  <th className="px-6 py-3 text-right">Balance Due</th>
-                  <th className="px-6 py-3 text-center">Status</th>
-                  <th className="px-6 py-3 text-center">Actions</th>
+                  <th className="px-4 sm:px-6 py-3 text-left">Bill #</th>
+                  <th className="px-4 sm:px-6 py-3 text-left">Vendor</th>
+                  <th className="px-4 sm:px-6 py-3 text-left">Issue Date</th>
+                  <th className="px-4 sm:px-6 py-3 text-left">Due Date</th>
+                  <th className="px-4 sm:px-6 py-3 text-right">Amount</th>
+                  <th className="px-4 sm:px-6 py-3 text-right">Balance Due</th>
+                  <th className="px-4 sm:px-6 py-3 text-center">Status</th>
+                  <th className="px-4 sm:px-6 py-3 text-center">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {bills.map((bill) => (
                   <tr key={bill.id} className="border-b border-border-light dark:border-border-dark hover:bg-primary/5" data-testid={`bill-row-${bill.id}`}>
-                    <td className="px-6 py-4">
+                    <td className="px-4 sm:px-6 py-4">
                       <Link to={`/bills/${bill.id}`} className="font-medium text-primary hover:underline" data-testid={`bill-link-${bill.id}`}>
                         {bill.billNumber}
                       </Link>
                     </td>
-                    <td className="px-6 py-4 text-text-light dark:text-text-dark">{bill.vendor?.name || 'N/A'}</td>
-                    <td className="px-6 py-4 text-subtle-text">{bill.billDate}</td>
-                    <td className="px-6 py-4 text-subtle-text">{bill.paymentDate}</td>
-                    <td className="px-6 py-4 text-right font-medium text-text-light dark:text-text-dark">
+                    <td className="px-4 sm:px-6 py-4 text-text-light dark:text-text-dark">{bill.vendor?.name || 'N/A'}</td>
+                    <td className="px-4 sm:px-6 py-4 text-subtle-text">{bill.billDate}</td>
+                    <td className="px-4 sm:px-6 py-4 text-subtle-text">{bill.paymentDate}</td>
+                    <td className="px-4 sm:px-6 py-4 text-right font-medium text-text-light dark:text-text-dark">
                       {formatCurrency(bill.totalAmount)}
                     </td>
-                    <td className="px-6 py-4 text-right font-medium text-text-light dark:text-text-dark">
+                    <td className="px-4 sm:px-6 py-4 text-right font-medium text-text-light dark:text-text-dark">
                       {formatCurrency(bill.amountDue)}
                     </td>
-                    <td className="px-6 py-4 text-center">
+                    <td className="px-4 sm:px-6 py-4 text-center">
                       <span className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${getStatusStyle(bill.status)}`} data-testid={`bill-status-${bill.id}`}>
                         {bill.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-center">
+                    <td className="px-4 sm:px-6 py-4 text-center">
                       <Link to={`/bills/${bill.id}/edit`} className="text-primary hover:underline text-sm" data-testid={`bill-edit-${bill.id}`}>
                         Edit
                       </Link>

@@ -142,15 +142,16 @@ export default function UserListPage() {
           </div>
         ) : users?.length ? (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            {/* Changed: Added min-w for proper horizontal scroll on mobile */}
+            <table className="w-full min-w-[700px] text-sm">
               <thead className="text-xs text-subtle-text uppercase bg-background-light dark:bg-background-dark">
                 <tr>
-                  <th className="px-6 py-3 text-left">Name</th>
-                  <th className="px-6 py-3 text-left">Email / Username</th>
-                  <th className="px-6 py-3 text-left">Role</th>
-                  <th className="px-6 py-3 text-center">Director/Signatory</th>
-                  <th className="px-6 py-3 text-center">Status</th>
-                  <th className="px-6 py-3 text-center">Actions</th>
+                  <th className="px-4 sm:px-6 py-3 text-left">Name</th>
+                  <th className="px-4 sm:px-6 py-3 text-left">Email / Username</th>
+                  <th className="px-4 sm:px-6 py-3 text-left">Role</th>
+                  <th className="px-4 sm:px-6 py-3 text-center">Director/Signatory</th>
+                  <th className="px-4 sm:px-6 py-3 text-center">Status</th>
+                  <th className="px-4 sm:px-6 py-3 text-center">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -159,7 +160,7 @@ export default function UserListPage() {
                     key={agent.id}
                     className="border-b border-border-light dark:border-border-dark hover:bg-primary/5"
                   >
-                    <td className="px-6 py-4">
+                    <td className="px-4 sm:px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="flex-shrink-0 size-9 rounded-full bg-primary/10 flex items-center justify-center">
                           <span className="text-primary font-semibold text-sm">
@@ -180,13 +181,13 @@ export default function UserListPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-text-light dark:text-text-dark">
+                    <td className="px-4 sm:px-6 py-4 text-text-light dark:text-text-dark">
                       {getUserEmail(agent)}
                     </td>
-                    <td className="px-6 py-4 text-text-light dark:text-text-dark">
+                    <td className="px-4 sm:px-6 py-4 text-text-light dark:text-text-dark">
                       <span className="text-xs">{getUserRoles(agent)}</span>
                     </td>
-                    <td className="px-6 py-4 text-center">
+                    <td className="px-4 sm:px-6 py-4 text-center">
                       {hasAccountPerson(agent) ? (
                         <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300">
                           <span className="material-symbols-outlined text-sm">badge</span>
@@ -196,7 +197,7 @@ export default function UserListPage() {
                         <span className="text-subtle-text text-xs">-</span>
                       )}
                     </td>
-                    <td className="px-6 py-4 text-center">
+                    <td className="px-4 sm:px-6 py-4 text-center">
                       {agent.disabled ? (
                         <span className="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300">
                           Disabled
@@ -211,7 +212,7 @@ export default function UserListPage() {
                         </span>
                       )}
                     </td>
-                    <td className="px-6 py-4 text-center">
+                    <td className="px-4 sm:px-6 py-4 text-center">
                       <div className="flex items-center justify-center gap-2">
                         <Link
                           to={`/settings/users/${agent.id}`}

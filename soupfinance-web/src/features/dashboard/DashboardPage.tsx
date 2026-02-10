@@ -125,13 +125,13 @@ export function DashboardPage() {
               Failed to load recent invoices
             </div>
           ) : invoices?.length ? (
-            <table className="w-full text-sm" data-testid="dashboard-invoices-table">
+            <table className="w-full min-w-[480px] text-sm" data-testid="dashboard-invoices-table">
               <thead className="text-xs text-subtle-text uppercase bg-background-light dark:bg-background-dark">
                 <tr>
-                  <th className="px-6 py-3 text-left">Invoice #</th>
-                  <th className="px-6 py-3 text-left">Client</th>
-                  <th className="px-6 py-3 text-right">Amount</th>
-                  <th className="px-6 py-3 text-center">Status</th>
+                  <th className="px-4 sm:px-6 py-3 text-left">Invoice #</th>
+                  <th className="px-4 sm:px-6 py-3 text-left">Client</th>
+                  <th className="px-4 sm:px-6 py-3 text-right">Amount</th>
+                  <th className="px-4 sm:px-6 py-3 text-center">Status</th>
                 </tr>
               </thead>
               <tbody>
@@ -141,16 +141,16 @@ export function DashboardPage() {
                     className="border-b border-border-light dark:border-border-dark hover:bg-primary/5"
                     data-testid={`dashboard-invoice-row-${invoice.id}`}
                   >
-                    <td className="px-6 py-4 font-medium text-primary">
+                    <td className="px-4 sm:px-6 py-4 font-medium text-primary">
                       {String(invoice.number)}
                     </td>
-                    <td className="px-6 py-4 text-text-light dark:text-text-dark">
+                    <td className="px-4 sm:px-6 py-4 text-text-light dark:text-text-dark">
                       {invoice.accountServices?.serialised || 'N/A'}
                     </td>
-                    <td className="px-6 py-4 text-right text-text-light dark:text-text-dark">
+                    <td className="px-4 sm:px-6 py-4 text-right text-text-light dark:text-text-dark">
                       {formatCurrency(invoice.totalAmount)}
                     </td>
-                    <td className="px-6 py-4 text-center">
+                    <td className="px-4 sm:px-6 py-4 text-center">
                       {/* Fix: invoice.status is optional, default to DRAFT */}
                       <StatusBadge status={invoice.status || 'DRAFT'} />
                     </td>

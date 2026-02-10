@@ -1202,7 +1202,7 @@ test.describe('Report Loading States', () => {
   test('shows loading state for trial balance', async ({ page }) => {
     // Delay API response to show loading
     await page.route('**/rest/financeReports/trialBalance*', async (route) => {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 3000));
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -1212,7 +1212,7 @@ test.describe('Report Loading States', () => {
 
     await page.goto('/reports/trial-balance');
 
-    await expect(page.getByTestId('trial-balance-loading')).toBeVisible();
+    await expect(page.getByTestId('trial-balance-loading')).toBeVisible({ timeout: 3000 });
 
     await takeScreenshot(page, 'trial-balance-loading');
 
@@ -1222,7 +1222,7 @@ test.describe('Report Loading States', () => {
 
   test('shows loading state for profit & loss', async ({ page }) => {
     await page.route('**/rest/financeReports/incomeStatement*', async (route) => {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 3000));
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -1232,14 +1232,14 @@ test.describe('Report Loading States', () => {
 
     await page.goto('/reports/pnl');
 
-    await expect(page.getByTestId('profit-loss-loading')).toBeVisible();
+    await expect(page.getByTestId('profit-loss-loading')).toBeVisible({ timeout: 3000 });
 
     await takeScreenshot(page, 'profit-loss-loading');
   });
 
   test('shows loading state for balance sheet', async ({ page }) => {
     await page.route('**/rest/financeReports/balanceSheet*', async (route) => {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 3000));
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -1249,14 +1249,14 @@ test.describe('Report Loading States', () => {
 
     await page.goto('/reports/balance-sheet');
 
-    await expect(page.getByTestId('balance-sheet-loading')).toBeVisible();
+    await expect(page.getByTestId('balance-sheet-loading')).toBeVisible({ timeout: 3000 });
 
     await takeScreenshot(page, 'balance-sheet-loading');
   });
 
   test('shows loading state for cash flow', async ({ page }) => {
     await page.route('**/rest/financeReports/accountTransactions*', async (route) => {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 3000));
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -1266,14 +1266,14 @@ test.describe('Report Loading States', () => {
 
     await page.goto('/reports/cash-flow');
 
-    await expect(page.getByTestId('cash-flow-loading')).toBeVisible();
+    await expect(page.getByTestId('cash-flow-loading')).toBeVisible({ timeout: 3000 });
 
     await takeScreenshot(page, 'cash-flow-loading');
   });
 
   test('shows loading states for aging reports', async ({ page }) => {
     await page.route('**/rest/financeReports/agedReceivables*', async (route) => {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 3000));
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -1282,7 +1282,7 @@ test.describe('Report Loading States', () => {
     });
 
     await page.route('**/rest/financeReports/agedPayables*', async (route) => {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 3000));
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -1292,8 +1292,8 @@ test.describe('Report Loading States', () => {
 
     await page.goto('/reports/aging');
 
-    await expect(page.getByTestId('ar-aging-loading')).toBeVisible();
-    await expect(page.getByTestId('ap-aging-loading')).toBeVisible();
+    await expect(page.getByTestId('ar-aging-loading')).toBeVisible({ timeout: 3000 });
+    await expect(page.getByTestId('ap-aging-loading')).toBeVisible({ timeout: 3000 });
 
     await takeScreenshot(page, 'aging-loading');
   });

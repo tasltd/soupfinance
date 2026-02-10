@@ -66,7 +66,7 @@ const mockBills = [
     totalAmount: 990.0,
     amountPaid: 0,
     amountDue: 990.0,
-    items: mockBillItems,
+    billItemList: mockBillItems,
   },
   {
     id: 'bill-002',
@@ -80,7 +80,7 @@ const mockBills = [
     totalAmount: 2200.0,
     amountPaid: 2200.0,
     amountDue: 0,
-    items: [],
+    billItemList: [],
   },
   {
     id: 'bill-003',
@@ -94,7 +94,7 @@ const mockBills = [
     totalAmount: 1650.0,
     amountPaid: 500.0,
     amountDue: 1150.0,
-    items: [],
+    billItemList: [],
   },
   {
     id: 'bill-004',
@@ -108,7 +108,7 @@ const mockBills = [
     totalAmount: 330.0,
     amountPaid: 0,
     amountDue: 330.0,
-    items: [],
+    billItemList: [],
   },
   {
     id: 'bill-005',
@@ -122,7 +122,7 @@ const mockBills = [
     totalAmount: 5500.0,
     amountPaid: 2000.0,
     amountDue: 3500.0,
-    items: [],
+    billItemList: [],
   },
 ];
 
@@ -294,7 +294,7 @@ async function mockCreateBillApi(page: any, success = true, createdBill?: typeof
             totalAmount: 1100.0,
             amountPaid: 0,
             amountDue: 1100.0,
-            items: [],
+            billItemList: [],
           }
         ),
       });
@@ -696,7 +696,7 @@ test.describe('Bill Management', () => {
         totalAmount: 1100.0,
         amountPaid: 0,
         amountDue: 1100.0,
-        items: [],
+        billItemList: [],
       });
       await mockBillsApi(page);
 

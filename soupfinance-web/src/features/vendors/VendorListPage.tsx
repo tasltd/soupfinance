@@ -123,14 +123,15 @@ export function VendorListPage() {
           </div>
         ) : vendors?.length ? (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm" data-testid="vendor-list-table">
+            {/* Changed: Added min-w for proper horizontal scroll on mobile */}
+            <table className="w-full min-w-[600px] text-sm" data-testid="vendor-list-table">
               <thead className="text-xs text-subtle-text uppercase bg-background-light dark:bg-background-dark">
                 <tr>
-                  <th className="px-6 py-3 text-left">Name</th>
-                  <th className="px-6 py-3 text-left">Email</th>
-                  <th className="px-6 py-3 text-left">Phone</th>
-                  <th className="px-6 py-3 text-center">Payment Terms</th>
-                  <th className="px-6 py-3 text-center">Actions</th>
+                  <th className="px-4 sm:px-6 py-3 text-left">Name</th>
+                  <th className="px-4 sm:px-6 py-3 text-left">Email</th>
+                  <th className="px-4 sm:px-6 py-3 text-left">Phone</th>
+                  <th className="px-4 sm:px-6 py-3 text-center">Payment Terms</th>
+                  <th className="px-4 sm:px-6 py-3 text-center">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -140,7 +141,7 @@ export function VendorListPage() {
                     className="border-b border-border-light dark:border-border-dark hover:bg-primary/5"
                     data-testid={`vendor-row-${vendor.id}`}
                   >
-                    <td className="px-6 py-4">
+                    <td className="px-4 sm:px-6 py-4">
                       <Link
                         to={`/vendors/${vendor.id}`}
                         className="font-medium text-primary hover:underline"
@@ -149,16 +150,16 @@ export function VendorListPage() {
                         {vendor.name}
                       </Link>
                     </td>
-                    <td className="px-6 py-4 text-text-light dark:text-text-dark">
+                    <td className="px-4 sm:px-6 py-4 text-text-light dark:text-text-dark">
                       {vendor.email || '-'}
                     </td>
-                    <td className="px-6 py-4 text-text-light dark:text-text-dark">
+                    <td className="px-4 sm:px-6 py-4 text-text-light dark:text-text-dark">
                       {vendor.phoneNumber || '-'}
                     </td>
-                    <td className="px-6 py-4 text-center text-text-light dark:text-text-dark">
+                    <td className="px-4 sm:px-6 py-4 text-center text-text-light dark:text-text-dark">
                       {vendor.paymentTerms ? `${vendor.paymentTerms} days` : '-'}
                     </td>
-                    <td className="px-6 py-4 text-center">
+                    <td className="px-4 sm:px-6 py-4 text-center">
                       <div className="flex items-center justify-center gap-2">
                         <Link
                           to={`/vendors/${vendor.id}`}

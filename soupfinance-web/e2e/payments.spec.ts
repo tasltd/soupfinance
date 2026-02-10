@@ -680,9 +680,9 @@ test.describe('Payment Management', () => {
     test('shows loading state while fetching invoices', async ({ page }) => {
       await mockTokenValidationApi(page, true);
 
-      // Delay invoice response
+      // Changed: Increased delay to 3s so loading state is reliably visible before data arrives
       await page.route('**/rest/invoice/index.json*', async (route) => {
-        await new Promise((resolve) => setTimeout(resolve, 2000));
+        await new Promise((resolve) => setTimeout(resolve, 3000));
         route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -696,8 +696,8 @@ test.describe('Payment Management', () => {
 
       await page.goto('/payments/new');
 
-      // Should show loading text in dropdown area
-      await expect(page.locator('text=Loading')).toBeVisible({ timeout: 2000 });
+      // Changed: Increased timeout to 3s to match the delayed response
+      await expect(page.locator('text=Loading')).toBeVisible({ timeout: 3000 });
     });
   });
 

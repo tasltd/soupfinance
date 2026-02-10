@@ -21,7 +21,8 @@ export function MainLayout() {
 
         {/* Page Content */}
         <main className="flex-1 overflow-y-auto">
-          <div className="p-6 lg:p-8 max-w-7xl mx-auto">
+          {/* Changed: Reduced mobile padding from p-6 to p-4 for more content space on small screens */}
+          <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
             <Outlet />
           </div>
         </main>
