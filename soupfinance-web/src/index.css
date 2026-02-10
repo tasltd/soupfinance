@@ -5,6 +5,9 @@
 /* SoupFinance Design System - Tailwind CSS v4 */
 @import "tailwindcss";
 
+/* Fix: Enable class-based dark mode (html.dark) instead of prefers-color-scheme */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* Custom theme configuration for SoupFinance */
 @theme {
   /* Colors from design system */
