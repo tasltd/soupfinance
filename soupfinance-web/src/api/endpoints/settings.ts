@@ -10,6 +10,8 @@
 // Changed: Added CSRF token imports for mutation operations (POST/PUT/DELETE)
 // Fix: Use shared accountClient from client.ts (has proper interceptors for 401/logging)
 import apiClient, { accountClient, toQueryString, getCsrfToken, getCsrfTokenForEdit, csrfQueryString } from '../client';
+// Changed: Static import for authStore (used by accountSettingsApi.get() to read tenantId)
+import { useAuthStore } from '../../stores/authStore';
 import type {
   Agent,
   AgentFormData,
@@ -362,7 +364,6 @@ export const accountSettingsApi = {
    */
   get: async (): Promise<AccountSettings> => {
     // Changed: Read tenantId from auth store (set during validateToken from /rest/user/current.json)
-    const { useAuthStore } = await import('../../stores/authStore');
     const tenantId = useAuthStore.getState().user?.tenantId;
     if (!tenantId) {
       throw new Error('No tenant ID found. User session may not be fully initialized.');
