@@ -28,7 +28,10 @@ storybook-static
 
 # Playwright
 test-results/
+test-results-lxc/
 playwright-report/
+playwright-report-lxc/
+playwright-report-integration/
 playwright/.cache/
 
 # Coverage
