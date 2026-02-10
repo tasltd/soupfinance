@@ -66,7 +66,8 @@ export class ErrorBoundary extends Component<Props, State> {
       // Default fallback UI
       return (
         <div className="min-h-screen bg-background-light dark:bg-background-dark flex items-center justify-center p-4">
-          <div className="max-w-md w-full bg-surface dark:bg-dark-surface rounded-xl shadow-lg p-8 text-center">
+          {/* Fix: Use correct semantic tokens (bg-surface-light/dark, text-text-light/dark) */}
+          <div className="max-w-md w-full bg-surface-light dark:bg-surface-dark rounded-xl shadow-lg p-8 text-center">
             {/* Error Icon */}
             <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
               <span className="material-symbols-outlined text-3xl text-red-600 dark:text-red-400">
@@ -75,12 +76,12 @@ export class ErrorBoundary extends Component<Props, State> {
             </div>
 
             {/* Title */}
-            <h1 className="text-xl font-bold text-primary-text dark:text-dark-primary-text mb-2">
+            <h1 className="text-xl font-bold text-text-light dark:text-text-dark mb-2">
               Something went wrong
             </h1>
 
             {/* Description */}
-            <p className="text-subtle-text dark:text-dark-subtle-text mb-6">
+            <p className="text-subtle-text dark:text-subtle-text-dark mb-6">
               We've logged this error and our team will look into it.
               Please try refreshing the page or go back to the dashboard.
             </p>
@@ -110,7 +111,7 @@ export class ErrorBoundary extends Component<Props, State> {
               </button>
               <button
                 onClick={this.handleGoHome}
-                className="inline-flex items-center justify-center px-6 py-3 bg-gray-100 dark:bg-gray-800 text-primary-text dark:text-dark-primary-text font-medium rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                className="inline-flex items-center justify-center px-6 py-3 bg-gray-100 dark:bg-gray-800 text-text-light dark:text-text-dark font-medium rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
               >
                 <span className="material-symbols-outlined mr-2 text-lg">home</span>
                 Go to Dashboard

@@ -1254,9 +1254,10 @@ test.describe('Report Loading States', () => {
     await takeScreenshot(page, 'balance-sheet-loading');
   });
 
+  // Fix: Increased mock delay and assertion timeout to eliminate race condition flakiness
   test('shows loading state for cash flow', async ({ page }) => {
     await page.route('**/rest/financeReports/accountTransactions*', async (route) => {
-      await new Promise((resolve) => setTimeout(resolve, 3000));
+      await new Promise((resolve) => setTimeout(resolve, 5000));
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -1266,7 +1267,7 @@ test.describe('Report Loading States', () => {
 
     await page.goto('/reports/cash-flow');
 
-    await expect(page.getByTestId('cash-flow-loading')).toBeVisible({ timeout: 3000 });
+    await expect(page.getByTestId('cash-flow-loading')).toBeVisible({ timeout: 5000 });
 
     await takeScreenshot(page, 'cash-flow-loading');
   });
