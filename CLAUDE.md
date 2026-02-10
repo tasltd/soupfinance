@@ -293,7 +293,7 @@ Screenshots should be taken after login, after key form submissions, after navig
 - Use `data-testid` attributes: `{feature}-page`, `{feature}-form`, `{feature}-submit-button`, `{feature}-table`
 - Handle session expiry in LXC mode before asserting
 - Integration tests live in `e2e/integration/` and follow `*.integration.spec.ts` naming (only run against LXC backend)
-- **14 mock E2E test files** in `e2e/` (350 tests, all passing, 2026-02-10) and **14 integration test files** in `e2e/integration/` (5 numbered + 9 non-numbered, 159/170 pass, 6 fail from backend Hibernate bug, 5 skipped)
+- **14 mock E2E test files** in `e2e/` (350 tests) and **14 integration test files** in `e2e/integration/` (5 numbered + 9 non-numbered, 159/170 pass on LXC backend, 6 fail from backend Hibernate bug, 5 skipped)
 - Integration test patterns: never `networkidle` (use `domcontentloaded` + auth wait), `maxRedirects: 0` on direct API calls, `safeApiGet` wrapper for crash resilience
 
 ### Test Credentials (LXC Backend)
