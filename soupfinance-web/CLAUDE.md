@@ -288,7 +288,7 @@ reports.integration.spec.ts      # Finance reports
 settings.integration.spec.ts     # Settings pages
 ```
 
-Use `backendTestUsers` from `e2e/fixtures.ts` for credentials. **768 unit tests** across 26 test files. **350 mock E2E tests** (all passing, 2026-02-10). **159/170 integration tests** pass against LXC backend (6 failed: backend Hibernate proxy bug in vendor CRUD, 5 skipped). See `e2e/integration/INTEGRATION-TEST-RESULTS.md` for detailed results.
+Use `backendTestUsers` from `e2e/fixtures.ts` for credentials. **768 unit tests** across 26 test files. **350 mock E2E tests**. **159/170 integration tests** pass against LXC backend (6 failed: backend Hibernate proxy bug in vendor CRUD, 5 skipped). See `e2e/integration/INTEGRATION-TEST-RESULTS.md` for detailed results.
 
 ### Integration Test Patterns (CRITICAL)
 
@@ -436,7 +436,7 @@ Some controllers have module prefixes: `/rest/finance/bill/*`, `/rest/trading/ve
 Tailwind v4 uses the Vite plugin (`@tailwindcss/vite`) — there is **no `tailwind.config.js`**. Custom tokens are defined via `@theme` in `src/index.css`:
 - Colors: `primary`, `background-light/dark`, `surface-light/dark`, `text-light/dark`, `border-light/dark`, `danger`, `success`, `warning`, `info`
 - Font: `--font-display: Manrope` (Google Fonts, loaded in `index.css`)
-- Dark mode: `dark:` prefix classes (toggled via `html.dark` class)
+- Dark mode: `dark:` prefix classes (toggled via `html.dark` class, state in `uiStore`). Uses **paired semantic tokens**: `bg-surface-light dark:bg-surface-dark`, `text-text-light dark:text-text-dark`, `border-border-light dark:border-border-dark`. Every element needs both light AND dark classes. Do NOT use non-existent shorthand tokens like `bg-surface` or `text-primary-text`
 - Icons: Material Symbols Outlined (`<span className="material-symbols-outlined">icon_name</span>`, use `.fill` class for filled variant)
 
 ### Internationalization (i18n)

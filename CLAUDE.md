@@ -269,7 +269,7 @@ Screenshots should be taken after login, after key form submissions, after navig
 
 ### Unit Tests (Vitest + React Testing Library)
 
-**768 tests** across **26 test files** (as of 2026-02-05).
+**768 tests** across **26 test files**.
 
 - Axios globally mocked in `src/test/setup.ts` — no real HTTP in unit tests
 - Render with `QueryClientProvider` + `MemoryRouter` wrappers
