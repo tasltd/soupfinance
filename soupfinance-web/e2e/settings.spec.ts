@@ -28,6 +28,8 @@ const mockUsers = [
     userAccess: { id: 1, username: 'john.doe', enabled: true },
     authorities: [{ id: 1, authority: 'ROLE_ADMIN' }, { id: 2, authority: 'ROLE_USER' }],
     accountPerson: { id: 'ap-001' },
+    // Added: account reference needed by accountSettingsApi.get() (agent → tenant_id flow)
+    account: { id: 'account-001', name: 'SoupFinance Demo Company' },
     disabled: false,
     archived: false,
     dateCreated: '2024-01-15T10:00:00Z',
@@ -42,6 +44,7 @@ const mockUsers = [
     userAccess: { id: 2, username: 'jane.smith', enabled: true },
     authorities: [{ id: 2, authority: 'ROLE_USER' }, { id: 3, authority: 'ROLE_FINANCE_REPORTS' }],
     accountPerson: null,
+    account: { id: 'account-001', name: 'SoupFinance Demo Company' },
     disabled: false,
     archived: false,
     dateCreated: '2024-01-20T14:30:00Z',
@@ -56,6 +59,7 @@ const mockUsers = [
     userAccess: { id: 3, username: 'bob.wilson', enabled: false },
     authorities: [{ id: 2, authority: 'ROLE_USER' }],
     accountPerson: null,
+    account: { id: 'account-001', name: 'SoupFinance Demo Company' },
     disabled: true,
     archived: false,
     dateCreated: '2024-02-01T09:15:00Z',
@@ -812,12 +816,13 @@ test.describe('Settings - Account Settings', () => {
 
     await mockTokenValidationApi(page, true);
 
-    // Mock account settings (returns array — backend returns list of accounts)
-    await page.route('**/account/index.json*', (route) => {
+    // Changed: Override account/show to return full mock account settings
+    // (mockTokenValidationApi sets up a generic one; this overrides with test-specific data)
+    await page.route('**/account/show/*.json*', (route) => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify([mockAccountSettings]),
+        body: JSON.stringify(mockAccountSettings),
       });
     });
 
@@ -918,7 +923,8 @@ test.describe('Settings - Account Settings', () => {
 
     await mockTokenValidationApi(page, true);
 
-    await page.route('**/account/index.json*', (route) => {
+    // Changed: Override account/show to return error (replaces /account/index.json)
+    await page.route('**/account/show/*.json*', (route) => {
       route.fulfill({
         status: 500,
         contentType: 'application/json',
@@ -973,8 +979,9 @@ test.describe('Settings Navigation', () => {
       await page.route('**/rest/accountBankDetails/index.json*', (route) => {
         route.fulfill({ status: 200, body: JSON.stringify(mockBankAccounts) });
       });
-      await page.route('**/account/index.json*', (route) => {
-        route.fulfill({ status: 200, body: JSON.stringify([mockAccountSettings]) });
+      // Changed: Mock account/show endpoint (replaces /account/index.json)
+      await page.route('**/account/show/*.json*', (route) => {
+        route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(mockAccountSettings) });
       });
     }
 

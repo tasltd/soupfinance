@@ -353,21 +353,45 @@ export async function mockTokenValidationApi(
     }
   });
 
-  // Added (2026-01-30): Mock account settings endpoint for currency formatting
-  // The accountStore fetches this on authentication to get tenant currency settings
-  // Fix: Account endpoint is at /account/index.json (returns array, not single object)
-  await page.route('**/account/index.json*', (route) => {
+  // Changed: Mock agent endpoint for account settings flow (agent → tenant_id → account/show)
+  // accountSettingsApi.get() calls /rest/agent/index.json first to get the account ID
+  await page.route('**/rest/agent/index.json*', (route) => {
     if (success) {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
-        // Changed: Backend returns array of accounts (single-tenant user has one)
         body: JSON.stringify([{
+          id: 'agent-001',
+          firstName: 'Admin',
+          lastName: 'User',
+          account: { id: 'account-001', name: 'Test Company' },
+        }]),
+      });
+    } else {
+      route.fulfill({
+        status: 401,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          error: 'Unauthorized',
+          message: 'Not authenticated',
+        }),
+      });
+    }
+  });
+
+  // Changed: Mock account/show endpoint (replaces /account/index.json)
+  // accountSettingsApi.get() calls /account/show/{id}.json after getting agent
+  await page.route('**/account/show/*.json*', (route) => {
+    if (success) {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
           id: 'account-001',
           name: 'Test Company',
           currency: 'USD',
           dateCreated: '2024-01-01T00:00:00Z',
-        }]),
+        }),
       });
     } else {
       route.fulfill({

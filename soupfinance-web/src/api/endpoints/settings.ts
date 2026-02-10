@@ -355,18 +355,26 @@ export const banksApi = {
 export const accountSettingsApi = {
   /**
    * Get current account settings
-   * Fix: Uses /account/index.json (NOT /account/current.json which returns 404).
-   * Auth is handled by the shared accountClient interceptor (X-Auth-Token from dual-storage).
-   * Response is an array — take the first element (single-tenant user has one account).
+   * Changed: Uses agent → tenant_id → account/show flow.
+   * Flow: 1) GET /rest/agent/index.json → get agent with account.id (= tenant_id)
+   *       2) GET /account/show/{accountId}.json → get account settings
+   * The agent endpoint works under /rest/ (token auth enabled).
+   * The account/show endpoint needs backend filter chain fix for production.
    */
   get: async (): Promise<AccountSettings> => {
-    const response = await accountClient.get<AccountSettings[]>('/account/index.json');
-    // Changed: Backend returns array of accounts; take first element
-    const accounts = response.data;
-    if (!Array.isArray(accounts) || accounts.length === 0) {
-      throw new Error('No account settings found');
+    // Step 1: Get current user's agent to find the account (tenant) ID
+    const agentResponse = await apiClient.get<Agent[]>('/agent/index.json?max=1');
+    const agents = agentResponse.data;
+    if (!Array.isArray(agents) || agents.length === 0) {
+      throw new Error('No agent found for current user');
     }
-    return accounts[0];
+    const accountId = agents[0].account?.id;
+    if (!accountId) {
+      throw new Error('Agent has no account ID. Account may not be set up correctly.');
+    }
+    // Step 2: Fetch account settings using the account ID
+    const response = await accountClient.get<AccountSettings>(`/account/show/${accountId}.json`);
+    return response.data;
   },
 
   /**
