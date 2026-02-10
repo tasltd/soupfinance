@@ -83,4 +83,15 @@ const tenantId = currentAgent.account?.id;
 
 ## Priority
 
-LOW — The frontend currently uses `tenantId` from `/rest/user/current.json` (already fetched during auth validation). This endpoint is for future use when the full agent object is needed without an extra ID lookup.
+LOW — The frontend currently uses `tenantId` from `/rest/user/current.json` (already fetched during auth validation). This endpoint is for future use when the full agent object is needed (e.g., user profile page showing firstName, lastName, emailContacts, phoneContacts).
+
+## Current Frontend Architecture (Implemented 2026-02-10)
+
+The account settings flow no longer calls `/rest/agent/index.json`. Instead:
+
+1. `authStore.validateToken()` calls `GET /rest/user/current.json`
+2. Response `{ tenantId, agentId, ... }` is captured — `tenantId` enriched into auth store
+3. `accountSettingsApi.get()` reads `tenantId` from `useAuthStore.getState().user.tenantId`
+4. Fetches `GET /account/show/{tenantId}.json` via `accountClient` (not apiClient)
+
+This eliminates the extra agent API call. The `agentId` is also stored for future use with this endpoint.

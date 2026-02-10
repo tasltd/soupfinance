@@ -79,7 +79,7 @@ Features: `accounting` (vouchers, journal entries, transaction register), `auth`
 - **endpoints/clients.ts**: Client + AccountServices APIs (invoices reference `accountServices.id` as FK, client metadata from `Client` entity)
 - **endpoints/ledger.ts**: Ledger accounts, transactions, vouchers (payment/receipt/deposit), journal entries (multi-line). CSRF only needed for POST/save; PUT/DELETE do not require CSRF
 - **endpoints/domainData.ts**: Shared domain data lookups — tax rates and payment terms are **hardcoded** (no backend endpoint); service descriptions from `/rest/serviceDescription/index.json`; **payment methods** from `/rest/paymentMethod/index.json` (domain class, dynamic)
-- **endpoints/settings.ts**: 6 sub-APIs: `agentApi` (staff CRUD), `accountBankDetailsApi` (bank accounts), `accountPersonApi` (directors/signatories), `rolesApi` (`/sbRole/index.json`), `banksApi` (`/bank/index.json`), `accountSettingsApi` (`/account/index.json` — returns array, take first element)
+- **endpoints/settings.ts**: 6 sub-APIs: `agentApi` (staff CRUD), `accountBankDetailsApi` (bank accounts), `accountPersonApi` (directors/signatories), `rolesApi` (`/sbRole/index.json`), `banksApi` (`/bank/index.json`), `accountSettingsApi` (reads `tenantId` from auth store → `GET /account/show/{tenantId}.json`)
 
 Key patterns:
 - Backend uses `application/json` content type (migrated from form-urlencoded 2026-01). **Exception:** OTP endpoints (`/client/authenticate.json`, `/client/verifyCode.json`) still use FormData
@@ -137,12 +137,47 @@ Validation behavior:
 
 ### State Management (`src/stores/`)
 Zustand stores with persistence:
-- **authStore**: Authentication state, token validation, remember-me support, `setAuthenticated()` for OTP flow
+- **authStore**: Authentication state, token validation (captures `tenantId` from `/rest/user/current.json`), remember-me support, `setAuthenticated()` for OTP flow
 - **uiStore**: Dark mode, sidebar state
 - **accountStore**: Tenant settings (currency, company info). Exports currency utilities:
   - Hooks: `useCurrencySymbol()`, `useFormatCurrency()`, `useCurrencyConfig()`
   - Non-React: `formatCurrency(amount)`, `getCurrencySymbol()`
   - Supports 12 currencies (USD, GHS, GBP, EUR, NGN, KES, ZAR, XOF, XAF, TZS, UGX, RWF)
+
+### User Profile Architecture (SbUser + Agent)
+
+The user profile is a combination of two backend domain classes:
+
+| Domain | Table | Purpose | Key Fields |
+|--------|-------|---------|------------|
+| **SbUser** | `sb_user` | Credentials only | `username`, `password`, `enabled`, `roles` |
+| **Agent** | `agent` | User metadata | `firstName`, `lastName`, `designation`, `emailContacts`, `phoneContacts` |
+
+**Relationships:** `Agent.userAccess` → SbUser (one agent per login). `Agent.account` → Account (= tenant; `account.id` IS the `tenant_id`).
+
+**Contact info:** Emails and phones are stored in `agent.emailContacts` and `agent.phoneContacts` (hasMany associations), NOT on SbUser.
+
+**Current user data flow:**
+1. `validateToken()` calls `GET /rest/user/current.json` (SbUserController.current())
+2. Response: `{ username, email, roles, tenantId, agentId }` — `tenantId` is enriched into the auth store
+3. `AgentService.current()` exists on the backend (`@WithoutTenant`, uses `springSecurityService.currentUser`) but AgentController does NOT yet expose a `current` action — see `plans/soupfinance-agent-current-endpoint.md`
+
+### Account Settings Flow (CRITICAL)
+
+Account settings are loaded using the `tenantId` captured during token validation:
+
+```
+App mount → initialize() → validateToken()
+                          → GET /rest/user/current.json → { tenantId }
+                          → enriches auth store with tenantId
+
+Settings page → accountSettingsApi.get()
+             → reads tenantId from useAuthStore.getState().user.tenantId
+             → GET /account/show/{tenantId}.json (via accountClient, NOT apiClient)
+             → returns AccountSettings
+```
+
+**CRITICAL:** `accountSettingsApi` uses `accountClient` (baseURL: '') because `/account/*` is NOT under `/rest/`. Using `apiClient` would produce `/rest/account/...` → 403 on production.
 
 ### Hooks (`src/hooks/`)
 - **usePdf**: Frontend PDF generation using html2pdf.js for invoices, bills, reports (templates in `src/utils/pdf/templates.ts`)
@@ -253,7 +288,7 @@ reports.integration.spec.ts      # Finance reports
 settings.integration.spec.ts     # Settings pages
 ```
 
-Use `backendTestUsers` from `e2e/fixtures.ts` for credentials. **768 unit tests** across 26 test files. **326 mock E2E tests** (all passing, 2026-02-08). **159/170 integration tests** pass against LXC backend (6 failed: backend Hibernate proxy bug in vendor CRUD, 5 skipped). See `e2e/integration/INTEGRATION-TEST-RESULTS.md` for detailed results.
+Use `backendTestUsers` from `e2e/fixtures.ts` for credentials. **768 unit tests** across 26 test files. **350 mock E2E tests** (all passing, 2026-02-10). **159/170 integration tests** pass against LXC backend (6 failed: backend Hibernate proxy bug in vendor CRUD, 5 skipped). See `e2e/integration/INTEGRATION-TEST-RESULTS.md` for detailed results.
 
 ### Integration Test Patterns (CRITICAL)
 

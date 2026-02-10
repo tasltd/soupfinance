@@ -90,6 +90,28 @@ The `Account` domain IS the tenant — `account.id` = `tenant_id`. Registration 
 
 The `SoupDiscriminatorTenantResolver` resolves tenants via: session → `sb_user.tenant_id` → hostname match. The `AccountController` needs `@WithoutTenant` annotation since Account is the root tenant entity. See `plans/soupfinance-tenant-resolution-fix.md` for the full backend fix plan.
 
+### User Profile Architecture (SbUser + Agent)
+
+| Domain | Table | Purpose | Key Fields |
+|--------|-------|---------|------------|
+| **SbUser** | `sb_user` | Credentials only | `username`, `password`, `enabled`, `roles` |
+| **Agent** | `agent` | User metadata | `firstName`, `lastName`, `designation`, `emailContacts`, `phoneContacts` |
+
+- `Agent.userAccess` → SbUser (one agent per login user)
+- `Agent.account` → Account (= tenant; `account.id` IS the `tenant_id`)
+- Emails/phones stored in `agent.emailContacts` and `agent.phoneContacts` (hasMany), NOT on SbUser
+- `GET /rest/user/current.json` returns `{ username, email, roles, tenantId, agentId }` — used for token validation AND tenant resolution
+- `AgentService.current()` exists (`@WithoutTenant`) but AgentController has no `current` action yet — see `plans/soupfinance-agent-current-endpoint.md`
+
+### Account Settings Flow
+
+Account settings use the `tenantId` from token validation (no extra API call needed):
+
+1. `validateToken()` → `GET /rest/user/current.json` → captures `tenantId` into auth store
+2. `accountSettingsApi.get()` → reads `tenantId` from auth store → `GET /account/show/{tenantId}.json` (via `accountClient`)
+
+**CRITICAL:** Uses `accountClient` (baseURL: '') — NOT `apiClient` — because `/account/*` is NOT under `/rest/`.
+
 ### Two API Clients (CRITICAL)
 
 The frontend uses two Axios instances in `soupfinance-web/src/api/client.ts`:
@@ -138,13 +160,13 @@ App.tsx                # Routes + providers (ProtectedRoute, PublicRoute wrapper
 | **Corporate 2FA** | OTP flow: POST `/client/authenticate.json` (FormData) → POST `/client/verifyCode.json` (FormData) |
 | **Data Content-Type** | `application/json` for all CRUD requests; OTP endpoints (`/client/*`) use FormData |
 | **Token Storage** | Dual-storage: `rememberMe=true` → localStorage, `false` → sessionStorage. `client.ts` interceptor checks both storages |
-| **Token Validation** | GET `/rest/user/current.json` on app mount |
+| **Token Validation** | GET `/rest/user/current.json` on app mount — returns `{ username, email, roles, tenantId, agentId }`; `tenantId` enriched into auth store for account settings |
 | **Invoice Clients** | `/rest/client/*` for Client entities (KYC clients); invoices reference `accountServices.id` as FK |
 | **CSRF Token** | **REQUIRED** for POST (save) — fetch from `create.json` first. PUT (update) and DELETE do NOT require CSRF tokens |
 | **Foreign Keys** | Use nested objects `{ vendor: { id: "uuid" } }` not `vendor.id` |
 | **Registration** | Goes through `/account/*` proxy (not `/rest/*`) |
 | **App Identification** | Backend identifies the app via the `Api-Authorization` header injected by the proxy (ApiAuthenticatorInterceptor resolves the ApiConsumer name) |
-| **Settings APIs** | `settings.ts` exports 6 sub-APIs: `agentApi`, `accountBankDetailsApi`, `accountPersonApi`, `rolesApi`, `banksApi`, `accountSettingsApi` |
+| **Settings APIs** | `settings.ts` exports 6 sub-APIs: `agentApi`, `accountBankDetailsApi`, `accountPersonApi`, `rolesApi`, `banksApi`, `accountSettingsApi` (uses `tenantId` from auth store → `/account/show/{tenantId}.json`) |
 | **Domain Data** | Tax rates and payment terms are **hardcoded** in `domainData.ts` (no backend endpoint); service descriptions from `/rest/serviceDescription/index.json`; payment methods from `/rest/paymentMethod/index.json` (dynamic, domain class FK) |
 | **PaymentMethod** | Domain class FK (`{ id, name, serialised?, class? }`), NOT a string enum. Use `usePaymentMethods()` hook. Send `paymentMethodId` in create requests |
 
@@ -271,7 +293,7 @@ Screenshots should be taken after login, after key form submissions, after navig
 - Use `data-testid` attributes: `{feature}-page`, `{feature}-form`, `{feature}-submit-button`, `{feature}-table`
 - Handle session expiry in LXC mode before asserting
 - Integration tests live in `e2e/integration/` and follow `*.integration.spec.ts` naming (only run against LXC backend)
-- **14 mock E2E test files** in `e2e/` (326 tests, all passing) and **14 integration test files** in `e2e/integration/` (5 numbered + 9 non-numbered, 159/170 pass, 6 fail from backend Hibernate bug, 5 skipped)
+- **14 mock E2E test files** in `e2e/` (350 tests, all passing, 2026-02-10) and **14 integration test files** in `e2e/integration/` (5 numbered + 9 non-numbered, 159/170 pass, 6 fail from backend Hibernate bug, 5 skipped)
 - Integration test patterns: never `networkidle` (use `domcontentloaded` + auth wait), `maxRedirects: 0` on direct API calls, `safeApiGet` wrapper for crash resilience
 
 ### Test Credentials (LXC Backend)
