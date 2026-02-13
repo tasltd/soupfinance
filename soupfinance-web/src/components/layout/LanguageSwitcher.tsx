@@ -37,7 +37,7 @@ export function LanguageSwitcher() {
       {/* Trigger Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-[#f5f1f0] dark:hover:bg-white/10 transition-colors"
+        className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-background-light dark:hover:bg-white/10 transition-colors"
         aria-label={t('header.language')}
         aria-expanded={isOpen}
         aria-haspopup="listbox"
@@ -45,10 +45,10 @@ export function LanguageSwitcher() {
         <span className="text-lg" role="img" aria-label={currentLanguage.name}>
           {currentLanguage.flag}
         </span>
-        <span className="text-sm font-medium text-[#181311] dark:text-white hidden sm:inline">
+        <span className="text-sm font-medium text-text-light dark:text-text-dark hidden sm:inline">
           {currentLanguage.nativeName}
         </span>
-        <span className="material-symbols-outlined text-base text-[#8a6b60] dark:text-gray-400">
+        <span className="material-symbols-outlined text-base text-subtle-text dark:text-subtle-text-dark">
           {isOpen ? 'expand_less' : 'expand_more'}
         </span>
       </button>
@@ -56,7 +56,7 @@ export function LanguageSwitcher() {
       {/* Dropdown Menu */}
       {isOpen && (
         <div
-          className="absolute right-0 mt-2 w-48 bg-white dark:bg-[#1f1715] rounded-xl border border-[#e6dedb] dark:border-gray-700 shadow-lg z-50"
+          className="absolute right-0 mt-2 w-48 bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-lg z-50"
           role="listbox"
           aria-label="Select language"
         >
@@ -70,7 +70,7 @@ export function LanguageSwitcher() {
                     w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors
                     ${i18n.language === code
                       ? 'bg-primary/10 text-primary'
-                      : 'text-[#181311] dark:text-white hover:bg-[#f5f1f0] dark:hover:bg-white/10'
+                      : 'text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-white/10'
                     }
                   `}
                   role="option"
@@ -81,7 +81,7 @@ export function LanguageSwitcher() {
                   </span>
                   <div className="flex flex-col">
                     <span className="text-sm font-medium">{lang.nativeName}</span>
-                    <span className="text-xs text-[#8a6b60] dark:text-gray-400">
+                    <span className="text-xs text-subtle-text dark:text-subtle-text-dark">
                       {lang.name}
                     </span>
                   </div>
@@ -127,14 +127,14 @@ export function LanguageSwitcherCompact() {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center justify-center size-10 rounded-full hover:bg-[#f5f1f0] dark:hover:bg-white/10 transition-colors"
+        className="flex items-center justify-center size-10 rounded-full hover:bg-background-light dark:hover:bg-white/10 transition-colors"
         aria-label="Change language"
       >
         <span className="text-xl">{currentLanguage.flag}</span>
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 bg-white dark:bg-[#1f1715] rounded-xl border border-[#e6dedb] dark:border-gray-700 shadow-lg z-50 overflow-hidden">
+        <div className="absolute right-0 mt-2 bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark shadow-lg z-50 overflow-hidden">
           {(Object.entries(supportedLanguages) as [SupportedLanguage, typeof currentLanguage][]).map(
             ([code, lang]) => (
               <button
@@ -144,7 +144,7 @@ export function LanguageSwitcherCompact() {
                   flex items-center justify-center size-12 transition-colors
                   ${i18n.language === code
                     ? 'bg-primary/10'
-                    : 'hover:bg-[#f5f1f0] dark:hover:bg-white/10'
+                    : 'hover:bg-background-light dark:hover:bg-white/10'
                   }
                 `}
                 title={lang.nativeName}

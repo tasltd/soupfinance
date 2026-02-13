@@ -52,6 +52,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Critical Rules (MUST READ)
 
+### Post-Fix CLAUDE.md Scan (HARD RULE)
+After completing any fix or code change, immediately re-read this CLAUDE.md before continuing to the next task. This ensures context stays fresh and prevents drift from project conventions.
+
 | Rule | File | Summary |
 |------|------|---------|
 | **Tenant Architecture** | [plans/soupfinance-tenant-architecture-refactor.md](plans/soupfinance-tenant-architecture-refactor.md) | Tenant-per-Account: Registration creates new `Account`, NOT Corporate |

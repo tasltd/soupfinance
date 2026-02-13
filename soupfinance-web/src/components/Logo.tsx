@@ -17,8 +17,6 @@ interface LogoProps {
   size?: number;
   /** Custom className for additional styling */
   className?: string;
-  /** Whether to use dark mode colors (light text on dark bg) */
-  darkMode?: boolean;
 }
 
 /**
@@ -40,10 +38,10 @@ function LogoMark({ size = 48, className = '' }: { size?: number; className?: st
 /**
  * Main Logo component
  */
-export function Logo({ variant = 'full', size = 40, className = '', darkMode = false }: LogoProps) {
-  // "Soup" in red (#e31b23), "Finance" in dark gray (#4a4a4a)
-  const soupColor = 'text-[#e31b23]'; // red from logo
-  const financeColor = darkMode ? 'text-gray-300' : 'text-[#4a4a4a]'; // dark gray
+// Changed: Removed darkMode prop — uses Tailwind dark: variants for automatic theme switching
+export function Logo({ variant = 'full', size = 40, className = '' }: LogoProps) {
+  const soupColor = 'text-[#e31b23]';
+  const financeColor = 'text-[#4a4a4a] dark:text-gray-300';
 
   if (variant === 'mark') {
     return <LogoMark size={size} className={className} />;

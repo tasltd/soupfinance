@@ -161,54 +161,63 @@ test.describe('Dark Mode Theme', () => {
       await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 });
       await takeScreenshot(page, 'theme-dashboard-light');
 
-      // Find the dark mode toggle button (has dark_mode or light_mode icon)
+      // Changed: Toggle button shows one of three icons: light_mode, dark_mode, or settings_brightness (system)
       const toggleButton = page.locator('button').filter({
         has: page.locator('span.material-symbols-outlined'),
       }).filter({
-        hasText: /dark_mode|light_mode/,
+        hasText: /dark_mode|light_mode|settings_brightness/,
       });
 
       await expect(toggleButton).toBeVisible();
     });
 
-    test('clicking toggle switches to dark mode with screenshot', async ({ page }) => {
+    test('clicking toggle cycles through light/dark/system modes with screenshot', async ({ page }) => {
       await page.goto('/dashboard');
       await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 });
 
-      // Screenshot in light mode first
+      // Screenshot in initial mode
       await takeScreenshot(page, 'theme-dashboard-before-toggle');
 
-      // Find and click the dark mode toggle — look for dark_mode icon text
+      // Changed: Toggle cycles through light → dark → system
+      // Find the theme toggle button (any of the three icons)
       const toggleButton = page.locator('button').filter({
         has: page.locator('span.material-symbols-outlined'),
       }).filter({
-        hasText: /dark_mode/,
+        hasText: /dark_mode|light_mode|settings_brightness/,
       });
 
       if (await toggleButton.isVisible({ timeout: 3000 }).catch(() => false)) {
-        await toggleButton.click();
-        await page.waitForTimeout(500);
+        // Click until we reach dark mode (icon shows dark_mode)
+        for (let i = 0; i < 3; i++) {
+          const iconText = await toggleButton.locator('span.material-symbols-outlined').textContent();
+          if (iconText?.trim() === 'dark_mode') break;
+          await toggleButton.click();
+          await page.waitForTimeout(300);
+        }
 
-        // Verify dark class is applied
+        // Verify dark class is applied when in dark mode
         const htmlClass = await page.evaluate(() => document.documentElement.className);
         expect(htmlClass).toContain('dark');
-
-        // Screenshot in dark mode
         await takeScreenshot(page, 'theme-dashboard-after-toggle-dark');
 
-        // Verify the icon changed to light_mode (toggle back button)
-        const lightToggle = page.locator('button').filter({
-          has: page.locator('span.material-symbols-outlined'),
-        }).filter({
-          hasText: /light_mode/,
-        });
-        await expect(lightToggle).toBeVisible();
+        // Click to cycle to system mode
+        await toggleButton.click();
+        await page.waitForTimeout(300);
 
-        // Toggle back to light
-        await lightToggle.click();
-        await page.waitForTimeout(500);
-        const htmlClassAfter = await page.evaluate(() => document.documentElement.className);
-        expect(htmlClassAfter).not.toContain('dark');
+        // Verify system icon is shown
+        const systemIcon = await toggleButton.locator('span.material-symbols-outlined').textContent();
+        expect(systemIcon?.trim()).toBe('settings_brightness');
+        await takeScreenshot(page, 'theme-dashboard-system-mode');
+
+        // Click to cycle to light mode
+        await toggleButton.click();
+        await page.waitForTimeout(300);
+
+        // Verify light mode — html should NOT have dark class (unless OS prefers dark)
+        const lightIcon = await toggleButton.locator('span.material-symbols-outlined').textContent();
+        expect(lightIcon?.trim()).toBe('light_mode');
+        const htmlClassLight = await page.evaluate(() => document.documentElement.className);
+        expect(htmlClassLight).not.toContain('dark');
         await takeScreenshot(page, 'theme-dashboard-toggled-back-light');
       }
     });

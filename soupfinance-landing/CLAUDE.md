@@ -14,6 +14,9 @@
 
 ---
 
+### Post-Fix CLAUDE.md Scan (HARD RULE)
+After completing any fix or code change, immediately re-read this CLAUDE.md before continuing to the next task. This ensures context stays fresh and prevents drift from project conventions.
+
 ## CRITICAL: Domain Architecture (HARD RULE)
 
 | Domain | Purpose | Login? | Content |

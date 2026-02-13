@@ -10,7 +10,7 @@ import { LanguageSwitcherCompact } from './LanguageSwitcher';
 export function TopNav() {
   const { t } = useTranslation('navigation');
   const user = useAuthStore((state) => state.user);
-  const { darkMode, toggleDarkMode, setMobileSidebarOpen, notificationsOpen, setNotificationsOpen } =
+  const { themeMode, cycleThemeMode, setMobileSidebarOpen, notificationsOpen, setNotificationsOpen } =
     useUIStore();
 
   // Changed: Reduced mobile padding from px-6 to px-4 to match MainLayout content padding
@@ -40,14 +40,14 @@ export function TopNav() {
 
       {/* Right: Actions & Avatar */}
       <div className="flex items-center gap-3">
-        {/* Dark mode toggle */}
+        {/* Changed: Dark mode toggle — cycles through light → dark → system */}
         <button
-          onClick={toggleDarkMode}
+          onClick={cycleThemeMode}
           className="flex items-center justify-center size-10 rounded-full hover:bg-primary/10 text-text-light dark:text-text-dark"
-          title={darkMode ? t('header.lightMode') : t('header.darkMode')}
+          title={themeMode === 'light' ? t('header.darkMode') : themeMode === 'dark' ? 'System' : t('header.lightMode')}
         >
           <span className="material-symbols-outlined">
-            {darkMode ? 'light_mode' : 'dark_mode'}
+            {themeMode === 'light' ? 'light_mode' : themeMode === 'dark' ? 'dark_mode' : 'settings_brightness'}
           </span>
         </button>
 

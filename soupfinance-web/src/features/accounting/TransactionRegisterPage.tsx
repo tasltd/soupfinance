@@ -417,12 +417,12 @@ export function TransactionRegisterPage() {
           <div className="flex flex-wrap justify-between items-center gap-4">
             <div>
               <h1
-                className="text-[#181311] dark:text-white text-3xl lg:text-4xl font-black leading-tight tracking-[-0.033em]"
+                className="text-text-light dark:text-text-dark text-3xl lg:text-4xl font-black leading-tight tracking-[-0.033em]"
                 data-testid="transaction-register-heading"
               >
                 Transaction Register
               </h1>
-              <p className="text-[#8a6b60] dark:text-gray-400 text-base mt-1">
+              <p className="text-subtle-text dark:text-subtle-text-dark text-base mt-1">
                 View and manage all accounting transactions
               </p>
             </div>
@@ -441,7 +441,7 @@ export function TransactionRegisterPage() {
               <button
                 type="button"
                 onClick={handleNewPayment}
-                className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-[#f5f1f0] dark:bg-[#2A221E] text-[#181311] dark:text-gray-200 text-sm font-bold leading-normal tracking-[0.015em] hover:bg-gray-200 dark:hover:bg-gray-700"
+                className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-background-light dark:bg-surface-dark text-text-light dark:text-text-dark text-sm font-bold leading-normal tracking-[0.015em] hover:bg-gray-200 dark:hover:bg-gray-700"
                 data-testid="new-payment-button"
               >
                 <span className="material-symbols-outlined text-lg mr-2">payments</span>
@@ -451,7 +451,7 @@ export function TransactionRegisterPage() {
               <button
                 type="button"
                 onClick={handleNewReceipt}
-                className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-[#f5f1f0] dark:bg-[#2A221E] text-[#181311] dark:text-gray-200 text-sm font-bold leading-normal tracking-[0.015em] hover:bg-gray-200 dark:hover:bg-gray-700"
+                className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-background-light dark:bg-surface-dark text-text-light dark:text-text-dark text-sm font-bold leading-normal tracking-[0.015em] hover:bg-gray-200 dark:hover:bg-gray-700"
                 data-testid="new-receipt-button"
               >
                 <span className="material-symbols-outlined text-lg mr-2">receipt</span>
@@ -461,7 +461,7 @@ export function TransactionRegisterPage() {
               <button
                 type="button"
                 onClick={handleExport}
-                className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-transparent text-[#181311] dark:text-gray-200 text-sm font-bold leading-normal tracking-[0.015em] hover:bg-gray-100 dark:hover:bg-gray-800 border border-gray-300 dark:border-gray-700"
+                className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-transparent text-text-light dark:text-text-dark text-sm font-bold leading-normal tracking-[0.015em] hover:bg-gray-100 dark:hover:bg-gray-800 border border-border-light dark:border-border-dark"
                 data-testid="export-button"
               >
                 <span className="material-symbols-outlined text-lg mr-2">download</span>
@@ -474,14 +474,14 @@ export function TransactionRegisterPage() {
           <div className="w-full">
             <label className="flex flex-col min-w-40 h-12 w-full">
               <div className="flex w-full flex-1 items-stretch rounded-lg h-full">
-                <div className="text-[#8a6b60] dark:text-gray-400 flex border-none bg-white dark:bg-[#2A221E] items-center justify-center pl-4 rounded-l-lg border-r-0 border border-[#e6dedb] dark:border-gray-700">
+                <div className="text-subtle-text dark:text-subtle-text-dark flex border-none bg-surface-light dark:bg-surface-dark items-center justify-center pl-4 rounded-l-lg border-r-0 border border-border-light dark:border-border-dark">
                   <span className="material-symbols-outlined">search</span>
                 </div>
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-r-lg text-[#181311] dark:text-white focus:outline-0 focus:ring-1 focus:ring-primary border-none bg-white dark:bg-[#2A221E] h-full placeholder:text-[#8a6b60] dark:placeholder:text-gray-500 px-4 pl-2 text-base font-normal leading-normal border border-l-0 border-[#e6dedb] dark:border-gray-700"
+                  className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-r-lg text-text-light dark:text-text-dark focus:outline-0 focus:ring-1 focus:ring-primary border-none bg-surface-light dark:bg-surface-dark h-full placeholder:text-subtle-text dark:placeholder:text-subtle-text-dark px-4 pl-2 text-base font-normal leading-normal border border-l-0 border-border-light dark:border-border-dark"
                   placeholder="Search by Transaction ID, Description, or Amount..."
                   data-testid="transaction-search-input"
                 />
@@ -490,36 +490,36 @@ export function TransactionRegisterPage() {
           </div>
 
           {/* Added: Inline Filter Bar */}
-          <div className="flex flex-wrap items-center gap-3 p-4 bg-white dark:bg-[#1C1613] rounded-lg border border-[#e6dedb] dark:border-gray-800">
+          <div className="flex flex-wrap items-center gap-3 p-4 bg-surface-light dark:bg-background-dark rounded-lg border border-border-light dark:border-border-dark">
             {/* Date Range */}
             <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-[#181311] dark:text-gray-300">From:</label>
+              <label className="text-sm font-medium text-text-light dark:text-subtle-text-dark">From:</label>
               <input
                 type="date"
                 value={filters.startDate}
                 onChange={(e) => handleFilterChange('startDate', e.target.value)}
-                className="form-input h-9 px-3 rounded-lg border border-[#e6dedb] dark:border-gray-700 bg-transparent dark:bg-[#2A221E] text-sm dark:text-white"
+                className="form-input h-9 px-3 rounded-lg border border-border-light dark:border-border-dark bg-transparent dark:bg-surface-dark text-sm dark:text-text-dark"
                 data-testid="filter-start-date"
               />
             </div>
             <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-[#181311] dark:text-gray-300">To:</label>
+              <label className="text-sm font-medium text-text-light dark:text-subtle-text-dark">To:</label>
               <input
                 type="date"
                 value={filters.endDate}
                 onChange={(e) => handleFilterChange('endDate', e.target.value)}
-                className="form-input h-9 px-3 rounded-lg border border-[#e6dedb] dark:border-gray-700 bg-transparent dark:bg-[#2A221E] text-sm dark:text-white"
+                className="form-input h-9 px-3 rounded-lg border border-border-light dark:border-border-dark bg-transparent dark:bg-surface-dark text-sm dark:text-text-dark"
                 data-testid="filter-end-date"
               />
             </div>
 
             {/* Status Filter */}
             <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-[#181311] dark:text-gray-300">Status:</label>
+              <label className="text-sm font-medium text-text-light dark:text-subtle-text-dark">Status:</label>
               <select
                 value={filters.status}
                 onChange={(e) => handleFilterChange('status', e.target.value)}
-                className="form-select h-9 px-3 rounded-lg border border-[#e6dedb] dark:border-gray-700 bg-transparent dark:bg-[#2A221E] text-sm dark:text-white"
+                className="form-select h-9 px-3 rounded-lg border border-border-light dark:border-border-dark bg-transparent dark:bg-surface-dark text-sm dark:text-text-dark"
                 data-testid="filter-status"
               >
                 <option value="ALL">All</option>
@@ -532,11 +532,11 @@ export function TransactionRegisterPage() {
 
             {/* Type Filter */}
             <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-[#181311] dark:text-gray-300">Type:</label>
+              <label className="text-sm font-medium text-text-light dark:text-subtle-text-dark">Type:</label>
               <select
                 value={filters.type}
                 onChange={(e) => handleFilterChange('type', e.target.value)}
-                className="form-select h-9 px-3 rounded-lg border border-[#e6dedb] dark:border-gray-700 bg-transparent dark:bg-[#2A221E] text-sm dark:text-white"
+                className="form-select h-9 px-3 rounded-lg border border-border-light dark:border-border-dark bg-transparent dark:bg-surface-dark text-sm dark:text-text-dark"
                 data-testid="filter-type"
               >
                 <option value="ALL">All Types</option>
@@ -548,13 +548,13 @@ export function TransactionRegisterPage() {
 
             {/* Account Filter */}
             <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-[#181311] dark:text-gray-300">Account:</label>
+              <label className="text-sm font-medium text-text-light dark:text-subtle-text-dark">Account:</label>
               <input
                 type="text"
                 value={filters.accountId}
                 onChange={(e) => handleFilterChange('accountId', e.target.value)}
                 placeholder="e.g., 1010"
-                className="form-input h-9 w-24 px-3 rounded-lg border border-[#e6dedb] dark:border-gray-700 bg-transparent dark:bg-[#2A221E] text-sm dark:text-white"
+                className="form-input h-9 w-24 px-3 rounded-lg border border-border-light dark:border-border-dark bg-transparent dark:bg-surface-dark text-sm dark:text-text-dark"
                 data-testid="filter-account"
               />
             </div>
@@ -563,7 +563,7 @@ export function TransactionRegisterPage() {
             <button
               type="button"
               onClick={handleClearFilters}
-              className="flex h-9 items-center gap-2 rounded-lg px-3 text-[#8a6b60] dark:text-gray-400 hover:text-primary hover:bg-primary/10 text-sm font-medium"
+              className="flex h-9 items-center gap-2 rounded-lg px-3 text-subtle-text dark:text-subtle-text-dark hover:text-primary hover:bg-primary/10 text-sm font-medium"
               data-testid="clear-filters-button"
             >
               <span className="material-symbols-outlined text-lg">filter_list_off</span>
@@ -577,7 +577,7 @@ export function TransactionRegisterPage() {
               className="flex items-center justify-between p-4 bg-primary/10 dark:bg-primary/20 rounded-lg border border-primary/30"
               data-testid="batch-action-bar"
             >
-              <span className="text-sm font-medium text-[#181311] dark:text-white">
+              <span className="text-sm font-medium text-text-light dark:text-text-dark">
                 {selectedIds.size} transaction{selectedIds.size > 1 ? 's' : ''} selected
               </span>
               <div className="flex gap-3">
@@ -602,7 +602,7 @@ export function TransactionRegisterPage() {
                 <button
                   type="button"
                   onClick={() => setSelectedIds(new Set())}
-                  className="flex items-center gap-2 h-9 px-4 rounded-lg bg-transparent text-[#181311] dark:text-white text-sm font-bold hover:bg-black/10"
+                  className="flex items-center gap-2 h-9 px-4 rounded-lg bg-transparent text-text-light dark:text-text-dark text-sm font-bold hover:bg-black/10"
                   data-testid="clear-selection-button"
                 >
                   Cancel
@@ -614,11 +614,11 @@ export function TransactionRegisterPage() {
           {/* Added: Loading State */}
           {isLoading && (
             <div className="w-full" data-testid="transaction-loading">
-              <div className="flex flex-col items-center justify-center py-16 rounded-lg border border-[#e6dedb] dark:border-gray-800 bg-white dark:bg-[#1C1613]">
+              <div className="flex flex-col items-center justify-center py-16 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-background-dark">
                 <span className="material-symbols-outlined text-4xl text-primary animate-spin mb-4">
                   progress_activity
                 </span>
-                <p className="text-[#8a6b60] dark:text-gray-400 text-sm">Loading transactions...</p>
+                <p className="text-subtle-text dark:text-subtle-text-dark text-sm">Loading transactions...</p>
               </div>
             </div>
           )}
@@ -630,7 +630,7 @@ export function TransactionRegisterPage() {
                 <span className="material-symbols-outlined text-5xl text-red-500 mb-3">
                   error_outline
                 </span>
-                <h3 className="text-lg font-bold text-[#181311] dark:text-white mb-1">
+                <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-1">
                   Failed to load transactions
                 </h3>
                 <p className="text-red-600 dark:text-red-400 text-sm mb-4">
@@ -652,9 +652,9 @@ export function TransactionRegisterPage() {
           {/* Added: Data Table - Only show when not loading and no error */}
           {!isLoading && !isError && (
           <div className="w-full" data-testid="transaction-table-container">
-            <div className="flex overflow-hidden rounded-lg border border-[#e6dedb] dark:border-gray-800 bg-white dark:bg-[#1C1613]">
+            <div className="flex overflow-hidden rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-background-dark">
               <table className="w-full" data-testid="transaction-table">
-                <thead className="bg-white dark:bg-[#2A221E] border-b border-[#e6dedb] dark:border-gray-800">
+                <thead className="bg-surface-light dark:bg-surface-dark border-b border-border-light dark:border-border-dark">
                   <tr>
                     {/* Added: Checkbox column */}
                     <th className="px-4 py-3 w-12 text-left">
@@ -662,54 +662,54 @@ export function TransactionRegisterPage() {
                         type="checkbox"
                         checked={allSelected}
                         onChange={handleToggleAll}
-                        className="h-5 w-5 rounded border-[#e6dedb] dark:border-gray-600 border-2 bg-transparent text-primary checked:bg-primary checked:border-primary focus:ring-0 focus:ring-offset-0 focus:border-[#e6dedb] dark:focus:border-gray-500"
+                        className="h-5 w-5 rounded border-border-light dark:border-border-dark border-2 bg-transparent text-primary checked:bg-primary checked:border-primary focus:ring-0 focus:ring-offset-0 focus:border-border-light dark:focus:border-border-dark"
                         data-testid="select-all-checkbox"
                       />
                     </th>
-                    <th className="px-4 py-3 text-left text-[#181311] dark:text-gray-300 text-sm font-medium leading-normal">
+                    <th className="px-4 py-3 text-left text-text-light dark:text-subtle-text-dark text-sm font-medium leading-normal">
                       Date
                     </th>
-                    <th className="px-4 py-3 text-left text-[#181311] dark:text-gray-300 text-sm font-medium leading-normal">
+                    <th className="px-4 py-3 text-left text-text-light dark:text-subtle-text-dark text-sm font-medium leading-normal">
                       Transaction ID
                     </th>
-                    <th className="px-4 py-3 text-left text-[#181311] dark:text-gray-300 text-sm font-medium leading-normal">
+                    <th className="px-4 py-3 text-left text-text-light dark:text-subtle-text-dark text-sm font-medium leading-normal">
                       Description
                     </th>
-                    <th className="px-4 py-3 text-left text-[#181311] dark:text-gray-300 text-sm font-medium leading-normal">
+                    <th className="px-4 py-3 text-left text-text-light dark:text-subtle-text-dark text-sm font-medium leading-normal">
                       Account #
                     </th>
-                    <th className="px-4 py-3 text-left text-[#181311] dark:text-gray-300 text-sm font-medium leading-normal">
+                    <th className="px-4 py-3 text-left text-text-light dark:text-subtle-text-dark text-sm font-medium leading-normal">
                       Account Name
                     </th>
-                    <th className="px-4 py-3 text-right text-[#181311] dark:text-gray-300 text-sm font-medium leading-normal">
+                    <th className="px-4 py-3 text-right text-text-light dark:text-subtle-text-dark text-sm font-medium leading-normal">
                       Debit
                     </th>
-                    <th className="px-4 py-3 text-right text-[#181311] dark:text-gray-300 text-sm font-medium leading-normal">
+                    <th className="px-4 py-3 text-right text-text-light dark:text-subtle-text-dark text-sm font-medium leading-normal">
                       Credit
                     </th>
-                    <th className="px-4 py-3 text-center text-[#181311] dark:text-gray-300 text-sm font-medium leading-normal">
+                    <th className="px-4 py-3 text-center text-text-light dark:text-subtle-text-dark text-sm font-medium leading-normal">
                       Status
                     </th>
-                    <th className="px-4 py-3 text-center text-[#181311] dark:text-gray-300 text-sm font-medium leading-normal">
+                    <th className="px-4 py-3 text-center text-text-light dark:text-subtle-text-dark text-sm font-medium leading-normal">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#e6dedb] dark:divide-gray-800">
+                <tbody className="divide-y divide-border-light dark:divide-border-dark">
                   {paginatedTransactions.length === 0 ? (
                     <tr>
                       <td colSpan={10} className="px-4 py-12 text-center">
                         <div className="flex flex-col items-center">
-                          <span className="material-symbols-outlined text-5xl text-[#8a6b60]/50 mb-3">
+                          <span className="material-symbols-outlined text-5xl text-subtle-text/50 mb-3">
                             compare_arrows
                           </span>
                           <h3
-                            className="text-lg font-bold text-[#181311] dark:text-white mb-1"
+                            className="text-lg font-bold text-text-light dark:text-text-dark mb-1"
                             data-testid="empty-state-heading"
                           >
                             No transactions found
                           </h3>
-                          <p className="text-[#8a6b60] dark:text-gray-400 text-sm mb-4">
+                          <p className="text-subtle-text dark:text-subtle-text-dark text-sm mb-4">
                             {searchQuery || filters.status !== 'ALL' || filters.type !== 'ALL'
                               ? 'Try adjusting your search or filter criteria'
                               : 'Create your first transaction to get started'}
@@ -741,12 +741,12 @@ export function TransactionRegisterPage() {
                             type="checkbox"
                             checked={selectedIds.has(tx.id)}
                             onChange={() => handleToggleSelection(tx.id)}
-                            className="h-5 w-5 rounded border-[#e6dedb] dark:border-gray-600 border-2 bg-transparent text-primary checked:bg-primary checked:border-primary focus:ring-0 focus:ring-offset-0 focus:border-[#e6dedb] dark:focus:border-gray-500"
+                            className="h-5 w-5 rounded border-border-light dark:border-border-dark border-2 bg-transparent text-primary checked:bg-primary checked:border-primary focus:ring-0 focus:ring-offset-0 focus:border-border-light dark:focus:border-border-dark"
                             data-testid={`transaction-checkbox-${tx.id}`}
                           />
                         </td>
                         {/* Added: Date column */}
-                        <td className="px-4 py-2 text-[#8a6b60] dark:text-gray-400 text-sm font-normal leading-normal">
+                        <td className="px-4 py-2 text-subtle-text dark:text-subtle-text-dark text-sm font-normal leading-normal">
                           {tx.date}
                         </td>
                         {/* Added: Transaction ID column */}
@@ -762,25 +762,25 @@ export function TransactionRegisterPage() {
                         </td>
                         {/* Added: Description column */}
                         <td
-                          className="px-4 py-2 text-[#181311] dark:text-gray-200 text-sm font-normal leading-normal max-w-xs truncate"
+                          className="px-4 py-2 text-text-light dark:text-text-dark text-sm font-normal leading-normal max-w-xs truncate"
                           title={tx.description}
                         >
                           {tx.description}
                         </td>
                         {/* Added: Account code column */}
-                        <td className="px-4 py-2 text-[#8a6b60] dark:text-gray-400 text-sm font-normal leading-normal">
+                        <td className="px-4 py-2 text-subtle-text dark:text-subtle-text-dark text-sm font-normal leading-normal">
                           {tx.accountCode}
                         </td>
                         {/* Added: Account name column */}
-                        <td className="px-4 py-2 text-[#8a6b60] dark:text-gray-400 text-sm font-normal leading-normal">
+                        <td className="px-4 py-2 text-subtle-text dark:text-subtle-text-dark text-sm font-normal leading-normal">
                           {tx.accountName}
                         </td>
                         {/* Added: Debit amount column */}
-                        <td className="px-4 py-2 text-[#8a6b60] dark:text-gray-400 text-sm font-normal leading-normal text-right">
+                        <td className="px-4 py-2 text-subtle-text dark:text-subtle-text-dark text-sm font-normal leading-normal text-right">
                           {tx.debitAmount > 0 ? formatCurrency(tx.debitAmount) : '—'}
                         </td>
                         {/* Added: Credit amount column */}
-                        <td className="px-4 py-2 text-[#8a6b60] dark:text-gray-400 text-sm font-normal leading-normal text-right">
+                        <td className="px-4 py-2 text-subtle-text dark:text-subtle-text-dark text-sm font-normal leading-normal text-right">
                           {tx.creditAmount > 0 ? formatCurrency(tx.creditAmount) : '—'}
                         </td>
                         {/* Added: Status badge column */}
@@ -800,7 +800,7 @@ export function TransactionRegisterPage() {
                             className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
                             data-testid={`transaction-actions-${tx.id}`}
                           >
-                            <span className="material-symbols-outlined text-[#8a6b60] dark:text-gray-400">
+                            <span className="material-symbols-outlined text-subtle-text dark:text-subtle-text-dark">
                               more_vert
                             </span>
                           </button>
@@ -813,14 +813,14 @@ export function TransactionRegisterPage() {
                                 onClick={handleCloseDropdown}
                               />
                               <div
-                                className="absolute right-0 mt-1 w-40 rounded-lg bg-white dark:bg-[#2A221E] shadow-lg border border-[#e6dedb] dark:border-gray-700 z-20"
+                                className="absolute right-0 mt-1 w-40 rounded-lg bg-surface-light dark:bg-surface-dark shadow-lg border border-border-light dark:border-border-dark z-20"
                                 data-testid={`transaction-dropdown-${tx.id}`}
                               >
                                 <div className="py-1">
                                   <button
                                     type="button"
                                     onClick={() => handleView(tx)}
-                                    className="flex items-center gap-2 w-full px-4 py-2 text-sm text-[#181311] dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
+                                    className="flex items-center gap-2 w-full px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-800"
                                   >
                                     <span className="material-symbols-outlined text-lg">visibility</span>
                                     View
@@ -829,7 +829,7 @@ export function TransactionRegisterPage() {
                                     <button
                                       type="button"
                                       onClick={() => handleEdit(tx)}
-                                      className="flex items-center gap-2 w-full px-4 py-2 text-sm text-[#181311] dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
+                                      className="flex items-center gap-2 w-full px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-800"
                                     >
                                       <span className="material-symbols-outlined text-lg">edit</span>
                                       Edit
@@ -904,7 +904,7 @@ export function TransactionRegisterPage() {
                   type="button"
                   onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
-                  className="relative inline-flex items-center rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-transparent px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="relative inline-flex items-center rounded-md border border-border-light dark:border-border-dark bg-white dark:bg-transparent px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
                   data-testid="pagination-prev"
                 >
                   Previous
@@ -913,7 +913,7 @@ export function TransactionRegisterPage() {
                   type="button"
                   onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                   disabled={currentPage === totalPages}
-                  className="relative inline-flex items-center rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-transparent px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="relative inline-flex items-center rounded-md border border-border-light dark:border-border-dark bg-white dark:bg-transparent px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
                   data-testid="pagination-next"
                 >
                   Next
@@ -926,11 +926,11 @@ export function TransactionRegisterPage() {
 
       {/* Added: Advanced Filters Side Panel (visible on xl screens) */}
       <aside
-        className="w-96 min-h-screen bg-white dark:bg-[#1C1613] p-6 border-l border-[#e6dedb] dark:border-gray-800 hidden xl:block"
+        className="w-96 min-h-screen bg-surface-light dark:bg-background-dark p-6 border-l border-border-light dark:border-border-dark hidden xl:block"
         data-testid="advanced-filters-panel"
       >
         <div className="flex flex-col gap-6">
-          <h2 className="text-xl font-bold text-[#181311] dark:text-white">Advanced Filters</h2>
+          <h2 className="text-xl font-bold text-text-light dark:text-text-dark">Advanced Filters</h2>
           <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
             {/* Date Range */}
             <div>
@@ -946,7 +946,7 @@ export function TransactionRegisterPage() {
                   id="panel-date-range-start"
                   value={filters.startDate}
                   onChange={(e) => handleFilterChange('startDate', e.target.value)}
-                  className="block w-full rounded-md border-gray-300 dark:border-gray-700 shadow-sm focus:border-primary focus:ring-primary sm:text-sm bg-transparent dark:text-white dark:bg-[#2A221E]"
+                  className="block w-full rounded-md border-border-light dark:border-border-dark shadow-sm focus:border-primary focus:ring-primary sm:text-sm bg-transparent dark:text-text-dark dark:bg-surface-dark"
                   data-testid="panel-filter-start-date"
                 />
                 <input
@@ -954,7 +954,7 @@ export function TransactionRegisterPage() {
                   id="panel-date-range-end"
                   value={filters.endDate}
                   onChange={(e) => handleFilterChange('endDate', e.target.value)}
-                  className="block w-full rounded-md border-gray-300 dark:border-gray-700 shadow-sm focus:border-primary focus:ring-primary sm:text-sm bg-transparent dark:text-white dark:bg-[#2A221E]"
+                  className="block w-full rounded-md border-border-light dark:border-border-dark shadow-sm focus:border-primary focus:ring-primary sm:text-sm bg-transparent dark:text-text-dark dark:bg-surface-dark"
                   data-testid="panel-filter-end-date"
                 />
               </div>
@@ -972,7 +972,7 @@ export function TransactionRegisterPage() {
                 id="panel-status-filter"
                 value={filters.status}
                 onChange={(e) => handleFilterChange('status', e.target.value)}
-                className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 py-2 pl-3 pr-10 text-base focus:border-primary focus:outline-none focus:ring-primary sm:text-sm bg-transparent dark:text-white dark:bg-[#1C1613]"
+                className="mt-1 block w-full rounded-md border-border-light dark:border-border-dark py-2 pl-3 pr-10 text-base focus:border-primary focus:outline-none focus:ring-primary sm:text-sm bg-transparent dark:text-text-dark dark:bg-background-dark"
                 data-testid="panel-filter-status"
               >
                 <option value="ALL">All</option>
@@ -995,7 +995,7 @@ export function TransactionRegisterPage() {
                 id="panel-type-filter"
                 value={filters.type}
                 onChange={(e) => handleFilterChange('type', e.target.value)}
-                className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 py-2 pl-3 pr-10 text-base focus:border-primary focus:outline-none focus:ring-primary sm:text-sm bg-transparent dark:text-white dark:bg-[#1C1613]"
+                className="mt-1 block w-full rounded-md border-border-light dark:border-border-dark py-2 pl-3 pr-10 text-base focus:border-primary focus:outline-none focus:ring-primary sm:text-sm bg-transparent dark:text-text-dark dark:bg-background-dark"
                 data-testid="panel-filter-type"
               >
                 <option value="ALL">All Types</option>
@@ -1019,7 +1019,7 @@ export function TransactionRegisterPage() {
                 value={filters.accountId}
                 onChange={(e) => handleFilterChange('accountId', e.target.value)}
                 placeholder="e.g., 1010"
-                className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 shadow-sm focus:border-primary focus:ring-primary sm:text-sm bg-transparent dark:text-white"
+                className="mt-1 block w-full rounded-md border-border-light dark:border-border-dark shadow-sm focus:border-primary focus:ring-primary sm:text-sm bg-transparent dark:text-text-dark"
                 data-testid="panel-filter-account"
               />
             </div>
@@ -1039,7 +1039,7 @@ export function TransactionRegisterPage() {
                   value={filters.minAmount}
                   onChange={(e) => handleFilterChange('minAmount', e.target.value)}
                   placeholder="0.00"
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 shadow-sm focus:border-primary focus:ring-primary sm:text-sm bg-transparent dark:text-white"
+                  className="mt-1 block w-full rounded-md border-border-light dark:border-border-dark shadow-sm focus:border-primary focus:ring-primary sm:text-sm bg-transparent dark:text-text-dark"
                   data-testid="panel-filter-min-amount"
                 />
               </div>
@@ -1056,7 +1056,7 @@ export function TransactionRegisterPage() {
                   value={filters.maxAmount}
                   onChange={(e) => handleFilterChange('maxAmount', e.target.value)}
                   placeholder="1000.00"
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 shadow-sm focus:border-primary focus:ring-primary sm:text-sm bg-transparent dark:text-white"
+                  className="mt-1 block w-full rounded-md border-border-light dark:border-border-dark shadow-sm focus:border-primary focus:ring-primary sm:text-sm bg-transparent dark:text-text-dark"
                   data-testid="panel-filter-max-amount"
                 />
               </div>
@@ -1067,7 +1067,7 @@ export function TransactionRegisterPage() {
               <button
                 type="button"
                 onClick={handleClearFilters}
-                className="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-transparent text-[#181311] dark:text-gray-200 text-sm font-bold leading-normal tracking-[0.015em] hover:bg-gray-100 dark:hover:bg-gray-800"
+                className="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-transparent text-text-light dark:text-text-dark text-sm font-bold leading-normal tracking-[0.015em] hover:bg-gray-100 dark:hover:bg-gray-800"
                 data-testid="panel-clear-button"
               >
                 <span className="truncate">Clear</span>
@@ -1086,7 +1086,7 @@ export function TransactionRegisterPage() {
 
           {/* Added: Reporting Quick Links */}
           <div className="flex flex-col gap-4">
-            <h2 className="text-xl font-bold text-[#181311] dark:text-white">Reporting</h2>
+            <h2 className="text-xl font-bold text-text-light dark:text-text-dark">Reporting</h2>
             <div className="space-y-3">
               <Link
                 to="/reports/trial-balance"

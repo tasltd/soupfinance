@@ -17,7 +17,7 @@ import type { LedgerAccount, LedgerGroup } from '../../types';
 const GROUP_CONFIG: Record<LedgerGroup, { label: string; icon: string; colorClass: string }> = {
   ASSET: { label: 'Assets', icon: 'account_balance', colorClass: 'text-info bg-info/10' },
   LIABILITY: { label: 'Liabilities', icon: 'credit_card', colorClass: 'text-danger bg-danger/10' },
-  EQUITY: { label: 'Equity', icon: 'balance', colorClass: 'text-purple-600 bg-purple-100' },
+  EQUITY: { label: 'Equity', icon: 'balance', colorClass: 'text-purple-600 dark:text-purple-400 bg-purple-100 dark:bg-purple-900/30' },
   INCOME: { label: 'Income', icon: 'trending_up', colorClass: 'text-success bg-success/10' },
   REVENUE: { label: 'Revenue', icon: 'trending_up', colorClass: 'text-success bg-success/10' },
   EXPENSE: { label: 'Expenses', icon: 'trending_down', colorClass: 'text-warning bg-warning/10' },

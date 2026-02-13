@@ -203,7 +203,7 @@ export default function App() {
     }
   }, [isAuthenticated, accountInitialized, fetchAccountSettings]);
 
-  // Apply dark mode class
+  // Apply dark mode class — darkMode is resolved from themeMode (light/dark/system) in uiStore
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode);
   }, [darkMode]);
