@@ -775,9 +775,9 @@ test.describe('Corporate Onboarding Flow', () => {
     });
 
     test('shows loading state while fetching data', async ({ page }) => {
-      // Changed: Increased delay from 1s to 3s for reliable loading state detection
+      // Fix: Increased delay to 5s to eliminate race condition with page navigation
       await page.route(`**/rest/corporate/show/${CORPORATE_ID}*`, async (route) => {
-        await new Promise((resolve) => setTimeout(resolve, 3000));
+        await new Promise((resolve) => setTimeout(resolve, 5000));
         route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -789,8 +789,8 @@ test.describe('Corporate Onboarding Flow', () => {
 
       await page.goto(BASE_URL_STATUS);
 
-      // Changed: Added timeout to handle race condition with page load
-      await expect(page.locator('.animate-spin').first()).toBeVisible({ timeout: 3000 });
+      // Fix: Increased timeout to 5s to match the delayed response
+      await expect(page.locator('.animate-spin').first()).toBeVisible({ timeout: 5000 });
       await takeScreenshot(page, 'onboarding-status-loading');
     });
   });

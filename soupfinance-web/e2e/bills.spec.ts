@@ -445,9 +445,9 @@ test.describe('Bill Management', () => {
       // Mock token validation to keep user authenticated
       await mockTokenValidationApi(page, true);
 
-      // Set up delayed API response (use longer delay to catch loading state)
+      // Fix: Increased delay to 5s to eliminate race condition with page navigation
       await page.route('**/rest/bill/index.json*', async (route: any) => {
-        await new Promise((resolve) => setTimeout(resolve, 2000));
+        await new Promise((resolve) => setTimeout(resolve, 5000));
         route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -458,8 +458,8 @@ test.describe('Bill Management', () => {
       // Navigate to the page
       await page.goto('/bills', { waitUntil: 'commit' });
 
-      // Should show loading state (check immediately after navigation begins)
-      await expect(page.getByTestId('bill-list-loading')).toBeVisible({ timeout: 3000 });
+      // Fix: Increased timeout to 5s to match the delayed response
+      await expect(page.getByTestId('bill-list-loading')).toBeVisible({ timeout: 5000 });
       await takeScreenshot(page, 'bills-list-loading');
 
       // Wait for table to appear after delay

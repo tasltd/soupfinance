@@ -229,6 +229,12 @@ test.describe('Ledger Integration Tests', () => {
       // Changed: Use domcontentloaded instead of networkidle — transactions API can be very slow
       await page.waitForLoadState('domcontentloaded');
 
+      // Fix: Wait for auth verification to complete before checking content
+      await page.waitForFunction(
+        () => !document.body.textContent?.includes('Verifying authentication'),
+        { timeout: 20000 }
+      ).catch(() => {});
+
       // Check if session expired
       const isLoginPage = await page.getByText(/session expired|sign in|welcome back/i).first().isVisible({ timeout: 3000 }).catch(() => false);
       if (isLoginPage) {

@@ -72,7 +72,7 @@ soupfinance-landing/
 
 ### Apache Virtual Host
 
-Location: `/etc/apache2/sites-available/001-soupfinance-landing.conf`
+Location: `/etc/apache2/sites-available/www-soupfinance-com.conf` (note: the old `001-soupfinance-landing.conf` is stale and should be removed)
 
 ```apache
 <VirtualHost *:80>

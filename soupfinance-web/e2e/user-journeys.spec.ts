@@ -386,6 +386,39 @@ test.describe('User Journey: Accounts Receivable', () => {
     await mockTokenValidationApi(page, true);
     await mockInvoicesApi(page, mockInvoices);
 
+    // Fix: Add show endpoint mock — edit page needs single invoice object (not array)
+    await page.route('**/rest/invoice/show/inv-001*', (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(mockInvoices[0]),
+      });
+    });
+
+    // Fix: Mock form dependencies — edit page fetches clients, service descriptions, and invoice items
+    await page.route('**/rest/client/index*', (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([]),
+      });
+    });
+    await page.route('**/rest/serviceDescription/index*', (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([]),
+      });
+    });
+    // Fix: getInvoice() also fetches invoiceItems — without mock, request hangs and promise never resolves
+    await page.route('**/rest/invoiceItem/index*', (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(mockInvoices[0]?.invoiceItemList || []),
+      });
+    });
+
     // List invoices
     await page.goto('/invoices');
     await expect(page.getByTestId('invoice-list-page')).toBeVisible();
@@ -402,7 +435,8 @@ test.describe('User Journey: Accounts Receivable', () => {
     // Navigate to edit
     await page.getByTestId('invoice-edit-inv-001').click();
     await expect(page).toHaveURL(/\/invoices\/inv-001\/edit/);
-    await expect(page.getByTestId('invoice-form-heading')).toHaveText('Edit Invoice');
+    // Fix: Wait for form to load data before asserting heading
+    await expect(page.getByTestId('invoice-form-heading')).toHaveText('Edit Invoice', { timeout: 10000 });
 
     await takeScreenshot(page, 'journey-ar-crud-complete');
   });

@@ -1200,9 +1200,9 @@ test.describe('Report Loading States', () => {
   });
 
   test('shows loading state for trial balance', async ({ page }) => {
-    // Delay API response to show loading
+    // Fix: Increased delay from 3s to 5s to eliminate race condition with page navigation
     await page.route('**/rest/financeReports/trialBalance*', async (route) => {
-      await new Promise((resolve) => setTimeout(resolve, 3000));
+      await new Promise((resolve) => setTimeout(resolve, 5000));
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -1212,7 +1212,7 @@ test.describe('Report Loading States', () => {
 
     await page.goto('/reports/trial-balance');
 
-    await expect(page.getByTestId('trial-balance-loading')).toBeVisible({ timeout: 3000 });
+    await expect(page.getByTestId('trial-balance-loading')).toBeVisible({ timeout: 5000 });
 
     await takeScreenshot(page, 'trial-balance-loading');
 
@@ -1238,8 +1238,9 @@ test.describe('Report Loading States', () => {
   });
 
   test('shows loading state for balance sheet', async ({ page }) => {
+    // Fix: Increased delay from 3s to 5s to eliminate race condition with page navigation
     await page.route('**/rest/financeReports/balanceSheet*', async (route) => {
-      await new Promise((resolve) => setTimeout(resolve, 3000));
+      await new Promise((resolve) => setTimeout(resolve, 5000));
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -1249,7 +1250,7 @@ test.describe('Report Loading States', () => {
 
     await page.goto('/reports/balance-sheet');
 
-    await expect(page.getByTestId('balance-sheet-loading')).toBeVisible({ timeout: 3000 });
+    await expect(page.getByTestId('balance-sheet-loading')).toBeVisible({ timeout: 5000 });
 
     await takeScreenshot(page, 'balance-sheet-loading');
   });
