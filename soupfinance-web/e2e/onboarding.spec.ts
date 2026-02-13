@@ -18,6 +18,7 @@ import {
   mockDocument,
   mockTokenValidationApi,
   takeScreenshot,
+  setupResponseValidation,
 } from './fixtures';
 
 // Added: Test constants for corporate onboarding
@@ -48,6 +49,8 @@ test.describe('Corporate Onboarding Flow', () => {
     });
     // Mock token validation API - required for authenticated pages
     await mockTokenValidationApi(page, true);
+    // Added: Validate API response shapes at runtime
+    await setupResponseValidation(page);
   });
 
   // ===========================================================================

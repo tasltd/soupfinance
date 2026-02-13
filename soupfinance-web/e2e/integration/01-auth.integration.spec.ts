@@ -5,7 +5,7 @@
  * Run with: npx playwright test --config=playwright.integration.config.ts e2e/integration/
  */
 import { test, expect } from '@playwright/test';
-import { backendTestUsers, takeScreenshot } from '../fixtures';
+import { backendTestUsers, takeScreenshot, setupResponseValidation } from '../fixtures';
 
 test.describe('Authentication Integration Tests', () => {
   // Clear localStorage before each test to ensure clean state
@@ -21,6 +21,8 @@ test.describe('Authentication Integration Tests', () => {
     await page.reload();
     // Wait for page to be ready
     await page.waitForLoadState('networkidle');
+    // Added: Validate API response shapes at runtime
+    await setupResponseValidation(page);
   });
 
   test.describe('Login with Real Backend', () => {

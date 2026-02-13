@@ -49,7 +49,7 @@
  *           invoice-cancel-button, invoice-download-pdf-button
  */
 import { test, expect, type Page } from '@playwright/test';
-import { backendTestUsers, takeScreenshot } from '../fixtures';
+import { backendTestUsers, takeScreenshot, setupResponseValidation } from '../fixtures';
 
 // LXC backend base URL for direct API calls
 const API_BASE = 'http://10.115.213.183:9090';
@@ -112,6 +112,8 @@ test.describe('Invoice Integration Tests', () => {
 
   test.beforeEach(async ({ page }) => {
     await loginAsAdmin(page);
+    // Added: Validate API response shapes at runtime
+    await setupResponseValidation(page);
   });
 
   // =========================================================================

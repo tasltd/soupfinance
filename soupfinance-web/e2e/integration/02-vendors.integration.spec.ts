@@ -24,7 +24,7 @@
  *   Detail: vendor-detail-page, vendor-detail-edit, vendor-detail-delete
  */
 import { test, expect, type Page } from '@playwright/test';
-import { backendTestUsers, takeScreenshot } from '../fixtures';
+import { backendTestUsers, takeScreenshot, setupResponseValidation } from '../fixtures';
 
 // ===========================================================================
 // Shared State (persists across serial tests)
@@ -192,6 +192,8 @@ test.describe('Vendor Integration Tests', () => {
 
   test.beforeEach(async ({ page }) => {
     await loginAsAdmin(page);
+    // Added: Validate API response shapes at runtime
+    await setupResponseValidation(page);
   });
 
   // =========================================================================

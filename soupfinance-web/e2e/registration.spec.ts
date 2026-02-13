@@ -9,7 +9,7 @@
  * - Email (no phone - password set during email confirmation)
  */
 import { test, expect } from '@playwright/test';
-import { takeScreenshot } from './fixtures';
+import { takeScreenshot, setupResponseValidation } from './fixtures';
 
 // Mock tenant registration data
 const mockTenantRegistration = {
@@ -58,6 +58,8 @@ test.describe('Tenant Registration', () => {
     await page.addInitScript(() => {
       localStorage.clear();
     });
+    // Added: Validate API response shapes at runtime
+    await setupResponseValidation(page);
   });
 
   test.describe('Registration Form Rendering', () => {

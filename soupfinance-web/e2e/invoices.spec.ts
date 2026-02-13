@@ -6,7 +6,7 @@
  * This is required because the app validates the auth token on page load
  */
 import { test, expect } from '@playwright/test';
-import { mockInvoicesApi, mockInvoices, mockDashboardApi, takeScreenshot, mockTokenValidationApi } from './fixtures';
+import { mockInvoicesApi, mockInvoices, mockDashboardApi, takeScreenshot, mockTokenValidationApi, setupResponseValidation } from './fixtures';
 
 // Helper to set up authenticated state
 async function setupAuth(page: any) {
@@ -66,6 +66,8 @@ async function mockInvoiceFormDeps(page: any) {
 test.describe('Invoice Management', () => {
   test.beforeEach(async ({ page }) => {
     await setupAuth(page);
+    // Added: Validate API response shapes at runtime
+    await setupResponseValidation(page);
   });
 
   test.describe('Invoice List Page', () => {

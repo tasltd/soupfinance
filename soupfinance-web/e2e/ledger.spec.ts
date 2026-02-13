@@ -3,7 +3,7 @@
  * Tests Chart of Accounts and Ledger Transactions pages
  */
 import { test, expect } from '@playwright/test';
-import { mockTokenValidationApi, takeScreenshot } from './fixtures';
+import { mockTokenValidationApi, takeScreenshot, setupResponseValidation } from './fixtures';
 
 // ===========================================================================
 // Mock Data
@@ -192,6 +192,8 @@ test.describe('Ledger Management', () => {
     });
     // Mock token validation API - required for authenticated pages
     await mockTokenValidationApi(page, true);
+    // Added: Validate API response shapes at runtime
+    await setupResponseValidation(page);
   });
 
   // Helper to mock ledger APIs

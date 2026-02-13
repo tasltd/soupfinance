@@ -14,6 +14,7 @@ import {
   takeScreenshot,
   getTestUsers,
   isLxcMode,
+  setupResponseValidation,
 } from './fixtures';
 
 // Get appropriate test users based on mode (mock or LXC)
@@ -25,6 +26,8 @@ test.describe('Authentication', () => {
     await page.addInitScript(() => {
       localStorage.clear();
     });
+    // Added: Validate API response shapes at runtime
+    await setupResponseValidation(page);
   });
 
   test.describe('Login Page', () => {

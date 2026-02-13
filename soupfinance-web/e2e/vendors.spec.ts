@@ -3,7 +3,7 @@
  * Tests vendor listing, creation, editing, and deletion flows
  */
 import { test, expect } from '@playwright/test';
-import { mockTokenValidationApi, takeScreenshot } from './fixtures';
+import { mockTokenValidationApi, takeScreenshot, setupResponseValidation } from './fixtures';
 
 // ===========================================================================
 // Mock Data
@@ -68,6 +68,8 @@ test.describe('Vendor Management', () => {
         })
       );
     });
+    // Added: Validate API response shapes at runtime
+    await setupResponseValidation(page);
   });
 
   // Helper to mock vendors API

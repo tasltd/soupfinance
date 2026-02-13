@@ -20,7 +20,7 @@
  *   - GET /rest/vendor/index.json - list vendors for dropdown
  */
 import { test, expect } from '@playwright/test';
-import { takeScreenshot, mockTokenValidationApi, mockDashboardApi, isLxcMode, backendTestUsers } from './fixtures';
+import { takeScreenshot, mockTokenValidationApi, mockDashboardApi, isLxcMode, backendTestUsers, setupResponseValidation } from './fixtures';
 
 // =============================================================================
 // Mock Data
@@ -401,6 +401,8 @@ async function _mockRecordPaymentApi(page: any, success = true) {
 test.describe('Bill Management', () => {
   test.beforeEach(async ({ page }) => {
     await setupAuth(page);
+    // Added: Validate API response shapes at runtime
+    await setupResponseValidation(page);
   });
 
   test.describe('Bill List Page', () => {

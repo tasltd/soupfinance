@@ -6,7 +6,7 @@
  * Added: Validates dark mode toggle, semantic token rendering, and ErrorBoundary fix
  */
 import { test, expect } from '@playwright/test';
-import { mockDashboardApi, takeScreenshot } from './fixtures';
+import { mockDashboardApi, takeScreenshot, setupResponseValidation } from './fixtures';
 
 // ==========================================================================
 // Favicon & Branding Tests
@@ -152,6 +152,8 @@ test.describe('Dark Mode Theme', () => {
         );
       });
       await mockDashboardApi(page);
+      // Added: Validate API response shapes at runtime
+      await setupResponseValidation(page);
     });
 
     test('dark mode toggle button is visible in TopNav', async ({ page }) => {

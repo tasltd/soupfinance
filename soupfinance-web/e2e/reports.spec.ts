@@ -13,7 +13,7 @@
  */
 import { test, expect } from '@playwright/test';
 // Changed: Import mockTokenValidationApi to mock /rest/user/current.json during auth initialization
-import { takeScreenshot, mockTokenValidationApi } from './fixtures';
+import { takeScreenshot, mockTokenValidationApi, setupResponseValidation } from './fixtures';
 
 // =============================================================================
 // Mock Data
@@ -129,6 +129,8 @@ async function setupAuth(page: any) {
       })
     );
   });
+  // Added: Validate API response shapes at runtime
+  await setupResponseValidation(page);
 }
 
 /**

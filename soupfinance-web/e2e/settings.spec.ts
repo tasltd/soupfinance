@@ -11,7 +11,7 @@
  *   npm run test:e2e:lxc      # Run against real LXC backend
  */
 import { test, expect } from '@playwright/test';
-import { mockTokenValidationApi, takeScreenshot, isLxcMode, backendTestUsers } from './fixtures';
+import { mockTokenValidationApi, takeScreenshot, isLxcMode, backendTestUsers, setupResponseValidation } from './fixtures';
 
 // ===========================================================================
 // Mock Data
@@ -181,6 +181,8 @@ async function setupAuth(page: any) {
       })
     );
   });
+  // Added: Validate API response shapes at runtime
+  await setupResponseValidation(page);
 }
 
 // ===========================================================================

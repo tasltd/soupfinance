@@ -3,7 +3,7 @@
  * Tests for journal entries, vouchers, and transaction register
  */
 import { test, expect } from '@playwright/test';
-import { mockTokenValidationApi, takeScreenshot } from './fixtures';
+import { mockTokenValidationApi, takeScreenshot, setupResponseValidation } from './fixtures';
 
 // ===========================================================================
 // Mock Data
@@ -132,6 +132,8 @@ test.describe('Accounting Module', () => {
         })
       );
     });
+    // Added: Validate API response shapes at runtime
+    await setupResponseValidation(page);
   });
 
   // Helper to mock accounting API endpoints

@@ -117,6 +117,264 @@ export const mockUsers = {
 };
 
 // ===========================================================================
+// API Response Shape Validators
+// Validates mock data matches actual Grails backend response structures.
+// These run at import time — if mock data drifts from backend shape, tests
+// fail immediately with a clear error instead of silently testing wrong shapes.
+// ===========================================================================
+
+/** Validate a field exists and has expected type */
+function assertField(obj: Record<string, unknown>, field: string, type: string, context: string) {
+  if (!(field in obj)) throw new Error(`${context}: missing required field '${field}'`);
+  if (type === 'array' && !Array.isArray(obj[field])) throw new Error(`${context}: '${field}' must be array`);
+  if (type !== 'array' && typeof obj[field] !== type) throw new Error(`${context}: '${field}' must be ${type}, got ${typeof obj[field]}`);
+}
+
+/** Validate FK reference object has id (and optionally serialised, class) */
+function assertFkRef(obj: Record<string, unknown>, field: string, context: string) {
+  if (!(field in obj) || obj[field] === null || obj[field] === undefined) throw new Error(`${context}: missing FK '${field}'`);
+  const fk = obj[field] as Record<string, unknown>;
+  if (typeof fk !== 'object') throw new Error(`${context}: FK '${field}' must be object, got ${typeof fk}`);
+  if (!('id' in fk)) throw new Error(`${context}: FK '${field}' missing 'id'`);
+}
+
+// Added: Validate invoice mock matches Grails Invoice domain
+export function validateInvoiceShape(inv: Record<string, unknown>, context = 'Invoice') {
+  assertField(inv, 'id', 'string', context);
+  assertField(inv, 'number', 'number', context);
+  assertFkRef(inv, 'accountServices', context);
+  assertField(inv, 'invoiceDate', 'string', context);
+  assertField(inv, 'status', 'string', context);
+  assertField(inv, 'invoiceItemList', 'array', context);
+  assertField(inv, 'invoicePaymentList', 'array', context);
+  // Validate FK has serialised and class (Grails convention)
+  const as = inv.accountServices as Record<string, unknown>;
+  assertField(as, 'serialised', 'string', `${context}.accountServices`);
+  assertField(as, 'class', 'string', `${context}.accountServices`);
+}
+
+// Added: Validate vendor mock matches Grails Vendor domain
+export function validateVendorShape(vendor: Record<string, unknown>, context = 'Vendor') {
+  assertField(vendor, 'id', 'string', context);
+  assertField(vendor, 'name', 'string', context);
+}
+
+// Added: Validate bill mock matches Grails Bill domain
+export function validateBillShape(bill: Record<string, unknown>, context = 'Bill') {
+  assertField(bill, 'id', 'string', context);
+  assertField(bill, 'billNumber', 'string', context);
+  assertFkRef(bill, 'vendor', context);
+  assertField(bill, 'billDate', 'string', context);
+  assertField(bill, 'status', 'string', context);
+  assertField(bill, 'totalAmount', 'number', context);
+}
+
+// Added: Validate login response matches /rest/api/login shape
+export function validateLoginResponseShape(data: Record<string, unknown>, context = 'LoginResponse') {
+  assertField(data, 'access_token', 'string', context);
+  assertField(data, 'username', 'string', context);
+  assertField(data, 'roles', 'array', context);
+}
+
+// Added: Validate user/current response matches SbUserController.current()
+export function validateCurrentUserShape(data: Record<string, unknown>, context = 'CurrentUser') {
+  assertField(data, 'username', 'string', context);
+  assertField(data, 'roles', 'array', context);
+  assertField(data, 'tenantId', 'string', context);
+}
+
+// Added: Validate account settings response
+export function validateAccountShape(data: Record<string, unknown>, context = 'Account') {
+  assertField(data, 'id', 'string', context);
+  assertField(data, 'name', 'string', context);
+  assertField(data, 'currency', 'string', context);
+}
+
+// Added: Validate ledger account matches Grails LedgerAccount domain
+export function validateLedgerAccountShape(acct: Record<string, unknown>, context = 'LedgerAccount') {
+  assertField(acct, 'id', 'string', context);
+  assertField(acct, 'code', 'string', context);
+  assertField(acct, 'name', 'string', context);
+  assertField(acct, 'ledgerGroup', 'string', context);
+}
+
+// Added: Validate ledger transaction matches Grails LedgerTransaction domain
+export function validateLedgerTransactionShape(txn: Record<string, unknown>, context = 'LedgerTransaction') {
+  assertField(txn, 'id', 'string', context);
+  assertField(txn, 'transactionDate', 'string', context);
+  assertField(txn, 'description', 'string', context);
+}
+
+// Added: Validate trial balance response shape
+export function validateTrialBalanceShape(data: Record<string, unknown>, context = 'TrialBalance') {
+  assertField(data, 'resultList', 'object', context);
+  assertField(data, 'totalDebit', 'number', context);
+  assertField(data, 'totalCredit', 'number', context);
+}
+
+// Added: Validate bill item matches Grails BillItem domain
+export function validateBillItemShape(item: Record<string, unknown>, context = 'BillItem') {
+  assertField(item, 'id', 'string', context);
+  assertField(item, 'description', 'string', context);
+  assertField(item, 'quantity', 'number', context);
+  assertField(item, 'unitPrice', 'number', context);
+}
+
+// ===========================================================================
+// Runtime Response Validation
+// Intercepts API responses during test execution and validates shapes.
+// Works in both mock and integration modes.
+// ===========================================================================
+
+// Added: Map of URL patterns to validator functions for runtime response checking
+const responseValidators: Array<{
+  pattern: RegExp;
+  validate: (data: unknown) => void;
+}> = [
+  {
+    pattern: /\/rest\/invoice\/(?:index|show)/,
+    validate: (data: unknown) => {
+      if (Array.isArray(data)) {
+        data.forEach((inv, i) => validateInvoiceShape(inv as Record<string, unknown>, `Response.invoice[${i}]`));
+      } else if (data && typeof data === 'object' && 'id' in data) {
+        validateInvoiceShape(data as Record<string, unknown>, 'Response.invoice');
+      }
+    },
+  },
+  {
+    pattern: /\/rest\/vendor\/(?:index|show)/,
+    validate: (data: unknown) => {
+      if (Array.isArray(data)) {
+        data.forEach((v, i) => validateVendorShape(v as Record<string, unknown>, `Response.vendor[${i}]`));
+      } else if (data && typeof data === 'object' && 'id' in data) {
+        validateVendorShape(data as Record<string, unknown>, 'Response.vendor');
+      }
+    },
+  },
+  {
+    pattern: /\/rest\/(?:finance\/)?bill\/(?:index|show)/,
+    validate: (data: unknown) => {
+      if (Array.isArray(data)) {
+        data.forEach((b, i) => validateBillShape(b as Record<string, unknown>, `Response.bill[${i}]`));
+      } else if (data && typeof data === 'object' && 'id' in data) {
+        validateBillShape(data as Record<string, unknown>, 'Response.bill');
+      }
+    },
+  },
+  {
+    pattern: /\/rest\/ledgerAccount\/(?:index|show)/,
+    validate: (data: unknown) => {
+      if (Array.isArray(data)) {
+        data.forEach((a, i) => validateLedgerAccountShape(a as Record<string, unknown>, `Response.ledgerAccount[${i}]`));
+      } else if (data && typeof data === 'object' && 'id' in data) {
+        validateLedgerAccountShape(data as Record<string, unknown>, 'Response.ledgerAccount');
+      }
+    },
+  },
+  {
+    pattern: /\/rest\/user\/current\.json/,
+    validate: (data: unknown) => {
+      if (data && typeof data === 'object' && 'username' in data) {
+        validateCurrentUserShape(data as Record<string, unknown>, 'Response.currentUser');
+      }
+    },
+  },
+  {
+    pattern: /\/rest\/api\/login/,
+    validate: (data: unknown) => {
+      if (data && typeof data === 'object' && 'access_token' in data) {
+        validateLoginResponseShape(data as Record<string, unknown>, 'Response.login');
+      }
+    },
+  },
+  {
+    pattern: /\/rest\/financeReports\/trialBalance/,
+    validate: (data: unknown) => {
+      if (data && typeof data === 'object' && 'resultList' in data) {
+        validateTrialBalanceShape(data as Record<string, unknown>, 'Response.trialBalance');
+      }
+    },
+  },
+  {
+    pattern: /\/account\/show\//,
+    validate: (data: unknown) => {
+      if (data && typeof data === 'object' && 'id' in data) {
+        validateAccountShape(data as Record<string, unknown>, 'Response.account');
+      }
+    },
+  },
+];
+
+/**
+ * Set up runtime API response validation on a Playwright page.
+ * Registers a response listener that validates JSON response shapes
+ * for known API endpoints. Call in beforeEach for comprehensive validation.
+ *
+ * Validation errors are logged as warnings (non-fatal) to avoid
+ * breaking tests for minor shape mismatches on the backend.
+ * Set strict=true to make validation errors fail the test.
+ */
+export async function setupResponseValidation(
+  page: import('@playwright/test').Page,
+  options: { strict?: boolean } = {}
+) {
+  const errors: string[] = [];
+
+  page.on('response', async (response) => {
+    const url = response.url();
+    const status = response.status();
+
+    // Only validate successful JSON responses
+    if (status < 200 || status >= 300) return;
+    const contentType = response.headers()['content-type'] || '';
+    if (!contentType.includes('application/json')) return;
+
+    for (const { pattern, validate } of responseValidators) {
+      if (pattern.test(url)) {
+        try {
+          const data = await response.json().catch(() => null);
+          if (data !== null) {
+            validate(data);
+          }
+        } catch (e) {
+          const msg = `[RESPONSE VALIDATION] ${url}: ${(e as Error).message}`;
+          if (options.strict) {
+            errors.push(msg);
+            throw new Error(msg);
+          } else {
+            console.warn(msg);
+          }
+        }
+        break; // Only first matching validator
+      }
+    }
+  });
+
+  return errors;
+}
+
+// ===========================================================================
+// Self-validation: Run shape checks on mock data at import time
+// If any mock data doesn't match expected shape, tests fail immediately
+// ===========================================================================
+
+function selfValidateMockData() {
+  // Validate after mockInvoices, mockBills, mockVendors are defined (deferred)
+  queueMicrotask(() => {
+    try {
+      mockInvoices.forEach((inv, i) => validateInvoiceShape(inv as unknown as Record<string, unknown>, `mockInvoices[${i}]`));
+      mockBills.forEach((bill, i) => validateBillShape(bill as unknown as Record<string, unknown>, `mockBills[${i}]`));
+      mockVendors.forEach((v, i) => validateVendorShape(v as unknown as Record<string, unknown>, `mockVendors[${i}]`));
+    } catch (e) {
+      console.error('[FIXTURES] Mock data shape validation FAILED:', (e as Error).message);
+      throw e;
+    }
+  });
+}
+
+selfValidateMockData();
+
+// ===========================================================================
 // Mock Invoice Data
 // ===========================================================================
 

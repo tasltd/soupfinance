@@ -35,6 +35,7 @@ import {
   mockDocument,
   mockTokenValidationApi,
   takeScreenshot,
+  setupResponseValidation,
 } from './fixtures';
 
 // ===========================================================================
@@ -187,6 +188,8 @@ async function setupAuth(page: any) {
       })
     );
   });
+  // Added: Validate API response shapes at runtime
+  await setupResponseValidation(page);
 }
 
 /**

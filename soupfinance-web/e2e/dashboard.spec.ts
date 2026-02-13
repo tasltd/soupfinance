@@ -9,7 +9,8 @@ import {
   mockTokenValidationApi,
   mockInvoices,
   mockBills,
-  takeScreenshot
+  takeScreenshot,
+  setupResponseValidation,
 } from './fixtures';
 
 test.describe('Dashboard', () => {
@@ -31,6 +32,8 @@ test.describe('Dashboard', () => {
         })
       );
     });
+    // Added: Validate API response shapes at runtime
+    await setupResponseValidation(page);
   });
 
   test.describe('Dashboard Page Loading', () => {
