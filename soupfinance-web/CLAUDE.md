@@ -291,7 +291,7 @@ reports.integration.spec.ts      # Finance reports
 settings.integration.spec.ts     # Settings pages
 ```
 
-Use `backendTestUsers` from `e2e/fixtures.ts` for credentials. **768 unit tests** across 26 test files. **362 mock E2E tests** (15 spec files). **165/170 integration tests** pass against LXC backend (0 failed, 5 skipped: trial balance timeout + voucher timeouts + bill CRUD redirect). See `e2e/integration/INTEGRATION-TEST-RESULTS.md` for detailed results.
+Use `backendTestUsers` from `e2e/fixtures.ts` for credentials. **655+ passing unit tests** across 26 test files (4 files currently failing: uiStore, LoginPage, VerifyPage, BillFormPage). **362 mock E2E tests** (15 spec files). **165/170 integration tests** pass against LXC backend (0 failed, 5 skipped: trial balance timeout + voucher timeouts + bill CRUD redirect). See `e2e/integration/INTEGRATION-TEST-RESULTS.md` for detailed results.
 
 ### Integration Test Patterns (CRITICAL)
 

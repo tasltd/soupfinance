@@ -272,7 +272,7 @@ Screenshots should be taken after login, after key form submissions, after navig
 
 ### Unit Tests (Vitest + React Testing Library)
 
-**768 tests** across **26 test files**.
+**655+ passing tests** across **26 test files** (4 files currently failing: uiStore, LoginPage, VerifyPage, BillFormPage).
 
 - Axios globally mocked in `src/test/setup.ts` — no real HTTP in unit tests
 - Render with `QueryClientProvider` + `MemoryRouter` wrappers

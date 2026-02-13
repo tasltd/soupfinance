@@ -29,6 +29,7 @@ storybook-static
 # Playwright
 test-results/
 test-results-lxc/
+test-results-integration/
 playwright-report/
 playwright-report-lxc/
 playwright-report-integration/
