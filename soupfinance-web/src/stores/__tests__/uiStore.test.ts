@@ -8,8 +8,9 @@ import { useUIStore } from '../uiStore'
 
 describe('uiStore', () => {
   beforeEach(() => {
-    // Reset store to initial state
+    // Reset store to initial state (including themeMode for three-way toggle)
     useUIStore.setState({
+      themeMode: 'light',
       darkMode: false,
       sidebarOpen: true,
       sidebarCollapsed: false,
@@ -44,9 +45,10 @@ describe('uiStore', () => {
   })
 
   describe('dark mode', () => {
-    describe('toggleDarkMode', () => {
-      it('toggles darkMode from false to true', () => {
-        // Arrange
+    describe('toggleDarkMode (three-way cycle: light → dark → system)', () => {
+      it('cycles from light to dark (enables dark mode)', () => {
+        // Arrange: starts at light
+        expect(useUIStore.getState().themeMode).toBe('light')
         expect(useUIStore.getState().darkMode).toBe(false)
 
         // Act
@@ -54,28 +56,30 @@ describe('uiStore', () => {
           useUIStore.getState().toggleDarkMode()
         })
 
-        // Assert
+        // Assert: moves to dark
+        expect(useUIStore.getState().themeMode).toBe('dark')
         expect(useUIStore.getState().darkMode).toBe(true)
       })
 
-      it('toggles darkMode from true to false', () => {
-        // Arrange
-        useUIStore.setState({ darkMode: true })
+      it('cycles from dark to system (disables dark mode when OS is light)', () => {
+        // Arrange: start at dark
+        useUIStore.setState({ themeMode: 'dark', darkMode: true })
 
         // Act
         act(() => {
           useUIStore.getState().toggleDarkMode()
         })
 
-        // Assert
+        // Assert: moves to system (matchMedia mocked to false = light)
+        expect(useUIStore.getState().themeMode).toBe('system')
         expect(useUIStore.getState().darkMode).toBe(false)
       })
 
-      it('adds dark class to document when enabling', () => {
+      it('adds dark class to document when cycling to dark', () => {
         // Arrange
         expect(document.documentElement.classList.contains('dark')).toBe(false)
 
-        // Act
+        // Act: light → dark
         act(() => {
           useUIStore.getState().toggleDarkMode()
         })
@@ -84,12 +88,12 @@ describe('uiStore', () => {
         expect(document.documentElement.classList.contains('dark')).toBe(true)
       })
 
-      it('removes dark class from document when disabling', () => {
-        // Arrange
-        useUIStore.setState({ darkMode: true })
+      it('removes dark class from document when cycling past dark', () => {
+        // Arrange: start at dark
+        useUIStore.setState({ themeMode: 'dark', darkMode: true })
         document.documentElement.classList.add('dark')
 
-        // Act
+        // Act: dark → system (matchMedia mocked = false)
         act(() => {
           useUIStore.getState().toggleDarkMode()
         })
@@ -98,19 +102,26 @@ describe('uiStore', () => {
         expect(document.documentElement.classList.contains('dark')).toBe(false)
       })
 
-      it('toggles multiple times correctly', () => {
-        // Act & Assert: Toggle 4 times
+      it('completes full cycle correctly', () => {
+        // light → dark
         act(() => useUIStore.getState().toggleDarkMode())
+        expect(useUIStore.getState().themeMode).toBe('dark')
         expect(useUIStore.getState().darkMode).toBe(true)
 
+        // dark → system (matchMedia=false → light)
         act(() => useUIStore.getState().toggleDarkMode())
+        expect(useUIStore.getState().themeMode).toBe('system')
         expect(useUIStore.getState().darkMode).toBe(false)
 
+        // system → light
         act(() => useUIStore.getState().toggleDarkMode())
+        expect(useUIStore.getState().themeMode).toBe('light')
+        expect(useUIStore.getState().darkMode).toBe(false)
+
+        // light → dark (back to dark)
+        act(() => useUIStore.getState().toggleDarkMode())
+        expect(useUIStore.getState().themeMode).toBe('dark')
         expect(useUIStore.getState().darkMode).toBe(true)
-
-        act(() => useUIStore.getState().toggleDarkMode())
-        expect(useUIStore.getState().darkMode).toBe(false)
       })
     })
 

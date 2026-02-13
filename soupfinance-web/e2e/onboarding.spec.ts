@@ -187,9 +187,9 @@ test.describe('Corporate Onboarding Flow', () => {
     });
 
     test('shows loading state while fetching data', async ({ page }) => {
-      // Fix: Increased delay to 3s so loading spinner is reliably visible before data arrives
+      // Fix: 5000ms delay so loading spinner is reliably visible (page navigation consumes ~2s)
       await page.route(`**/rest/corporate/show/${CORPORATE_ID}*`, async (route) => {
-        await new Promise((resolve) => setTimeout(resolve, 3000));
+        await new Promise((resolve) => setTimeout(resolve, 5000));
         route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -199,14 +199,14 @@ test.describe('Corporate Onboarding Flow', () => {
 
       await page.goto(BASE_URL_COMPANY);
 
-      // Fix: Check for either spinner or loading text — component may use either
-      const hasSpinner = await page.locator('.animate-spin').isVisible().catch(() => false);
-      const hasLoadingText = await page.getByText(/loading/i).isVisible().catch(() => false);
+      // Fix: Check for either spinner or loading text with 5s timeout
+      const hasSpinner = await page.locator('.animate-spin').isVisible({ timeout: 5000 }).catch(() => false);
+      const hasLoadingText = await page.getByText(/loading/i).isVisible({ timeout: 5000 }).catch(() => false);
       expect(hasSpinner || hasLoadingText).toBeTruthy();
       await takeScreenshot(page, 'onboarding-company-loading');
 
       // Wait for content to load after delay resolves
-      await expect(page.getByText('Company Information')).toBeVisible({ timeout: 10000 });
+      await expect(page.getByText('Company Information')).toBeVisible({ timeout: 15000 });
     });
   });
 
