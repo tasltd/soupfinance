@@ -56,6 +56,8 @@ const navItems: NavItem[] = [
       { label: 'Aging Reports', path: '/reports/aging' },
       // Added: Trial Balance report
       { label: 'Trial Balance', path: '/reports/trial-balance' },
+      // Added: Scheduled Reports for automated delivery
+      { label: 'Scheduled Reports', path: '/reports/scheduled' },
     ],
   },
   // Added (2026-01-30): Settings section

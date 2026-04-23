@@ -79,6 +79,8 @@ import { CashFlowPage } from './features/reports/CashFlowPage';
 import { AgingReportsPage } from './features/reports/AgingReportsPage';
 // Added: Trial Balance report page
 import { TrialBalancePage } from './features/reports/TrialBalancePage';
+// Added: Scheduled Reports page for automated report delivery
+import { ScheduledReportsPage } from './features/reports/ScheduledReportsPage';
 
 // Added: Corporate KYC Onboarding
 import {
@@ -304,6 +306,8 @@ export default function App() {
             <Route path="/reports/aging" element={<AgingReportsPage />} />
             {/* Added: Trial Balance report */}
             <Route path="/reports/trial-balance" element={<TrialBalancePage />} />
+            {/* Added: Scheduled Reports for automated report delivery */}
+            <Route path="/reports/scheduled" element={<ScheduledReportsPage />} />
 
             {/* Added: Corporate KYC Onboarding (protected) */}
             <Route path="/onboarding/company" element={<CompanyInfoPage />} />

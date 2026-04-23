@@ -10,6 +10,8 @@ const reports = [
   { title: 'Aging Reports', description: 'Outstanding receivables and payables', icon: 'schedule', path: '/reports/aging' },
   // Added: Trial Balance report link
   { title: 'Trial Balance', description: 'Debit and credit balances for all accounts', icon: 'balance', path: '/reports/trial-balance' },
+  // Added: Scheduled Reports for automated delivery
+  { title: 'Scheduled Reports', description: 'Automate report generation and delivery', icon: 'event_repeat', path: '/reports/scheduled' },
 ];
 
 // Added: data-testid attributes for E2E testing
