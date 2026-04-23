@@ -6,9 +6,13 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { listInvoices } from '../../api';
 import { useFormatCurrency } from '../../stores';
+// Added: GSAP page entrance animation (SOUP-679)
+import { usePageEntrance } from '../../hooks/useGsapAnimations';
 
 export function InvoiceListPage() {
   const formatCurrency = useFormatCurrency();
+  // Added: GSAP page entrance animation ref (SOUP-679)
+  const pageRef = usePageEntrance();
 
   // Changed: Added error state handling for API failures
   const { data: invoices, isLoading, error } = useQuery({
@@ -18,7 +22,7 @@ export function InvoiceListPage() {
 
   // Added: data-testid attributes for E2E testing
   return (
-    <div className="flex flex-col gap-6" data-testid="invoice-list-page">
+    <div ref={pageRef} className="flex flex-col gap-6" data-testid="invoice-list-page">
       {/* Page Header */}
       <div className="flex flex-wrap justify-between items-center gap-4">
         <div>

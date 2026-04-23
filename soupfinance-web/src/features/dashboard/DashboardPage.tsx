@@ -9,6 +9,8 @@ import { useQuery } from '@tanstack/react-query';
 import { listInvoices } from '../../api';
 import { useDashboardStats } from '../../hooks/useDashboardStats';
 import { useFormatCurrency } from '../../stores';
+// Added: GSAP dashboard entrance animation (SOUP-679)
+import { useDashboardEntrance } from '../../hooks/useGsapAnimations';
 
 // Added: Format percentage change for display
 function formatChange(change: number): string {
@@ -18,6 +20,8 @@ function formatChange(change: number): string {
 
 export function DashboardPage() {
   const formatCurrency = useFormatCurrency();
+  // Added: GSAP entrance animation ref (SOUP-679)
+  const dashRef = useDashboardEntrance();
 
   // Changed: Added error state handling for API failures
   const { data: stats, isLoading: statsLoading, error: statsError } = useDashboardStats();
@@ -37,13 +41,13 @@ export function DashboardPage() {
 
   // Added: data-testid attributes for E2E testing
   return (
-    <div className="flex flex-col gap-8" data-testid="dashboard-page">
+    <div ref={dashRef} className="flex flex-col gap-8" data-testid="dashboard-page">
       {/* Page Header */}
       <div className="flex flex-col gap-1">
-        <h1 className="text-3xl font-black tracking-tight text-text-light dark:text-text-dark" data-testid="dashboard-heading">
+        <h1 data-anim="hero-heading" className="text-3xl font-black tracking-tight text-text-light dark:text-text-dark" data-testid="dashboard-heading">
           Financial Overview
         </h1>
-        <p className="text-base text-subtle-text">
+        <p data-anim="hero-subtext" className="text-base text-subtle-text">
           Welcome back! Here's your financial snapshot.
         </p>
       </div>
@@ -103,7 +107,7 @@ export function DashboardPage() {
       </div>
 
       {/* Recent Invoices */}
-      <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark" data-testid="dashboard-recent-invoices">
+      <div data-anim="activity-section" className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark" data-testid="dashboard-recent-invoices">
         <div className="p-6 border-b border-border-light dark:border-border-dark flex items-center justify-between">
           <h2 className="text-lg font-bold text-text-light dark:text-text-dark">
             Recent Invoices
@@ -192,7 +196,7 @@ function StatCard({
   }[changeType];
 
   return (
-    <div className="flex flex-col gap-3 rounded-xl p-6 border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark" data-testid={testId}>
+    <div data-anim="kpi-card" className="flex flex-col gap-3 rounded-xl p-6 border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark" data-testid={testId}>
       <div className="flex items-center justify-between">
         <p className="text-subtle-text text-sm font-medium">{label}</p>
         <span className="material-symbols-outlined text-primary">{icon}</span>

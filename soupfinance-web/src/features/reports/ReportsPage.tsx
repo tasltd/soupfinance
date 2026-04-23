@@ -2,6 +2,8 @@
  * Reports Hub Page - Stub
  */
 import { Link } from 'react-router-dom';
+// Added: GSAP page entrance animation (SOUP-679)
+import { usePageEntrance } from '../../hooks/useGsapAnimations';
 
 const reports = [
   { title: 'Profit & Loss', description: 'Revenue, expenses, and net income', icon: 'trending_up', path: '/reports/pnl' },
@@ -16,8 +18,11 @@ const reports = [
 
 // Added: data-testid attributes for E2E testing
 export function ReportsPage() {
+  // Added: GSAP page entrance animation ref (SOUP-679)
+  const pageRef = usePageEntrance();
+
   return (
-    <div className="flex flex-col gap-6" data-testid="reports-page">
+    <div ref={pageRef} className="flex flex-col gap-6" data-testid="reports-page">
       <div>
         <h1 className="text-3xl font-black tracking-tight text-text-light dark:text-text-dark" data-testid="reports-heading">Reports</h1>
         <p className="text-subtle-text">Financial reports and analytics</p>

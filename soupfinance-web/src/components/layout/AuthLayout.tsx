@@ -6,10 +6,15 @@
  */
 import { Outlet } from 'react-router-dom';
 import { Logo } from '../Logo';
+// Added: GSAP login background animation (SOUP-679)
+import { useLoginBackground } from '../../hooks/useGsapAnimations';
 
 export function AuthLayout() {
+  // Added: GSAP login background animation ref (SOUP-679)
+  const bgRef = useLoginBackground();
+
   return (
-    <div className="min-h-screen flex bg-background-light dark:bg-background-dark">
+    <div ref={bgRef} className="min-h-screen flex bg-background-light dark:bg-background-dark">
       {/* Left: Branding Panel with Professional Image */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
         {/* Background Image - Professional Black woman at laptop */}
@@ -22,8 +27,13 @@ export function AuthLayout() {
         {/* Gradient Overlay */}
         <div className="absolute inset-0 bg-gradient-to-br from-primary/85 via-primary/70 to-[#221510]/90" />
 
+        {/* Added: Floating gradient orbs for GSAP animation (SOUP-679) */}
+        <div data-anim="login-orb" className="absolute w-64 h-64 rounded-full bg-white/5 blur-3xl top-1/4 left-1/4" />
+        <div data-anim="login-orb" className="absolute w-48 h-48 rounded-full bg-white/8 blur-2xl bottom-1/3 right-1/4" />
+        <div data-anim="login-orb" className="absolute w-56 h-56 rounded-full bg-white/4 blur-3xl top-2/3 left-1/2" />
+
         {/* Content */}
-        <div className="relative z-10 flex flex-col justify-between h-full p-12 text-white">
+        <div data-anim="login-side" className="relative z-10 flex flex-col justify-between h-full p-12 text-white">
           {/* Logo */}
           <div className="flex items-center gap-3">
             <Logo variant="mark" size={48} />
@@ -86,7 +96,7 @@ export function AuthLayout() {
 
       {/* Right: Form Panel */}
       <div className="flex-1 flex items-center justify-center p-8">
-        <div className="w-full max-w-md">
+        <div data-anim="login-form" className="w-full max-w-md">
           <Outlet />
         </div>
       </div>
