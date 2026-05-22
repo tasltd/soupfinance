@@ -12,33 +12,31 @@ import { test, expect } from '@playwright/test';
 import { takeScreenshot, setupResponseValidation } from './fixtures';
 
 // Mock tenant registration data
+// Changed (2026-05-22): Added testPassword for single-step registration flow
 const mockTenantRegistration = {
   companyName: 'Test Company LLC',
   businessType: 'SERVICES' as const,
   adminFirstName: 'John',
   adminLastName: 'Doe',
   email: 'john.doe@testcompany.com',
+  password: 'TestPass1',
 };
 
 /**
  * Mock tenant registration API
  * POST /account/register.json
+ *
+ * Changed (2026-05-22): `confirmation` param controls the response shape:
+ *  - 'skip' → success + requiresConfirmation: false (single-step flow)
+ *  - 'require' → success + requiresConfirmation: true (legacy flow, "Check Your Email")
+ *  - 'fail' → 400 with email-already-registered error
  */
 async function mockTenantRegistrationApi(
   page: Awaited<ReturnType<typeof test.page>>,
-  success = true
+  confirmation: 'skip' | 'require' | 'fail' = 'skip',
 ) {
   await page.route('**/account/register.json', (route) => {
-    if (success) {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          success: true,
-          message: 'Registration successful. Please check your email to confirm your account.',
-        }),
-      });
-    } else {
+    if (confirmation === 'fail') {
       route.fulfill({
         status: 400,
         contentType: 'application/json',
@@ -48,7 +46,23 @@ async function mockTenantRegistrationApi(
           message: 'An account with this email already exists.',
         }),
       });
+      return;
     }
+
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        success: true,
+        message: confirmation === 'require'
+          ? 'Registration successful. Please check your email to confirm your account.'
+          : 'Registration successful. Your account is ready.',
+        accountId: 'mock-account-id',
+        agentId: 'mock-agent-id',
+        email: mockTenantRegistration.email,
+        requiresConfirmation: confirmation === 'require',
+      }),
+    });
   });
 }
 
@@ -198,31 +212,51 @@ test.describe('Tenant Registration', () => {
     });
   });
 
+  // Helper (2026-05-22): Fill the full registration form including password
+  async function fillRegistrationForm(
+    page: Awaited<ReturnType<typeof test.page>>,
+    overrides: Partial<typeof mockTenantRegistration> = {},
+  ) {
+    const data = { ...mockTenantRegistration, ...overrides };
+    await page.getByTestId('registration-company-name-input').fill(data.companyName);
+    await page.getByTestId('registration-business-type-services').click();
+    await page.getByTestId('registration-country-select').selectOption('GH');
+    await page.getByTestId('registration-admin-first-name').fill(data.adminFirstName);
+    await page.getByTestId('registration-admin-last-name').fill(data.adminLastName);
+    await page.getByTestId('registration-email-input').fill(data.email);
+    await page.getByTestId('registration-password-input').fill(data.password);
+    await page.getByTestId('registration-confirm-password-input').fill(data.password);
+  }
+
   test.describe('Successful Registration', () => {
-    test('successful registration shows email confirmation screen', async ({ page }) => {
-      await mockTenantRegistrationApi(page, true);
+    // Changed (2026-05-22): Single-step flow — redirects to /login with success banner
+    test('redirects to login when backend skips email confirmation', async ({ page }) => {
+      await mockTenantRegistrationApi(page, 'skip');
 
       await page.goto('/register');
       await takeScreenshot(page, 'registration-success-before-fill');
 
-      // Fill in all required fields
-      await page.getByTestId('registration-company-name-input').fill(mockTenantRegistration.companyName);
-      await page.getByTestId('registration-business-type-services').click();
-      // Changed: Country selection auto-sets currency (GH → GHS)
-      await page.getByTestId('registration-country-select').selectOption('GH');
-      await page.getByTestId('registration-admin-first-name').fill(mockTenantRegistration.adminFirstName);
-      await page.getByTestId('registration-admin-last-name').fill(mockTenantRegistration.adminLastName);
-      await page.getByTestId('registration-email-input').fill(mockTenantRegistration.email);
-
+      await fillRegistrationForm(page);
       await takeScreenshot(page, 'registration-success-form-filled');
 
-      // Submit form
       await page.getByTestId('registration-submit-button').click();
 
-      // Wait for success screen
+      // Should land on /login with the post-registration banner
+      await expect(page).toHaveURL(/\/login$/);
+      await expect(page.getByTestId('login-registration-success')).toBeVisible();
+      await takeScreenshot(page, 'registration-success-redirect-to-login');
+    });
+
+    // Kept for backwards-compat: legacy flow when backend still requires email confirmation
+    test('shows "Check Your Email" screen when backend requires confirmation', async ({ page }) => {
+      await mockTenantRegistrationApi(page, 'require');
+
+      await page.goto('/register');
+      await fillRegistrationForm(page);
+      await page.getByTestId('registration-submit-button').click();
+
       await expect(page.getByTestId('registration-success')).toBeVisible();
       await expect(page.getByTestId('registration-success-heading')).toHaveText('Check Your Email');
-
       await takeScreenshot(page, 'registration-success-confirmation');
     });
 
@@ -236,45 +270,37 @@ test.describe('Tenant Registration', () => {
           body: JSON.stringify({
             success: true,
             message: 'Registration successful',
+            requiresConfirmation: false,
           }),
         });
       });
 
       await page.goto('/register');
+      await fillRegistrationForm(page);
 
-      // Fill in form
-      await page.getByTestId('registration-company-name-input').fill(mockTenantRegistration.companyName);
-      // Changed: Country selection auto-sets currency (GH → GHS)
-      await page.getByTestId('registration-country-select').selectOption('GH');
-      await page.getByTestId('registration-admin-first-name').fill(mockTenantRegistration.adminFirstName);
-      await page.getByTestId('registration-admin-last-name').fill(mockTenantRegistration.adminLastName);
-      await page.getByTestId('registration-email-input').fill(mockTenantRegistration.email);
-
-      // Submit and check loading state
       await page.getByTestId('registration-submit-button').click();
 
-      // Button should show loading text
       await expect(page.getByTestId('registration-submit-button')).toContainText('Creating Account');
       await takeScreenshot(page, 'registration-loading-state');
 
-      // Wait for completion
-      await expect(page.getByTestId('registration-success')).toBeVisible();
+      // Single-step flow lands on /login
+      await expect(page).toHaveURL(/\/login$/);
     });
   });
 
   test.describe('Registration Failures', () => {
     test('shows error message when registration fails', async ({ page }) => {
-      await mockTenantRegistrationApi(page, false);
+      await mockTenantRegistrationApi(page, 'fail');
 
       await page.goto('/register');
 
-      // Fill in form
-      await page.getByTestId('registration-company-name-input').fill('Existing Company');
-      // Changed: Country selection auto-sets currency (GH → GHS)
-      await page.getByTestId('registration-country-select').selectOption('GH');
-      await page.getByTestId('registration-admin-first-name').fill('Jane');
-      await page.getByTestId('registration-admin-last-name').fill('Smith');
-      await page.getByTestId('registration-email-input').fill('existing@company.com');
+      // Fill in form (existing email scenario — backend rejects)
+      await fillRegistrationForm(page, {
+        companyName: 'Existing Company',
+        adminFirstName: 'Jane',
+        adminLastName: 'Smith',
+        email: 'existing@company.com',
+      });
 
       // Submit form
       await page.getByTestId('registration-submit-button').click();

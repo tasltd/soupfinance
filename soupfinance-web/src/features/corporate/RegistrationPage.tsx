@@ -4,14 +4,21 @@
  *
  * ARCHITECTURE (2026-01-30):
  * - Registration creates a NEW TENANT (Account) with isolated data
- * - No password during registration - set during email confirmation
  * - Business type (TRADING/SERVICES) determines initial Chart of Accounts
+ *
+ * Changed (2026-05-22): Password is now collected at registration.
+ * Backend response includes `requiresConfirmation`:
+ *  - false → single-step flow: redirect to /login with success banner
+ *  - true  → legacy flow: show "Check Your Email" screen, keep ConfirmEmailPage path
+ * See plans/soupfinance-disable-email-confirmation.md.
  *
  * Required fields:
  * - Company name
  * - Business type (TRADING or SERVICES)
+ * - Country
  * - Admin name (first name, last name)
  * - Admin email
+ * - Password + confirm password
  */
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -41,6 +48,7 @@ export function RegistrationPage() {
 
   // Form state - matches TenantRegistration interface
   // Changed: Country selection auto-maps to currency (editable later in settings)
+  // Changed (2026-05-22): Added password field + confirmPassword (form-only, not sent)
   const [formData, setFormData] = useState<TenantRegistration>({
     companyName: '',
     businessType: 'SERVICES',
@@ -49,23 +57,37 @@ export function RegistrationPage() {
     email: '',
     country: '',
     currency: '',
+    password: '',
   });
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   // Error state for validation
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
-  // Success state - show confirmation message after registration
+  // Success state - shown only on legacy email-confirmation path
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
   const [registeredEmail, setRegisteredEmail] = useState('');
 
   // Mutation for registering tenant
+  // Changed (2026-05-22): Branch on response.requiresConfirmation
+  //  - false → account is enabled, redirect to /login with success banner
+  //  - true / undefined → legacy email-confirmation flow (show "Check Your Email")
   const registerMutation = useMutation({
     mutationFn: registerTenant,
     onSuccess: (response) => {
       if (response.success) {
-        // Show success message and email confirmation instructions
-        setRegistrationSuccess(true);
-        setRegisteredEmail(formData.email);
+        if (response.requiresConfirmation === false) {
+          // Single-step flow: account ready, go straight to login
+          navigate('/login', {
+            replace: true,
+            state: { fromRegistration: true, registeredEmail: formData.email },
+          });
+        } else {
+          // Legacy flow: user must click the email link before logging in
+          setRegistrationSuccess(true);
+          setRegisteredEmail(formData.email);
+        }
       } else {
         // Handle backend validation errors
         if (response.errors) {
@@ -99,6 +121,9 @@ export function RegistrationPage() {
         country: value,
         currency: mappedCurrency || '',
       }));
+    } else if (name === 'confirmPassword') {
+      // confirmPassword is form-local state, not sent to backend
+      setConfirmPassword(value);
     } else {
       setFormData((prev) => ({ ...prev, [name]: value }));
     }
@@ -147,6 +172,24 @@ export function RegistrationPage() {
       errors.email = 'Email is required';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       errors.email = 'Please enter a valid email address';
+    }
+
+    // Added (2026-05-22): Password required + match ConfirmEmailPage rules
+    // Backend may still reject it when requireEmailConfirmation=true; that's fine.
+    const pwd = formData.password ?? '';
+    if (!pwd) {
+      errors.password = 'Password is required';
+    } else if (pwd.length < 8) {
+      errors.password = 'Password must be at least 8 characters';
+    } else if (!/[A-Z]/.test(pwd)) {
+      errors.password = 'Password must include an uppercase letter';
+    } else if (!/[a-z]/.test(pwd)) {
+      errors.password = 'Password must include a lowercase letter';
+    } else if (!/\d/.test(pwd)) {
+      errors.password = 'Password must include a number';
+    }
+    if (!errors.password && pwd !== confirmPassword) {
+      errors.confirmPassword = 'Passwords do not match';
     }
 
     setValidationErrors(errors);
@@ -465,9 +508,73 @@ export function RegistrationPage() {
               {validationErrors.email}
             </span>
           )}
-          <span className="text-xs text-subtle-text">
-            We'll send a confirmation link to verify your email
+        </label>
+
+        {/* Added (2026-05-22): Password + confirm fields for single-step registration */}
+        <label className="flex flex-col gap-2">
+          <span className="text-sm font-medium text-text-light dark:text-text-dark">
+            Password <span className="text-danger">*</span>
           </span>
+          <div className="relative">
+            <input
+              type={showPassword ? 'text' : 'password'}
+              name="password"
+              value={formData.password ?? ''}
+              onChange={handleChange}
+              placeholder="At least 8 characters"
+              data-testid="registration-password-input"
+              autoComplete="new-password"
+              className={`h-12 w-full pl-4 pr-12 rounded-lg border ${
+                validationErrors.password
+                  ? 'border-danger focus:border-danger focus:ring-danger/20'
+                  : 'border-border-light dark:border-border-dark focus:border-primary focus:ring-primary/20'
+              } bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark placeholder:text-subtle-text focus:ring-2 focus:outline-none`}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-subtle-text hover:text-text-light dark:hover:text-text-dark"
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              data-testid="registration-password-toggle"
+            >
+              <span className="material-symbols-outlined text-xl">
+                {showPassword ? 'visibility_off' : 'visibility'}
+              </span>
+            </button>
+          </div>
+          {validationErrors.password && (
+            <span className="text-xs text-danger" data-testid="registration-password-error">
+              {validationErrors.password}
+            </span>
+          )}
+          <span className="text-xs text-subtle-text">
+            Must include uppercase, lowercase, and a number
+          </span>
+        </label>
+
+        <label className="flex flex-col gap-2">
+          <span className="text-sm font-medium text-text-light dark:text-text-dark">
+            Confirm Password <span className="text-danger">*</span>
+          </span>
+          <input
+            type={showPassword ? 'text' : 'password'}
+            name="confirmPassword"
+            value={confirmPassword}
+            onChange={handleChange}
+            placeholder="Re-enter your password"
+            data-testid="registration-confirm-password-input"
+            autoComplete="new-password"
+            className={`h-12 px-4 rounded-lg border ${
+              validationErrors.confirmPassword
+                ? 'border-danger focus:border-danger focus:ring-danger/20'
+                : 'border-border-light dark:border-border-dark focus:border-primary focus:ring-primary/20'
+            } bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark placeholder:text-subtle-text focus:ring-2 focus:outline-none`}
+          />
+          {validationErrors.confirmPassword && (
+            <span className="text-xs text-danger" data-testid="registration-confirm-password-error">
+              {validationErrors.confirmPassword}
+            </span>
+          )}
         </label>
 
         {/* Submit Button */}

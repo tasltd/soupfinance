@@ -124,6 +124,42 @@ describe('Registration API', () => {
       expect(result.success).toBe(true);
     });
 
+    it('includes password in JSON body when provided (single-step registration)', async () => {
+      // Added (2026-05-22): Single-step registration flow per
+      // plans/soupfinance-disable-email-confirmation.md
+      const registration: TenantRegistration = {
+        companyName: 'Single Step Co',
+        businessType: 'SERVICES',
+        adminFirstName: 'Pat',
+        adminLastName: 'Quinn',
+        email: 'pat@singlestep.com',
+        password: 'StrongPass1',
+      };
+
+      const mockPost = vi.fn().mockResolvedValue({
+        data: { success: true, requiresConfirmation: false, accountId: 'a-1' },
+      });
+      (axios.create as ReturnType<typeof vi.fn>).mockReturnValue({
+        interceptors: {
+          request: { use: vi.fn() },
+          response: { use: vi.fn() },
+        },
+        post: mockPost,
+        get: vi.fn(),
+      });
+
+      vi.resetModules();
+      const { registerTenant: freshRegister } = await import('../registration');
+
+      const result = await freshRegister(registration);
+
+      expect(mockPost).toHaveBeenCalledWith('/account/register.json', expect.objectContaining({
+        password: 'StrongPass1',
+      }));
+      expect(result.success).toBe(true);
+      expect(result.requiresConfirmation).toBe(false);
+    });
+
     it('includes optional currency field when provided', async () => {
       const registration: TenantRegistration = {
         companyName: 'Ghana Trading Co',
