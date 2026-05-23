@@ -6,6 +6,7 @@
  * Changed: Now fetches dashboard stats from API via useDashboardStats hook
  */
 import { useQuery } from '@tanstack/react-query';
+import axios from 'axios';
 import { listInvoices } from '../../api';
 import { useDashboardStats } from '../../hooks/useDashboardStats';
 import { useFormatCurrency } from '../../stores';
@@ -26,18 +27,36 @@ export function DashboardPage() {
   // Changed: Added error state handling for API failures
   const { data: stats, isLoading: statsLoading, error: statsError } = useDashboardStats();
 
-  // Changed: Return empty array on error so new accounts see "No invoices yet" not error message
-  const { data: invoices, isLoading: invoicesLoading, error: invoicesError } = useQuery({
+  // Changed: capture permission/backend errors separately so we can distinguish
+  // "no data yet" from "request was forbidden" (bug 11 in SOUPFIN-2)
+  const {
+    data: invoicesResult,
+    isLoading: invoicesLoading,
+    error: invoicesError,
+  } = useQuery({
     queryKey: ['invoices', { max: 5 }],
-    queryFn: async () => {
+    queryFn: async (): Promise<{ invoices: Awaited<ReturnType<typeof listInvoices>>; hadPermissionError: boolean }> => {
       try {
-        return await listInvoices({ max: 5, sort: 'dateCreated', order: 'desc' });
-      } catch {
-        // New accounts or backend issues should show empty state, not error
-        return [];
+        const data = await listInvoices({ max: 5, sort: 'dateCreated', order: 'desc' });
+        return { invoices: data, hadPermissionError: false };
+      } catch (err) {
+        // Only show "permission error" when the backend actually denied us
+        // (403/5xx) — true network errors also count. Otherwise show empty.
+        let permissionError = false;
+        if (axios.isAxiosError(err)) {
+          const status = err.response?.status;
+          permissionError = status === 403 || (status !== undefined && status >= 500) || !err.response;
+        }
+        return { invoices: [], hadPermissionError: permissionError };
       }
     },
   });
+  const invoices = invoicesResult?.invoices;
+  // Added: combined permission-error flag — true if stats *or* recent invoices
+  // were blocked by the backend. Drives the dashboard-wide warning banner.
+  const hasBackendError = Boolean(
+    stats?.hasPermissionError || invoicesResult?.hadPermissionError
+  );
 
   // Added: data-testid attributes for E2E testing
   return (
@@ -51,6 +70,31 @@ export function DashboardPage() {
           Welcome back! Here's your financial snapshot.
         </p>
       </div>
+
+      {/* Added: surface backend / permission failures instead of silently
+          showing zeros and "No invoices yet" (bug 11 in SOUPFIN-2) */}
+      {hasBackendError && (
+        <div
+          className="flex items-start gap-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800/30 rounded-xl p-4"
+          role="alert"
+          data-testid="dashboard-backend-warning"
+        >
+          <span className="material-symbols-outlined text-2xl text-yellow-700 dark:text-yellow-400 shrink-0">
+            warning
+          </span>
+          <div className="flex-1">
+            <p className="font-semibold text-yellow-900 dark:text-yellow-200 text-sm">
+              Some dashboard data could not be loaded
+            </p>
+            <p className="text-yellow-800/90 dark:text-yellow-200/80 text-sm mt-1">
+              The backend rejected one or more requests. The numbers below may be
+              incomplete. If you just registered, your account may still be
+              provisioning — please retry in a moment or contact support if the
+              problem persists.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* KPI Cards - Changed: Now using dynamic data from useDashboardStats hook */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" data-testid="dashboard-kpi-cards">

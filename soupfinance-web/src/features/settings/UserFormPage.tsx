@@ -15,6 +15,8 @@ import { agentApi, accountPersonApi, rolesApi } from '../../api/endpoints/settin
 import type { AgentFormData } from '../../types/settings';
 import { SOUPFINANCE_ROLES, SOUPFINANCE_ROLE_LABELS } from '../../types/settings';
 import { logger } from '../../utils/logger';
+// Added: backend error extraction so the form can surface the real failure (bugs 7, 9 in SOUPFIN-2)
+import { normalizeApiError } from '../../utils/apiError';
 
 // Form validation schema
 const userSchema = z.object({
@@ -61,6 +63,9 @@ export default function UserFormPage() {
   const isEdit = Boolean(id);
 
   const [showPassword, setShowPassword] = useState(false);
+  // Added: hold the parsed backend error so the banner can show the real cause
+  // (bug 7 in SOUPFIN-2 — generic "Please check the form" hides 500/403)
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   // Fetch existing user data if editing
   const { data: existingUser, isLoading: isLoadingUser } = useQuery({
@@ -77,15 +82,26 @@ export default function UserFormPage() {
   });
 
   // Fetch available roles
-  const { data: allRoles } = useQuery({
+  // Changed: expose loading and error states so the Roles section can render a
+  // clear UI instead of silently rendering empty when /rest/sbRole/index.json 500s
+  // (bugs 5, 6 in SOUPFIN-2)
+  const {
+    data: allRoles,
+    isLoading: isLoadingRoles,
+    error: rolesError,
+    refetch: refetchRoles,
+  } = useQuery({
     queryKey: ['roles'],
     queryFn: rolesApi.list,
+    // Don't retry on a 500 — backend bug, no point hammering it
+    retry: 1,
   });
 
   // Filter to relevant roles
   const availableRoles = allRoles?.filter((role) =>
     (RELEVANT_ROLES as readonly string[]).includes(role.authority)
   ) || [];
+  const rolesUnavailable = Boolean(rolesError) || (allRoles !== undefined && availableRoles.length === 0);
 
   const {
     register,
@@ -106,7 +122,10 @@ export default function UserFormPage() {
       phone: '',
       username: '',
       password: '',
-      roles: [SOUPFINANCE_ROLES.USER],
+      // Changed: do NOT silently default to ROLE_USER (bug 12 in SOUPFIN-2).
+      // The Zod schema enforces "at least one role" — make the user choose
+      // explicitly so they know what permissions are being granted.
+      roles: [],
       archived: false,
       disabled: false,
       enableAccountPerson: false,
@@ -222,16 +241,21 @@ export default function UserFormPage() {
     },
     onSuccess: () => {
       logger.info('User saved successfully');
+      setSubmitError(null);
       queryClient.invalidateQueries({ queryKey: ['users'] });
       queryClient.invalidateQueries({ queryKey: ['accountPersons'] });
       navigate('/settings/users');
     },
     onError: (error) => {
       logger.error('Failed to save user', error);
+      // Changed: surface the backend's actual error message instead of a generic toast
+      const normalized = normalizeApiError(error);
+      setSubmitError(normalized.message);
     },
   });
 
   const onSubmit = (data: UserFormValues) => {
+    setSubmitError(null);
     saveMutation.mutate(data);
   };
 
@@ -429,37 +453,85 @@ export default function UserFormPage() {
         </div>
 
         {/* Roles & Permissions */}
-        <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-6">
+        {/* Changed: explicit loading / error / empty states (bugs 5, 6 in SOUPFIN-2).
+            Previously the section silently rendered empty when /rest/sbRole/index.json failed. */}
+        <div
+          className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-6"
+          data-testid="user-form-roles-section"
+        >
           <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-4">
-            Roles & Permissions
+            Roles & Permissions <span className="text-danger">*</span>
           </h3>
           <p className="text-subtle-text text-sm mb-4">
             Select the roles that determine what this user can access.
           </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {availableRoles.map((role) => (
-              <label
-                key={role.id}
-                className="flex items-center gap-3 p-3 rounded-lg border border-border-light dark:border-border-dark hover:bg-primary/5 cursor-pointer"
-              >
-                <input
-                  type="checkbox"
-                  checked={selectedRoles?.includes(role.authority) || false}
-                  onChange={(e) => handleRoleChange(role.authority, e.target.checked)}
-                  className="w-4 h-4 text-primary border-border-light dark:border-border-dark rounded focus:ring-primary"
-                />
+          {isLoadingRoles ? (
+            <div
+              className="flex items-center gap-2 text-subtle-text text-sm py-4"
+              data-testid="user-form-roles-loading"
+            >
+              <span className="material-symbols-outlined text-lg animate-spin">progress_activity</span>
+              Loading available roles…
+            </div>
+          ) : rolesError ? (
+            <div
+              className="flex flex-col gap-3 bg-danger/10 border border-danger/20 rounded-lg p-4"
+              data-testid="user-form-roles-error"
+              role="alert"
+            >
+              <div className="flex items-start gap-2">
+                <span className="material-symbols-outlined text-danger text-xl">error</span>
                 <div>
-                  <span className="font-medium text-text-light dark:text-text-dark text-sm">
-                    {SOUPFINANCE_ROLE_LABELS[role.authority] || role.authority.replace('ROLE_', '')}
-                  </span>
-                  {role.authority === SOUPFINANCE_ROLES.ADMIN && (
-                    <span className="ml-2 text-xs text-primary">(Full access)</span>
-                  )}
+                  <p className="text-danger font-medium text-sm">Could not load roles</p>
+                  <p className="text-danger/80 text-xs mt-1">
+                    {normalizeApiError(rolesError).message}
+                  </p>
                 </div>
-              </label>
-            ))}
-          </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => refetchRoles()}
+                className="self-start inline-flex items-center gap-2 h-8 px-3 rounded border border-danger/30 text-danger text-xs font-medium hover:bg-danger/10"
+                data-testid="user-form-roles-retry"
+              >
+                <span className="material-symbols-outlined text-base">refresh</span>
+                Retry
+              </button>
+            </div>
+          ) : rolesUnavailable ? (
+            <div
+              className="bg-warning/10 border border-warning/20 rounded-lg p-4 text-warning text-sm"
+              data-testid="user-form-roles-empty"
+            >
+              No assignable roles were returned by the server. Contact your administrator before
+              creating users.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {availableRoles.map((role) => (
+                <label
+                  key={role.id}
+                  className="flex items-center gap-3 p-3 rounded-lg border border-border-light dark:border-border-dark hover:bg-primary/5 cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedRoles?.includes(role.authority) || false}
+                    onChange={(e) => handleRoleChange(role.authority, e.target.checked)}
+                    className="w-4 h-4 text-primary border-border-light dark:border-border-dark rounded focus:ring-primary"
+                  />
+                  <div>
+                    <span className="font-medium text-text-light dark:text-text-dark text-sm">
+                      {SOUPFINANCE_ROLE_LABELS[role.authority] || role.authority.replace('ROLE_', '')}
+                    </span>
+                    {role.authority === SOUPFINANCE_ROLES.ADMIN && (
+                      <span className="ml-2 text-xs text-primary">(Full access)</span>
+                    )}
+                  </div>
+                </label>
+              ))}
+            </div>
+          )}
           {errors.roles && <p className="text-danger text-xs mt-2">{errors.roles.message}</p>}
         </div>
 
@@ -606,8 +678,16 @@ export default function UserFormPage() {
           </Link>
           <button
             type="submit"
-            disabled={isSubmitting || saveMutation.isPending}
+            // Changed: also block submit while roles are still loading or unavailable
+            // — saving without a roles list yields a backend 500 (SOUPFIN-2 bug 1)
+            disabled={
+              isSubmitting ||
+              saveMutation.isPending ||
+              isLoadingRoles ||
+              rolesUnavailable
+            }
             className="h-10 px-6 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90 disabled:opacity-50 flex items-center gap-2"
+            data-testid="user-form-submit-button"
           >
             {(isSubmitting || saveMutation.isPending) && (
               <span className="material-symbols-outlined text-lg animate-spin">progress_activity</span>
@@ -617,11 +697,22 @@ export default function UserFormPage() {
         </div>
 
         {/* Error Display */}
-        {saveMutation.isError && (
-          <div className="bg-danger/10 border border-danger/20 rounded-lg p-4">
-            <p className="text-danger text-sm">
-              Failed to save user. Please check the form and try again.
-            </p>
+        {/* Changed: show the actual backend error (bug 7 in SOUPFIN-2) */}
+        {submitError && (
+          <div
+            className="bg-danger/10 border border-danger/20 rounded-lg p-4"
+            data-testid="user-form-submit-error"
+            role="alert"
+          >
+            <div className="flex items-start gap-2">
+              <span className="material-symbols-outlined text-danger text-xl">error</span>
+              <div>
+                <p className="text-danger font-medium text-sm">
+                  {isEdit ? 'Failed to update user' : 'Failed to add user'}
+                </p>
+                <p className="text-danger/80 text-sm mt-1">{submitError}</p>
+              </div>
+            </div>
           </div>
         )}
       </form>

@@ -11,6 +11,8 @@ import { agentApi } from '../../api/endpoints/settings';
 import type { Agent } from '../../types/settings';
 import { SOUPFINANCE_ROLE_LABELS } from '../../types/settings';
 import { logger } from '../../utils/logger';
+// Added: normalize backend error for the list-level error banner
+import { normalizeApiError } from '../../utils/apiError';
 
 interface DeleteState {
   isOpen: boolean;
@@ -64,22 +66,29 @@ export default function UserListPage() {
     setDeleteState({ isOpen: false, userId: null, userName: null });
   };
 
-  const getUserRoles = (agent: Agent): string => {
-    if (!agent.authorities || agent.authorities.length === 0) return '-';
+  // Changed: return null when no role data — caller renders an explicit "No role"
+  // pill instead of a bare dash (bug 10 in SOUPFIN-2)
+  const getUserRoles = (agent: Agent): string | null => {
+    if (!agent.authorities || agent.authorities.length === 0) return null;
     return agent.authorities
       .slice(0, 3)
       .map((role) => SOUPFINANCE_ROLE_LABELS[role.authority] || role.authority.replace('ROLE_', ''))
       .join(', ');
   };
 
-  const getUserEmail = (agent: Agent): string => {
-    if (agent.emailContacts && agent.emailContacts.length > 0) {
-      return agent.emailContacts[0].email;
+  // Changed: distinguish email vs username vs missing so the user-list table is
+  // never just a row of dashes (bug 10 in SOUPFIN-2)
+  const getUserContact = (
+    agent: Agent
+  ): { primary: string; secondary?: string; isPlaceholder?: boolean } => {
+    const email = agent.emailContacts?.[0]?.email;
+    const username = agent.userAccess?.username;
+    if (email && username && email !== username) {
+      return { primary: email, secondary: `@${username}` };
     }
-    if (agent.userAccess?.username) {
-      return agent.userAccess.username;
-    }
-    return '-';
+    if (email) return { primary: email };
+    if (username) return { primary: `@${username}`, secondary: 'No email on file' };
+    return { primary: 'No contact info', isPlaceholder: true };
   };
 
   const hasAccountPerson = (agent: Agent): boolean => {
@@ -126,12 +135,15 @@ export default function UserListPage() {
         {isLoading ? (
           <div className="p-8 text-center text-subtle-text">Loading users...</div>
         ) : error ? (
-          <div className="p-12 text-center">
+          <div className="p-12 text-center" data-testid="user-list-error">
             <span className="material-symbols-outlined text-6xl text-danger/50 mb-4 block">error</span>
             <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">
               Failed to load users
             </h3>
-            <p className="text-subtle-text mb-4">There was an error loading users.</p>
+            {/* Changed: show the real backend error message (was generic before) */}
+            <p className="text-subtle-text mb-4 max-w-md mx-auto">
+              {normalizeApiError(error).message}
+            </p>
             <button
               onClick={() => queryClient.invalidateQueries({ queryKey: ['users'] })}
               className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm"
@@ -182,10 +194,38 @@ export default function UserListPage() {
                       </div>
                     </td>
                     <td className="px-4 sm:px-6 py-4 text-text-light dark:text-text-dark">
-                      {getUserEmail(agent)}
+                      {(() => {
+                        const contact = getUserContact(agent);
+                        return (
+                          <div className="flex flex-col">
+                            <span
+                              className={
+                                contact.isPlaceholder
+                                  ? 'text-subtle-text italic text-sm'
+                                  : 'text-sm'
+                              }
+                            >
+                              {contact.primary}
+                            </span>
+                            {contact.secondary && (
+                              <span className="text-xs text-subtle-text">{contact.secondary}</span>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </td>
                     <td className="px-4 sm:px-6 py-4 text-text-light dark:text-text-dark">
-                      <span className="text-xs">{getUserRoles(agent)}</span>
+                      {(() => {
+                        const roleLabel = getUserRoles(agent);
+                        return roleLabel ? (
+                          <span className="text-xs">{roleLabel}</span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">
+                            <span className="material-symbols-outlined text-sm">warning</span>
+                            No role
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td className="px-4 sm:px-6 py-4 text-center">
                       {hasAccountPerson(agent) ? (
