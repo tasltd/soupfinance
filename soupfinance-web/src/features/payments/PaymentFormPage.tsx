@@ -8,13 +8,14 @@
  * Added: data-testid attributes for E2E testing
  */
 import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { listInvoices, recordInvoicePayment } from '../../api/endpoints/invoices';
 import { listBills, recordBillPayment } from '../../api/endpoints/bills';
 import { useFormatCurrency, useCurrencySymbol } from '../../stores';
 import { useLedgerAccounts } from '../../hooks/useLedgerAccounts';
 import { usePaymentMethods } from '../../hooks/usePaymentMethods';
+import { isModuleDisabledError } from '../../utils/apiErrors';
 import type { Invoice, Bill, InvoicePayment, BillPayment } from '../../types';
 
 // Added: Payment type for form toggle
@@ -47,10 +48,16 @@ export function PaymentFormPage() {
   const [formError, setFormError] = useState('');
 
   // Added: Fetch invoices for dropdown (only unpaid/partial)
-  const { data: invoices, isLoading: isLoadingInvoices } = useQuery({
+  // NOTE: retry=false so 403 (module disabled) surfaces immediately
+  const {
+    data: invoices,
+    isLoading: isLoadingInvoices,
+    error: invoicesError,
+  } = useQuery({
     queryKey: ['invoices-for-payment'],
     queryFn: () => listInvoices({ max: 100 }),
     enabled: paymentType === 'invoice',
+    retry: false,
   });
 
   // Added: Filter to invoices with balance due
@@ -59,10 +66,15 @@ export function PaymentFormPage() {
   );
 
   // Added: Fetch bills for dropdown (only unpaid/partial)
-  const { data: bills, isLoading: isLoadingBills } = useQuery({
+  const {
+    data: bills,
+    isLoading: isLoadingBills,
+    error: billsError,
+  } = useQuery({
     queryKey: ['bills-for-payment'],
     queryFn: () => listBills({ max: 100 }),
     enabled: paymentType === 'bill',
+    retry: false,
   });
 
   // Added: Filter to bills with balance due
@@ -178,6 +190,60 @@ export function PaymentFormPage() {
 
   const isPending = invoicePaymentMutation.isPending || billPaymentMutation.isPending;
   const isLoadingData = paymentType === 'invoice' ? isLoadingInvoices : isLoadingBills;
+
+  // Added: Detect Finance module disabled (403 on the source list endpoint)
+  // We only check the active tab's endpoint because the other one is disabled by `enabled: false`.
+  const dataError = paymentType === 'invoice' ? invoicesError : billsError;
+  const isModuleDisabled = isModuleDisabledError(dataError);
+
+  if (isModuleDisabled) {
+    return (
+      <div className="flex flex-col gap-6" data-testid="payment-form-page">
+        <div className="flex flex-wrap justify-between items-center gap-4">
+          <div>
+            <h1
+              className="text-3xl font-black tracking-tight text-text-light dark:text-text-dark"
+              data-testid="payment-form-heading"
+            >
+              Record Payment
+            </h1>
+            <p className="text-subtle-text">Record a payment against an invoice or bill</p>
+          </div>
+        </div>
+        <div
+          className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-12 text-center max-w-2xl"
+          data-testid="payment-form-module-disabled"
+        >
+          <span className="material-symbols-outlined text-6xl text-warning/70 mb-4">block</span>
+          <h2 className="text-xl font-bold text-text-light dark:text-text-dark mb-2">
+            Finance module not available
+          </h2>
+          <p className="text-subtle-text mb-6">
+            The Finance module is not enabled for your account, so payments cannot be
+            recorded right now. Please contact your administrator to enable it.
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <Link
+              to="/payments"
+              className="inline-flex items-center gap-2 h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm hover:bg-primary/5"
+              data-testid="payment-form-module-disabled-back"
+            >
+              <span className="material-symbols-outlined text-lg">arrow_back</span>
+              Back to Payments
+            </Link>
+            <a
+              href="mailto:support@soupfinance.com?subject=Enable%20Finance%20module"
+              className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90"
+              data-testid="payment-form-module-disabled-contact"
+            >
+              <span className="material-symbols-outlined text-lg">mail</span>
+              Contact Support
+            </a>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6" data-testid="payment-form-page">
