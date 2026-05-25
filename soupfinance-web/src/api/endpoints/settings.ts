@@ -357,14 +357,32 @@ export const banksApi = {
 export const accountSettingsApi = {
   /**
    * Get current account settings
-   * Changed: Uses tenantId from auth store (populated by /rest/user/current.json during token validation).
+   * Uses tenantId from auth store (populated by /rest/user/current.json during token validation).
    * Flow: authStore.validateToken() → /rest/user/current.json → tenantId stored on user
    *       → accountSettingsApi.get() reads tenantId → GET /account/show/{tenantId}.json
-   * No extra API call needed — tenantId is already available from auth validation.
+   *
+   * Fix (SOUPFIN-10): If tenantId is missing (race condition: settings fetch fires
+   * before validateToken has completed), fall back to fetching /rest/user/current.json
+   * directly and enrich the auth store. Prevents "No tenant ID found" race-condition
+   * failures when the settings page loads before initialize() resolves.
    */
   get: async (): Promise<AccountSettings> => {
-    // Changed: Read tenantId from auth store (set during validateToken from /rest/user/current.json)
-    const tenantId = useAuthStore.getState().user?.tenantId;
+    let tenantId = useAuthStore.getState().user?.tenantId;
+
+    // Fix (SOUPFIN-10): Resolve tenantId on-demand if missing — handles race where
+    // settings load fires before validateToken() enriches the user with tenantId.
+    if (!tenantId) {
+      const current = await apiClient.get<{ tenantId?: string }>('/user/current.json');
+      tenantId = current.data?.tenantId;
+      if (tenantId) {
+        // Enrich the auth store so subsequent callers see the tenantId immediately.
+        const currentUser = useAuthStore.getState().user;
+        if (currentUser) {
+          useAuthStore.setState({ user: { ...currentUser, tenantId } });
+        }
+      }
+    }
+
     if (!tenantId) {
       throw new Error('No tenant ID found. User session may not be fully initialized.');
     }

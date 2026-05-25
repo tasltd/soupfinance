@@ -13,6 +13,8 @@ import type { AccountSettings, BusinessLicenceCategory } from '../../types/setti
 import { DEFAULT_CURRENCIES, listCurrencies } from '../../api/endpoints/domainData';
 import type { Currency as DomainCurrency } from '../../api/endpoints/domainData';
 import { logger } from '../../utils/logger';
+// Fix (SOUPFIN-10): Gate query on auth + tenantId readiness
+import { useAuthStore } from '../../stores/authStore';
 
 // Form validation schema
 // Changed: Added startOfFiscalYear for fiscal year configuration
@@ -54,14 +56,23 @@ export default function AccountSettingsPage() {
     listCurrencies().then(setCurrencies);
   }, []);
 
+  // Fix (SOUPFIN-10): Gate the query on auth-init + tenantId presence so the
+  // settings fetch never fires before the auth store has resolved tenantId from
+  // /rest/user/current.json. Avoids the "No tenant ID found" race condition.
+  const authInitialized = useAuthStore((state) => state.isInitialized);
+  const tenantId = useAuthStore((state) => state.user?.tenantId);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const canLoadSettings = isAuthenticated && authInitialized && Boolean(tenantId);
+
   // Fetch current settings
   // Changed: Added retry and better error handling for account settings loading
   const { data: currentSettings, isLoading, error } = useQuery({
-    queryKey: ['accountSettings'],
+    queryKey: ['accountSettings', tenantId],
     queryFn: () => {
       logger.info('Fetching account settings');
       return accountSettingsApi.get();
     },
+    enabled: canLoadSettings,
     retry: 2,
     retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 5000),
   });
