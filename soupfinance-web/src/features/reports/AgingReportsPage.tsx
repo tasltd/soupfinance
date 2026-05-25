@@ -7,7 +7,7 @@
  * Reference: soupfinance-designs/ar-aging-report/, soupfinance-designs/ap-aging-report/
  */
 import { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   getARAgingReport,
   getAPAgingReport,
@@ -15,6 +15,12 @@ import {
   type ReportFilters,
 } from '../../api/endpoints/reports';
 import type { AgingReport, AgingItem } from '../../types';
+
+// Fix(SOUPFIN-11): Earliest date users can pick for historical aging analysis.
+// The previous date picker had no `min` attribute, so the browser-native picker
+// occasionally restricted the year selector. Setting an explicit min unlocks
+// historical analysis back to 2000.
+const AGING_MIN_DATE = '2000-01-01';
 
 // Added: Get today's date in ISO format (YYYY-MM-DD)
 function getTodayDate(): string {
@@ -272,6 +278,12 @@ export function AgingReportsPage() {
   const [arExportLoading, setArExportLoading] = useState<string | null>(null);
   const [apExportLoading, setApExportLoading] = useState<string | null>(null);
 
+  // Fix(SOUPFIN-11): React Query client used by the "Today" button so that
+  // clicking it always refreshes data, even when the date is already today.
+  // The previous implementation only called setAsOfDate, which is a no-op
+  // when the new value equals the old value, leaving the button silent.
+  const queryClient = useQueryClient();
+
   // Fetch A/R aging report
   const {
     data: arAgingData,
@@ -367,12 +379,25 @@ export function AgingReportsPage() {
             type="date"
             value={asOfDate}
             onChange={(e) => setAsOfDate(e.target.value)}
+            min={AGING_MIN_DATE}
             max={getTodayDate()}
             className="h-10 px-4 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary/50 focus:border-primary"
             data-testid="aging-reports-date-picker"
           />
           <button
-            onClick={() => setAsOfDate(defaultDate)}
+            onClick={() => {
+              // Fix(SOUPFIN-11): Force a refetch even when the date is already
+              // today. Previously this only called setState which React would
+              // bail out of when the value did not change, leaving the button
+              // visually clickable but functionally inert.
+              const today = getTodayDate();
+              if (asOfDate !== today) {
+                setAsOfDate(today);
+              } else {
+                queryClient.invalidateQueries({ queryKey: ['arAging'] });
+                queryClient.invalidateQueries({ queryKey: ['apAging'] });
+              }
+            }}
             className="flex items-center gap-2 h-10 px-4 rounded-lg bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm hover:bg-primary/10"
             data-testid="aging-reports-reset-date"
           >

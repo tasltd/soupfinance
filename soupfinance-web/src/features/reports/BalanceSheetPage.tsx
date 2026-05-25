@@ -337,6 +337,8 @@ export function BalanceSheetPage() {
       )}
 
       {/* Empty State - No data */}
+      {/* Fix(SOUPFIN-11): Empty-state copy now distinguishes "no data" from
+          common setup issues so users know what to check next. */}
       {!isLoading && !isError && balanceSheet && balanceSheet.assets.length === 0 && balanceSheet.liabilities.length === 0 && balanceSheet.equity.length === 0 && (
         <div
           className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-12 text-center"
@@ -344,8 +346,10 @@ export function BalanceSheetPage() {
         >
           <span className="material-symbols-outlined text-6xl text-subtle-text/50 mb-4">account_balance</span>
           <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">No accounts found</h3>
-          <p className="text-subtle-text">
+          <p className="text-subtle-text max-w-md mx-auto">
             There are no ledger accounts with balances as of {formatDateDisplay(asOfDate)}.
+            Try a later date, or check that your chart of accounts contains
+            asset, liability, and equity accounts with posted transactions.
           </p>
         </div>
       )}

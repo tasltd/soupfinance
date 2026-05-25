@@ -364,6 +364,8 @@ export function TrialBalancePage() {
         ) : !trialBalance ||
           LEDGER_GROUP_ORDER.every((g) => trialBalance.accounts[g].length === 0) ? (
           // Empty State
+          // Fix(SOUPFIN-11): Clarify why the report is empty so users don't assume
+          // the module is broken when it's actually a setup or date-range issue.
           <div className="p-12 text-center" data-testid="trial-balance-empty">
             <span className="material-symbols-outlined text-6xl text-subtle-text/50 mb-4">
               account_balance
@@ -371,8 +373,10 @@ export function TrialBalancePage() {
             <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">
               No accounts found
             </h3>
-            <p className="text-subtle-text">
-              No account balances found for the selected date range.
+            <p className="text-subtle-text max-w-md mx-auto">
+              No account balances found between {filters.from} and {filters.to}.
+              Try widening the date range, or check that your chart of accounts
+              has posted ledger transactions for this period.
             </p>
           </div>
         ) : (
