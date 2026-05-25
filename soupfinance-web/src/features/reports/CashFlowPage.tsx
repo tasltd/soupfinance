@@ -42,6 +42,46 @@ function getTodayISO(): string {
   return new Date().toISOString().split('T')[0];
 }
 
+// Fix(SOUPFIN-11): Escape a single CSV cell — quotes the value when it contains
+// a comma, quote, or newline (per RFC 4180).
+function csvCell(value: string | number): string {
+  const str = typeof value === 'number' ? String(value) : value ?? '';
+  if (/[",\n\r]/.test(str)) {
+    return `"${str.replace(/"/g, '""')}"`;
+  }
+  return str;
+}
+
+// Fix(SOUPFIN-11): Build a CSV representation of the cash flow statement for
+// client-side download. Includes every section, every activity row, and the
+// summary totals so the export is self-contained.
+function buildCashFlowCsv(cashFlow: CashFlowStatement): string {
+  const rows: string[] = [];
+  rows.push(`Cash Flow Statement,${csvCell(cashFlow.periodStart)},to,${csvCell(cashFlow.periodEnd)}`);
+  rows.push('');
+  rows.push('Section,Description,Amount');
+
+  const sections: Array<{ name: string; activities: CashFlowActivity[]; total: number }> = [
+    { name: 'Operating Activities', activities: cashFlow.operatingActivities ?? [], total: cashFlow.totalOperatingCashFlow },
+    { name: 'Investing Activities', activities: cashFlow.investingActivities ?? [], total: cashFlow.totalInvestingCashFlow },
+    { name: 'Financing Activities', activities: cashFlow.financingActivities ?? [], total: cashFlow.totalFinancingCashFlow },
+  ];
+
+  for (const section of sections) {
+    for (const activity of section.activities) {
+      rows.push(`${csvCell(section.name)},${csvCell(activity.description)},${csvCell(activity.amount.toFixed(2))}`);
+    }
+    rows.push(`${csvCell(section.name)},Total ${csvCell(section.name)},${csvCell(section.total.toFixed(2))}`);
+    rows.push('');
+  }
+
+  rows.push(`Summary,Beginning Cash Balance,${csvCell(cashFlow.beginningCashBalance.toFixed(2))}`);
+  rows.push(`Summary,Net Cash Flow,${csvCell(cashFlow.netCashFlow.toFixed(2))}`);
+  rows.push(`Summary,Ending Cash Balance,${csvCell(cashFlow.endingCashBalance.toFixed(2))}`);
+
+  return rows.join('\n');
+}
+
 export function CashFlowPage() {
   // Added: State for date range filter with default to current month
   const [fromDate, setFromDate] = useState<string>(getFirstDayOfMonth());
@@ -79,9 +119,28 @@ export function CashFlowPage() {
     };
   }, [cashFlow]);
 
-  // Added: Placeholder export handlers (backend export endpoint not yet available)
+  // Fix(SOUPFIN-11): CSV export now runs entirely client-side from data already
+  // in memory, so users can download the report without waiting for a backend
+  // export endpoint. PDF/Excel remain backend-dependent for now.
   const handleExport = (format: 'pdf' | 'xlsx' | 'csv') => {
-    // NOTE: Export functionality requires backend endpoint implementation
+    if (format === 'csv' && cashFlow) {
+      try {
+        const csv = buildCashFlowCsv(cashFlow);
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `cash-flow-${fromDate}-to-${toDate}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      } catch (err) {
+        console.error('Cash flow CSV export failed:', err);
+      }
+      return;
+    }
+    // NOTE: PDF/Excel export functionality requires backend endpoint implementation
     console.log(`Export to ${format} requested - backend endpoint not yet available`);
     alert(`Export to ${format.toUpperCase()} will be available when backend support is added.`);
   };
@@ -180,12 +239,14 @@ export function CashFlowPage() {
             <span className="material-symbols-outlined text-lg">grid_on</span>
             <span className="text-sm font-bold">Excel</span>
           </button>
+          {/* Fix(SOUPFIN-11): CSV export is functional client-side; PDF/Excel
+              still require backend support and remain disabled. */}
           <button
             onClick={() => handleExport('csv')}
-            disabled
-            className="flex items-center justify-center gap-2 h-10 px-4 border border-border-light dark:border-border-dark rounded-lg text-subtle-text cursor-not-allowed opacity-50"
+            disabled={!cashFlow || isLoading}
+            className="flex items-center justify-center gap-2 h-10 px-4 border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark disabled:opacity-50 disabled:cursor-not-allowed"
             data-testid="cash-flow-export-csv"
-            title="Export to CSV (coming soon)"
+            title="Export to CSV"
           >
             <span className="material-symbols-outlined text-lg">download</span>
             <span className="text-sm font-bold">CSV</span>
@@ -275,13 +336,15 @@ export function CashFlowPage() {
           </div>
 
           {/* Activity Sections */}
+          {/* Fix(SOUPFIN-11): Defensive fallbacks ensure missing arrays from backend
+              never crash the page with "t is not iterable". */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6" data-testid="cash-flow-sections">
             {/* Operating Activities Section */}
             <CashFlowSection
               title="Operating Activities"
               icon="business_center"
               iconColor="text-primary"
-              activities={cashFlow.operatingActivities}
+              activities={Array.isArray(cashFlow.operatingActivities) ? cashFlow.operatingActivities : []}
               total={cashFlow.totalOperatingCashFlow}
               testIdPrefix="operating"
             />
@@ -291,7 +354,7 @@ export function CashFlowPage() {
               title="Investing Activities"
               icon="trending_up"
               iconColor="text-info"
-              activities={cashFlow.investingActivities}
+              activities={Array.isArray(cashFlow.investingActivities) ? cashFlow.investingActivities : []}
               total={cashFlow.totalInvestingCashFlow}
               testIdPrefix="investing"
             />
@@ -301,7 +364,7 @@ export function CashFlowPage() {
               title="Financing Activities"
               icon="account_balance"
               iconColor="text-warning"
-              activities={cashFlow.financingActivities}
+              activities={Array.isArray(cashFlow.financingActivities) ? cashFlow.financingActivities : []}
               total={cashFlow.totalFinancingCashFlow}
               testIdPrefix="financing"
             />
