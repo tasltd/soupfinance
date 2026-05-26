@@ -32,6 +32,31 @@ export async function getAccountServices(id: string): Promise<AccountServices> {
   return response.data;
 }
 
+/**
+ * Create an AccountServices record linked to an existing Client.
+ * POST /rest/accountServices/save.json?forClient={clientId}
+ *
+ * The backend `AccountServicesService.doSave` automatically creates a
+ * ClientPortfolio join row when the `forClient` query param is present
+ * (see soupmarkets-web AccountServicesService.groovy doSave).
+ *
+ * Used by `createClient` to ensure every newly-created Client has at least
+ * one AccountServices, since invoices reference accountServices.id as FK.
+ */
+export async function createAccountServicesForClient(clientId: string): Promise<AccountServices> {
+  const csrf = await getCsrfToken('accountServices');
+  const queryParams = new URLSearchParams({
+    forClient: clientId,
+    SYNCHRONIZER_TOKEN: csrf.SYNCHRONIZER_TOKEN,
+    SYNCHRONIZER_URI: csrf.SYNCHRONIZER_URI,
+  });
+  const response = await apiClient.post<AccountServices>(
+    `/accountServices/save.json?${queryParams.toString()}`,
+    {}
+  );
+  return response.data;
+}
+
 // =============================================================================
 // Client CRUD (KYC Client - the billing recipient with metadata)
 // =============================================================================
@@ -59,11 +84,26 @@ export async function getClient(id: string): Promise<Client> {
 }
 
 /**
- * Create a new client
- * POST /rest/client/save.json
+ * Create a new client AND its initial AccountServices.
+ * POST /rest/client/save.json + POST /rest/accountServices/save.json?forClient={id}
  *
- * CSRF Token Required: Calls create.json first to get SYNCHRONIZER_TOKEN.
- * Backend creates a KYC Client entity with associated AccountServices.
+ * Fix (SOUPFIN-1): The backend `ClientController.save` only saves the Client —
+ * it does NOT auto-create AccountServices. Since invoices reference
+ * `accountServices.id` as their FK, a Client without AccountServices cannot
+ * have invoices raised against it ("This client has no linked account services").
+ *
+ * This function performs the full two-step create so the returned Client always
+ * has at least one entry in `portfolioList[].accountServices`.
+ *
+ * Steps:
+ *   1. POST /rest/client/save.json (CSRF-protected) → creates the Client
+ *   2. POST /rest/accountServices/save.json?forClient={id} → creates AccountServices
+ *      and the ClientPortfolio join row that links them
+ *   3. GET /rest/client/show/{id}.json → re-fetch so portfolioList is populated
+ *
+ * If step 2 fails the Client is still returned (it can be repaired later via the
+ * full Client management page), but the caller will see the missing-AccountServices
+ * warning until the link is created.
  */
 export async function createClient(data: Record<string, unknown>): Promise<Client> {
   // Step 1: Get CSRF token from create endpoint
@@ -74,7 +114,25 @@ export async function createClient(data: Record<string, unknown>): Promise<Clien
     `${BASE_URL}/save.json?${csrfQueryString(csrf)}`,
     data
   );
-  return response.data;
+  const newClient = response.data;
+
+  // Step 3 (Fix SOUPFIN-1): Create the AccountServices and ClientPortfolio link.
+  // Without this, the new Client has no `portfolioList[].accountServices` and
+  // cannot be selected as an invoice recipient.
+  try {
+    await createAccountServicesForClient(newClient.id);
+  } catch (error) {
+    // Non-fatal: the Client exists and can be repaired manually. Surface a
+    // warning so the user-facing error path stays informative.
+    console.warn(
+      `[createClient] Client ${newClient.id} created but AccountServices link failed:`,
+      error
+    );
+    return newClient;
+  }
+
+  // Step 4: Re-fetch so `portfolioList` reflects the new ClientPortfolio row.
+  return await getClient(newClient.id);
 }
 
 /**
