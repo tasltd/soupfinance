@@ -12,6 +12,8 @@ import {
   exportReport,
   buildBalanceSheet,
   buildProfitLoss,
+  normalizeTransactions,
+  getCashFlowStatement,
   type AccountBalanceEntry,
   type ReportFilters,
 } from '../reports';
@@ -636,6 +638,149 @@ describe('Reports API', () => {
       expect(result.totalIncome).toBe(0);
       expect(result.totalExpenses).toBe(0);
       expect(result.netProfit).toBe(0);
+    });
+  });
+
+  // ===========================================================================
+  // SOUPFIN-11: Cash Flow JS crash regression tests
+  // ===========================================================================
+
+  describe('normalizeTransactions (SOUPFIN-11)', () => {
+    it('returns the same array when input is already an array', () => {
+      const input = [
+        { id: 't1', transactionDate: '2026-01-15', description: 'A', debitAmount: 5000, creditAmount: 0, balance: 5000, ledgerAccountId: 'acc-1', ledgerAccountName: 'Cash' },
+      ];
+      const result = normalizeTransactions(input);
+      expect(result).toEqual(input);
+    });
+
+    it('unwraps { resultList: [...] } payloads', () => {
+      const input = {
+        resultList: [
+          { id: 't1', transactionDate: '2026-01-15', description: 'A', debitAmount: 5000, creditAmount: 0, balance: 5000, ledgerAccountId: 'acc-1', ledgerAccountName: 'Cash' },
+        ],
+      };
+      const result = normalizeTransactions(input);
+      expect(result).toHaveLength(1);
+      expect(result[0].description).toBe('A');
+    });
+
+    it('unwraps { ledgerTransactionList: [...] } payloads', () => {
+      const input = {
+        ledgerTransactionList: [
+          { id: 't2', transactionDate: '2026-01-16', description: 'B', debitAmount: 0, creditAmount: 1000, balance: 4000, ledgerAccountId: 'acc-2', ledgerAccountName: 'A/P' },
+        ],
+      };
+      const result = normalizeTransactions(input);
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('t2');
+    });
+
+    it('returns [] for null', () => {
+      expect(normalizeTransactions(null)).toEqual([]);
+    });
+
+    it('returns [] for undefined', () => {
+      expect(normalizeTransactions(undefined)).toEqual([]);
+    });
+
+    it('returns [] for primitive types (numbers, strings, booleans)', () => {
+      expect(normalizeTransactions(42)).toEqual([]);
+      expect(normalizeTransactions('hello')).toEqual([]);
+      expect(normalizeTransactions(true)).toEqual([]);
+    });
+
+    it('returns [] for objects without a known array key', () => {
+      expect(normalizeTransactions({ foo: 'bar' })).toEqual([]);
+      expect(normalizeTransactions({ resultList: 'not-an-array' })).toEqual([]);
+    });
+  });
+
+  describe('getAccountTransactions normalization (SOUPFIN-11)', () => {
+    it('coerces wrapped { resultList } responses into a flat array', async () => {
+      (apiClient.get as ReturnType<typeof vi.fn>).mockResolvedValue({
+        data: {
+          resultList: [
+            { id: 't1', transactionDate: '2026-01-15', description: 'A', debitAmount: 5000, creditAmount: 0, balance: 5000, ledgerAccountId: 'acc-1', ledgerAccountName: 'Cash' },
+          ],
+        },
+      });
+
+      const result = await getAccountTransactions({ from: '2026-01-01', to: '2026-01-31' });
+      expect(Array.isArray(result)).toBe(true);
+      expect(result).toHaveLength(1);
+    });
+
+    it('returns an empty array when backend returns null', async () => {
+      (apiClient.get as ReturnType<typeof vi.fn>).mockResolvedValue({ data: null });
+      const result = await getAccountTransactions({ from: '2026-01-01', to: '2026-01-31' });
+      expect(result).toEqual([]);
+    });
+
+    it('returns an empty array when backend returns a wrapper object with no array key', async () => {
+      (apiClient.get as ReturnType<typeof vi.fn>).mockResolvedValue({ data: { error: 'Finance module disabled' } });
+      const result = await getAccountTransactions({ from: '2026-01-01', to: '2026-01-31' });
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('getCashFlowStatement guard (SOUPFIN-11)', () => {
+    it('does not throw "t is not iterable" when backend returns a non-array', async () => {
+      // Simulate the production crash: backend returns a wrapper object instead
+      // of the array the type promised. Pre-fix, the for...of in getCashFlowStatement
+      // would crash with TypeError. Post-fix, it should return an empty statement.
+      (apiClient.get as ReturnType<typeof vi.fn>).mockResolvedValue({
+        data: { error: 'Finance module is not enabled for this tenant' },
+      });
+
+      await expect(
+        getCashFlowStatement({ from: '2026-05-01', to: '2026-05-25' })
+      ).resolves.toMatchObject({
+        periodStart: '2026-05-01',
+        periodEnd: '2026-05-25',
+        operatingActivities: [],
+        investingActivities: [],
+        financingActivities: [],
+        totalOperatingCashFlow: 0,
+        totalInvestingCashFlow: 0,
+        totalFinancingCashFlow: 0,
+        netCashFlow: 0,
+      });
+    });
+
+    it('does not throw when backend rejects (catches API errors)', async () => {
+      // If getAccountTransactions throws (e.g., 500), Cash Flow page should still
+      // render an empty statement instead of crashing the whole page.
+      (apiClient.get as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('boom'));
+
+      await expect(
+        getCashFlowStatement({ from: '2026-05-01', to: '2026-05-25' })
+      ).resolves.toMatchObject({
+        operatingActivities: [],
+        investingActivities: [],
+        financingActivities: [],
+        netCashFlow: 0,
+      });
+    });
+
+    it('still categorises transactions correctly when backend returns a valid array', async () => {
+      (apiClient.get as ReturnType<typeof vi.fn>).mockResolvedValue({
+        data: [
+          { id: 't1', transactionDate: '2026-05-15', description: 'Customer Payment', debitAmount: 5000, creditAmount: 0, balance: 5000, ledgerAccountId: 'acc-1', ledgerAccountName: 'Cash' },
+          { id: 't2', transactionDate: '2026-05-16', description: 'Equipment Buy', debitAmount: 0, creditAmount: 10000, balance: -5000, ledgerAccountId: 'fixed-asset-1', ledgerAccountName: 'Fixed Asset - Equipment' },
+          { id: 't3', transactionDate: '2026-05-17', description: 'Loan Proceeds', debitAmount: 15000, creditAmount: 0, balance: 10000, ledgerAccountId: 'loan-1', ledgerAccountName: 'Bank Loan' },
+        ],
+      });
+
+      const cashFlow = await getCashFlowStatement({ from: '2026-05-01', to: '2026-05-31' });
+
+      expect(cashFlow.operatingActivities).toHaveLength(1);
+      expect(cashFlow.investingActivities).toHaveLength(1);
+      expect(cashFlow.financingActivities).toHaveLength(1);
+      expect(cashFlow.totalOperatingCashFlow).toBe(5000);
+      expect(cashFlow.totalInvestingCashFlow).toBe(-10000);
+      expect(cashFlow.totalFinancingCashFlow).toBe(15000);
+      expect(cashFlow.netCashFlow).toBe(10000);
     });
   });
 });
