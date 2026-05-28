@@ -8,6 +8,7 @@
  * - Mock data ONLY when VITE_USE_MOCK_DATA=true explicitly
  */
 import { useQuery } from '@tanstack/react-query';
+import axios from 'axios';
 import { listInvoices } from '../api/endpoints/invoices';
 import { listBills } from '../api/endpoints/bills';
 import type { Invoice, Bill } from '../types';
@@ -22,6 +23,11 @@ export interface DashboardStats {
   expensesMTDChange: number;
   netProfit: number;
   netProfitChange: number;
+  // Added: per-source failure flags so the UI can distinguish "empty" from
+  // "permission/tenant error" (bug 11 in SOUPFIN-2 — 403s were hidden by
+  // Promise.allSettled returning [] silently).
+  hasPermissionError?: boolean;
+  partialFailureSources?: ('invoices' | 'bills')[];
 }
 
 // Mock stats for explicit testing mode only (VITE_USE_MOCK_DATA=true)
@@ -107,7 +113,34 @@ export function useDashboardStats() {
       const invoices = results[0].status === 'fulfilled' ? results[0].value : [];
       const bills = results[1].status === 'fulfilled' ? results[1].value : [];
 
-      return calculateStats(invoices, bills);
+      // Added: classify failures so the UI can tell the user *why* the dashboard
+      // is showing zeros. A 401 already triggers global redirect — we only
+      // surface 403 and 5xx as "permission / backend" errors here. A network
+      // error (no response) also counts.
+      const partialFailureSources: ('invoices' | 'bills')[] = [];
+      let hasPermissionError = false;
+      const sourceNames: ('invoices' | 'bills')[] = ['invoices', 'bills'];
+      results.forEach((result, idx) => {
+        if (result.status === 'rejected') {
+          partialFailureSources.push(sourceNames[idx]);
+          const reason = result.reason as unknown;
+          if (axios.isAxiosError(reason)) {
+            const status = reason.response?.status;
+            if (status === 403 || status === 500 || status === 502 || status === 503 || !reason.response) {
+              hasPermissionError = true;
+            }
+          } else {
+            hasPermissionError = true;
+          }
+        }
+      });
+
+      const stats = calculateStats(invoices, bills);
+      return {
+        ...stats,
+        hasPermissionError,
+        partialFailureSources: partialFailureSources.length > 0 ? partialFailureSources : undefined,
+      };
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 30 * 60 * 1000, // 30 minutes
