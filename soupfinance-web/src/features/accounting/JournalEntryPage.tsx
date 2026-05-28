@@ -19,6 +19,9 @@ import { DatePicker } from '../../components/forms/DatePicker';
 import { Textarea } from '../../components/forms/Textarea';
 import { createJournalEntry, getTransactionGroup, updateJournalEntry } from '../../api/endpoints/ledger';
 import { useLedgerAccounts } from '../../hooks/useLedgerAccounts';
+// Added (SOUPFIN-9): explain disabled module + parse submit errors
+import { ModuleDisabledBanner } from '../../components/feedback';
+import { getApiErrorMessage } from '../../api/errors';
 import type { CreateJournalEntryRequest } from '../../types';
 
 // Added: Zod schema for journal entry line item validation
@@ -101,9 +104,10 @@ export function JournalEntryPage() {
   // Added: Determine if entry is read-only (posted or reversed entries cannot be edited)
   const isReadOnly = isEditMode && !!existingGroup && (existingGroup.status === 'POSTED' || existingGroup.status === 'REVERSED');
 
-  // Changed: Fetch accounts from API via useLedgerAccounts hook
+  // Changed (SOUPFIN-9): expose the accounts query error so we can render a
+  // ModuleDisabledBanner when the Ledger module is not enabled for the tenant.
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { data: accounts, isLoading: _accountsLoading } = useLedgerAccounts();
+  const { data: accounts, isLoading: _accountsLoading, error: accountsError } = useLedgerAccounts();
 
   // Added: Convert accounts to select options format
   const accountOptions: SelectOption[] = useMemo(() =>
@@ -223,12 +227,9 @@ export function JournalEntryPage() {
       // Added: Navigate back to ledger transactions after successful save
       navigate('/ledger/transactions');
     } catch (error) {
-      // Added: Display error message from API or generic fallback
-      setSubmitError(
-        error instanceof Error
-          ? error.message
-          : 'Failed to save journal entry. Please try again.'
-      );
+      // Changed (SOUPFIN-9): use parseApiError so 403 ("module disabled")
+      // shows a useful message instead of raw axios "Request failed..." text.
+      setSubmitError(getApiErrorMessage(error));
     } finally {
       setIsSubmitting(false);
     }
@@ -315,6 +316,16 @@ export function JournalEntryPage() {
           )}
         </div>
       </div>
+
+      {/* Added (SOUPFIN-9): Warn when the Ledger module is disabled so the
+          user understands why account dropdowns are empty and submit will fail. */}
+      {accountsError && (
+        <ModuleDisabledBanner
+          error={accountsError}
+          context="Account selection is unavailable until the module is enabled."
+          testId="journal-entry-module-disabled"
+        />
+      )}
 
       {/* Added: Read-only banner for posted/reversed entries */}
       {isReadOnly && (

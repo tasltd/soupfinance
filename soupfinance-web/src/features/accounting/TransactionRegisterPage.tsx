@@ -21,6 +21,9 @@ import {
   deleteVoucher,
 } from '../../api/endpoints/ledger';
 import { useQueryClient } from '@tanstack/react-query';
+// Added (SOUPFIN-9): parse 403/network errors into user-friendly messages
+import { parseApiError, getApiErrorMessage } from '../../api/errors';
+import { ApiErrorState, useToast } from '../../components/feedback';
 
 // =============================================================================
 // Added: Type definitions for filtering
@@ -73,6 +76,8 @@ const defaultFilters: FilterState = {
 export function TransactionRegisterPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  // Added (SOUPFIN-9): toast for action feedback (Post/Reverse/Delete/Export)
+  const { showToast } = useToast();
 
   // Added: Fetch transactions from API
   const { data: transactions, isLoading, isError, error, refetch } = useTransactions();
@@ -251,7 +256,7 @@ export function TransactionRegisterPage() {
     setOpenActionDropdown(null);
   }, [navigate]);
 
-  // Changed: Post transaction - now calls API based on transaction type
+  // Changed (SOUPFIN-9): Post transaction with toast feedback on success/failure
   const handlePost = useCallback(async (tx: UnifiedTransaction) => {
     try {
       if (tx.type === 'JOURNAL_ENTRY') {
@@ -259,16 +264,16 @@ export function TransactionRegisterPage() {
       } else {
         await postVoucher(tx.sourceId);
       }
-      // Added: Invalidate query to refresh data
       await queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      showToast({ variant: 'success', message: `Transaction ${tx.transactionId} posted.` });
     } catch (err) {
       console.error('[TransactionRegister] Failed to post transaction:', err);
-      // TODO: Show error toast notification
+      showToast({ variant: 'error', message: getApiErrorMessage(err) });
     }
     setOpenActionDropdown(null);
-  }, [queryClient]);
+  }, [queryClient, showToast]);
 
-  // Changed: Reverse transaction - now calls API based on transaction type
+  // Changed (SOUPFIN-9): Reverse transaction with toast feedback
   const handleReverse = useCallback(async (tx: UnifiedTransaction) => {
     try {
       if (tx.type === 'JOURNAL_ENTRY') {
@@ -276,18 +281,17 @@ export function TransactionRegisterPage() {
       } else {
         await cancelVoucher(tx.sourceId);
       }
-      // Added: Invalidate query to refresh data
       await queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      showToast({ variant: 'success', message: `Transaction ${tx.transactionId} reversed.` });
     } catch (err) {
       console.error('[TransactionRegister] Failed to reverse transaction:', err);
-      // TODO: Show error toast notification
+      showToast({ variant: 'error', message: getApiErrorMessage(err) });
     }
     setOpenActionDropdown(null);
-  }, [queryClient]);
+  }, [queryClient, showToast]);
 
-  // Changed: Delete transaction - now calls API based on transaction type
+  // Changed (SOUPFIN-9): Delete transaction with toast feedback
   const handleDelete = useCallback(async (tx: UnifiedTransaction) => {
-    // Added: Confirm before deleting
     if (!window.confirm(`Are you sure you want to delete transaction ${tx.transactionId}?`)) {
       setOpenActionDropdown(null);
       return;
@@ -299,23 +303,22 @@ export function TransactionRegisterPage() {
       } else {
         await deleteVoucher(tx.sourceId);
       }
-      // Added: Invalidate query to refresh data
       await queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      showToast({ variant: 'success', message: `Transaction ${tx.transactionId} deleted.` });
     } catch (err) {
       console.error('[TransactionRegister] Failed to delete transaction:', err);
-      // TODO: Show error toast notification
+      showToast({ variant: 'error', message: getApiErrorMessage(err) });
     }
     setOpenActionDropdown(null);
-  }, [queryClient]);
+  }, [queryClient, showToast]);
 
-  // Changed: Batch post - now calls API for each selected transaction
+  // Changed (SOUPFIN-9): Batch post with summary toast
   const handleBatchPost = useCallback(async () => {
     if (selectedIds.size === 0 || !transactions) return;
 
     const selectedTxs = transactions.filter(tx => selectedIds.has(tx.id));
 
     try {
-      // Added: Post all selected transactions
       await Promise.all(
         selectedTxs.map(tx => {
           if (tx.type === 'JOURNAL_ENTRY') {
@@ -325,20 +328,19 @@ export function TransactionRegisterPage() {
           }
         })
       );
-      // Added: Invalidate and refetch
       await queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      showToast({ variant: 'success', message: `${selectedTxs.length} transaction(s) posted.` });
     } catch (err) {
       console.error('[TransactionRegister] Batch post failed:', err);
-      // TODO: Show error toast
+      showToast({ variant: 'error', message: getApiErrorMessage(err) });
     }
     setSelectedIds(new Set());
-  }, [selectedIds, transactions, queryClient]);
+  }, [selectedIds, transactions, queryClient, showToast]);
 
-  // Changed: Batch delete - now calls API for each selected transaction
+  // Changed (SOUPFIN-9): Batch delete with summary toast
   const handleBatchDelete = useCallback(async () => {
     if (selectedIds.size === 0 || !transactions) return;
 
-    // Added: Confirm before batch delete
     if (!window.confirm(`Are you sure you want to delete ${selectedIds.size} transaction(s)?`)) {
       return;
     }
@@ -346,7 +348,6 @@ export function TransactionRegisterPage() {
     const selectedTxs = transactions.filter(tx => selectedIds.has(tx.id));
 
     try {
-      // Added: Delete all selected transactions
       await Promise.all(
         selectedTxs.map(tx => {
           if (tx.type === 'JOURNAL_ENTRY') {
@@ -356,19 +357,64 @@ export function TransactionRegisterPage() {
           }
         })
       );
-      // Added: Invalidate and refetch
       await queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      showToast({ variant: 'success', message: `${selectedTxs.length} transaction(s) deleted.` });
     } catch (err) {
       console.error('[TransactionRegister] Batch delete failed:', err);
-      // TODO: Show error toast
+      showToast({ variant: 'error', message: getApiErrorMessage(err) });
     }
     setSelectedIds(new Set());
-  }, [selectedIds, transactions, queryClient]);
+  }, [selectedIds, transactions, queryClient, showToast]);
 
-  // Added: Export handler
+  // Changed (SOUPFIN-9): Export now gives explicit feedback instead of silent console.log.
+  // If the transactions query failed (e.g. 403 Accounting module disabled), the
+  // error toast tells the user why nothing was exported.
+  // Otherwise we generate a CSV from the in-memory data and trigger a download.
   const handleExport = useCallback(() => {
-    console.log('Exporting transactions...');
-  }, []);
+    if (isError) {
+      const parsed = parseApiError(error);
+      showToast({
+        variant: 'error',
+        message: `Cannot export — ${parsed.message}`,
+        duration: 7000,
+      });
+      return;
+    }
+    const rows = filteredTransactions;
+    if (!rows || rows.length === 0) {
+      showToast({ variant: 'warning', message: 'Nothing to export — the current view is empty.' });
+      return;
+    }
+    try {
+      const header = ['Date', 'Transaction ID', 'Description', 'Account #', 'Account Name', 'Debit', 'Credit', 'Status', 'Type'];
+      const csvRows = rows.map(tx => [
+        tx.date,
+        tx.transactionId,
+        // Escape commas and quotes per RFC 4180
+        `"${(tx.description || '').replace(/"/g, '""')}"`,
+        tx.accountCode,
+        `"${(tx.accountName || '').replace(/"/g, '""')}"`,
+        tx.debitAmount.toFixed(2),
+        tx.creditAmount.toFixed(2),
+        tx.status,
+        tx.type,
+      ]);
+      const csv = [header.join(','), ...csvRows.map(r => r.join(','))].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.href = url;
+      link.download = `transactions-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      showToast({ variant: 'success', message: `Exported ${rows.length} transaction(s) to CSV.` });
+    } catch (err) {
+      console.error('[TransactionRegister] Export failed:', err);
+      showToast({ variant: 'error', message: 'Export failed. Please try again.' });
+    }
+  }, [filteredTransactions, isError, error, showToast]);
 
   // Added: Status badge color helper
   const getStatusBadgeClass = (status: string): string => {
@@ -623,29 +669,16 @@ export function TransactionRegisterPage() {
             </div>
           )}
 
-          {/* Added: Error State */}
+          {/* Changed (SOUPFIN-9): Error State uses ApiErrorState so 403s on
+              voucher/ledger endpoints render a "module not enabled" message
+              instead of the raw axios "Request failed with status code 403". */}
           {isError && !isLoading && (
-            <div className="w-full" data-testid="transaction-error">
-              <div className="flex flex-col items-center justify-center py-16 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20">
-                <span className="material-symbols-outlined text-5xl text-red-500 mb-3">
-                  error_outline
-                </span>
-                <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-1">
-                  Failed to load transactions
-                </h3>
-                <p className="text-red-600 dark:text-red-400 text-sm mb-4">
-                  {error instanceof Error ? error.message : 'An unexpected error occurred'}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => refetch()}
-                  className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90"
-                  data-testid="retry-button"
-                >
-                  <span className="material-symbols-outlined text-lg">refresh</span>
-                  Retry
-                </button>
-              </div>
+            <div className="w-full">
+              <ApiErrorState
+                error={error}
+                onRetry={() => refetch()}
+                testId="transaction-error"
+              />
             </div>
           )}
 
