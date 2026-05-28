@@ -12,6 +12,7 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { listLedgerTransactions, listLedgerAccounts } from '../../api/endpoints/ledger';
 import { useFormatCurrency } from '../../stores';
+import { ApiErrorState } from '../../components/feedback';
 import type { LedgerTransaction, LedgerAccount, LedgerState } from '../../types';
 
 // Added: Transaction status type for filtering
@@ -33,7 +34,8 @@ export function LedgerTransactionsPage() {
   });
 
   // Added: Fetch transactions with filters
-  const { data: transactions, isLoading, error } = useQuery({
+  // NOTE: do not retry on 403 — module-disabled is permanent until admin enables it
+  const { data: transactions, isLoading, error, refetch } = useQuery({
     queryKey: ['ledger-transactions', accountId, startDate, endDate, statusFilter],
     queryFn: () => listLedgerTransactions({
       max: 100,
@@ -43,6 +45,11 @@ export function LedgerTransactionsPage() {
       startDate: startDate || undefined,
       endDate: endDate || undefined,
     }),
+    retry: (failureCount, err) => {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status === 403 || status === 401) return false;
+      return failureCount < 2;
+    },
   });
 
   // Added: Filter transactions by status client-side (API may not support status filter)
@@ -183,17 +190,12 @@ export function LedgerTransactionsPage() {
             Loading transactions...
           </div>
         ) : error ? (
-          <div className="p-12 text-center" data-testid="ledger-error">
-            <span className="material-symbols-outlined text-6xl text-danger/50 mb-4">error</span>
-            <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">Failed to load transactions</h3>
-            <p className="text-subtle-text mb-4">There was an error loading ledger transactions. Please try again.</p>
-            <button
-              onClick={() => window.location.reload()}
-              className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm"
-            >
-              <span className="material-symbols-outlined text-lg">refresh</span>
-              Retry
-            </button>
+          <div className="p-2">
+            <ApiErrorState
+              error={error}
+              onRetry={() => refetch()}
+              testId="ledger-error"
+            />
           </div>
         ) : !filteredTransactions || filteredTransactions.length === 0 ? (
           <div className="p-12 text-center" data-testid="ledger-empty">

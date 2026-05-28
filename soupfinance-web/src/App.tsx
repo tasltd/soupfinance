@@ -172,6 +172,10 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 export default function App() {
   const initialize = useAuthStore((state) => state.initialize);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  // Fix (SOUPFIN-10): Gate account-settings fetch on full auth initialization +
+  // tenantId presence to avoid race-condition error "No tenant ID found".
+  const authInitialized = useAuthStore((state) => state.isInitialized);
+  const tenantId = useAuthStore((state) => state.user?.tenantId);
   const darkMode = useUIStore((state) => state.darkMode);
   const fetchAccountSettings = useAccountStore((state) => state.fetchSettings);
   const accountInitialized = useAccountStore((state) => state.isInitialized);
@@ -197,13 +201,16 @@ export default function App() {
 
   // Added: Fetch account settings when authenticated
   // This loads the tenant's currency and other settings
+  // Fix (SOUPFIN-10): Only fetch after auth fully initialized AND tenantId is enriched.
+  // Without this guard, fetchSettings runs on persisted-but-stale auth state before
+  // validateToken() resolves, producing "No tenant ID found" errors.
   useEffect(() => {
-    if (isAuthenticated && !accountInitialized) {
+    if (isAuthenticated && authInitialized && tenantId && !accountInitialized) {
       fetchAccountSettings().catch((error) => {
         console.error('[App] Failed to fetch account settings:', error);
       });
     }
-  }, [isAuthenticated, accountInitialized, fetchAccountSettings]);
+  }, [isAuthenticated, authInitialized, tenantId, accountInitialized, fetchAccountSettings]);
 
   // Apply dark mode class — darkMode is resolved from themeMode (light/dark/system) in uiStore
   useEffect(() => {

@@ -7,3 +7,5 @@ export { Spinner, type SpinnerProps, type SpinnerSize } from './Spinner';
 export { Toast, type ToastProps } from './Toast';
 export { ToastProvider, useToast, type ToastData, type ShowToastOptions } from './ToastProvider';
 export { Tooltip, type TooltipProps, type TooltipPosition } from './Tooltip';
+export { ApiErrorState } from './ApiErrorState';
+export { ModuleDisabledBanner } from './ModuleDisabledBanner';

@@ -25,6 +25,9 @@ import { createVoucher } from '../../api/endpoints/ledger';
 import { useLedgerAccounts } from '../../hooks/useLedgerAccounts';
 import { usePaymentMethods } from '../../hooks/usePaymentMethods';
 import { DEFAULT_CURRENCIES } from '../../api/endpoints/domainData';
+// Added (SOUPFIN-9): module-disabled banner + user-friendly submit errors
+import { ModuleDisabledBanner } from '../../components/feedback';
+import { getApiErrorMessage } from '../../api/errors';
 import type { CreateVoucherRequest, VoucherType, VoucherTo } from '../../types';
 
 // Added: Zod schema for voucher form validation
@@ -104,9 +107,10 @@ export function VoucherFormPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  // Changed: Fetch accounts from API via useLedgerAccounts hook
+  // Changed (SOUPFIN-9): expose the accounts query error so we can render a
+  // ModuleDisabledBanner when the Accounting/Ledger module is not enabled.
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { data: accounts, isLoading: _accountsLoading } = useLedgerAccounts();
+  const { data: accounts, isLoading: _accountsLoading, error: accountsError } = useLedgerAccounts();
 
   // Added: Fetch payment methods from backend (domain class, not enum)
   const { data: paymentMethods } = usePaymentMethods();
@@ -293,12 +297,9 @@ export function VoucherFormPage() {
       // Added: Navigate back to vouchers list after successful save
       navigate('/accounting/vouchers');
     } catch (error) {
-      // Added: Display error message from API or generic fallback
-      setSubmitError(
-        error instanceof Error
-          ? error.message
-          : 'Failed to save voucher. Please try again.'
-      );
+      // Changed (SOUPFIN-9): use parseApiError so 403 ("module disabled")
+      // shows a useful message instead of raw axios "Request failed..." text.
+      setSubmitError(getApiErrorMessage(error));
     } finally {
       setIsSubmitting(false);
     }
@@ -371,6 +372,18 @@ export function VoucherFormPage() {
           </button>
         </div>
       </div>
+
+      {/* Added (SOUPFIN-9): module-disabled banner. Renders only when the
+          accounts query failed with 403 on a Ledger/Voucher endpoint so the
+          user knows why the Bank/Cash, Expense, and Income dropdowns are
+          empty and submitting will not work. */}
+      {accountsError && (
+        <ModuleDisabledBanner
+          error={accountsError}
+          context="Bank/Cash, Expense, and Income account dropdowns are unavailable until the module is enabled."
+          testId="voucher-form-module-disabled"
+        />
+      )}
 
       {/* Error Banner */}
       {submitError && (

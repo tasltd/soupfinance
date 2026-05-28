@@ -125,10 +125,47 @@ export async function getAccountTransactions(
   filters: ReportFilters
 ): Promise<AccountTransactionEntry[]> {
   const query = toQueryString(filters);
-  const response = await apiClient.get<AccountTransactionEntry[]>(
+  const response = await apiClient.get<unknown>(
     `/financeReports/accountTransactions.json?${query}`
   );
-  return response.data;
+  // Fix(SOUPFIN-11): Backend may return either an array or a wrapper object.
+  // Coerce both shapes into AccountTransactionEntry[] so callers can safely
+  // iterate without crashing with "t is not iterable" in production builds.
+  return normalizeTransactions(response.data);
+}
+
+/**
+ * Normalize backend account-transactions responses into an iterable array.
+ *
+ * Accepts: direct arrays, wrapped objects like { resultList } / { ledgerTransactionList }
+ * / { accountTransactionList } / { transactions }, or null/undefined.
+ *
+ * Fix(SOUPFIN-11): Cash Flow page was crashing with "t is not iterable" in
+ * production whenever the backend returned a wrapper object instead of a bare
+ * array. Centralising the normalisation here makes every consumer safe.
+ */
+export function normalizeTransactions(value: unknown): AccountTransactionEntry[] {
+  if (Array.isArray(value)) {
+    return value as AccountTransactionEntry[];
+  }
+  if (value && typeof value === 'object') {
+    const obj = value as Record<string, unknown>;
+    const candidateKeys = [
+      'resultList',
+      'ledgerTransactionList',
+      'accountTransactionList',
+      'transactions',
+      'transactionList',
+      'data',
+    ];
+    for (const key of candidateKeys) {
+      const candidate = obj[key];
+      if (Array.isArray(candidate)) {
+        return candidate as AccountTransactionEntry[];
+      }
+    }
+  }
+  return [];
 }
 
 /**
@@ -563,7 +600,13 @@ export async function getAPAgingReport(asOf: string): Promise<AgingReport> {
 export async function getCashFlowStatement(filters: ReportFilters): Promise<CashFlowStatement> {
   // Added: Build cash flow from account transactions
   // This is a simplified version - ideally backend would expose the full endpoint
-  const transactions = await getAccountTransactions(filters);
+  // Fix(SOUPFIN-11): Normalize backend response — production has occasionally returned a
+  // non-array (e.g., a wrapper object or null) which crashed the page with
+  // "t is not iterable" when the for...of loop ran. We now coerce to an array
+  // and accept several shapes: AccountTransactionEntry[] | { resultList: [...] } |
+  // { ledgerTransactionList: [...] } | { accountTransactionList: [...] } | null.
+  const rawTransactions: unknown = await getAccountTransactions(filters).catch(() => null);
+  const transactions: AccountTransactionEntry[] = normalizeTransactions(rawTransactions);
 
   // Group transactions by type (simplified categorization)
   const operatingActivities: { description: string; amount: number }[] = [];
