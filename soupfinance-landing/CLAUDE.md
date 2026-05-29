@@ -153,3 +153,7 @@ When running E2E tests against the backend (Playwright, Cypress, or any E2E fram
 3. Provide evidence of test success/failure
 
 Screenshots should be taken after login, after key form submissions, after navigation to target pages, and at assertion points. Store screenshots in a  directory.
+
+### E2E Browser Default: Firefox
+All Playwright E2E tests use Firefox as the default browser. Configure `playwright.config.ts` with `browserName: 'firefox'`. Screenshots must be captured at key validation points (page load, form interactions, assertions). See `~/.claude/docs/e2e-validation-rules.md` for full E2E rules.
+

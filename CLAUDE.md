@@ -309,6 +309,9 @@ Screenshots should be taken after login, after key form submissions, after navig
 
 ---
 
+### E2E Browser Default: Firefox
+All Playwright E2E tests use Firefox as the default browser. Configure `playwright.config.ts` with `browserName: 'firefox'`. Screenshots must be captured at key validation points (page load, form interactions, assertions). See `~/.claude/docs/e2e-validation-rules.md` for full E2E rules.
+
 ## Local Backend (LXC)
 
 ```bash
@@ -385,3 +388,20 @@ Part of **Soupmarkets** ecosystem (see `../CLAUDE.md`).
 **Important:** Only commit/push changes to this repo. If backend changes are needed in soupmarkets-web, inform the user but do not commit to other repos.
 
 **Note:** For detailed frontend patterns (API layer, hooks, state management, testing), see `soupfinance-web/CLAUDE.md`.
+
+## Session File Uploads
+
+Files uploaded during TASCIM Claude sessions for this project are stored at:
+
+```
+/opt/tascim-web/data/uploads/{session_name}/
+```
+
+Session names follow the pattern `soupfinance-{name}-{id}` (e.g., `soupfinance-okomfo-5682`).
+
+To list uploaded files for a session:
+```bash
+ls /opt/tascim-web/data/uploads/soupfinance-*/
+```
+
+Files auto-delete after 5 hours or when the session ends. For persistent file references, copy them to the project before expiry.

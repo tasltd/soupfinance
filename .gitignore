@@ -8,3 +8,6 @@
 .vscode
 *.sw?
 .DS_Store
+
+# Git worktrees for sessions
+.worktrees/

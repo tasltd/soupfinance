@@ -390,6 +390,9 @@ Form pages need mocks for ALL API endpoints they call. If `page.goto` times out,
 - Dashboard: `/rest/invoice/index.json`, `/rest/bill/index.json`
 - Always mock `mockTokenValidationApi(page, true)` for auth + account settings (currency)
 
+### E2E Browser Default: Firefox
+All Playwright E2E tests use Firefox as the default browser. Configure `playwright.config.ts` with `browserName: 'firefox'`. Screenshots must be captured at key validation points (page load, form interactions, assertions). See `~/.claude/docs/e2e-validation-rules.md` for full E2E rules.
+
 ## Key Conventions
 
 ### Documentation & Planning
