@@ -5,7 +5,14 @@
 import '@testing-library/jest-dom'
 import { vi, beforeEach, afterEach } from 'vitest'
 
-// Mock axios globally to prevent URL issues in jsdom
+// Mock axios globally to prevent URL issues in jsdom.
+// Added isAxiosError helper (SOUPFIN-2) so utilities like normalizeApiError
+// can detect mocked errors in tests — checks for plain objects carrying an
+// `isAxiosError: true` flag.
+const isAxiosErrorMock = (value: unknown): boolean =>
+  typeof value === 'object' &&
+  value !== null &&
+  (value as { isAxiosError?: boolean }).isAxiosError === true
 vi.mock('axios', () => ({
   default: {
     create: vi.fn(() => ({
@@ -18,7 +25,9 @@ vi.mock('axios', () => ({
       put: vi.fn(),
       delete: vi.fn(),
     })),
+    isAxiosError: isAxiosErrorMock,
   },
+  isAxiosError: isAxiosErrorMock,
 }))
 
 // Mock window.matchMedia (jsdom doesn't provide it; needed by uiStore dark mode)

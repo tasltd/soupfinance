@@ -11,6 +11,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { listLedgerAccounts } from '../../api/endpoints/ledger';
 import { useFormatCurrency } from '../../stores';
+import { ApiErrorState } from '../../components/feedback';
 import type { LedgerAccount, LedgerGroup } from '../../types';
 
 // Added: Group configuration with colors and icons
@@ -33,9 +34,15 @@ export function ChartOfAccountsPage() {
   const [expandedGroups, setExpandedGroups] = useState<Set<LedgerGroup>>(new Set(GROUP_ORDER));
 
   // Added: Fetch accounts from API
-  const { data: accounts, isLoading, error } = useQuery({
+  // NOTE: do not retry on 403 (module-disabled is permanent until admin enables it)
+  const { data: accounts, isLoading, error, refetch } = useQuery({
     queryKey: ['ledger-accounts'],
     queryFn: () => listLedgerAccounts(),
+    retry: (failureCount, err) => {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status === 403 || status === 401) return false;
+      return failureCount < 2;
+    },
   });
 
   // Added: Group accounts by ledgerGroup
@@ -80,18 +87,11 @@ export function ChartOfAccountsPage() {
           Loading accounts...
         </div>
       ) : error ? (
-        <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-12 text-center" data-testid="coa-error">
-          <span className="material-symbols-outlined text-6xl text-danger/50 mb-4">error</span>
-          <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">Failed to load accounts</h3>
-          <p className="text-subtle-text mb-4">There was an error loading your chart of accounts. Please try again.</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm"
-          >
-            <span className="material-symbols-outlined text-lg">refresh</span>
-            Retry
-          </button>
-        </div>
+        <ApiErrorState
+          error={error}
+          onRetry={() => refetch()}
+          testId="coa-error"
+        />
       ) : !accounts || accounts.length === 0 ? (
         <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-12 text-center" data-testid="coa-empty">
           <span className="material-symbols-outlined text-6xl text-subtle-text/50 mb-4">account_tree</span>

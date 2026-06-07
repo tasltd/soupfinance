@@ -335,6 +335,9 @@ export function ProfitLossPage() {
       )}
 
       {/* Empty State - No data */}
+      {/* Fix(SOUPFIN-11): Empty state message now hints at common causes
+          (date range, missing revenue/expense accounts) so users can self-
+          diagnose instead of assuming the report is broken. */}
       {!isLoading && !isError && profitLoss && profitLoss.income.length === 0 && profitLoss.expenses.length === 0 && (
         <div
           className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-12 text-center"
@@ -342,8 +345,10 @@ export function ProfitLossPage() {
         >
           <span className="material-symbols-outlined text-6xl text-subtle-text/50 mb-4">trending_up</span>
           <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">No transactions found</h3>
-          <p className="text-subtle-text">
-            There are no income or expense transactions for the selected period.
+          <p className="text-subtle-text max-w-md mx-auto">
+            There are no income or expense transactions between {fromDate} and {toDate}.
+            Try widening the date range, or check that your chart of accounts has
+            revenue and expense accounts with posted transactions.
           </p>
         </div>
       )}

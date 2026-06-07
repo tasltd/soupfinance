@@ -796,7 +796,7 @@ test.describe('Cash Flow Statement Report', () => {
     await takeScreenshot(page, 'cash-flow-error');
   });
 
-  test('export buttons are visible (disabled as backend not ready)', async ({ page }) => {
+  test('export buttons render with correct enabled/disabled state (SOUPFIN-11)', async ({ page }) => {
     await page.route('**/rest/financeReports/accountTransactions*', (route) => {
       route.fulfill({
         status: 200,
@@ -807,15 +807,61 @@ test.describe('Cash Flow Statement Report', () => {
 
     await page.goto('/reports/cash-flow');
 
-    // Export buttons exist but are disabled for cash flow
+    // All three buttons render
     await expect(page.getByTestId('cash-flow-export-pdf')).toBeVisible();
     await expect(page.getByTestId('cash-flow-export-excel')).toBeVisible();
     await expect(page.getByTestId('cash-flow-export-csv')).toBeVisible();
 
-    // They should be disabled
+    // PDF and Excel still need backend support — they stay disabled.
     await expect(page.getByTestId('cash-flow-export-pdf')).toBeDisabled();
     await expect(page.getByTestId('cash-flow-export-excel')).toBeDisabled();
-    await expect(page.getByTestId('cash-flow-export-csv')).toBeDisabled();
+
+    // Fix(SOUPFIN-11): CSV is now functional client-side once data has loaded.
+    // Wait for the data to appear before asserting the button is enabled.
+    await expect(page.getByTestId('cash-flow-stats')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId('cash-flow-export-csv')).toBeEnabled();
+  });
+
+  test('CSV export downloads a file with cash flow data (SOUPFIN-11)', async ({ page }) => {
+    await page.route('**/rest/financeReports/accountTransactions*', (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(mockAccountTransactionsResponse),
+      });
+    });
+
+    await page.goto('/reports/cash-flow');
+    await expect(page.getByTestId('cash-flow-stats')).toBeVisible({ timeout: 10000 });
+
+    // Trigger the download and verify it produced a CSV file.
+    const downloadPromise = page.waitForEvent('download');
+    await page.getByTestId('cash-flow-export-csv').click();
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toMatch(/cash-flow-.*\.csv$/);
+  });
+
+  test('does not crash when backend returns wrapped non-array response (SOUPFIN-11)', async ({ page }) => {
+    // Reproduces the production "t is not iterable" crash by returning the
+    // exact 200-with-error-payload that triggered it. Page must stay rendered
+    // and show an empty / loading state instead of blanking out.
+    await page.route('**/rest/financeReports/accountTransactions*', (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: 'Finance module is not enabled for this tenant' }),
+      });
+    });
+
+    await page.goto('/reports/cash-flow');
+
+    // Page chrome still renders — heading + toolbar are present.
+    await expect(page.getByTestId('cash-flow-page')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId('cash-flow-heading')).toBeVisible();
+    await expect(page.getByTestId('cash-flow-toolbar')).toBeVisible();
+
+    // Empty state appears instead of a JS crash.
+    await expect(page.getByTestId('cash-flow-empty')).toBeVisible({ timeout: 10000 });
   });
 
   test('responsive layout on mobile viewport', async ({ page }) => {
@@ -929,6 +975,70 @@ test.describe('Aging Reports', () => {
 
     expect(arCapturedUrl).toContain('2025-06-30');
     expect(apCapturedUrl).toContain('2025-06-30');
+  });
+
+  test('Today button refetches even when date is already today (SOUPFIN-11)', async ({ page }) => {
+    // Fix(SOUPFIN-11): The Today button was a no-op when the date was already
+    // today because setState bailed out on equal values. Verify it now always
+    // refetches by counting API requests.
+    let arRequestCount = 0;
+    let apRequestCount = 0;
+
+    await page.route('**/rest/financeReports/agedReceivables*', (route) => {
+      arRequestCount += 1;
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(mockAgedReceivablesResponse),
+      });
+    });
+
+    await page.route('**/rest/financeReports/agedPayables*', (route) => {
+      apRequestCount += 1;
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(mockAgedPayablesResponse),
+      });
+    });
+
+    await page.goto('/reports/aging');
+    await expect(page.getByTestId('ar-aging-table')).toBeVisible({ timeout: 10000 });
+
+    // After initial load both endpoints have been hit at least once.
+    const arInitial = arRequestCount;
+    const apInitial = apRequestCount;
+    expect(arInitial).toBeGreaterThanOrEqual(1);
+    expect(apInitial).toBeGreaterThanOrEqual(1);
+
+    // Click Today while date IS already today — must trigger refetch.
+    await page.getByTestId('aging-reports-reset-date').click();
+    await page.waitForTimeout(500);
+
+    expect(arRequestCount).toBeGreaterThan(arInitial);
+    expect(apRequestCount).toBeGreaterThan(apInitial);
+  });
+
+  test('date picker allows selecting historical years (SOUPFIN-11)', async ({ page }) => {
+    // Fix(SOUPFIN-11): The picker now has min=2000-01-01 so users can pick
+    // dates from earlier years. Verify a 2024 date is accepted by the input.
+    await page.route('**/rest/financeReports/agedReceivables*', (route) => {
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(mockAgedReceivablesResponse) });
+    });
+    await page.route('**/rest/financeReports/agedPayables*', (route) => {
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(mockAgedPayablesResponse) });
+    });
+
+    await page.goto('/reports/aging');
+    await expect(page.getByTestId('aging-reports-date-picker')).toBeVisible({ timeout: 10000 });
+
+    const datePicker = page.getByTestId('aging-reports-date-picker');
+    await datePicker.fill('2024-03-15');
+    await expect(datePicker).toHaveValue('2024-03-15');
+
+    // Min attribute should be set so the native picker exposes earlier years.
+    const minAttr = await datePicker.getAttribute('min');
+    expect(minAttr).toBe('2000-01-01');
   });
 
   test('renders both A/R and A/P tables', async ({ page }) => {

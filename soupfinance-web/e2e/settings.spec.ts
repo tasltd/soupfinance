@@ -934,6 +934,53 @@ test.describe('Settings - Account Settings', () => {
 
     await expect(page.locator('text=Failed to load account settings')).toBeVisible();
   });
+
+  // SOUPFIN-10: Race-condition regression test
+  // Reproduces the bug where /settings/account loaded before validateToken()
+  // enriched the auth store with tenantId, producing "No tenant ID found".
+  // With the fix, AccountSettingsPage gates its query on isInitialized + tenantId,
+  // and accountSettingsApi.get() falls back to /user/current.json on-demand.
+  test('loads cleanly when persisted auth state lacks tenantId (SOUPFIN-10)', async ({ page }) => {
+    if (isLxcMode()) {
+      test.skip();
+      return;
+    }
+
+    // Arrange: simulate persisted auth from an older session that has no tenantId.
+    // This is the exact state that produced the race condition in production.
+    await page.addInitScript(() => {
+      const staleUser = {
+        username: 'admin',
+        email: 'admin@soupfinance.com',
+        roles: ['ROLE_ADMIN', 'ROLE_USER'],
+        // tenantId intentionally absent
+      };
+      localStorage.setItem('access_token', 'mock-jwt-token');
+      localStorage.setItem('user', JSON.stringify(staleUser));
+      localStorage.setItem(
+        'auth-storage',
+        JSON.stringify({
+          state: { user: staleUser, isAuthenticated: true },
+          version: 0,
+        })
+      );
+    });
+
+    await mockAccountSettingsApis(page);
+
+    // Act: load the settings page directly (cold-start scenario)
+    await page.goto('/settings/account');
+
+    // Assert: the page renders without the race-condition error.
+    await expect(page.getByRole('heading', { name: 'Account Settings' })).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('text=Failed to load account settings')).not.toBeVisible();
+    await expect(page.locator('text=No tenant ID found')).not.toBeVisible();
+
+    // Form should populate from the mocked account/show response
+    await expect(page.locator('input[name="name"]')).toHaveValue('SoupFinance Demo Company');
+
+    await takeScreenshot(page, 'account-settings-soupfin-10-race-fix');
+  });
 });
 
 // ===========================================================================

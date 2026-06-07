@@ -48,7 +48,12 @@ export type BusinessType = 'TRADING' | 'SERVICES';
 
 /**
  * Tenant registration data
- * Password is NOT collected here - set during email confirmation
+ *
+ * Changed (2026-05-22): Password is now collected at registration when the
+ * SoupFinance ApiConsumer has `requireEmailConfirmation = false` on the backend.
+ * The backend returns `requiresConfirmation` on success so the frontend can
+ * branch: redirect to login (single-step) vs show "Check Your Email" (legacy).
+ * See plans/soupfinance-disable-email-confirmation.md.
  */
 export interface TenantRegistration {
   /** Company/business name - becomes tenant name */
@@ -65,6 +70,13 @@ export interface TenantRegistration {
   country?: string;
   /** Base currency for the tenant (auto-set from country, editable in settings) */
   currency?: string;
+  /**
+   * Admin password.
+   * Sent unconditionally; backend rejects when `requireEmailConfirmation = true`
+   * for the calling ApiConsumer, accepts when `false`. Validated against the
+   * same rules as ConfirmEmailPage (≥8 chars, uppercase, lowercase, digit).
+   */
+  password?: string;
 }
 
 /**
@@ -102,6 +114,11 @@ export interface PasswordReset {
 
 /**
  * Response from registration endpoint
+ *
+ * Changed (2026-05-22): Added `requiresConfirmation` flag.
+ * - true  → legacy flow: user gets confirmation email, must click link
+ * - false → single-step flow: account is enabled immediately, user logs in
+ * See plans/soupfinance-disable-email-confirmation.md.
  */
 export interface RegistrationResponse {
   success: boolean;
@@ -109,6 +126,11 @@ export interface RegistrationResponse {
   accountId?: string;
   agentId?: string;
   email?: string;
+  /**
+   * Whether the user must still confirm their email before logging in.
+   * When undefined, frontend falls back to legacy behaviour (show "Check Your Email").
+   */
+  requiresConfirmation?: boolean;
   error?: string;
   errors?: Record<string, string>;
 }

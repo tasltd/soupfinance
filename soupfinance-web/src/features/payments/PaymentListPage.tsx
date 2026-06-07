@@ -13,6 +13,7 @@ import { useQuery } from '@tanstack/react-query';
 import { listAllInvoicePayments } from '../../api/endpoints/invoices';
 import { listAllBillPayments } from '../../api/endpoints/bills';
 import { useFormatCurrency } from '../../stores';
+import { isModuleDisabledError } from '../../utils/apiErrors';
 import type { InvoicePayment, BillPayment } from '../../types';
 
 // Added: Tab type for filtering
@@ -25,6 +26,7 @@ export function PaymentListPage() {
   const [activeTab, setActiveTab] = useState<PaymentTab>('incoming');
 
   // Added: Fetch incoming payments (from invoices)
+  // NOTE: retry=false so 403 (module disabled) surfaces immediately instead of retrying 3x
   const {
     data: incomingPayments,
     isLoading: isLoadingIncoming,
@@ -32,6 +34,7 @@ export function PaymentListPage() {
   } = useQuery({
     queryKey: ['invoice-payments'],
     queryFn: () => listAllInvoicePayments({ max: 50, sort: 'paymentDate', order: 'desc' }),
+    retry: false,
   });
 
   // Added: Fetch outgoing payments (to vendors/bills)
@@ -42,12 +45,19 @@ export function PaymentListPage() {
   } = useQuery({
     queryKey: ['bill-payments'],
     queryFn: () => listAllBillPayments({ max: 50, sort: 'paymentDate', order: 'desc' }),
+    retry: false,
   });
 
   // Added: Get current tab data
   const isLoading = activeTab === 'incoming' ? isLoadingIncoming : isLoadingOutgoing;
   const error = activeTab === 'incoming' ? incomingError : outgoingError;
   const payments = activeTab === 'incoming' ? incomingPayments : outgoingPayments;
+
+  // Added: Detect Finance module disabled (403 on BOTH read endpoints)
+  // Both must be 403 because a single 403 could be a transient permission glitch;
+  // both endpoints failing the same way is the module-disabled signal.
+  const isModuleDisabled =
+    isModuleDisabledError(incomingError) && isModuleDisabledError(outgoingError);
 
   // Added: Payment method display helper
   const getPaymentMethodLabel = (method: string): string => {
@@ -85,13 +95,57 @@ export function PaymentListPage() {
         </div>
         <Link
           to="/payments/new"
-          className="flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90"
+          aria-disabled={isModuleDisabled}
+          tabIndex={isModuleDisabled ? -1 : undefined}
+          onClick={(e) => {
+            if (isModuleDisabled) e.preventDefault();
+          }}
+          className={`flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90 ${
+            isModuleDisabled ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''
+          }`}
           data-testid="record-payment-button"
         >
           <span className="material-symbols-outlined text-lg">add</span>
           Record Payment
         </Link>
       </div>
+
+      {/* Added: Finance module disabled — render dedicated state instead of broken table + tabs */}
+      {isModuleDisabled ? (
+        <div
+          className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-12 text-center"
+          data-testid="payment-module-disabled"
+        >
+          <span className="material-symbols-outlined text-6xl text-warning/70 mb-4">block</span>
+          <h2 className="text-xl font-bold text-text-light dark:text-text-dark mb-2">
+            Finance module not available
+          </h2>
+          <p className="text-subtle-text max-w-lg mx-auto mb-6">
+            The Finance module is not enabled for your account, so payments cannot be
+            listed or recorded right now. Please contact your administrator to enable
+            the Finance module for this workspace.
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <Link
+              to="/dashboard"
+              className="inline-flex items-center gap-2 h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm hover:bg-primary/5"
+              data-testid="payment-module-disabled-dashboard"
+            >
+              <span className="material-symbols-outlined text-lg">arrow_back</span>
+              Back to Dashboard
+            </Link>
+            <a
+              href="mailto:support@soupfinance.com?subject=Enable%20Finance%20module"
+              className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90"
+              data-testid="payment-module-disabled-contact"
+            >
+              <span className="material-symbols-outlined text-lg">mail</span>
+              Contact Support
+            </a>
+          </div>
+        </div>
+      ) : (
+        <>
 
       {/* Tabs */}
       <div className="flex gap-1 bg-surface-light dark:bg-surface-dark rounded-lg p-1 border border-border-light dark:border-border-dark w-fit" data-testid="payment-tabs">
@@ -268,6 +322,8 @@ export function PaymentListPage() {
             </span>
           </div>
         </div>
+      )}
+        </>
       )}
     </div>
   );

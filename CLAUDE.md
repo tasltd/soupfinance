@@ -46,7 +46,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `docs/` | User journeys, validation reports | Reference documentation |
 | `scripts/` | Utility scripts | `get-issues.sh` (symlink to shared scripts) |
 
-**Tech Stack:** React 19 · TypeScript · Vite 7 · TailwindCSS v4 · Zustand (state) · TanStack Query (data) · React Hook Form + Zod (forms) · Recharts (charts) · Axios (HTTP) · Vitest + Playwright (tests) · Storybook 10 · i18next (4 languages: en/de/fr/nl, 12 namespaces)
+**Tech Stack:** React 19 · TypeScript · Vite 7 · TailwindCSS v4 · Zustand (state) · TanStack Query (data) · React Hook Form + Zod (forms) · Recharts (charts) · Axios (HTTP) · GSAP (cinematic animations) · html2pdf.js (PDF generation) · Vitest + Playwright (tests) · Storybook 10 · i18next (4 languages: en/de/fr/nl, 12 namespaces)
 
 ---
 
@@ -135,7 +135,9 @@ The frontend uses two Axios instances in `soupfinance-web/src/api/client.ts`:
 ```
 api/                    # Axios client + endpoint modules
 ├── client.ts          # Base instance, auth interceptors, CSRF helpers, response normalization
-└── endpoints/         # Feature-specific: invoices, bills, vendors, ledger, corporate, reports, etc.
+└── endpoints/         # Feature-specific: invoices, bills, vendors, clients, ledger, corporate,
+                       #   reports, report-schedules (scheduled reports CRUD), email, registration,
+                       #   settings, domainData
 components/
 ├── layout/            # MainLayout, AuthLayout, SideNav, TopNav
 ├── forms/             # Input, Select, Textarea, Checkbox, Radio, DatePicker
@@ -144,7 +146,8 @@ components/
 └── ErrorBoundary.tsx  # Global React error boundary
 features/              # Page components by domain (auth, dashboard, invoices, bills, vendors,
 │                      #   payments, ledger, accounting, reports, clients, corporate, settings)
-hooks/                 # usePdf, useEmailSend, useDashboardStats, useLedgerAccounts, useTransactions, usePaymentMethods
+hooks/                 # usePdf, useEmailSend, useDashboardStats, useLedgerAccounts, useTransactions,
+                       #   usePaymentMethods, useGsapAnimations (cinematic entrance/transition animations)
 i18n/                  # 4 languages (en, de, fr, nl), 12 namespaces
 schemas/               # Zod runtime validation (dev: throw, prod: log only)
 stores/                # Zustand: authStore, uiStore, accountStore (currency/company settings)
@@ -375,6 +378,8 @@ source env-variables.sh && ./gradlew assembleDeployToSoupfinance
 5. Add i18n keys to all 4 language files in `src/i18n/locales/{lang}/`
 6. Backend changes needed? Create a plan in `plans/` — do NOT modify backend directly
 7. All implementation plans (frontend and backend) go in `plans/`; backend-specific plans also go in the `soupmarkets-web` repo
+8. For animated entrances/transitions, use the `useGsapAnimations` hook — add `data-anim` attributes to elements (e.g., `data-anim="kpi-card"`) rather than imperative GSAP calls
+9. Scheduled reports are managed via `/rest/reportSchedule/*` (CRUD + pause/resume + execution history) — see `src/api/endpoints/report-schedules.ts` and `src/features/reports/ScheduledReportsPage.tsx`
 
 ## Git
 

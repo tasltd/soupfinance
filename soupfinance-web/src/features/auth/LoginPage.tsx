@@ -4,9 +4,15 @@
  * Reference: soupfinance-designs/login-authentication/
  */
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuthStore } from '../../stores';
 import { Logo } from '../../components/Logo';
+
+// Added (2026-05-22): State pushed by RegistrationPage when single-step register succeeds
+interface LoginLocationState {
+  fromRegistration?: boolean;
+  registeredEmail?: string;
+}
 
 /** Patterns in backend error messages that indicate the email has not been confirmed yet */
 const UNCONFIRMED_PATTERNS = [
@@ -22,9 +28,16 @@ const UNCONFIRMED_PATTERNS = [
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login, isLoading, error, clearError } = useAuthStore();
 
-  const [email, setEmail] = useState('');
+  // Added (2026-05-22): Banner shown after single-step registration redirects here
+  const loginState = location.state as LoginLocationState | null;
+  const [showRegistrationBanner, setShowRegistrationBanner] = useState(
+    Boolean(loginState?.fromRegistration),
+  );
+
+  const [email, setEmail] = useState(loginState?.registeredEmail ?? '');
   const [password, setPassword] = useState('');
   // Added (2026-01-28): Remember Me state - uses localStorage (persistent) when true, sessionStorage (session-only) when false
   const [rememberMe, setRememberMe] = useState(false);
@@ -59,6 +72,30 @@ export function LoginPage() {
           Sign in to access your corporate finance dashboard
         </p>
       </div>
+
+      {/* Added (2026-05-22): Banner after single-step registration redirects here */}
+      {showRegistrationBanner && !error && (
+        <div
+          className="p-4 rounded-lg bg-success/10 border border-success/30 text-success text-sm flex items-start gap-3"
+          data-testid="login-registration-success"
+        >
+          <span className="material-symbols-outlined text-success">check_circle</span>
+          <div className="flex-1">
+            <p className="font-medium">Your account is ready.</p>
+            <p className="mt-1 text-text-light dark:text-text-dark">
+              Sign in with the password you just created to access your dashboard.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowRegistrationBanner(false)}
+            aria-label="Dismiss"
+            className="text-subtle-text hover:text-text-light dark:hover:text-text-dark"
+          >
+            <span className="material-symbols-outlined text-base">close</span>
+          </button>
+        </div>
+      )}
 
       {/* Error message */}
       {error && (
