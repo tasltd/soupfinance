@@ -22,7 +22,9 @@ fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
-SOUPMARKETS_WEB_DIR="/home/ddr/Documents/code/soupmarkets/soupmarkets-web"
+# Allow callers (e.g. Gradle's deployToSoupfinance from a feature worktree) to
+# override the WAR source dir. Falls back to the main checkout when unset.
+SOUPMARKETS_WEB_DIR="${SOUPMARKETS_WEB_DIR:-/home/ddr/Documents/code/soupmarkets/soupmarkets-web}"
 CONTAINER_NAME="soupfinance-backend"
 
 # Colors
@@ -83,11 +85,12 @@ fi
 # Deploy WAR
 echo -e "${BLUE}Deploying WAR to container...${NC}"
 
-# Copy WAR to container via mounted /app directory (fastest)
-# The /app mount points to soupmarkets-web, so we can copy directly
+# Push WAR via lxc file push so we transfer from the actual $WAR_FILE on the
+# host (which honours $SOUPMARKETS_WEB_DIR / feature worktrees), not from the
+# /app mount that's pinned to the main checkout.
+$LXC exec $CONTAINER_NAME -- mkdir -p /opt/soupmarkets/war /opt/soupmarkets/logs
+$LXC file push "$WAR_FILE" "$CONTAINER_NAME/opt/soupmarkets/war/ROOT.war"
 $LXC exec $CONTAINER_NAME -- bash -c "
-    mkdir -p /opt/soupmarkets/war /opt/soupmarkets/logs
-    cp /app/build/libs/$WAR_NAME /opt/soupmarkets/war/ROOT.war
     echo '$WAR_CHECKSUM' > /opt/soupmarkets/war/checksum
     echo '$WAR_NAME' > /opt/soupmarkets/war/deployed-war-name
     echo '$(date -Iseconds)' > /opt/soupmarkets/war/deployed-at
