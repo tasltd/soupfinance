@@ -13,7 +13,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import AccountSettingsPage from '../AccountSettingsPage';
+import AccountSettingsPage, { sanitizeFiscalYearDate } from '../AccountSettingsPage';
 import { useAuthStore } from '../../../stores/authStore';
 
 vi.mock('../../../api/endpoints/settings', () => ({
@@ -137,6 +137,55 @@ describe('AccountSettingsPage (SOUPFIN-14 fixes)', () => {
     if (!result.success) {
       expect(result.error.issues[0].message).toMatch(/11 characters or less/);
     }
+  });
+
+  it('sanitizes a "0000-00-00" fiscal year value into an empty string', () => {
+    // Fix (SOUPFIN-14): The MariaDB null-date sentinel must not reach the
+    // <input type="date"> — the browser renders "0/0/0" placeholder for it.
+    expect(sanitizeFiscalYearDate('0000-00-00')).toBe('');
+    expect(sanitizeFiscalYearDate(undefined)).toBe('');
+    expect(sanitizeFiscalYearDate(null)).toBe('');
+    expect(sanitizeFiscalYearDate('')).toBe('');
+    expect(sanitizeFiscalYearDate('0/0/0')).toBe('');
+  });
+
+  it('passes through a valid ISO date and strips the time portion', () => {
+    expect(sanitizeFiscalYearDate('2024-01-01')).toBe('2024-01-01');
+    expect(sanitizeFiscalYearDate('2024-01-01T00:00:00.000Z')).toBe('2024-01-01');
+    expect(sanitizeFiscalYearDate('  2024-01-01  ')).toBe('2024-01-01');
+  });
+
+  it('rejects malformed date strings instead of forwarding them to the picker', () => {
+    expect(sanitizeFiscalYearDate('not-a-date')).toBe('');
+    expect(sanitizeFiscalYearDate('01/01/2024')).toBe('');
+    expect(sanitizeFiscalYearDate('2024-1-1')).toBe('');
+  });
+
+  it('renders an empty fiscal year picker when the backend returns "0000-00-00"', async () => {
+    // End-to-end check: the backend sends a MariaDB null sentinel and the
+    // component must show a blank picker (not "0/0/0") so users can pick a real date.
+    vi.mocked(accountSettingsApi.get).mockResolvedValueOnce({
+      id: 'tenant-123',
+      name: 'Demo Company',
+      currency: 'GHS',
+      countryOfOrigin: '',
+      designation: '',
+      address: '',
+      location: '',
+      website: '',
+      emailSubjectPrefix: '',
+      smsIdPrefix: '',
+      slogan: '',
+      startOfFiscalYear: '0000-00-00',
+    } as never);
+
+    renderPage();
+
+    const fiscalInput = (await screen.findByTestId(
+      'account-settings-fiscal-year'
+    )) as HTMLInputElement;
+    expect(fiscalInput.type).toBe('date');
+    await waitFor(() => expect(fiscalInput.value).toBe(''));
   });
 
   it('explains that Save/Reset are disabled until the form is dirty', async () => {

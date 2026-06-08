@@ -105,8 +105,25 @@ export function ClientFormPage() {
   // Populate form when client data is loaded
   useEffect(() => {
     if (client) {
+      // Fix (SOUPFIN-14): The backend sometimes returns clientType=CORPORATE
+      // even for individual clients. Infer the actual type from populated
+      // fields so the Personal Information section isn't hidden when the
+      // record clearly has firstName/lastName but a wrong type discriminator.
+      // Priority order:
+      //   1. companyName present and no individual fields → CORPORATE
+      //   2. firstName/lastName present and no companyName → INDIVIDUAL
+      //   3. fall back to whatever the backend reported (default CORPORATE)
+      const hasIndividualFields = Boolean(client.firstName?.trim() || client.lastName?.trim());
+      const hasCorporateFields = Boolean(client.companyName?.trim());
+      let resolvedType: ClientType = client.clientType || 'CORPORATE';
+      if (hasIndividualFields && !hasCorporateFields) {
+        resolvedType = 'INDIVIDUAL';
+      } else if (hasCorporateFields && !hasIndividualFields) {
+        resolvedType = 'CORPORATE';
+      }
+
       reset({
-        clientType: client.clientType,
+        clientType: resolvedType,
         email: client.email || '',
         phone: client.phone || '',
         address: client.address || '',
@@ -117,7 +134,7 @@ export function ClientFormPage() {
         registrationNumber: client.registrationNumber || '',
         taxNumber: client.taxNumber || '',
       });
-      setClientType(client.clientType);
+      setClientType(resolvedType);
     }
   }, [client, reset]);
 
@@ -259,12 +276,14 @@ export function ClientFormPage() {
                 setValue('clientType', 'INDIVIDUAL');
                 setClientType('INDIVIDUAL');
               }}
-              disabled={isEdit} // Can't change type when editing
+              // Fix (SOUPFIN-14): Allow type changes when editing — the backend
+              // sometimes mislabels individual records as Corporate, and the
+              // user needs a way to correct the discriminator.
               className={`p-4 rounded-lg border-2 transition-all ${
                 clientType === 'INDIVIDUAL'
                   ? 'border-primary bg-primary/5'
                   : 'border-border-light dark:border-border-dark hover:border-primary/50'
-              } ${isEdit ? 'opacity-60 cursor-not-allowed' : ''}`}
+              }`}
               data-testid="client-type-individual"
             >
               <div className="flex flex-col items-center gap-2">
@@ -286,12 +305,13 @@ export function ClientFormPage() {
                 setValue('clientType', 'CORPORATE');
                 setClientType('CORPORATE');
               }}
-              disabled={isEdit}
+              // Fix (SOUPFIN-14): Allow type changes when editing — see Individual
+              // button above. Mirrors the same rule.
               className={`p-4 rounded-lg border-2 transition-all ${
                 clientType === 'CORPORATE'
                   ? 'border-primary bg-primary/5'
                   : 'border-border-light dark:border-border-dark hover:border-primary/50'
-              } ${isEdit ? 'opacity-60 cursor-not-allowed' : ''}`}
+              }`}
               data-testid="client-type-corporate"
             >
               <div className="flex flex-col items-center gap-2">

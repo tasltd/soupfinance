@@ -80,6 +80,18 @@ export function ClientListPage() {
     return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400';
   };
 
+  // Fix (SOUPFIN-14): The backend response for /rest/client/index.json sometimes
+  // omits the computed `name` field. Fall back to firstName+lastName for
+  // individuals, then companyName for corporates, then a deterministic placeholder
+  // so the NAME column never renders blank.
+  const getDisplayName = (client: Client): string => {
+    if (client.name?.trim()) return client.name.trim();
+    const fullName = `${client.firstName ?? ''} ${client.lastName ?? ''}`.trim();
+    if (fullName) return fullName;
+    if (client.companyName?.trim()) return client.companyName.trim();
+    return client.email?.trim() || 'Unnamed client';
+  };
+
   return (
     <div className="flex flex-col gap-6" data-testid="client-list-page">
       {/* Page Header */}
@@ -180,7 +192,7 @@ export function ClientListPage() {
                         className="font-medium text-primary hover:underline"
                         data-testid={`client-link-${client.id}`}
                       >
-                        {client.name}
+                        {getDisplayName(client)}
                       </Link>
                     </td>
                     <td className="px-6 py-4">
