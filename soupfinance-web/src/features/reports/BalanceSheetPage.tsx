@@ -33,9 +33,17 @@ function getTodayISO(): string {
   return new Date().toISOString().split('T')[0];
 }
 
+// Fix (SOUPFIN-14): Hard timeout so the PDF export request can't hang indefinitely
+// (was previously stuck in pending forever with no UI feedback).
+const EXPORT_TIMEOUT_MS = 60_000;
+
 export function BalanceSheetPage() {
   // Added: State for "As Of" date filter with default to today
   const [asOfDate, setAsOfDate] = useState<string>(getTodayISO());
+  // Fix (SOUPFIN-14): Track which format is currently exporting + any error so the
+  // user sees progress (spinner on the active button) and gets feedback on failure.
+  const [exportingFormat, setExportingFormat] = useState<null | 'pdf' | 'xlsx' | 'csv'>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   // Added: Fetch balance sheet data using React Query
   const {
@@ -62,13 +70,32 @@ export function BalanceSheetPage() {
   }, [balanceSheet]);
 
   // Added: Export handler for PDF/Excel/CSV
+  // Fix (SOUPFIN-14): Track in-flight state per click + hard timeout so the user
+  // always gets feedback. Previously the request could remain "pending" forever
+  // (e.g. when the backend report endpoint OOMs on a large dataset) with no UI
+  // indication that anything was happening.
   const handleExport = async (format: 'pdf' | 'xlsx' | 'csv') => {
+    if (exportingFormat) return; // ignore double-clicks
+    setExportingFormat(format);
+    setExportError(null);
+
+    // Race the export against a manual timeout so we recover from hung requests.
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(
+        () => reject(new Error('Export timed out — the report is taking too long. Try a narrower date range.')),
+        EXPORT_TIMEOUT_MS
+      );
+    });
+
     try {
       const filters: ReportFilters = {
         from: '1900-01-01', // Balance sheet is as-of, not period-based
         to: asOfDate,
       };
-      const blob = await exportFinanceReport('balanceSheet', filters, format);
+      const blob = await Promise.race([
+        exportFinanceReport('balanceSheet', filters, format),
+        timeoutPromise,
+      ]);
       const url = URL.createObjectURL(blob);
 
       // Create download link
@@ -82,7 +109,10 @@ export function BalanceSheetPage() {
       URL.revokeObjectURL(url);
     } catch (err) {
       console.error('Export failed:', err);
-      // NOTE: In production, show toast notification for export errors
+      const message = err instanceof Error ? err.message : 'Export failed. Please try again.';
+      setExportError(message);
+    } finally {
+      setExportingFormat(null);
     }
   };
 
@@ -137,33 +167,84 @@ export function BalanceSheetPage() {
         </div>
 
         {/* Export Buttons */}
+        {/* Fix (SOUPFIN-14): Spinner on active button, disable others, disable while
+            exporting, and surface a visible error banner below the toolbar. */}
         <div className="flex items-center gap-2">
           <button
             onClick={() => handleExport('pdf')}
-            className="flex items-center justify-center gap-2 h-10 px-4 border border-primary rounded-lg text-primary hover:bg-primary/10"
+            disabled={exportingFormat !== null}
+            className="flex items-center justify-center gap-2 h-10 px-4 border border-primary rounded-lg text-primary hover:bg-primary/10 disabled:opacity-60 disabled:cursor-not-allowed"
             data-testid="balance-sheet-export-pdf"
           >
-            <span className="material-symbols-outlined text-lg">picture_as_pdf</span>
-            <span className="text-sm font-bold">PDF</span>
+            <span
+              className={`material-symbols-outlined text-lg ${
+                exportingFormat === 'pdf' ? 'animate-spin' : ''
+              }`}
+            >
+              {exportingFormat === 'pdf' ? 'progress_activity' : 'picture_as_pdf'}
+            </span>
+            <span className="text-sm font-bold">
+              {exportingFormat === 'pdf' ? 'Exporting…' : 'PDF'}
+            </span>
           </button>
           <button
             onClick={() => handleExport('xlsx')}
-            className="flex items-center justify-center gap-2 h-10 px-4 bg-primary text-white rounded-lg hover:bg-primary/90"
+            disabled={exportingFormat !== null}
+            className="flex items-center justify-center gap-2 h-10 px-4 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-60 disabled:cursor-not-allowed"
             data-testid="balance-sheet-export-excel"
           >
-            <span className="material-symbols-outlined text-lg">grid_on</span>
-            <span className="text-sm font-bold">Excel</span>
+            <span
+              className={`material-symbols-outlined text-lg ${
+                exportingFormat === 'xlsx' ? 'animate-spin' : ''
+              }`}
+            >
+              {exportingFormat === 'xlsx' ? 'progress_activity' : 'grid_on'}
+            </span>
+            <span className="text-sm font-bold">
+              {exportingFormat === 'xlsx' ? 'Exporting…' : 'Excel'}
+            </span>
           </button>
           <button
             onClick={() => handleExport('csv')}
-            className="flex items-center justify-center gap-2 h-10 px-4 border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark"
+            disabled={exportingFormat !== null}
+            className="flex items-center justify-center gap-2 h-10 px-4 border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark disabled:opacity-60 disabled:cursor-not-allowed"
             data-testid="balance-sheet-export-csv"
           >
-            <span className="material-symbols-outlined text-lg">download</span>
-            <span className="text-sm font-bold">CSV</span>
+            <span
+              className={`material-symbols-outlined text-lg ${
+                exportingFormat === 'csv' ? 'animate-spin' : ''
+              }`}
+            >
+              {exportingFormat === 'csv' ? 'progress_activity' : 'download'}
+            </span>
+            <span className="text-sm font-bold">
+              {exportingFormat === 'csv' ? 'Exporting…' : 'CSV'}
+            </span>
           </button>
         </div>
       </div>
+
+      {/* Export error banner — visible feedback for hung or failed exports. */}
+      {exportError && (
+        <div
+          className="bg-danger/10 border border-danger/30 rounded-lg p-3 flex items-start gap-3"
+          data-testid="balance-sheet-export-error"
+          role="alert"
+        >
+          <span className="material-symbols-outlined text-danger">error</span>
+          <div className="flex-1">
+            <p className="text-danger text-sm font-medium">Export failed</p>
+            <p className="text-subtle-text text-xs">{exportError}</p>
+          </div>
+          <button
+            onClick={() => setExportError(null)}
+            className="text-subtle-text hover:text-danger"
+            aria-label="Dismiss"
+          >
+            <span className="material-symbols-outlined">close</span>
+          </button>
+        </div>
+      )}
 
       {/* Loading State */}
       {isLoading && (
