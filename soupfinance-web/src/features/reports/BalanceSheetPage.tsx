@@ -9,6 +9,7 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getBalanceSheetDirect, exportFinanceReport, type ReportFilters } from '../../api/endpoints/reports';
 import type { BalanceSheet, BalanceSheetItem } from '../../types';
+import { REPORT_MIN_DATE, REPORT_MAX_DATE, safeFilenameExtension } from './reportConstants';
 
 // Added: Currency formatter for consistent display
 const currencyFormatter = new Intl.NumberFormat('en-US', {
@@ -99,9 +100,10 @@ export function BalanceSheetPage() {
       const url = URL.createObjectURL(blob);
 
       // Create download link
+      // Fix (SOUPFIN-16): safeFilenameExtension prevents `.null` filenames.
       const link = document.createElement('a');
       link.href = url;
-      const extension = format === 'xlsx' ? 'xlsx' : format;
+      const extension = safeFilenameExtension(format);
       link.download = `balance-sheet-${asOfDate}.${extension}`;
       document.body.appendChild(link);
       link.click();
@@ -151,6 +153,8 @@ export function BalanceSheetPage() {
               id="asOfDate"
               type="date"
               value={asOfDate}
+              min={REPORT_MIN_DATE}
+              max={REPORT_MAX_DATE}
               onChange={(e) => setAsOfDate(e.target.value)}
               className="pl-10 pr-4 py-2 h-10 border border-border-light dark:border-border-dark rounded-lg bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary/50 focus:border-primary"
               data-testid="balance-sheet-date-picker"

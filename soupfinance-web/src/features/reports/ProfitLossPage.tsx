@@ -9,6 +9,7 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getIncomeStatement, exportFinanceReport, type ReportFilters } from '../../api/endpoints/reports';
 import type { ProfitLoss, ProfitLossItem } from '../../types';
+import { REPORT_MIN_DATE, REPORT_MAX_DATE, safeFilenameExtension } from './reportConstants';
 
 // Added: Currency formatter for consistent display
 const currencyFormatter = new Intl.NumberFormat('en-US', {
@@ -97,9 +98,11 @@ export function ProfitLossPage() {
       const url = URL.createObjectURL(blob);
 
       // Create download link
+      // Fix (SOUPFIN-16): safeFilenameExtension() guarantees we never produce a
+      // `.null` filename even if the runtime value of `format` becomes invalid.
       const link = document.createElement('a');
       link.href = url;
-      const extension = format === 'xlsx' ? 'xlsx' : format;
+      const extension = safeFilenameExtension(format);
       link.download = `profit-loss-${fromDate}-to-${toDate}.${extension}`;
       document.body.appendChild(link);
       link.click();
@@ -152,6 +155,8 @@ export function ProfitLossPage() {
                 id="fromDate"
                 type="date"
                 value={fromDate}
+                min={REPORT_MIN_DATE}
+                max={REPORT_MAX_DATE}
                 onChange={(e) => setFromDate(e.target.value)}
                 className="pl-10 pr-4 py-2 h-10 border border-border-light dark:border-border-dark rounded-lg bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary/50 focus:border-primary"
                 data-testid="profit-loss-from-date"
@@ -170,6 +175,8 @@ export function ProfitLossPage() {
                 id="toDate"
                 type="date"
                 value={toDate}
+                min={REPORT_MIN_DATE}
+                max={REPORT_MAX_DATE}
                 onChange={(e) => setToDate(e.target.value)}
                 className="pl-10 pr-4 py-2 h-10 border border-border-light dark:border-border-dark rounded-lg bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary/50 focus:border-primary"
                 data-testid="profit-loss-to-date"

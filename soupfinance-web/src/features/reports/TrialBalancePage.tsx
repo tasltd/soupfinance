@@ -10,6 +10,7 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getTrialBalance, exportFinanceReport, type ReportFilters } from '../../api/endpoints/reports';
 import type { TrialBalanceItem } from '../../types';
+import { REPORT_MIN_DATE, REPORT_MAX_DATE, safeFilenameExtension } from './reportConstants';
 
 // Added: Trial balance uses subset of LedgerGroup (excludes 'INCOME' which is aliased to 'REVENUE')
 type TrialBalanceLedgerGroup = 'ASSET' | 'LIABILITY' | 'EQUITY' | 'REVENUE' | 'EXPENSE';
@@ -183,10 +184,12 @@ export function TrialBalancePage() {
     try {
       const blob = await exportFinanceReport('trialBalance', filters, format);
       // Create download link
+      // Fix (SOUPFIN-16): safeFilenameExtension prevents `.null` filenames.
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `trial-balance-${filters.from}-to-${filters.to}.${format}`;
+      const extension = safeFilenameExtension(format);
+      link.download = `trial-balance-${filters.from}-to-${filters.to}.${extension}`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -265,6 +268,8 @@ export function TrialBalancePage() {
             <input
               type="date"
               value={filters.from}
+              min={REPORT_MIN_DATE}
+              max={REPORT_MAX_DATE}
               onChange={(e) => handleFilterChange('from', e.target.value)}
               className="h-12 px-4 rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary/50 focus:border-primary"
               data-testid="trial-balance-filter-from"
@@ -279,6 +284,8 @@ export function TrialBalancePage() {
             <input
               type="date"
               value={filters.to}
+              min={REPORT_MIN_DATE}
+              max={REPORT_MAX_DATE}
               onChange={(e) => handleFilterChange('to', e.target.value)}
               className="h-12 px-4 rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary/50 focus:border-primary"
               data-testid="trial-balance-filter-to"

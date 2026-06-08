@@ -12,6 +12,7 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getCashFlowStatement, type ReportFilters } from '../../api/endpoints/reports';
 import type { CashFlowStatement, CashFlowActivity } from '../../types';
+import { REPORT_MIN_DATE, REPORT_MAX_DATE, safeFilenameExtension } from './reportConstants';
 
 // Added: Currency formatter for consistent display
 const currencyFormatter = new Intl.NumberFormat('en-US', {

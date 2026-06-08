@@ -35,7 +35,10 @@ export function ClientListPage() {
   });
 
   // Query clients
-  const { data: clients, isLoading, error } = useQuery({
+  // Fix (SOUPFIN-16): `isFetching` lets us show a "refreshing" indicator when the
+  // user changes a filter, even if the cached page is already populated. Without
+  // this the filter dropdown felt completely inert.
+  const { data: clients, isLoading, isFetching, error } = useQuery({
     queryKey: ['clients', searchTerm, typeFilter],
     queryFn: () => listClients({
       max: 50,
@@ -45,6 +48,38 @@ export function ClientListPage() {
       clientType: typeFilter || undefined,
     }),
   });
+
+  // Fix (SOUPFIN-16): Belt-and-braces client-side filter. The backend currently
+  // ignores `clientType` on some tenants, which made the "Individual / Corporate"
+  // filter dropdown look broken from the user's perspective. Re-filter locally
+  // so the displayed list always matches the dropdown.
+  const filteredClients = (clients ?? []).filter((client) => {
+    if (typeFilter && client.clientType !== typeFilter) return false;
+    if (searchTerm) {
+      const needle = searchTerm.toLowerCase();
+      const haystack = [
+        client.name,
+        client.firstName,
+        client.lastName,
+        client.companyName,
+        client.email,
+        client.phone,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      if (!haystack.includes(needle)) return false;
+    }
+    return true;
+  });
+
+  // Fix (SOUPFIN-16): Distinguish "no clients exist" from "no results match the
+  // current search/filter" — the previous code always showed "No clients yet"
+  // even after a search for an existing client returned zero rows.
+  const hasFilters = Boolean(searchTerm || typeFilter);
+  const hasAnyClients = (clients?.length ?? 0) > 0;
+  const showEmptyDataState = !hasFilters && filteredClients.length === 0;
+  const showNoResultsState = hasFilters && filteredClients.length === 0;
 
   // Delete mutation
   const deleteMutation = useMutation({
@@ -116,7 +151,7 @@ export function ClientListPage() {
       </div>
 
       {/* Search and Filter Bar */}
-      <div className="flex flex-wrap gap-4" data-testid="client-filters">
+      <div className="flex flex-wrap gap-4 items-center" data-testid="client-filters">
         {/* Search Input */}
         <div className="relative flex-1 min-w-[200px] max-w-md">
           <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-subtle-text text-xl">
@@ -143,6 +178,55 @@ export function ClientListPage() {
           <option value="INDIVIDUAL">Individual</option>
           <option value="CORPORATE">Corporate</option>
         </select>
+
+        {/* Fix (SOUPFIN-16): Visible "active filter" pill so the user has
+            confirmation that their selection took effect. Clicking it clears
+            the filter. */}
+        {hasFilters && (
+          <div
+            className="flex flex-wrap items-center gap-2"
+            data-testid="client-active-filters"
+          >
+            {typeFilter && (
+              <button
+                type="button"
+                onClick={() => setTypeFilter('')}
+                className="inline-flex items-center gap-1 h-8 px-3 rounded-full bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20"
+                data-testid="client-filter-pill-type"
+              >
+                <span className="material-symbols-outlined text-sm">filter_alt</span>
+                Type: {typeFilter === 'INDIVIDUAL' ? 'Individual' : 'Corporate'}
+                <span className="material-symbols-outlined text-sm">close</span>
+              </button>
+            )}
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => setSearchTerm('')}
+                className="inline-flex items-center gap-1 h-8 px-3 rounded-full bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20"
+                data-testid="client-filter-pill-search"
+              >
+                <span className="material-symbols-outlined text-sm">search</span>
+                "{searchTerm}"
+                <span className="material-symbols-outlined text-sm">close</span>
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Fix (SOUPFIN-16): Spinner while a filter change is being fetched so
+            the user has feedback that the request is in flight. */}
+        {isFetching && !isLoading && (
+          <span
+            className="inline-flex items-center gap-1 text-xs text-subtle-text"
+            data-testid="client-list-refreshing"
+          >
+            <span className="material-symbols-outlined text-base animate-spin">
+              progress_activity
+            </span>
+            Refreshing…
+          </span>
+        )}
       </div>
 
       {/* Client Table */}
@@ -167,7 +251,7 @@ export function ClientListPage() {
               Retry
             </button>
           </div>
-        ) : clients?.length ? (
+        ) : filteredClients.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full text-sm" data-testid="client-list-table">
               <thead className="text-xs text-subtle-text uppercase bg-background-light dark:bg-background-dark">
@@ -180,7 +264,7 @@ export function ClientListPage() {
                 </tr>
               </thead>
               <tbody>
-                {clients.map((client: Client) => (
+                {filteredClients.map((client: Client) => (
                   <tr
                     key={client.id}
                     className="border-b border-border-light dark:border-border-dark hover:bg-primary/5"
@@ -249,7 +333,36 @@ export function ClientListPage() {
               </tbody>
             </table>
           </div>
-        ) : (
+        ) : showNoResultsState ? (
+          // Fix (SOUPFIN-16): User searched/filtered but matched nothing.
+          // Distinguish this from "no clients exist" so they know the data is there.
+          <div className="p-12 text-center" data-testid="client-list-no-results">
+            <span className="material-symbols-outlined text-6xl text-subtle-text/50 mb-4 block">
+              search_off
+            </span>
+            <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">
+              No results found
+            </h3>
+            <p className="text-subtle-text mb-4">
+              No clients match the current search or filter.
+              {hasAnyClients
+                ? ' Try a different keyword or clear the type filter.'
+                : ''}
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setSearchTerm('');
+                setTypeFilter('');
+              }}
+              className="inline-flex items-center gap-2 h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm hover:bg-primary/5"
+              data-testid="client-clear-filters-button"
+            >
+              <span className="material-symbols-outlined text-lg">filter_alt_off</span>
+              Clear search & filters
+            </button>
+          </div>
+        ) : showEmptyDataState ? (
           <div className="p-12 text-center" data-testid="client-list-empty">
             <span className="material-symbols-outlined text-6xl text-subtle-text/50 mb-4 block">
               people
@@ -265,7 +378,7 @@ export function ClientListPage() {
               Add Client
             </Link>
           </div>
-        )}
+        ) : null}
       </div>
 
       {/* Delete Confirmation Modal */}

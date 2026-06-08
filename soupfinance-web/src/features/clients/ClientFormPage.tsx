@@ -331,17 +331,24 @@ export function ClientFormPage() {
           <input type="hidden" {...register('clientType')} />
         </div>
 
-        {/* Individual Fields */}
-        {clientType === 'INDIVIDUAL' && (
-          <div className="p-6 border-b border-border-light dark:border-border-dark">
+        {/* Fix (SOUPFIN-16): On the Edit form, ALWAYS render the Personal
+            Information (First / Last Name) section regardless of clientType.
+            Previously the form hid these fields when the backend reported the
+            client as CORPORATE — even if the record had real firstName/lastName
+            values — so the user couldn't correct a misspelled name. */}
+        {(clientType === 'INDIVIDUAL' || isEdit) && (
+          <div
+            className="p-6 border-b border-border-light dark:border-border-dark"
+            data-testid="client-form-personal-section"
+          >
             <h2 className="text-lg font-bold text-text-light dark:text-text-dark mb-6">
-              Personal Information
+              {clientType === 'INDIVIDUAL' ? 'Personal Information' : 'Contact Name'}
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Input
                 label="First Name"
                 placeholder="Enter first name"
-                required
+                required={clientType === 'INDIVIDUAL'}
                 error={errors.firstName?.message}
                 {...register('firstName')}
                 data-testid="client-form-first-name"
@@ -349,7 +356,7 @@ export function ClientFormPage() {
               <Input
                 label="Last Name"
                 placeholder="Enter last name"
-                required
+                required={clientType === 'INDIVIDUAL'}
                 error={errors.lastName?.message}
                 {...register('lastName')}
                 data-testid="client-form-last-name"

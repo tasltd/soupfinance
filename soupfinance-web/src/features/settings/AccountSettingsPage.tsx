@@ -2,7 +2,7 @@
  * Account Settings Page
  * PURPOSE: Configure company account settings and preferences
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -54,22 +54,67 @@ const BUSINESS_CATEGORIES: { value: BusinessLicenceCategory; label: string }[] =
 
 // Removed: Hardcoded CURRENCIES list - now loaded from shared domainData source
 
-// Fix (SOUPFIN-14): Normalize startOfFiscalYear into ISO YYYY-MM-DD format the
-// HTML5 <input type="date"> understands. The backend can return:
+// Fix (SOUPFIN-16): Upload constraints for Logo / Favicon branding assets.
+// Backend SoupBrokerFileUtilityService accepts a base64-encoded data URL
+// (auto-detected via Base64.isBase64()), a public URL, or a MultipartFile.
+// We use the base64 path so the upload travels with the JSON PUT request.
+const MAX_LOGO_BYTES = 2 * 1024 * 1024; // 2 MB
+const MAX_FAVICON_BYTES = 256 * 1024;   // 256 KB
+const LOGO_ACCEPT = 'image/png,image/jpeg,image/svg+xml';
+const FAVICON_ACCEPT = 'image/png,image/x-icon,image/vnd.microsoft.icon';
+
+// Read a File as a base64 data URL the backend can ingest directly.
+async function fileToBase64(file: File): Promise<string> {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(reader.error ?? new Error('Failed to read file'));
+    reader.onload = () => {
+      const result = reader.result;
+      if (typeof result !== 'string') {
+        reject(new Error('Unexpected file reader result'));
+        return;
+      }
+      resolve(result);
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+// Fix (SOUPFIN-14, hardened in SOUPFIN-16): Normalize startOfFiscalYear into
+// ISO YYYY-MM-DD format the HTML5 <input type="date"> understands. The backend
+// can return:
 //   - undefined / null      → fall back to '' (empty input)
 //   - "0000-00-00"          → MariaDB null sentinel; treat as empty so the
 //                             picker doesn't render the "0/0/0" placeholder
 //   - "2024-01-01T00:00:00" → ISO datetime; strip the time portion
 //   - "2024-01-01"          → already valid; pass through
+//   - "0"/"null"/"undefined"→ stringified nulls from buggy backends — drop them
+//   - any year < 1900       → invalid sentinel (e.g. epoch overflow); drop it
 // Exported for unit tests.
 export function sanitizeFiscalYearDate(value?: string | null): string {
-  if (!value) return '';
+  if (value === null || value === undefined) return '';
   const trimmed = String(value).trim();
-  if (!trimmed || trimmed.startsWith('0000-') || trimmed === '0/0/0') return '';
+  if (!trimmed) return '';
+  // Drop stringified null/undefined/0 sentinels and the MariaDB null-date marker.
+  if (
+    trimmed === '0' ||
+    trimmed === 'null' ||
+    trimmed === 'undefined' ||
+    trimmed === '0/0/0' ||
+    trimmed.startsWith('0000-')
+  ) {
+    return '';
+  }
   // Strip time portion if present (e.g. "2024-01-01T00:00:00.000Z")
   const datePart = trimmed.split('T')[0];
-  // Validate YYYY-MM-DD shape — anything else is unsafe to pass to type=date
-  return /^\d{4}-\d{2}-\d{2}$/.test(datePart) ? datePart : '';
+  // Validate YYYY-MM-DD shape — anything else is unsafe to pass to type=date.
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(datePart)) return '';
+  // Reject implausibly old years (any year < 1900 is almost certainly a
+  // sentinel value masquerading as a date — would render "0/0/0" in some
+  // browsers' date pickers).
+  const year = parseInt(datePart.slice(0, 4), 10);
+  if (!Number.isFinite(year) || year < 1900) return '';
+  return datePart;
 }
 
 export default function AccountSettingsPage() {
@@ -83,6 +128,20 @@ export default function AccountSettingsPage() {
     listCurrencies().then(setCurrencies);
     listCountries().then(setCountries);
   }, []);
+
+  // Fix (SOUPFIN-16): Branding asset state (Logo / Favicon).
+  // - `*Data` holds the base64 data URL when the user picks a new file (sent on save).
+  // - `*Preview` is what the UI shows: either the freshly-picked data URL OR the
+  //   existing file ID that the backend will resolve to /soupBrokerFile/show/{id}.
+  // - `*Error` surfaces validation failures (size / type).
+  const [logoData, setLogoData] = useState<string | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [logoError, setLogoError] = useState<string | null>(null);
+  const [faviconData, setFaviconData] = useState<string | null>(null);
+  const [faviconPreview, setFaviconPreview] = useState<string | null>(null);
+  const [faviconError, setFaviconError] = useState<string | null>(null);
+  const logoInputRef = useRef<HTMLInputElement | null>(null);
+  const faviconInputRef = useRef<HTMLInputElement | null>(null);
 
   // Fix (SOUPFIN-10): Gate the query on auth-init + tenantId presence so the
   // settings fetch never fires before the auth store has resolved tenantId from
@@ -109,6 +168,7 @@ export default function AccountSettingsPage() {
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors, isSubmitting, isDirty },
   } = useForm<SettingsFormValues>({
     resolver: zodResolver(settingsSchema),
@@ -128,9 +188,28 @@ export default function AccountSettingsPage() {
     },
   });
 
+  // Fix (SOUPFIN-16): Watch the SMS prefix so we can render a live character counter.
+  // The user previously had no feedback on how close they were to the 11-char telco limit.
+  const smsIdPrefixValue = watch('smsIdPrefix') ?? '';
+
   // Reset form when settings load
   useEffect(() => {
     if (currentSettings) {
+      // Fix (SOUPFIN-16): Mirror current backend logo / favicon refs into the preview so
+      // returning users see what is already on file. Backend SoupBrokerFile is served by
+      // /soupBrokerFile/show/{id}; for now we just signal "an image exists" via a stub.
+      if (currentSettings.logo?.id) {
+        setLogoPreview(`/rest/soupBrokerFile/show/${currentSettings.logo.id}`);
+      } else {
+        setLogoPreview(null);
+      }
+      if (currentSettings.favicon?.id) {
+        setFaviconPreview(`/rest/soupBrokerFile/show/${currentSettings.favicon.id}`);
+      } else {
+        setFaviconPreview(null);
+      }
+      setLogoData(null);
+      setFaviconData(null);
       reset({
         name: currentSettings.name || '',
         currency: currentSettings.currency || 'GHS',
@@ -155,7 +234,10 @@ export default function AccountSettingsPage() {
   const saveMutation = useMutation({
     mutationFn: async (data: SettingsFormValues) => {
       logger.info('Updating account settings');
-      const updateData: Partial<AccountSettings> = {
+      // Fix (SOUPFIN-16): Include base64-encoded branding assets when the user
+      // picked new ones. SoupBrokerFileUtilityService on the backend auto-detects
+      // data URLs and stores them as SoupBrokerFile records.
+      const updateData: Partial<AccountSettings> & { logo?: unknown; favicon?: unknown } = {
         id: currentSettings?.id,
         name: data.name,
         currency: data.currency,
@@ -170,6 +252,8 @@ export default function AccountSettingsPage() {
         slogan: data.slogan,
         startOfFiscalYear: data.startOfFiscalYear,
       };
+      if (logoData) updateData.logo = logoData;
+      if (faviconData) updateData.favicon = faviconData;
       return accountSettingsApi.update(updateData);
     },
     onSuccess: () => {
@@ -181,8 +265,100 @@ export default function AccountSettingsPage() {
     },
   });
 
+  // Fix (SOUPFIN-16): Branding assets count as user changes too — without this
+  // the Save button stayed disabled even after the user picked a new logo.
+  const hasBrandingChanges = logoData !== null || faviconData !== null;
+  const hasUnsavedChanges = isDirty || hasBrandingChanges;
+
   const onSubmit = (data: SettingsFormValues) => {
+    // Fix (SOUPFIN-16): Buttons are visually enabled at all times now (see V2
+    // feedback: users couldn't see the "active" button styling). If the form is
+    // genuinely pristine the click is a no-op rather than a confusing error.
+    if (!hasUnsavedChanges) {
+      logger.info('Save clicked with no pending changes — ignoring');
+      return;
+    }
     saveMutation.mutate(data);
+  };
+
+  // Fix (SOUPFIN-16): Reset must also clear any picked branding assets so the
+  // preview falls back to whatever is currently on the backend.
+  const handleReset = () => {
+    setLogoData(null);
+    setFaviconData(null);
+    setLogoError(null);
+    setFaviconError(null);
+    if (logoInputRef.current) logoInputRef.current.value = '';
+    if (faviconInputRef.current) faviconInputRef.current.value = '';
+    if (currentSettings?.logo?.id) {
+      setLogoPreview(`/rest/soupBrokerFile/show/${currentSettings.logo.id}`);
+    } else {
+      setLogoPreview(null);
+    }
+    if (currentSettings?.favicon?.id) {
+      setFaviconPreview(`/rest/soupBrokerFile/show/${currentSettings.favicon.id}`);
+    } else {
+      setFaviconPreview(null);
+    }
+    reset();
+  };
+
+  // Fix (SOUPFIN-16): Logo / Favicon file pickers. Validates type + size, converts to
+  // base64 data URL, and stores both the raw upload (sent on save) and the preview.
+  const handleBrandingPick = async (
+    kind: 'logo' | 'favicon',
+    file: File | undefined,
+  ): Promise<void> => {
+    const setError = kind === 'logo' ? setLogoError : setFaviconError;
+    const setData = kind === 'logo' ? setLogoData : setFaviconData;
+    const setPreview = kind === 'logo' ? setLogoPreview : setFaviconPreview;
+    const maxBytes = kind === 'logo' ? MAX_LOGO_BYTES : MAX_FAVICON_BYTES;
+    const accept = kind === 'logo' ? LOGO_ACCEPT : FAVICON_ACCEPT;
+    const label = kind === 'logo' ? 'logo' : 'favicon';
+
+    setError(null);
+    if (!file) return;
+
+    const acceptList = accept.split(',').map((t) => t.trim());
+    if (!acceptList.includes(file.type)) {
+      setError(`Unsupported ${label} type. Allowed: ${acceptList.join(', ')}.`);
+      return;
+    }
+    if (file.size > maxBytes) {
+      const maxKb = Math.round(maxBytes / 1024);
+      setError(`File too large. Max size is ${maxKb} KB.`);
+      return;
+    }
+    try {
+      const dataUrl = await fileToBase64(file);
+      setData(dataUrl);
+      setPreview(dataUrl);
+    } catch (err) {
+      logger.error('Failed to read branding asset', err);
+      setError('Could not read the selected file. Please try again.');
+    }
+  };
+
+  // Fix (SOUPFIN-16): Allow the user to clear a freshly-picked asset and fall back
+  // to the previously-stored one (or the empty placeholder).
+  const handleBrandingClear = (kind: 'logo' | 'favicon') => {
+    if (kind === 'logo') {
+      setLogoData(null);
+      setLogoError(null);
+      if (logoInputRef.current) logoInputRef.current.value = '';
+      setLogoPreview(
+        currentSettings?.logo?.id ? `/rest/soupBrokerFile/show/${currentSettings.logo.id}` : null,
+      );
+    } else {
+      setFaviconData(null);
+      setFaviconError(null);
+      if (faviconInputRef.current) faviconInputRef.current.value = '';
+      setFaviconPreview(
+        currentSettings?.favicon?.id
+          ? `/rest/soupBrokerFile/show/${currentSettings.favicon.id}`
+          : null,
+      );
+    }
   };
 
   if (isLoading) {
@@ -336,6 +512,10 @@ export default function AccountSettingsPage() {
             </div>
 
             {/* Added: Start of Fiscal Year */}
+            {/* Fix (SOUPFIN-16): Explicit min/max bounds so the browser's date
+                picker never falls back to the "0/0/0" sentinel value when the
+                form first renders. Lower bound of 1900-01-01 mirrors the same
+                guard used in the Aging report page. */}
             <div>
               <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
                 Start of Fiscal Year
@@ -343,6 +523,9 @@ export default function AccountSettingsPage() {
               <input
                 {...register('startOfFiscalYear')}
                 type="date"
+                min="1900-01-01"
+                max="2100-12-31"
+                placeholder="YYYY-MM-DD"
                 className="w-full h-10 px-3 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-background-dark text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none"
                 data-testid="account-settings-fiscal-year"
               />
@@ -374,32 +557,132 @@ export default function AccountSettingsPage() {
             Branding & Communication
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Added: Logo upload placeholder */}
-            <div>
-              <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
+            {/* Fix (SOUPFIN-16): Replaced "coming soon" placeholder with a real
+                file picker. Pick a PNG/JPEG/SVG, see a preview, and save —
+                the backend's SoupBrokerFileUtilityService accepts the data URL. */}
+            <div data-testid="account-settings-logo-field">
+              <label
+                htmlFor="account-settings-logo-input"
+                className="block text-sm font-medium text-text-light dark:text-text-dark mb-1"
+              >
                 Company Logo
               </label>
-              <div className="w-full h-24 rounded-lg border-2 border-dashed border-border-light dark:border-border-dark flex items-center justify-center gap-2 text-subtle-text hover:border-primary/50 cursor-pointer transition-colors">
-                <span className="material-symbols-outlined text-2xl">image</span>
-                <span className="text-sm">Upload logo (coming soon)</span>
+              <label
+                htmlFor="account-settings-logo-input"
+                className="block w-full h-24 rounded-lg border-2 border-dashed border-border-light dark:border-border-dark hover:border-primary/50 cursor-pointer transition-colors overflow-hidden"
+              >
+                {logoPreview ? (
+                  <img
+                    src={logoPreview}
+                    alt="Company logo preview"
+                    className="w-full h-full object-contain p-1"
+                    data-testid="account-settings-logo-preview"
+                  />
+                ) : (
+                  <span className="flex items-center justify-center gap-2 w-full h-full text-subtle-text">
+                    <span className="material-symbols-outlined text-2xl">image</span>
+                    <span className="text-sm">Click to upload logo</span>
+                  </span>
+                )}
+              </label>
+              <input
+                id="account-settings-logo-input"
+                ref={logoInputRef}
+                type="file"
+                accept={LOGO_ACCEPT}
+                onChange={(event) => {
+                  void handleBrandingPick('logo', event.target.files?.[0]);
+                }}
+                className="sr-only"
+                data-testid="account-settings-logo-input"
+              />
+              <div className="flex items-center justify-between mt-1 gap-2">
+                <p className="text-subtle-text text-xs flex-1">
+                  Displayed on invoices and reports. PNG, JPEG, or SVG, max{' '}
+                  {Math.round(MAX_LOGO_BYTES / 1024)} KB.
+                </p>
+                {(logoData || logoPreview) && (
+                  <button
+                    type="button"
+                    onClick={() => handleBrandingClear('logo')}
+                    className="text-xs text-danger hover:underline"
+                    data-testid="account-settings-logo-clear"
+                  >
+                    Remove
+                  </button>
+                )}
               </div>
-              <p className="text-subtle-text text-xs mt-1">
-                Displayed on invoices and reports. PNG or SVG recommended.
-              </p>
+              {logoError && (
+                <p
+                  className="text-danger text-xs mt-1"
+                  data-testid="account-settings-logo-error"
+                >
+                  {logoError}
+                </p>
+              )}
             </div>
 
-            {/* Added: Favicon upload placeholder */}
-            <div>
-              <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
+            {/* Fix (SOUPFIN-16): Favicon picker — same pattern as the logo above. */}
+            <div data-testid="account-settings-favicon-field">
+              <label
+                htmlFor="account-settings-favicon-input"
+                className="block text-sm font-medium text-text-light dark:text-text-dark mb-1"
+              >
                 Favicon
               </label>
-              <div className="w-full h-24 rounded-lg border-2 border-dashed border-border-light dark:border-border-dark flex items-center justify-center gap-2 text-subtle-text hover:border-primary/50 cursor-pointer transition-colors">
-                <span className="material-symbols-outlined text-2xl">bookmark</span>
-                <span className="text-sm">Upload favicon (coming soon)</span>
+              <label
+                htmlFor="account-settings-favicon-input"
+                className="block w-full h-24 rounded-lg border-2 border-dashed border-border-light dark:border-border-dark hover:border-primary/50 cursor-pointer transition-colors overflow-hidden"
+              >
+                {faviconPreview ? (
+                  <img
+                    src={faviconPreview}
+                    alt="Favicon preview"
+                    className="w-full h-full object-contain p-1"
+                    data-testid="account-settings-favicon-preview"
+                  />
+                ) : (
+                  <span className="flex items-center justify-center gap-2 w-full h-full text-subtle-text">
+                    <span className="material-symbols-outlined text-2xl">bookmark</span>
+                    <span className="text-sm">Click to upload favicon</span>
+                  </span>
+                )}
+              </label>
+              <input
+                id="account-settings-favicon-input"
+                ref={faviconInputRef}
+                type="file"
+                accept={FAVICON_ACCEPT}
+                onChange={(event) => {
+                  void handleBrandingPick('favicon', event.target.files?.[0]);
+                }}
+                className="sr-only"
+                data-testid="account-settings-favicon-input"
+              />
+              <div className="flex items-center justify-between mt-1 gap-2">
+                <p className="text-subtle-text text-xs flex-1">
+                  Browser tab icon. ICO or PNG (32×32 px recommended), max{' '}
+                  {Math.round(MAX_FAVICON_BYTES / 1024)} KB.
+                </p>
+                {(faviconData || faviconPreview) && (
+                  <button
+                    type="button"
+                    onClick={() => handleBrandingClear('favicon')}
+                    className="text-xs text-danger hover:underline"
+                    data-testid="account-settings-favicon-clear"
+                  >
+                    Remove
+                  </button>
+                )}
               </div>
-              <p className="text-subtle-text text-xs mt-1">
-                Browser tab icon. ICO or PNG, 32x32px recommended.
-              </p>
+              {faviconError && (
+                <p
+                  className="text-danger text-xs mt-1"
+                  data-testid="account-settings-favicon-error"
+                >
+                  {faviconError}
+                </p>
+              )}
             </div>
 
             <div className="md:col-span-2">
@@ -431,57 +714,86 @@ export default function AccountSettingsPage() {
               <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
                 SMS Sender ID Prefix
               </label>
-              {/* Fix (SOUPFIN-14): Cap input length at 11 + show validation error before submit. */}
+              {/* Fix (SOUPFIN-14 + SOUPFIN-16): Native maxLength caps the field at 11 chars
+                  (3GPP TS 23.038 telco limit); Zod re-validates on submit; a live counter
+                  shows the user how close they are to the cap. */}
               <input
                 {...register('smsIdPrefix')}
                 maxLength={11}
                 data-testid="account-settings-sms-prefix"
+                aria-describedby="account-settings-sms-prefix-counter"
                 className="w-full h-10 px-3 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-background-dark text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none"
                 placeholder="e.g., MYCO"
               />
-              {errors.smsIdPrefix ? (
-                <p className="text-danger text-xs mt-1" data-testid="account-settings-sms-prefix-error">
-                  {errors.smsIdPrefix.message}
+              <div className="flex items-center justify-between gap-2 mt-1">
+                {errors.smsIdPrefix ? (
+                  <p
+                    className="text-danger text-xs"
+                    data-testid="account-settings-sms-prefix-error"
+                  >
+                    {errors.smsIdPrefix.message}
+                  </p>
+                ) : (
+                  <p className="text-subtle-text text-xs">
+                    Max 11 characters for SMS sender ID
+                  </p>
+                )}
+                <p
+                  id="account-settings-sms-prefix-counter"
+                  data-testid="account-settings-sms-prefix-counter"
+                  className={`text-xs tabular-nums ${
+                    smsIdPrefixValue.length >= 11
+                      ? 'text-danger font-medium'
+                      : 'text-subtle-text'
+                  }`}
+                >
+                  {smsIdPrefixValue.length}/11
                 </p>
-              ) : (
-                <p className="text-subtle-text text-xs mt-1">Max 11 characters for SMS sender ID</p>
-              )}
+              </div>
             </div>
           </div>
         </div>
 
         {/* Form Actions */}
-        {/* Changed: Stack vertically on mobile for better touch targets */}
+        {/* Fix (SOUPFIN-16): Save / Reset are now always visually active.
+            V2 user feedback: the disabled-by-default state hid the active button
+            styling on initial load. We instead render an unobtrusive hint to
+            explain what will happen when clicked while pristine. */}
         <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
           <div>
-            {/* Fix (SOUPFIN-14): Explain why Save/Reset are disabled on initial load so the
-                disabled state is no longer mysterious to the user. */}
-            {isDirty ? (
+            {hasUnsavedChanges ? (
               <span className="text-sm text-warning" data-testid="account-settings-dirty-hint">
                 You have unsaved changes
               </span>
             ) : (
-              <span className="text-sm text-subtle-text" data-testid="account-settings-no-changes-hint">
-                Edit any field to enable Save / Reset
+              <span
+                className="text-sm text-subtle-text"
+                data-testid="account-settings-no-changes-hint"
+              >
+                No changes yet — edit a field, logo, or favicon to enable saving
               </span>
             )}
           </div>
           <div className="flex gap-3">
             <button
               type="button"
-              onClick={() => reset()}
-              disabled={!isDirty || isSubmitting}
+              onClick={handleReset}
+              disabled={isSubmitting}
               className="h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm hover:bg-primary/5 disabled:opacity-50"
+              data-testid="account-settings-reset-button"
             >
               Reset
             </button>
             <button
               type="submit"
-              disabled={!isDirty || isSubmitting || saveMutation.isPending}
+              disabled={isSubmitting || saveMutation.isPending}
               className="h-10 px-6 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90 disabled:opacity-50 flex items-center justify-center gap-2"
+              data-testid="account-settings-save-button"
             >
               {(isSubmitting || saveMutation.isPending) && (
-                <span className="material-symbols-outlined text-lg animate-spin">progress_activity</span>
+                <span className="material-symbols-outlined text-lg animate-spin">
+                  progress_activity
+                </span>
               )}
               Save Changes
             </button>
