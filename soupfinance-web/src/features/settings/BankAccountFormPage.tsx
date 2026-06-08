@@ -17,18 +17,29 @@ import { logger } from '../../utils/logger';
 import apiClient from '../../api/client';
 
 // Form validation schema
-const bankAccountSchema = z.object({
-  accountName: z.string().min(1, 'Account name is required'),
-  accountNumber: z.string().min(1, 'Account number is required'),
-  bankId: z.string().optional(),
-  bankForOtherOption: z.string().optional(),
-  bankBranch: z.string().optional(),
-  priority: z.enum(['PRIMARY', 'SECONDARY']),
-  currency: z.string().optional(),
-  ledgerAccountId: z.string().optional(),
-  defaultClientDebtAccount: z.boolean().optional(),
-  defaultClientEquityAccount: z.boolean().optional(),
-});
+// Fix (SOUPFIN-14): Bank is required (matches backend constraint). Either pick a known
+// bank OR choose "OTHER" and enter the name in `bankForOtherOption`. Without this rule
+// the user could submit a blank bank and get a generic backend rejection.
+const bankAccountSchema = z
+  .object({
+    accountName: z.string().min(1, 'Account name is required'),
+    accountNumber: z.string().min(1, 'Account number is required'),
+    bankId: z.string().min(1, 'Bank is required'),
+    bankForOtherOption: z.string().optional(),
+    bankBranch: z.string().optional(),
+    priority: z.enum(['PRIMARY', 'SECONDARY']),
+    currency: z.string().optional(),
+    ledgerAccountId: z.string().optional(),
+    defaultClientDebtAccount: z.boolean().optional(),
+    defaultClientEquityAccount: z.boolean().optional(),
+  })
+  .refine(
+    (data) => data.bankId !== 'OTHER' || !!data.bankForOtherOption?.trim(),
+    {
+      message: 'Bank name is required when "Other" is selected',
+      path: ['bankForOtherOption'],
+    }
+  );
 
 type BankAccountFormValues = z.infer<typeof bankAccountSchema>;
 
@@ -231,11 +242,18 @@ export default function BankAccountFormPage() {
 
             <div>
               <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                Bank
+                {/* Fix (SOUPFIN-14): Required asterisk + error message to match the other
+                    required fields (Account Holder Name, Account Number). */}
+                Bank <span className="text-danger">*</span>
               </label>
               <select
                 {...register('bankId')}
-                className="w-full h-10 px-3 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-background-dark text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none"
+                data-testid="bank-account-bank"
+                className={`w-full h-10 px-3 rounded-lg border ${
+                  errors.bankId
+                    ? 'border-danger focus:border-danger focus:ring-danger/20'
+                    : 'border-border-light dark:border-border-dark focus:border-primary focus:ring-primary/20'
+                } bg-surface-light dark:bg-background-dark text-text-light dark:text-text-dark focus:ring-2 focus:outline-none`}
               >
                 <option value="">Select a bank</option>
                 {banks?.map((bank) => (
@@ -245,18 +263,31 @@ export default function BankAccountFormPage() {
                 ))}
                 <option value="OTHER">Other (specify)</option>
               </select>
+              {errors.bankId && (
+                <p className="text-danger text-xs mt-1" data-testid="bank-account-bank-error">
+                  {errors.bankId.message}
+                </p>
+              )}
             </div>
 
             {isOtherBank && (
               <div>
                 <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                  Bank Name (Other)
+                  Bank Name (Other) <span className="text-danger">*</span>
                 </label>
                 <input
                   {...register('bankForOtherOption')}
-                  className="w-full h-10 px-3 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-background-dark text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none"
+                  data-testid="bank-account-bank-other"
+                  className={`w-full h-10 px-3 rounded-lg border ${
+                    errors.bankForOtherOption
+                      ? 'border-danger focus:border-danger focus:ring-danger/20'
+                      : 'border-border-light dark:border-border-dark focus:border-primary focus:ring-primary/20'
+                  } bg-surface-light dark:bg-background-dark text-text-light dark:text-text-dark focus:ring-2 focus:outline-none`}
                   placeholder="Enter bank name"
                 />
+                {errors.bankForOtherOption && (
+                  <p className="text-danger text-xs mt-1">{errors.bankForOtherOption.message}</p>
+                )}
               </div>
             )}
 

@@ -10,8 +10,8 @@ import { z } from 'zod';
 import { accountSettingsApi } from '../../api/endpoints/settings';
 import type { AccountSettings, BusinessLicenceCategory } from '../../types/settings';
 // Changed: Import shared currency data from domainData (single source of truth)
-import { DEFAULT_CURRENCIES, listCurrencies } from '../../api/endpoints/domainData';
-import type { Currency as DomainCurrency } from '../../api/endpoints/domainData';
+import { DEFAULT_CURRENCIES, listCurrencies, DEFAULT_COUNTRIES, listCountries } from '../../api/endpoints/domainData';
+import type { Currency as DomainCurrency, Country as DomainCountry } from '../../api/endpoints/domainData';
 import { logger } from '../../utils/logger';
 // Fix (SOUPFIN-10): Gate query on auth + tenantId readiness
 import { useAuthStore } from '../../stores/authStore';
@@ -28,7 +28,14 @@ const settingsSchema = z.object({
   location: z.string().optional(),
   website: z.string().url('Invalid URL').optional().or(z.literal('')),
   emailSubjectPrefix: z.string().optional(),
-  smsIdPrefix: z.string().optional(),
+  // Fix (SOUPFIN-14): Client-side max length validation for SMS Sender ID.
+  // Telco SMS sender IDs are limited to 11 alphanumeric characters by industry
+  // standard (3GPP TS 23.038). The backend rejects longer values with a generic
+  // "Failed to save" toast; enforce locally so the user sees the specific reason.
+  smsIdPrefix: z
+    .string()
+    .max(11, 'SMS Sender ID Prefix must be 11 characters or less')
+    .optional(),
   slogan: z.string().optional(),
   startOfFiscalYear: z.string().optional(),
 });
@@ -52,8 +59,11 @@ export default function AccountSettingsPage() {
 
   // Changed: Load currencies from shared domainData source (loads from backend when available)
   const [currencies, setCurrencies] = useState<DomainCurrency[]>(DEFAULT_CURRENCIES);
+  // Fix (SOUPFIN-14): Load country list for the Country dropdown (was previously a free-text input).
+  const [countries, setCountries] = useState<DomainCountry[]>(DEFAULT_COUNTRIES);
   useEffect(() => {
     listCurrencies().then(setCurrencies);
+    listCountries().then(setCountries);
   }, []);
 
   // Fix (SOUPFIN-10): Gate the query on auth-init + tenantId presence so the
@@ -266,11 +276,20 @@ export default function AccountSettingsPage() {
               <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
                 Country
               </label>
-              <input
+              {/* Fix (SOUPFIN-14): Changed from free-text input to standardized dropdown
+                  so the value matches a known ISO country and reliably maps to a currency. */}
+              <select
                 {...register('countryOfOrigin')}
+                data-testid="account-settings-country"
                 className="w-full h-10 px-3 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-background-dark text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none"
-                placeholder="Country of operation"
-              />
+              >
+                <option value="">Select country of operation</option>
+                {countries.map((country) => (
+                  <option key={country.code} value={country.code}>
+                    {country.name}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div className="md:col-span-2">
@@ -390,12 +409,21 @@ export default function AccountSettingsPage() {
               <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
                 SMS Sender ID Prefix
               </label>
+              {/* Fix (SOUPFIN-14): Cap input length at 11 + show validation error before submit. */}
               <input
                 {...register('smsIdPrefix')}
+                maxLength={11}
+                data-testid="account-settings-sms-prefix"
                 className="w-full h-10 px-3 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-background-dark text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none"
                 placeholder="e.g., MYCO"
               />
-              <p className="text-subtle-text text-xs mt-1">Max 11 characters for SMS sender ID</p>
+              {errors.smsIdPrefix ? (
+                <p className="text-danger text-xs mt-1" data-testid="account-settings-sms-prefix-error">
+                  {errors.smsIdPrefix.message}
+                </p>
+              ) : (
+                <p className="text-subtle-text text-xs mt-1">Max 11 characters for SMS sender ID</p>
+              )}
             </div>
           </div>
         </div>
@@ -404,8 +432,16 @@ export default function AccountSettingsPage() {
         {/* Changed: Stack vertically on mobile for better touch targets */}
         <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
           <div>
-            {isDirty && (
-              <span className="text-sm text-warning">You have unsaved changes</span>
+            {/* Fix (SOUPFIN-14): Explain why Save/Reset are disabled on initial load so the
+                disabled state is no longer mysterious to the user. */}
+            {isDirty ? (
+              <span className="text-sm text-warning" data-testid="account-settings-dirty-hint">
+                You have unsaved changes
+              </span>
+            ) : (
+              <span className="text-sm text-subtle-text" data-testid="account-settings-no-changes-hint">
+                Edit any field to enable Save / Reset
+              </span>
             )}
           </div>
           <div className="flex gap-3">
