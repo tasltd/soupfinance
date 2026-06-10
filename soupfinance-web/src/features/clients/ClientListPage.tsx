@@ -35,7 +35,11 @@ export function ClientListPage() {
   });
 
   // Query clients
-  const { data: clients, isLoading, error } = useQuery({
+  // Fix (SOUPFIN-16): Capture isFetching so the filter dropdown can show a spinner
+  // while the API re-runs after a filter change. Provides visual feedback that
+  // "Individual"/"Corporate" filters are actually being applied (the issue called
+  // out that the filter gave no indication it was working).
+  const { data: clients, isLoading, isFetching, error } = useQuery({
     queryKey: ['clients', searchTerm, typeFilter],
     queryFn: () => listClients({
       max: 50,
@@ -45,6 +49,10 @@ export function ClientListPage() {
       clientType: typeFilter || undefined,
     }),
   });
+
+  // Fix (SOUPFIN-16): True when any filter or search term is active — used to
+  // decide whether an empty result set is "no clients yet" or "no matches".
+  const hasActiveFilters = Boolean(searchTerm.trim()) || Boolean(typeFilter);
 
   // Delete mutation
   const deleteMutation = useMutation({
@@ -116,7 +124,9 @@ export function ClientListPage() {
       </div>
 
       {/* Search and Filter Bar */}
-      <div className="flex flex-wrap gap-4" data-testid="client-filters">
+      {/* Fix (SOUPFIN-16): Wrap filter row with refetch spinner so users see that
+          Individual/Corporate type selection is being applied. */}
+      <div className="flex flex-wrap items-center gap-4" data-testid="client-filters">
         {/* Search Input */}
         <div className="relative flex-1 min-w-[200px] max-w-md">
           <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-subtle-text text-xl">
@@ -132,17 +142,50 @@ export function ClientListPage() {
           />
         </div>
 
-        {/* Type Filter */}
+        {/* Type Filter — Fix (SOUPFIN-16): visual ring when active so user can see filter is applied. */}
         <select
           value={typeFilter}
           onChange={(e) => setTypeFilter(e.target.value as ClientType | '')}
-          className="h-10 px-4 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none"
+          className={`h-10 px-4 rounded-lg border bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary/20 focus:outline-none ${
+            typeFilter
+              ? 'border-primary ring-2 ring-primary/20 font-semibold'
+              : 'border-border-light dark:border-border-dark focus:border-primary'
+          }`}
           data-testid="client-type-filter"
         >
           <option value="">All Types</option>
           <option value="INDIVIDUAL">Individual</option>
           <option value="CORPORATE">Corporate</option>
         </select>
+
+        {/* Refetch spinner — visible while filter/search is being applied. */}
+        {isFetching && !isLoading && (
+          <span
+            className="flex items-center gap-1 text-sm text-subtle-text"
+            data-testid="client-list-filtering"
+            role="status"
+            aria-live="polite"
+          >
+            <span className="material-symbols-outlined text-lg animate-spin">progress_activity</span>
+            Filtering…
+          </span>
+        )}
+
+        {/* Active filter chip — confirms the active filter and offers a 1-click clear. */}
+        {(searchTerm || typeFilter) && (
+          <button
+            type="button"
+            onClick={() => {
+              setSearchTerm('');
+              setTypeFilter('');
+            }}
+            className="flex items-center gap-1 h-10 px-3 rounded-lg text-sm text-subtle-text hover:text-primary hover:bg-primary/5"
+            data-testid="client-filters-clear"
+          >
+            <span className="material-symbols-outlined text-lg">filter_alt_off</span>
+            Clear filters
+          </button>
+        )}
       </div>
 
       {/* Client Table */}
@@ -248,6 +291,38 @@ export function ClientListPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        ) : hasActiveFilters ? (
+          // Fix (SOUPFIN-16): When a search or type filter is active but no clients
+          // matched, show a "no results" message instead of the empty-state CTA so
+          // the user knows to broaden their filter rather than thinking the account
+          // has no clients at all.
+          <div className="p-12 text-center" data-testid="client-list-no-results">
+            <span className="material-symbols-outlined text-6xl text-subtle-text/50 mb-4 block">
+              search_off
+            </span>
+            <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">
+              No clients match your filters
+            </h3>
+            <p className="text-subtle-text mb-4">
+              {searchTerm && typeFilter
+                ? `No ${typeFilter === 'INDIVIDUAL' ? 'individual' : 'corporate'} clients match "${searchTerm}". Try broadening your search or removing filters.`
+                : searchTerm
+                  ? `No clients match "${searchTerm}". Try a different search term.`
+                  : `No ${typeFilter === 'INDIVIDUAL' ? 'individual' : 'corporate'} clients found. Try a different type or clear the filter.`}
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setSearchTerm('');
+                setTypeFilter('');
+              }}
+              className="inline-flex items-center gap-2 h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-bold text-sm hover:bg-primary/5"
+              data-testid="client-list-clear-filters-button"
+            >
+              <span className="material-symbols-outlined text-lg">filter_alt_off</span>
+              Clear filters
+            </button>
           </div>
         ) : (
           <div className="p-12 text-center" data-testid="client-list-empty">

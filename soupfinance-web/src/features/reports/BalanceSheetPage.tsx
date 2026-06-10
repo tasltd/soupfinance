@@ -37,6 +37,20 @@ function getTodayISO(): string {
 // (was previously stuck in pending forever with no UI feedback).
 const EXPORT_TIMEOUT_MS = 60_000;
 
+// Fix (SOUPFIN-16): Minimum supported reporting date — allows navigating to any
+// historic year (the issue reported the calendar was "stuck" at 2026). We use
+// 1900-01-01 so the browser's native year picker can scroll back over a century.
+const REPORT_MIN_DATE = '1900-01-01';
+
+// Fix (SOUPFIN-16): Map an internal report ID to a file extension. Whitelisting
+// the format prevents a null/undefined sneaking into the filename and producing
+// "balance-sheet-2026-06-08.null" (or .undefined). Defaults to .pdf for unknown.
+function getReportExtension(format: 'pdf' | 'xlsx' | 'csv' | null | undefined): string {
+  if (format === 'xlsx') return 'xlsx';
+  if (format === 'csv') return 'csv';
+  return 'pdf';
+}
+
 export function BalanceSheetPage() {
   // Added: State for "As Of" date filter with default to today
   const [asOfDate, setAsOfDate] = useState<string>(getTodayISO());
@@ -101,7 +115,9 @@ export function BalanceSheetPage() {
       // Create download link
       const link = document.createElement('a');
       link.href = url;
-      const extension = format === 'xlsx' ? 'xlsx' : format;
+      // Fix (SOUPFIN-16): Use whitelist helper so a null/undefined format never
+      // produces a ".null" extension (the bug reported on app.soupfinance.com).
+      const extension = getReportExtension(format);
       link.download = `balance-sheet-${asOfDate}.${extension}`;
       document.body.appendChild(link);
       link.click();
@@ -151,6 +167,7 @@ export function BalanceSheetPage() {
               id="asOfDate"
               type="date"
               value={asOfDate}
+              min={REPORT_MIN_DATE}
               onChange={(e) => setAsOfDate(e.target.value)}
               className="pl-10 pr-4 py-2 h-10 border border-border-light dark:border-border-dark rounded-lg bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary/50 focus:border-primary"
               data-testid="balance-sheet-date-picker"

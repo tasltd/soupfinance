@@ -42,6 +42,9 @@ function getTodayISO(): string {
   return new Date().toISOString().split('T')[0];
 }
 
+// Fix (SOUPFIN-16): Allow navigating to historic years in the date picker.
+const REPORT_MIN_DATE = '1900-01-01';
+
 // Fix(SOUPFIN-11): Escape a single CSV cell — quotes the value when it contains
 // a comma, quote, or newline (per RFC 4180).
 function csvCell(value: string | number): string {
@@ -183,6 +186,7 @@ export function CashFlowPage() {
                 id="fromDate"
                 type="date"
                 value={fromDate}
+                min={REPORT_MIN_DATE}
                 onChange={(e) => setFromDate(e.target.value)}
                 className="pl-10 pr-4 py-2 h-10 border border-border-light dark:border-border-dark rounded-lg bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary/50 focus:border-primary"
                 data-testid="cash-flow-from-date"
@@ -201,6 +205,7 @@ export function CashFlowPage() {
                 id="toDate"
                 type="date"
                 value={toDate}
+                min={REPORT_MIN_DATE}
                 onChange={(e) => setToDate(e.target.value)}
                 className="pl-10 pr-4 py-2 h-10 border border-border-light dark:border-border-dark rounded-lg bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary/50 focus:border-primary"
                 data-testid="cash-flow-to-date"

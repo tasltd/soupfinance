@@ -16,11 +16,19 @@ import {
 } from '../../api/endpoints/reports';
 import type { AgingReport, AgingItem } from '../../types';
 
-// Fix(SOUPFIN-11): Earliest date users can pick for historical aging analysis.
-// The previous date picker had no `min` attribute, so the browser-native picker
-// occasionally restricted the year selector. Setting an explicit min unlocks
-// historical analysis back to 2000.
-const AGING_MIN_DATE = '2000-01-01';
+// Fix(SOUPFIN-11/SOUPFIN-16): Earliest date users can pick for historical aging analysis.
+// The browser-native date picker's year navigation is gated by this min — users on
+// app.soupfinance.com reported the picker was "stuck" at 2026 with no way back, so we
+// widen to 1900-01-01 to expose a full century of historic years in the year selector.
+const AGING_MIN_DATE = '1900-01-01';
+
+// Fix (SOUPFIN-16): Whitelist export format → extension so a null/undefined format
+// never lands in the filename as ".null" (the exact bug reported on production).
+function getReportExtension(format: 'pdf' | 'xlsx' | 'csv' | null | undefined): string {
+  if (format === 'xlsx') return 'xlsx';
+  if (format === 'csv') return 'csv';
+  return 'pdf';
+}
 
 // Added: Get today's date in ISO format (YYYY-MM-DD)
 function getTodayDate(): string {
@@ -318,7 +326,8 @@ export function AgingReportsPage() {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `ar-aging-${asOfDate}.${format}`;
+      // Fix (SOUPFIN-16): Use whitelist helper so null/undefined never becomes ".null".
+      link.download = `ar-aging-${asOfDate}.${getReportExtension(format)}`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -340,7 +349,8 @@ export function AgingReportsPage() {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `ap-aging-${asOfDate}.${format}`;
+      // Fix (SOUPFIN-16): Use whitelist helper so null/undefined never becomes ".null".
+      link.download = `ap-aging-${asOfDate}.${getReportExtension(format)}`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

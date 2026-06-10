@@ -2,7 +2,7 @@
  * Account Settings Page
  * PURPOSE: Configure company account settings and preferences
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ChangeEvent } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -18,6 +18,9 @@ import { useAuthStore } from '../../stores/authStore';
 
 // Form validation schema
 // Changed: Added startOfFiscalYear for fiscal year configuration
+// Fix (SOUPFIN-16): Added logoFile/faviconFile for base64-encoded image uploads.
+//   Backend SoupBrokerFileUtilityService auto-detects base64 strings on any
+//   SoupBrokerFile property (see CLAUDE.md "File/Image Upload").
 const settingsSchema = z.object({
   name: z.string().min(1, 'Company name is required'),
   currency: z.string().optional(),
@@ -38,6 +41,10 @@ const settingsSchema = z.object({
     .optional(),
   slogan: z.string().optional(),
   startOfFiscalYear: z.string().optional(),
+  // Fix (SOUPFIN-16): Image uploads — stored as data:image/...;base64,... URIs
+  // until save. Backend resolves them into SoupBrokerFile records on PUT.
+  logoFile: z.string().optional(),
+  faviconFile: z.string().optional(),
 });
 
 type SettingsFormValues = z.infer<typeof settingsSchema>;
@@ -109,6 +116,8 @@ export default function AccountSettingsPage() {
     register,
     handleSubmit,
     reset,
+    setValue,
+    watch,
     formState: { errors, isSubmitting, isDirty },
   } = useForm<SettingsFormValues>({
     resolver: zodResolver(settingsSchema),
@@ -125,8 +134,84 @@ export default function AccountSettingsPage() {
       smsIdPrefix: '',
       slogan: '',
       startOfFiscalYear: '',
+      logoFile: '',
+      faviconFile: '',
     },
   });
+
+  // Fix (SOUPFIN-16): Watch logo/favicon for live preview as the user picks files.
+  const logoPreview = watch('logoFile');
+  const faviconPreview = watch('faviconFile');
+
+  // Fix (SOUPFIN-16): Validation errors surfaced from the file <input> handlers.
+  // RHF schema only validates strings, not the File object itself.
+  const [logoUploadError, setLogoUploadError] = useState<string | null>(null);
+  const [faviconUploadError, setFaviconUploadError] = useState<string | null>(null);
+
+  // Fix (SOUPFIN-16): Read a File from a hidden <input type="file"> into a
+  // base64 data URI so it can be sent as JSON. Backend SoupBrokerFileUtilityService
+  // accepts data:image/...;base64,... values on any SoupBrokerFile property.
+  const readFileAsDataUrl = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(new Error('Failed to read file'));
+      reader.readAsDataURL(file);
+    });
+
+  const MAX_LOGO_BYTES = 2 * 1024 * 1024; // 2 MB
+  const MAX_FAVICON_BYTES = 256 * 1024; // 256 KB
+  const ALLOWED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/svg+xml', 'image/x-icon', 'image/vnd.microsoft.icon', 'image/webp'];
+
+  const handleLogoUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+    setLogoUploadError(null);
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      setLogoUploadError('Logo must be PNG, JPG, SVG, or WebP');
+      return;
+    }
+    if (file.size > MAX_LOGO_BYTES) {
+      setLogoUploadError('Logo must be 2MB or smaller');
+      return;
+    }
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      setValue('logoFile', dataUrl, { shouldDirty: true });
+    } catch (err) {
+      setLogoUploadError(err instanceof Error ? err.message : 'Failed to read file');
+    }
+  };
+
+  const handleFaviconUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+    setFaviconUploadError(null);
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      setFaviconUploadError('Favicon must be PNG, ICO, or SVG');
+      return;
+    }
+    if (file.size > MAX_FAVICON_BYTES) {
+      setFaviconUploadError('Favicon must be 256KB or smaller');
+      return;
+    }
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      setValue('faviconFile', dataUrl, { shouldDirty: true });
+    } catch (err) {
+      setFaviconUploadError(err instanceof Error ? err.message : 'Failed to read file');
+    }
+  };
+
+  const handleLogoClear = () => {
+    setLogoUploadError(null);
+    setValue('logoFile', '', { shouldDirty: true });
+  };
+
+  const handleFaviconClear = () => {
+    setFaviconUploadError(null);
+    setValue('faviconFile', '', { shouldDirty: true });
+  };
 
   // Reset form when settings load
   useEffect(() => {
@@ -155,7 +240,10 @@ export default function AccountSettingsPage() {
   const saveMutation = useMutation({
     mutationFn: async (data: SettingsFormValues) => {
       logger.info('Updating account settings');
-      const updateData: Partial<AccountSettings> = {
+      const updateData: Partial<Omit<AccountSettings, 'logo' | 'favicon'>> & {
+        logo?: string;
+        favicon?: string;
+      } = {
         id: currentSettings?.id,
         name: data.name,
         currency: data.currency,
@@ -170,7 +258,20 @@ export default function AccountSettingsPage() {
         slogan: data.slogan,
         startOfFiscalYear: data.startOfFiscalYear,
       };
-      return accountSettingsApi.update(updateData);
+      // Fix (SOUPFIN-16): Only include logo/favicon when the user picked a new image.
+      // An empty string means "no change"; sending an unchanged FK would overwrite
+      // the existing SoupBrokerFile with a no-op record.
+      if (data.logoFile && data.logoFile.startsWith('data:')) {
+        updateData.logo = data.logoFile;
+      }
+      if (data.faviconFile && data.faviconFile.startsWith('data:')) {
+        updateData.favicon = data.faviconFile;
+      }
+      // Fix (SOUPFIN-16): Cast to Partial<AccountSettings> for the API call. At runtime
+      // the backend SoupBrokerFileUtilityService accepts a base64 data: URI string on
+      // any SoupBrokerFile property and resolves it into a SoupBrokerFile record. The
+      // frontend type only describes the read shape ({ id: string }), so we widen here.
+      return accountSettingsApi.update(updateData as Partial<AccountSettings>);
     },
     onSuccess: () => {
       logger.info('Account settings updated successfully');
@@ -374,32 +475,130 @@ export default function AccountSettingsPage() {
             Branding & Communication
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Added: Logo upload placeholder */}
+            {/* Fix (SOUPFIN-16): Functional logo upload replacing "coming soon" placeholder.
+                Files are read into base64 data URIs and sent to the backend on save —
+                SoupBrokerFileUtilityService converts them to SoupBrokerFile records. */}
             <div>
-              <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
+              <label
+                htmlFor="account-settings-logo-input"
+                className="block text-sm font-medium text-text-light dark:text-text-dark mb-1"
+              >
                 Company Logo
               </label>
-              <div className="w-full h-24 rounded-lg border-2 border-dashed border-border-light dark:border-border-dark flex items-center justify-center gap-2 text-subtle-text hover:border-primary/50 cursor-pointer transition-colors">
-                <span className="material-symbols-outlined text-2xl">image</span>
-                <span className="text-sm">Upload logo (coming soon)</span>
+              <label
+                htmlFor="account-settings-logo-input"
+                className="block w-full h-24 rounded-lg border-2 border-dashed border-border-light dark:border-border-dark cursor-pointer hover:border-primary/50 transition-colors overflow-hidden"
+                data-testid="account-settings-logo-dropzone"
+              >
+                {logoPreview ? (
+                  <div className="relative w-full h-full flex items-center justify-center bg-background-light dark:bg-background-dark">
+                    <img
+                      src={logoPreview}
+                      alt="Logo preview"
+                      className="max-h-20 max-w-full object-contain"
+                      data-testid="account-settings-logo-preview"
+                    />
+                  </div>
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center gap-2 text-subtle-text">
+                    <span className="material-symbols-outlined text-2xl">image</span>
+                    <span className="text-sm">Click to upload logo</span>
+                  </div>
+                )}
+              </label>
+              <input
+                id="account-settings-logo-input"
+                type="file"
+                accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                onChange={handleLogoUpload}
+                className="hidden"
+                data-testid="account-settings-logo-input"
+              />
+              <div className="flex items-center justify-between mt-1 gap-2">
+                <p className="text-subtle-text text-xs">
+                  Displayed on invoices and reports. PNG, JPG, SVG or WebP up to 2MB.
+                </p>
+                {logoPreview && (
+                  <button
+                    type="button"
+                    onClick={handleLogoClear}
+                    className="text-xs text-danger hover:underline"
+                    data-testid="account-settings-logo-clear"
+                  >
+                    Remove
+                  </button>
+                )}
               </div>
-              <p className="text-subtle-text text-xs mt-1">
-                Displayed on invoices and reports. PNG or SVG recommended.
-              </p>
+              {logoUploadError && (
+                <p
+                  className="text-danger text-xs mt-1"
+                  data-testid="account-settings-logo-error"
+                >
+                  {logoUploadError}
+                </p>
+              )}
             </div>
 
-            {/* Added: Favicon upload placeholder */}
+            {/* Fix (SOUPFIN-16): Functional favicon upload replacing "coming soon" placeholder. */}
             <div>
-              <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
+              <label
+                htmlFor="account-settings-favicon-input"
+                className="block text-sm font-medium text-text-light dark:text-text-dark mb-1"
+              >
                 Favicon
               </label>
-              <div className="w-full h-24 rounded-lg border-2 border-dashed border-border-light dark:border-border-dark flex items-center justify-center gap-2 text-subtle-text hover:border-primary/50 cursor-pointer transition-colors">
-                <span className="material-symbols-outlined text-2xl">bookmark</span>
-                <span className="text-sm">Upload favicon (coming soon)</span>
+              <label
+                htmlFor="account-settings-favicon-input"
+                className="block w-full h-24 rounded-lg border-2 border-dashed border-border-light dark:border-border-dark cursor-pointer hover:border-primary/50 transition-colors overflow-hidden"
+                data-testid="account-settings-favicon-dropzone"
+              >
+                {faviconPreview ? (
+                  <div className="relative w-full h-full flex items-center justify-center bg-background-light dark:bg-background-dark">
+                    <img
+                      src={faviconPreview}
+                      alt="Favicon preview"
+                      className="max-h-16 max-w-16 object-contain"
+                      data-testid="account-settings-favicon-preview"
+                    />
+                  </div>
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center gap-2 text-subtle-text">
+                    <span className="material-symbols-outlined text-2xl">bookmark</span>
+                    <span className="text-sm">Click to upload favicon</span>
+                  </div>
+                )}
+              </label>
+              <input
+                id="account-settings-favicon-input"
+                type="file"
+                accept="image/png,image/x-icon,image/vnd.microsoft.icon,image/svg+xml"
+                onChange={handleFaviconUpload}
+                className="hidden"
+                data-testid="account-settings-favicon-input"
+              />
+              <div className="flex items-center justify-between mt-1 gap-2">
+                <p className="text-subtle-text text-xs">
+                  Browser tab icon. ICO, PNG or SVG, 32x32px recommended (max 256KB).
+                </p>
+                {faviconPreview && (
+                  <button
+                    type="button"
+                    onClick={handleFaviconClear}
+                    className="text-xs text-danger hover:underline"
+                    data-testid="account-settings-favicon-clear"
+                  >
+                    Remove
+                  </button>
+                )}
               </div>
-              <p className="text-subtle-text text-xs mt-1">
-                Browser tab icon. ICO or PNG, 32x32px recommended.
-              </p>
+              {faviconUploadError && (
+                <p
+                  className="text-danger text-xs mt-1"
+                  data-testid="account-settings-favicon-error"
+                >
+                  {faviconUploadError}
+                </p>
+              )}
             </div>
 
             <div className="md:col-span-2">
@@ -452,17 +651,19 @@ export default function AccountSettingsPage() {
 
         {/* Form Actions */}
         {/* Changed: Stack vertically on mobile for better touch targets */}
+        {/* Fix (SOUPFIN-16): Save/Reset are always enabled on initial load so users can
+            see the active state of the form and re-save existing settings (e.g. to
+            re-trigger backend-side recompute). The dirty-state hint still communicates
+            whether there are pending changes. */}
         <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
           <div>
-            {/* Fix (SOUPFIN-14): Explain why Save/Reset are disabled on initial load so the
-                disabled state is no longer mysterious to the user. */}
             {isDirty ? (
               <span className="text-sm text-warning" data-testid="account-settings-dirty-hint">
                 You have unsaved changes
               </span>
             ) : (
               <span className="text-sm text-subtle-text" data-testid="account-settings-no-changes-hint">
-                Edit any field to enable Save / Reset
+                No unsaved changes
               </span>
             )}
           </div>
@@ -470,15 +671,17 @@ export default function AccountSettingsPage() {
             <button
               type="button"
               onClick={() => reset()}
-              disabled={!isDirty || isSubmitting}
+              disabled={isSubmitting || saveMutation.isPending}
               className="h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm hover:bg-primary/5 disabled:opacity-50"
+              data-testid="account-settings-reset"
             >
               Reset
             </button>
             <button
               type="submit"
-              disabled={!isDirty || isSubmitting || saveMutation.isPending}
+              disabled={isSubmitting || saveMutation.isPending}
               className="h-10 px-6 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90 disabled:opacity-50 flex items-center justify-center gap-2"
+              data-testid="account-settings-save"
             >
               {(isSubmitting || saveMutation.isPending) && (
                 <span className="material-symbols-outlined text-lg animate-spin">progress_activity</span>

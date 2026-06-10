@@ -64,14 +64,18 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       proxy: {
         '/rest': proxyConfig,
-        // Added: Proxy for /client/* endpoints (public/unauthenticated)
-        // Used by registration and other public client-facing APIs
-        '/client': proxyConfig,
-        // Added: Proxy for /account/* API endpoints (tenant registration)
-        // Used by SoupFinance self-service registration flow
-        // Proxy injects Api-Authorization header to identify app to backend
-        // IMPORTANT: Use regex to avoid matching /accounting/* frontend routes
-        // Vite proxy does prefix matching, so /account would match /accounting/transactions
+        // Fix (SOUPFIN-16): The previous prefix `'/client'` matched BOTH the
+        // backend public API at `/client/authenticate.json` AND the SPA routes
+        // at `/clients`, `/clients/new`, `/clients/:id/edit` — Vite proxy
+        // does prefix matching, so `/clients/new` was proxied to the backend
+        // and the user saw the Soupmarkets backend login page instead of the
+        // SoupFinance Client form. Switching to the regex `^/client/` is the
+        // same fix applied to the production Apache config (trailing slash
+        // required on ProxyPass — see `.claude/rules/soupfinance-deployment.md`).
+        '^/client/': proxyConfig,
+        // Proxy for /account/* API endpoints (tenant registration).
+        // Same trailing-slash pattern — `/account` alone would catch
+        // `/accounting/transactions` SPA routes.
         '^/account/': proxyConfig,
       },
     },

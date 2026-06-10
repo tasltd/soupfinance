@@ -123,4 +123,31 @@ describe('ClientFormPage (SOUPFIN-14 fixes)', () => {
     const companyInput = screen.getByTestId('client-form-company-name') as HTMLInputElement;
     expect(companyInput.value).toBe('Acme Corp');
   });
+
+  it('renders First Name and Last Name fields when editing a client that has them even after toggling to CORPORATE (SOUPFIN-16)', async () => {
+    // SOUPFIN-16: The reported bug was that the Edit Client form was "missing the
+    // First Name and Last Name input fields" — happens when the user toggles a
+    // record with populated names to CORPORATE, hiding the Personal Information
+    // section entirely. With the fix, the section continues to render while
+    // editing so the user can still update name details.
+    vi.mocked(getClient).mockResolvedValue(
+      createMockClient({
+        clientType: 'CORPORATE' as never,
+        firstName: 'Alice',
+        lastName: 'Smith',
+        companyName: 'Acme Corp', // Hybrid record with BOTH individual + corporate fields
+      })
+    );
+    renderEditPage('client-abc');
+
+    // Even though the resolved type may swing to CORPORATE on this hybrid record,
+    // First/Last Name must remain editable because they're populated in the DB.
+    await waitFor(() =>
+      expect(screen.getByTestId('client-form-personal-section')).toBeInTheDocument()
+    );
+    const firstNameInput = screen.getByTestId('client-form-first-name') as HTMLInputElement;
+    const lastNameInput = screen.getByTestId('client-form-last-name') as HTMLInputElement;
+    expect(firstNameInput.value).toBe('Alice');
+    expect(lastNameInput.value).toBe('Smith');
+  });
 });
