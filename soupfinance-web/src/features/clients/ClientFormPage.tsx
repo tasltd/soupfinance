@@ -332,8 +332,18 @@ export function ClientFormPage() {
         </div>
 
         {/* Individual Fields */}
-        {clientType === 'INDIVIDUAL' && (
-          <div className="p-6 border-b border-border-light dark:border-border-dark">
+        {/* Fix (SOUPFIN-16): Also render Personal Information in edit mode when the
+            client has firstName/lastName even if the backend reported CORPORATE —
+            the previous fix only inferred type at form-init time, but a user who
+            manually toggles to CORPORATE would then lose access to update name
+            fields. Showing them for INDIVIDUAL OR when existing values are present
+            in edit mode keeps name details editable in all real-world scenarios. */}
+        {(clientType === 'INDIVIDUAL' ||
+          (isEdit && (!!client?.firstName?.trim() || !!client?.lastName?.trim()))) && (
+          <div
+            className="p-6 border-b border-border-light dark:border-border-dark"
+            data-testid="client-form-personal-section"
+          >
             <h2 className="text-lg font-bold text-text-light dark:text-text-dark mb-6">
               Personal Information
             </h2>
@@ -341,7 +351,7 @@ export function ClientFormPage() {
               <Input
                 label="First Name"
                 placeholder="Enter first name"
-                required
+                required={clientType === 'INDIVIDUAL'}
                 error={errors.firstName?.message}
                 {...register('firstName')}
                 data-testid="client-form-first-name"
@@ -349,7 +359,7 @@ export function ClientFormPage() {
               <Input
                 label="Last Name"
                 placeholder="Enter last name"
-                required
+                required={clientType === 'INDIVIDUAL'}
                 error={errors.lastName?.message}
                 {...register('lastName')}
                 data-testid="client-form-last-name"
@@ -360,7 +370,10 @@ export function ClientFormPage() {
 
         {/* Corporate Fields */}
         {clientType === 'CORPORATE' && (
-          <div className="p-6 border-b border-border-light dark:border-border-dark">
+          <div
+            className="p-6 border-b border-border-light dark:border-border-dark"
+            data-testid="client-form-company-section"
+          >
             <h2 className="text-lg font-bold text-text-light dark:text-text-dark mb-6">
               Company Information
             </h2>

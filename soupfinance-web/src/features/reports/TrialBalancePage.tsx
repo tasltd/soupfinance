@@ -14,6 +14,17 @@ import type { TrialBalanceItem } from '../../types';
 // Added: Trial balance uses subset of LedgerGroup (excludes 'INCOME' which is aliased to 'REVENUE')
 type TrialBalanceLedgerGroup = 'ASSET' | 'LIABILITY' | 'EQUITY' | 'REVENUE' | 'EXPENSE';
 
+// Fix (SOUPFIN-16): Allow navigating to historic years in the date picker.
+const REPORT_MIN_DATE = '1900-01-01';
+
+// Fix (SOUPFIN-16): Whitelist export format → file extension. Defaults to PDF
+// for unknown / null / undefined values so the download never has a ".null" suffix.
+function getReportExtension(format: 'pdf' | 'xlsx' | 'csv' | null | undefined): string {
+  if (format === 'xlsx') return 'xlsx';
+  if (format === 'csv') return 'csv';
+  return 'pdf';
+}
+
 // Added: Get current month date range (first day to last day)
 function getCurrentMonthRange() {
   const now = new Date();
@@ -186,7 +197,9 @@ export function TrialBalancePage() {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `trial-balance-${filters.from}-to-${filters.to}.${format}`;
+      // Fix (SOUPFIN-16): Use whitelist helper so null/undefined never becomes ".null".
+      const extension = getReportExtension(format);
+      link.download = `trial-balance-${filters.from}-to-${filters.to}.${extension}`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -265,6 +278,7 @@ export function TrialBalancePage() {
             <input
               type="date"
               value={filters.from}
+              min={REPORT_MIN_DATE}
               onChange={(e) => handleFilterChange('from', e.target.value)}
               className="h-12 px-4 rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary/50 focus:border-primary"
               data-testid="trial-balance-filter-from"
@@ -279,6 +293,7 @@ export function TrialBalancePage() {
             <input
               type="date"
               value={filters.to}
+              min={REPORT_MIN_DATE}
               onChange={(e) => handleFilterChange('to', e.target.value)}
               className="h-12 px-4 rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary/50 focus:border-primary"
               data-testid="trial-balance-filter-to"

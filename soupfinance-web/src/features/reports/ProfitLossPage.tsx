@@ -44,6 +44,17 @@ function getTodayISO(): string {
 // Fix (SOUPFIN-14): Hard timeout for hung exports.
 const EXPORT_TIMEOUT_MS = 60_000;
 
+// Fix (SOUPFIN-16): Allow navigating to any historic year in the date picker.
+const REPORT_MIN_DATE = '1900-01-01';
+
+// Fix (SOUPFIN-16): Whitelist format → extension so null/undefined never
+// becomes ".null" in the downloaded filename.
+function getReportExtension(format: 'pdf' | 'xlsx' | 'csv' | null | undefined): string {
+  if (format === 'xlsx') return 'xlsx';
+  if (format === 'csv') return 'csv';
+  return 'pdf';
+}
+
 export function ProfitLossPage() {
   // Added: State for date range filter with defaults to current month
   const [fromDate, setFromDate] = useState<string>(getFirstDayOfMonth());
@@ -99,7 +110,8 @@ export function ProfitLossPage() {
       // Create download link
       const link = document.createElement('a');
       link.href = url;
-      const extension = format === 'xlsx' ? 'xlsx' : format;
+      // Fix (SOUPFIN-16): Use whitelist helper so null/undefined never becomes ".null".
+      const extension = getReportExtension(format);
       link.download = `profit-loss-${fromDate}-to-${toDate}.${extension}`;
       document.body.appendChild(link);
       link.click();
@@ -152,6 +164,7 @@ export function ProfitLossPage() {
                 id="fromDate"
                 type="date"
                 value={fromDate}
+                min={REPORT_MIN_DATE}
                 onChange={(e) => setFromDate(e.target.value)}
                 className="pl-10 pr-4 py-2 h-10 border border-border-light dark:border-border-dark rounded-lg bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary/50 focus:border-primary"
                 data-testid="profit-loss-from-date"
@@ -170,6 +183,7 @@ export function ProfitLossPage() {
                 id="toDate"
                 type="date"
                 value={toDate}
+                min={REPORT_MIN_DATE}
                 onChange={(e) => setToDate(e.target.value)}
                 className="pl-10 pr-4 py-2 h-10 border border-border-light dark:border-border-dark rounded-lg bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary/50 focus:border-primary"
                 data-testid="profit-loss-to-date"

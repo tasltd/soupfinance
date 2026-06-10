@@ -188,16 +188,121 @@ describe('AccountSettingsPage (SOUPFIN-14 fixes)', () => {
     await waitFor(() => expect(fiscalInput.value).toBe(''));
   });
 
-  it('explains that Save/Reset are disabled until the form is dirty', async () => {
+  it('shows a pristine-state hint that does not imply Save is disabled (SOUPFIN-16)', async () => {
     renderPage();
 
-    // While pristine, the helper hint must be visible so the user knows
-    // the disabled buttons are intentional.
+    // Fix (SOUPFIN-16): The previous copy ("Edit any field to enable Save/Reset")
+    // implied the buttons were inactive; users complained on production that the
+    // disabled state was unexpected. The hint now reports the current state only.
     await waitFor(() =>
       expect(screen.getByTestId('account-settings-no-changes-hint')).toBeInTheDocument()
     );
     expect(screen.getByTestId('account-settings-no-changes-hint')).toHaveTextContent(
-      /Edit any field to enable Save/i
+      /No unsaved changes/i
     );
+  });
+
+  it('keeps Save and Reset buttons enabled on initial load (SOUPFIN-16)', async () => {
+    renderPage();
+
+    const saveBtn = await screen.findByTestId('account-settings-save');
+    const resetBtn = await screen.findByTestId('account-settings-reset');
+
+    // Fix (SOUPFIN-16): Buttons must reflect an active form state on load so users
+    // can re-save unchanged settings (e.g. to re-trigger backend recompute) and
+    // can see the active visual state.
+    expect(saveBtn).not.toBeDisabled();
+    expect(resetBtn).not.toBeDisabled();
+  });
+
+  it('renders functional logo upload UI (no more "coming soon" placeholder, SOUPFIN-16)', async () => {
+    renderPage();
+
+    // The dropzone now wraps a real <input type="file"> instead of static text.
+    const logoInput = await screen.findByTestId('account-settings-logo-input');
+    expect(logoInput.tagName).toBe('INPUT');
+    expect((logoInput as HTMLInputElement).type).toBe('file');
+    expect((logoInput as HTMLInputElement).accept).toMatch(/image\//);
+
+    // The dropzone label exists alongside the hidden input.
+    expect(screen.getByTestId('account-settings-logo-dropzone')).toBeInTheDocument();
+    // No "coming soon" copy anywhere on the page.
+    expect(screen.queryByText(/coming soon/i)).not.toBeInTheDocument();
+  });
+
+  it('renders functional favicon upload UI (no more "coming soon" placeholder, SOUPFIN-16)', async () => {
+    renderPage();
+
+    const faviconInput = await screen.findByTestId('account-settings-favicon-input');
+    expect(faviconInput.tagName).toBe('INPUT');
+    expect((faviconInput as HTMLInputElement).type).toBe('file');
+    expect((faviconInput as HTMLInputElement).accept).toMatch(/image\//);
+
+    expect(screen.getByTestId('account-settings-favicon-dropzone')).toBeInTheDocument();
+  });
+
+  it('reads an uploaded logo file into a base64 data URI and previews it (SOUPFIN-16)', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    const logoInput = (await screen.findByTestId(
+      'account-settings-logo-input'
+    )) as HTMLInputElement;
+
+    // Use a tiny real-ish PNG payload — jsdom's FileReader handles arbitrary Blob
+    // content and emits a "data:image/png;base64,..." URI for the result.
+    const file = new File([new Uint8Array([137, 80, 78, 71])], 'logo.png', {
+      type: 'image/png',
+    });
+
+    await user.upload(logoInput, file);
+
+    const preview = (await screen.findByTestId(
+      'account-settings-logo-preview'
+    )) as HTMLImageElement;
+    expect(preview.src).toMatch(/^data:image\/png;base64,/);
+  });
+
+  it('rejects a logo file larger than 2MB with a visible error (SOUPFIN-16)', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    const logoInput = (await screen.findByTestId(
+      'account-settings-logo-input'
+    )) as HTMLInputElement;
+
+    // 2.5 MB synthetic PNG — File.size is computed from the byte array length,
+    // so we can build an oversized file deterministically in jsdom.
+    const oversized = new File([new Uint8Array(2_500_000)], 'huge.png', {
+      type: 'image/png',
+    });
+
+    await user.upload(logoInput, oversized);
+
+    const err = await screen.findByTestId('account-settings-logo-error');
+    expect(err).toHaveTextContent(/2MB or smaller/i);
+    // No preview rendered because the upload was rejected.
+    expect(screen.queryByTestId('account-settings-logo-preview')).not.toBeInTheDocument();
+  });
+
+  it('rejects a non-image logo file with a visible error (SOUPFIN-16)', async () => {
+    const user = userEvent.setup({
+      // Bypass the file input's `accept` attribute so this test reaches our JS
+      // validation. In a real browser the user could only get past `accept` via
+      // drag-and-drop with an unexpected mime type — `applyAccept: false`
+      // simulates that path so we can prove the in-JS guard works too.
+      applyAccept: false,
+    });
+    renderPage();
+
+    const logoInput = (await screen.findByTestId(
+      'account-settings-logo-input'
+    )) as HTMLInputElement;
+
+    const badFile = new File(['hello'], 'logo.txt', { type: 'text/plain' });
+    await user.upload(logoInput, badFile);
+
+    const err = await screen.findByTestId('account-settings-logo-error');
+    expect(err).toHaveTextContent(/PNG, JPG, SVG, or WebP/i);
   });
 });

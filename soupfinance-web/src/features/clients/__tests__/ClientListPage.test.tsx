@@ -8,6 +8,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ClientListPage } from '../ClientListPage';
@@ -115,5 +116,89 @@ describe('ClientListPage (SOUPFIN-14 name fallback)', () => {
     ]);
     renderPage();
     await waitFor(() => expect(screen.getByTestId('client-link-c5')).toHaveTextContent('Unnamed client'));
+  });
+});
+
+describe('ClientListPage filter/search empty states (SOUPFIN-16)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('shows "No clients yet" with the New Client CTA when no clients exist AND no filters are active', async () => {
+    vi.mocked(listClients).mockResolvedValue([]);
+    renderPage();
+
+    const empty = await screen.findByTestId('client-list-empty');
+    expect(empty).toHaveTextContent(/No clients yet/i);
+    // Empty-state CTA still points users at the create flow.
+    expect(screen.getByTestId('client-create-first-button')).toBeInTheDocument();
+    // The "no results" copy must NOT appear when there are no filters.
+    expect(screen.queryByTestId('client-list-no-results')).not.toBeInTheDocument();
+  });
+
+  it('shows "No clients match your filters" when a search term filters everyone out', async () => {
+    const user = userEvent.setup();
+    // First call returns the full list, second call (after typing) returns empty.
+    vi.mocked(listClients)
+      .mockResolvedValueOnce([
+        createMockClient({ id: 'c1', name: 'Alice Smith', clientType: 'INDIVIDUAL' }),
+      ])
+      .mockResolvedValue([]);
+
+    renderPage();
+
+    // Wait for the initial list to render so we know the page is interactive.
+    await screen.findByTestId('client-link-c1');
+
+    // Type a search term that doesn't match anything.
+    const search = screen.getByTestId('client-search-input');
+    await user.type(search, 'zzz-no-match');
+
+    // Now we expect the no-results state, NOT the "No clients yet" copy.
+    const noResults = await screen.findByTestId('client-list-no-results');
+    expect(noResults).toHaveTextContent(/No clients match your filters/i);
+    expect(noResults).toHaveTextContent(/zzz-no-match/);
+    expect(screen.queryByTestId('client-list-empty')).not.toBeInTheDocument();
+    // Clear-filters CTA must be present so the user can reset in one click.
+    expect(screen.getByTestId('client-list-clear-filters-button')).toBeInTheDocument();
+  });
+
+  it('shows "No clients match your filters" with type-specific copy when only the type filter is active', async () => {
+    const user = userEvent.setup();
+    vi.mocked(listClients)
+      .mockResolvedValueOnce([
+        createMockClient({ id: 'c1', name: 'Bob', clientType: 'INDIVIDUAL' }),
+      ])
+      .mockResolvedValue([]);
+
+    renderPage();
+    await screen.findByTestId('client-link-c1');
+
+    // Change the type filter to CORPORATE — the next fetch returns empty.
+    const filter = screen.getByTestId('client-type-filter');
+    await user.selectOptions(filter, 'CORPORATE');
+
+    const noResults = await screen.findByTestId('client-list-no-results');
+    expect(noResults).toHaveTextContent(/corporate clients/i);
+  });
+
+  it('applies a visible active style to the type filter when a type is selected (SOUPFIN-16)', async () => {
+    const user = userEvent.setup();
+    vi.mocked(listClients).mockResolvedValue([]);
+
+    renderPage();
+    const filter = (await screen.findByTestId('client-type-filter')) as HTMLSelectElement;
+
+    // When no type is selected the filter should not have the active styling.
+    // (The base class includes "focus:border-primary" so we match the
+    // standalone active marker `ring-primary/20 font-semibold` instead.)
+    expect(filter.className).not.toMatch(/ring-primary\/20 font-semibold/);
+
+    await user.selectOptions(filter, 'INDIVIDUAL');
+
+    // After selecting a type, the dropdown gets a primary-colored ring +
+    // font-semibold so the user can see the filter is being applied.
+    expect(filter.className).toMatch(/ring-primary\/20/);
+    expect(filter.className).toMatch(/font-semibold/);
   });
 });
