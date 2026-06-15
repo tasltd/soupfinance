@@ -306,3 +306,72 @@ describe('AccountSettingsPage (SOUPFIN-14 fixes)', () => {
     expect(err).toHaveTextContent(/PNG, JPG, SVG, or WebP/i);
   });
 });
+
+/**
+ * SOUPFIN-18 fixes: graceful degradation when the profile/settings API fails.
+ *
+ * Production symptom: the Account Settings page "fails to render any form content,
+ * remaining stuck on Loading..." because the underlying profile API returns a 500.
+ * The page must instead render the editable form with a non-blocking warning so the
+ * user can still update and re-save their details.
+ */
+describe('AccountSettingsPage (SOUPFIN-18 — resilient to settings GET failure)', () => {
+  function makeHttpError(status: number, message = `Request failed with status code ${status}`) {
+    return Object.assign(new Error(message), { response: { status } });
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    useAuthStore.setState({
+      user: { username: 'demo', email: 'demo@example.com', roles: [], tenantId: 'tenant-123' },
+      isAuthenticated: true,
+      isInitialized: true,
+      isLoading: false,
+      error: null,
+      login: vi.fn(),
+      logout: vi.fn(),
+      clearError: vi.fn(),
+      initialize: vi.fn(),
+    } as never);
+  });
+
+  it('renders the editable form (not a blocking error screen) when the settings GET returns 500', async () => {
+    vi.mocked(accountSettingsApi.get).mockRejectedValue(makeHttpError(500));
+
+    renderPage();
+
+    // The non-blocking warning banner is shown...
+    const banner = await screen.findByTestId('account-settings-load-error');
+    expect(banner).toHaveTextContent(/Couldn't load your saved settings/i);
+
+    // ...AND the form itself still renders so the user can edit + save.
+    expect(screen.getByTestId('account-settings-save')).toBeInTheDocument();
+    expect(screen.getByTestId('account-settings-save')).not.toBeDisabled();
+    // The full-screen blocking copy from the old behaviour must be gone.
+    expect(screen.queryByText(/Failed to load account settings/i)).not.toBeInTheDocument();
+  });
+
+  it('saves using tenantId as the account id when settings failed to load (SOUPFIN-18)', async () => {
+    const user = userEvent.setup();
+    vi.mocked(accountSettingsApi.get).mockRejectedValue(makeHttpError(500));
+    vi.mocked(accountSettingsApi.update).mockResolvedValue({ id: 'tenant-123' } as never);
+
+    renderPage();
+
+    // Wait for the form to render despite the failed load.
+    await screen.findByTestId('account-settings-load-error');
+
+    // Company name is required by the schema; the GET failed so it starts empty.
+    const nameInput = screen.getByPlaceholderText(/Your company name/i);
+    await user.type(nameInput, 'Recovered Co');
+
+    await user.click(screen.getByTestId('account-settings-save'));
+
+    // The update must be called with the tenantId as the account id, proving the
+    // fallback round-trips even though currentSettings was never loaded.
+    await waitFor(() => expect(accountSettingsApi.update).toHaveBeenCalledTimes(1));
+    const payload = vi.mocked(accountSettingsApi.update).mock.calls[0][0];
+    expect(payload).toMatchObject({ id: 'tenant-123', name: 'Recovered Co' });
+  });
+});
