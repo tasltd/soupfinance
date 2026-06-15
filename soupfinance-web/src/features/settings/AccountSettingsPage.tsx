@@ -108,7 +108,15 @@ export default function AccountSettingsPage() {
       return accountSettingsApi.get();
     },
     enabled: canLoadSettings,
-    retry: 2,
+    // Fix (SOUPFIN-18): Do NOT retry definite server/client error responses
+    // (4xx/5xx). A 500 from the profile API won't recover on immediate retry —
+    // retrying only prolongs the "Loading account settings..." state the user
+    // reported as a hang. Retry transient network errors (no response) up to twice.
+    retry: (failureCount, err) => {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status && status >= 400) return false;
+      return failureCount < 2;
+    },
     retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 5000),
   });
 
@@ -244,7 +252,10 @@ export default function AccountSettingsPage() {
         logo?: string;
         favicon?: string;
       } = {
-        id: currentSettings?.id,
+        // Fix (SOUPFIN-18): Fall back to tenantId (= account id) when the settings
+        // GET failed, so the user can still save edits when the profile API returned
+        // a 500 on load. account.id === tenant_id, so either source is the same id.
+        id: currentSettings?.id ?? tenantId,
         name: data.name,
         currency: data.currency,
         countryOfOrigin: data.countryOfOrigin,
@@ -294,31 +305,17 @@ export default function AccountSettingsPage() {
     );
   }
 
-  if (error) {
-    // Changed: Show actual error details and suggest common fixes
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return (
-      <div className="p-8 sm:p-12 text-center bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark">
-        <span className="material-symbols-outlined text-6xl text-danger/50 mb-4 block">error</span>
-        <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">
-          Failed to load account settings
-        </h3>
-        <p className="text-subtle-text mb-2">There was an error loading your account settings.</p>
-        <p className="text-subtle-text text-xs mb-4 max-w-md mx-auto">
-          {errorMessage === 'No account settings found'
-            ? 'Your account may not be fully set up yet. Please contact support if this persists.'
-            : 'Please check your connection and try again.'}
-        </p>
-        <button
-          onClick={() => queryClient.invalidateQueries({ queryKey: ['accountSettings'] })}
-          className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm"
-        >
-          <span className="material-symbols-outlined text-lg">refresh</span>
-          Retry
-        </button>
-      </div>
-    );
-  }
+  // Fix (SOUPFIN-18): The settings GET failing (e.g. the profile API returns a
+  // 500) must NOT block the entire page. Previously this returned a full-screen
+  // error and the form never rendered — the exact "stuck, no form content"
+  // symptom reported on production. Instead we render the editable form with a
+  // non-blocking warning banner so the user can still update and re-save their
+  // settings (the save path falls back to tenantId for the account id).
+  const loadError = error
+    ? error instanceof Error
+      ? error.message
+      : 'Unknown error'
+    : null;
 
   return (
     <div className="flex flex-col gap-6 max-w-3xl">
@@ -329,6 +326,36 @@ export default function AccountSettingsPage() {
         </h2>
         <p className="text-subtle-text text-sm">Configure your company profile and preferences</p>
       </div>
+
+      {/* Non-blocking load-error banner (SOUPFIN-18) */}
+      {loadError && (
+        <div
+          className="flex items-start gap-3 p-4 rounded-lg bg-warning/10 border border-warning/30"
+          data-testid="account-settings-load-error"
+          role="alert"
+        >
+          <span className="material-symbols-outlined text-xl text-warning">warning</span>
+          <div className="flex-1">
+            <p className="font-medium text-text-light dark:text-text-dark">
+              Couldn't load your saved settings
+            </p>
+            <p className="text-subtle-text text-sm">
+              {loadError === 'No account settings found'
+                ? 'Your account may not be fully set up yet. You can still enter and save your details below.'
+                : 'We hit an error fetching your current settings. You can still edit and save the form below, or retry the load.'}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => queryClient.invalidateQueries({ queryKey: ['accountSettings'] })}
+            className="inline-flex items-center gap-2 h-9 px-3 rounded-lg bg-primary text-white font-bold text-sm shrink-0"
+            data-testid="account-settings-load-error-retry"
+          >
+            <span className="material-symbols-outlined text-lg">refresh</span>
+            Retry
+          </button>
+        </div>
+      )}
 
       {/* Form */}
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6">
