@@ -164,7 +164,10 @@ async function mockClientApis(
   });
   await page.route('**/rest/client/index.json*', (route) => {
     const url = new URL(route.request().url());
-    const search = (url.searchParams.get('search') || '').toLowerCase();
+    // SOUP-1836: the SPA now sends the quick-search term as `q` (the param the
+    // backend honours for KYC subtype name matching). Read `q` first, falling
+    // back to the legacy `search` param so this mock mirrors the real backend.
+    const search = (url.searchParams.get('q') || url.searchParams.get('search') || '').toLowerCase();
     const clientType = url.searchParams.get('clientType');
     let filtered = [...clients];
     if (search) {
