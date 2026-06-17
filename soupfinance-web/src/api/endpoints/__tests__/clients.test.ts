@@ -253,6 +253,56 @@ describe('clients API', () => {
     });
   });
 
+  describe('listClients quick-search param (SOUP-1836)', () => {
+    it('sends the search term as `q`, not `search`', async () => {
+      // The backend ClientService.searchList only matches KYC subtype name fields
+      // (firstName/lastName/companyName) when it receives `q`. A plain `search`
+      // param only hits the base serialised match, so a name query like "alice"
+      // returned no results. The endpoint must forward the term as `q`.
+      mockGet.mockResolvedValueOnce({ data: [] });
+
+      vi.resetModules();
+      const { listClients } = await import('../clients');
+
+      await listClients({ search: 'alice', clientType: 'CORPORATE' });
+
+      expect(mockGet).toHaveBeenCalledTimes(1);
+      const url = mockGet.mock.calls[0][0] as string;
+      expect(url).toContain('q=alice');
+      expect(url).not.toContain('search=');
+      // The type filter must still be forwarded for server-side filtering.
+      expect(url).toContain('clientType=CORPORATE');
+    });
+
+    it('forwards an explicit `q` param unchanged', async () => {
+      mockGet.mockResolvedValueOnce({ data: [] });
+
+      vi.resetModules();
+      const { listClients } = await import('../clients');
+
+      await listClients({ q: 'beta corp' });
+
+      const url = mockGet.mock.calls[0][0] as string;
+      // URLSearchParams encodes the space as '+'.
+      expect(url).toContain('q=beta+corp');
+      expect(url).not.toContain('search=');
+    });
+
+    it('omits the search param entirely when no term is supplied', async () => {
+      mockGet.mockResolvedValueOnce({ data: [] });
+
+      vi.resetModules();
+      const { listClients } = await import('../clients');
+
+      await listClients({ max: 50, sort: 'name', order: 'asc' });
+
+      const url = mockGet.mock.calls[0][0] as string;
+      expect(url).not.toContain('q=');
+      expect(url).not.toContain('search=');
+      expect(url).toContain('max=50');
+    });
+  });
+
   describe('createAccountServicesForClient', () => {
     it('POSTs to /accountServices/save.json with forClient and CSRF on the URL', async () => {
       // Arrange

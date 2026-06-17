@@ -68,8 +68,26 @@ export async function createAccountServicesForClient(clientId: string): Promise<
  * Returns Client entities with name, email, phone, address, clientType.
  * Each Client is linked to AccountServices for invoice FK reference.
  */
-export async function listClients(params?: ListParams & { search?: string; clientType?: string }): Promise<Client[]> {
-  const query = params ? `?${toQueryString(params)}` : '';
+export async function listClients(
+  params?: ListParams & { search?: string; q?: string; clientType?: string }
+): Promise<Client[]> {
+  // Fix (SOUP-1836): The clients quick-search must use the `q` parameter, NOT
+  // `search`. The backend ClientService.searchList (SOUP-1818) only matches the
+  // KYC subtype name fields (Individual firstName/lastName, Corporate/ITF name)
+  // when it receives `q` — it mirrors `q` onto both the subtype-name match AND
+  // the base `serialised` match. The plain `search` param only hits the base
+  // Client.serialised/id path, so a first-name query like "alice" returned
+  // "No clients match your filters" even though the client exists. Map any
+  // caller-supplied `search` onto `q` so both paths run.
+  const normalized: Record<string, unknown> | undefined = params
+    ? { ...params }
+    : undefined;
+  if (normalized) {
+    const term = normalized.q ?? normalized.search;
+    if (term) normalized.q = term;
+    delete normalized.search;
+  }
+  const query = normalized ? `?${toQueryString(normalized)}` : '';
   const response = await apiClient.get<Client[]>(`${BASE_URL}/index.json${query}`);
   return response.data;
 }

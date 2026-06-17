@@ -115,12 +115,26 @@ export function ClientFormPage() {
       //   3. fall back to whatever the backend reported (default CORPORATE)
       const hasIndividualFields = Boolean(client.firstName?.trim() || client.lastName?.trim());
       const hasCorporateFields = Boolean(client.companyName?.trim());
-      let resolvedType: ClientType = client.clientType || 'CORPORATE';
-      if (hasIndividualFields && !hasCorporateFields) {
-        resolvedType = 'INDIVIDUAL';
-      } else if (hasCorporateFields && !hasIndividualFields) {
-        resolvedType = 'CORPORATE';
-      }
+      // Fix (SOUP-1836): The form only supports INDIVIDUAL and CORPORATE, but the
+      // backend can return ITF or "UNKNOWN" client types (and Corporate records
+      // sometimes carry the company name only in the generic `name` field, not
+      // `companyName`). Resolve every non-individual record to the CORPORATE
+      // branch so a name field is ALWAYS shown and editable — previously an
+      // ITF/UNKNOWN client rendered neither the Personal nor Company section,
+      // leaving its name field missing entirely.
+      const resolvedType: ClientType =
+        hasIndividualFields && !hasCorporateFields
+          ? 'INDIVIDUAL'
+          : client.clientType === 'INDIVIDUAL' && !hasCorporateFields
+            ? 'INDIVIDUAL'
+            : 'CORPORATE';
+
+      // Back-fill the Company Name from the generic `name` field for any
+      // corporate-resolved record whose `companyName` came back empty (Corporate,
+      // ITF and UNKNOWN all surface their display name as `name`).
+      const resolvedCompanyName =
+        client.companyName?.trim() ||
+        (resolvedType === 'CORPORATE' ? client.name?.trim() || '' : '');
 
       reset({
         clientType: resolvedType,
@@ -129,7 +143,7 @@ export function ClientFormPage() {
         address: client.address || '',
         firstName: client.firstName || '',
         lastName: client.lastName || '',
-        companyName: client.companyName || '',
+        companyName: resolvedCompanyName,
         contactPerson: client.contactPerson || '',
         registrationNumber: client.registrationNumber || '',
         taxNumber: client.taxNumber || '',

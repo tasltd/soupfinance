@@ -151,3 +151,54 @@ describe('ClientFormPage (SOUPFIN-14 fixes)', () => {
     expect(lastNameInput.value).toBe('Smith');
   });
 });
+
+describe('ClientFormPage (SOUP-1836 corporate/unknown name mapping)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('back-fills Company Name from the generic `name` field when companyName is empty', async () => {
+    // The backend /client/show response for a corporate record can surface the
+    // company name only in the generic `name` field (companyName empty). The form
+    // must still populate the Company Name input so it does not render blank.
+    vi.mocked(getClient).mockResolvedValue(
+      createMockClient({
+        clientType: 'CORPORATE',
+        name: 'Globex Industries',
+        firstName: '',
+        lastName: '',
+        companyName: '',
+      })
+    );
+    renderEditPage('client-abc');
+
+    await waitFor(() =>
+      expect(screen.getByTestId('client-form-company-name')).toBeInTheDocument()
+    );
+    const companyInput = screen.getByTestId('client-form-company-name') as HTMLInputElement;
+    expect(companyInput.value).toBe('Globex Industries');
+  });
+
+  it('renders an editable name field for an "UNKNOWN" client type (only `name` returned)', async () => {
+    // ITF / UNKNOWN client types return only `name` — neither firstName/lastName
+    // nor companyName. Previously the form rendered neither the Personal nor the
+    // Company section, leaving the client name completely uneditable. The fix
+    // resolves these to the CORPORATE branch so a name field is always shown.
+    vi.mocked(getClient).mockResolvedValue(
+      createMockClient({
+        clientType: 'UNKNOWN' as never,
+        name: 'Estate of John Doe',
+        firstName: '',
+        lastName: '',
+        companyName: '',
+      })
+    );
+    renderEditPage('client-abc');
+
+    await waitFor(() =>
+      expect(screen.getByTestId('client-form-company-name')).toBeInTheDocument()
+    );
+    const nameInput = screen.getByTestId('client-form-company-name') as HTMLInputElement;
+    expect(nameInput.value).toBe('Estate of John Doe');
+  });
+});

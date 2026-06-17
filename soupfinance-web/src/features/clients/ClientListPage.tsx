@@ -45,7 +45,11 @@ export function ClientListPage() {
       max: 50,
       sort: 'name',
       order: 'asc',
-      search: searchTerm || undefined,
+      // Fix (SOUP-1836): send the search term as `q` (the universal quick-search
+      // param the backend honours). `q` triggers the KYC subtype name match
+      // (firstName/lastName/companyName) — `search` alone only matched serialised
+      // text, which is why a name query like "alice" returned no results.
+      q: searchTerm || undefined,
       clientType: typeFilter || undefined,
     }),
   });
