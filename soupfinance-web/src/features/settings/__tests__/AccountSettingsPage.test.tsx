@@ -13,7 +13,9 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import AccountSettingsPage, { sanitizeFiscalYearDate } from '../AccountSettingsPage';
+import AccountSettingsPage from '../AccountSettingsPage';
+// SOUPFIN-19: fiscal-year sanitisation now lives in the shared date util.
+import { sanitizeDateInputValue as sanitizeFiscalYearDate } from '../../../utils/date';
 import { useAuthStore } from '../../../stores/authStore';
 
 vi.mock('../../../api/endpoints/settings', () => ({
