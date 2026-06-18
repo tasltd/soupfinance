@@ -15,6 +15,8 @@ import type { Currency as DomainCurrency, Country as DomainCountry } from '../..
 import { logger } from '../../utils/logger';
 // Fix (SOUPFIN-10): Gate query on auth + tenantId readiness
 import { useAuthStore } from '../../stores/authStore';
+// SOUPFIN-19: shared date-input sanitiser (single source of truth)
+import { sanitizeDateInputValue } from '../../utils/date';
 
 // Form validation schema
 // Changed: Added startOfFiscalYear for fiscal year configuration
@@ -60,24 +62,6 @@ const BUSINESS_CATEGORIES: { value: BusinessLicenceCategory; label: string }[] =
 ];
 
 // Removed: Hardcoded CURRENCIES list - now loaded from shared domainData source
-
-// Fix (SOUPFIN-14): Normalize startOfFiscalYear into ISO YYYY-MM-DD format the
-// HTML5 <input type="date"> understands. The backend can return:
-//   - undefined / null      → fall back to '' (empty input)
-//   - "0000-00-00"          → MariaDB null sentinel; treat as empty so the
-//                             picker doesn't render the "0/0/0" placeholder
-//   - "2024-01-01T00:00:00" → ISO datetime; strip the time portion
-//   - "2024-01-01"          → already valid; pass through
-// Exported for unit tests.
-export function sanitizeFiscalYearDate(value?: string | null): string {
-  if (!value) return '';
-  const trimmed = String(value).trim();
-  if (!trimmed || trimmed.startsWith('0000-') || trimmed === '0/0/0') return '';
-  // Strip time portion if present (e.g. "2024-01-01T00:00:00.000Z")
-  const datePart = trimmed.split('T')[0];
-  // Validate YYYY-MM-DD shape — anything else is unsafe to pass to type=date
-  return /^\d{4}-\d{2}-\d{2}$/.test(datePart) ? datePart : '';
-}
 
 export default function AccountSettingsPage() {
   const queryClient = useQueryClient();
@@ -236,10 +220,10 @@ export default function AccountSettingsPage() {
         emailSubjectPrefix: currentSettings.emailSubjectPrefix || '',
         smsIdPrefix: currentSettings.smsIdPrefix || '',
         slogan: currentSettings.slogan || '',
-        // Fix (SOUPFIN-14): Sanitize so a backend "0000-00-00" / null doesn't
-        // render the picker as "0/0/0" — the date input expects YYYY-MM-DD
+        // Fix (SOUPFIN-14 / SOUPFIN-19): Sanitize so a backend "0000-00-00" / null
+        // doesn't render the picker as "0/0/0" — the date input expects YYYY-MM-DD
         // and silently falls back to that placeholder for invalid input.
-        startOfFiscalYear: sanitizeFiscalYearDate(currentSettings.startOfFiscalYear),
+        startOfFiscalYear: sanitizeDateInputValue(currentSettings.startOfFiscalYear),
       });
     }
   }, [currentSettings, reset]);

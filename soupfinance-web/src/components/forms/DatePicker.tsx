@@ -4,6 +4,9 @@
  * Reference: soupfinance-designs/new-invoice-form/, design-system.md Form Inputs section
  */
 import { forwardRef, type InputHTMLAttributes } from 'react';
+// SOUPFIN-19: Guard every date picker against rendering a "0/0/0" placeholder
+// when fed a null / invalid / sentinel value.
+import { sanitizeDateInputValue } from '../../utils/date';
 
 // Added: Props interface for DatePicker component
 export interface DatePickerProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type' | 'className'> {
@@ -23,7 +26,14 @@ export interface DatePickerProps extends Omit<InputHTMLAttributes<HTMLInputEleme
  * Supports: labels, error states, min/max dates, dark mode
  */
 export const DatePicker = forwardRef<HTMLInputElement, DatePickerProps>(
-  ({ label, error, helperText, containerClassName = '', disabled, required, ...props }, ref) => {
+  ({ label, error, helperText, containerClassName = '', disabled, required, value, ...props }, ref) => {
+    // SOUPFIN-19: When the picker is used as a controlled input, sanitize the
+    // incoming value so a null/invalid/"0000-00-00" date never reaches the
+    // native input as "0/0/0". Uncontrolled usage (react-hook-form `register`,
+    // which sets the value via ref) passes `value === undefined` and is left
+    // untouched so the form library keeps full control.
+    const safeValue = value === undefined ? undefined : sanitizeDateInputValue(value as string | number | null);
+
     // Added: Compute border color based on error state
     const borderClass = error
       ? 'border-danger focus:border-danger focus:ring-danger/20'
@@ -50,6 +60,7 @@ export const DatePicker = forwardRef<HTMLInputElement, DatePickerProps>(
           type="date"
           disabled={disabled}
           required={required}
+          {...(safeValue === undefined ? {} : { value: safeValue })}
           className={`
             h-12 px-4 rounded-lg border
             ${borderClass}
