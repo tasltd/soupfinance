@@ -24,6 +24,10 @@ import { useQueryClient } from '@tanstack/react-query';
 // Added (SOUPFIN-9): parse 403/network errors into user-friendly messages
 import { parseApiError, getApiErrorMessage } from '../../api/errors';
 import { ApiErrorState, useToast } from '../../components/feedback';
+// SOUPFIN-20: route the raw date filter inputs through the same sanitiser the
+// shared DatePicker uses (SOUPFIN-19) so a null/sentinel/malformed value never
+// renders as the confusing "0/0/0" placeholder the user reported.
+import { sanitizeDateInputValue } from '../../utils/date';
 
 // =============================================================================
 // Added: Type definitions for filtering
@@ -542,7 +546,7 @@ export function TransactionRegisterPage() {
               <label className="text-sm font-medium text-text-light dark:text-subtle-text-dark">From:</label>
               <input
                 type="date"
-                value={filters.startDate}
+                value={sanitizeDateInputValue(filters.startDate)}
                 onChange={(e) => handleFilterChange('startDate', e.target.value)}
                 className="form-input h-9 px-3 rounded-lg border border-border-light dark:border-border-dark bg-transparent dark:bg-surface-dark text-sm dark:text-text-dark"
                 data-testid="filter-start-date"
@@ -552,7 +556,7 @@ export function TransactionRegisterPage() {
               <label className="text-sm font-medium text-text-light dark:text-subtle-text-dark">To:</label>
               <input
                 type="date"
-                value={filters.endDate}
+                value={sanitizeDateInputValue(filters.endDate)}
                 onChange={(e) => handleFilterChange('endDate', e.target.value)}
                 className="form-input h-9 px-3 rounded-lg border border-border-light dark:border-border-dark bg-transparent dark:bg-surface-dark text-sm dark:text-text-dark"
                 data-testid="filter-end-date"
@@ -977,7 +981,7 @@ export function TransactionRegisterPage() {
                 <input
                   type="date"
                   id="panel-date-range-start"
-                  value={filters.startDate}
+                  value={sanitizeDateInputValue(filters.startDate)}
                   onChange={(e) => handleFilterChange('startDate', e.target.value)}
                   className="block w-full rounded-md border-border-light dark:border-border-dark shadow-sm focus:border-primary focus:ring-primary sm:text-sm bg-transparent dark:text-text-dark dark:bg-surface-dark"
                   data-testid="panel-filter-start-date"
@@ -985,7 +989,7 @@ export function TransactionRegisterPage() {
                 <input
                   type="date"
                   id="panel-date-range-end"
-                  value={filters.endDate}
+                  value={sanitizeDateInputValue(filters.endDate)}
                   onChange={(e) => handleFilterChange('endDate', e.target.value)}
                   className="block w-full rounded-md border-border-light dark:border-border-dark shadow-sm focus:border-primary focus:ring-primary sm:text-sm bg-transparent dark:text-text-dark dark:bg-surface-dark"
                   data-testid="panel-filter-end-date"
