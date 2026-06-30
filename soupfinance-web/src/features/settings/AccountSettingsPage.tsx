@@ -301,6 +301,15 @@ export default function AccountSettingsPage() {
       : 'Unknown error'
     : null;
 
+  // Fix (SOUPFIN-21): Distinguish a genuinely-empty account (new tenant, 404 — safe
+  // to edit a fresh form) from a real load failure (5xx / network error) where the
+  // account's settings DO exist on the server but couldn't be fetched. In the latter
+  // case the previous behaviour (SOUPFIN-18) left the empty/default form editable,
+  // so a user could unknowingly Save it and overwrite their real saved settings with
+  // blanks. We now LOCK the form until a successful Retry loads the actual values.
+  const loadErrorStatus = (error as { response?: { status?: number } })?.response?.status;
+  const settingsLoadFailed = Boolean(error) && loadErrorStatus !== 404;
+
   return (
     <div className="flex flex-col gap-6 max-w-3xl">
       {/* Page Header */}
@@ -324,9 +333,9 @@ export default function AccountSettingsPage() {
               Couldn't load your saved settings
             </p>
             <p className="text-subtle-text text-sm">
-              {loadError === 'No account settings found'
-                ? 'Your account may not be fully set up yet. You can still enter and save your details below.'
-                : 'We hit an error fetching your current settings. You can still edit and save the form below, or retry the load.'}
+              {settingsLoadFailed
+                ? 'We couldn’t fetch your current settings. The form is locked to avoid overwriting your saved values with a blank one — please retry to load them.'
+                : 'Your account may not be fully set up yet. You can still enter and save your details below.'}
             </p>
           </div>
           <button
@@ -343,6 +352,17 @@ export default function AccountSettingsPage() {
 
       {/* Form */}
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6">
+        {/* Fix (SOUPFIN-21): A native disabled <fieldset> locks every field AND the
+            Save/Reset buttons when the settings failed to load (server/network error),
+            preventing the user from overwriting their real saved settings with a blank
+            form. `display: contents` keeps the existing layout intact. The Retry button
+            lives in the banner outside this fieldset, so it stays clickable. */}
+        <fieldset
+          disabled={settingsLoadFailed}
+          className="contents"
+          data-testid="account-settings-fieldset"
+          aria-disabled={settingsLoadFailed}
+        >
         {/* Company Information */}
         <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-6">
           <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-4">
@@ -720,6 +740,7 @@ export default function AccountSettingsPage() {
             </p>
           </div>
         )}
+        </fieldset>
       </form>
     </div>
   );
