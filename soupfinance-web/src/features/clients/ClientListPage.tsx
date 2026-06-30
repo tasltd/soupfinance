@@ -12,6 +12,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { listClients, deleteClient } from '../../api';
 // Changed: Renamed from InvoiceClient/InvoiceClientType to Client/ClientType (matches backend domain)
 import type { Client, ClientType } from '../../api/endpoints/clients';
+// Fix (SOUP-1929): shared never-blank display-name resolver — used for both the
+// table NAME column AND the delete dialog so the dialog never shows a blank name.
+import { getClientDisplayName } from './getClientDisplayName';
 
 // Delete confirmation state interface
 interface DeleteState {
@@ -59,6 +62,12 @@ export function ClientListPage() {
   const hasActiveFilters = Boolean(searchTerm.trim()) || Boolean(typeFilter);
 
   // Delete mutation
+  // Fix (SOUP-1929): the soft-delete (archive) always proceeds via a direct
+  // DELETE /rest/client/delete/{id}.json — the backend (SOUP-1928,
+  // ClientService.doDelete) flips archived+deleted and excludes the client from
+  // searchList even when invoices/account-services reference it, so there is NO
+  // relatedList pre-check to gate on. On failure we keep the modal open and
+  // surface the error instead of silently stalling ("Deleting…" → nothing).
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteClient(id),
     onSuccess: () => {
@@ -69,6 +78,7 @@ export function ClientListPage() {
 
   // Open delete confirmation
   const handleDeleteClick = (clientId: string, clientName: string) => {
+    deleteMutation.reset(); // clear any prior error so a re-open starts clean
     setDeleteState({ isOpen: true, clientId, clientName });
   };
 
@@ -81,6 +91,7 @@ export function ClientListPage() {
 
   // Close delete modal
   const handleCancelDelete = () => {
+    deleteMutation.reset();
     setDeleteState({ isOpen: false, clientId: null, clientName: null });
   };
 
@@ -92,17 +103,10 @@ export function ClientListPage() {
     return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400';
   };
 
-  // Fix (SOUPFIN-14): The backend response for /rest/client/index.json sometimes
-  // omits the computed `name` field. Fall back to firstName+lastName for
-  // individuals, then companyName for corporates, then a deterministic placeholder
-  // so the NAME column never renders blank.
-  const getDisplayName = (client: Client): string => {
-    if (client.name?.trim()) return client.name.trim();
-    const fullName = `${client.firstName ?? ''} ${client.lastName ?? ''}`.trim();
-    if (fullName) return fullName;
-    if (client.companyName?.trim()) return client.companyName.trim();
-    return client.email?.trim() || 'Unnamed client';
-  };
+  // Fix (SOUPFIN-14 / SOUP-1929): name fallback now lives in the shared
+  // getClientDisplayName helper so the table column AND the delete dialog use the
+  // exact same never-blank resolution.
+  const getDisplayName = getClientDisplayName;
 
   return (
     <div className="flex flex-col gap-6" data-testid="client-list-page">
@@ -282,7 +286,7 @@ export function ClientListPage() {
                           <span className="material-symbols-outlined text-lg">edit</span>
                         </Link>
                         <button
-                          onClick={() => handleDeleteClick(client.id, client.name)}
+                          onClick={() => handleDeleteClick(client.id, getDisplayName(client))}
                           className="p-1.5 rounded hover:bg-danger/10 text-subtle-text hover:text-danger transition-colors"
                           title="Delete"
                           data-testid={`client-delete-${client.id}`}
@@ -381,6 +385,16 @@ export function ClientListPage() {
                     This action cannot be undone. Invoices associated with this client will remain
                     but the client reference will be removed.
                   </p>
+                  {/* Fix (SOUP-1929): surface delete failures instead of stalling silently. */}
+                  {deleteMutation.isError && (
+                    <p
+                      className="mt-3 text-sm text-danger"
+                      role="alert"
+                      data-testid="client-delete-error"
+                    >
+                      Could not delete this client. Please try again.
+                    </p>
+                  )}
                 </div>
               </div>
             </div>

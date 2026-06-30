@@ -19,7 +19,7 @@ vi.mock('../../../api', () => ({
   deleteClient: vi.fn(),
 }));
 
-import { listClients } from '../../../api';
+import { listClients, deleteClient } from '../../../api';
 
 function createMockClient(overrides: Partial<Client> = {}): Client {
   return {
@@ -116,6 +116,64 @@ describe('ClientListPage (SOUPFIN-14 name fallback)', () => {
     ]);
     renderPage();
     await waitFor(() => expect(screen.getByTestId('client-link-c5')).toHaveTextContent('Unnamed client'));
+  });
+});
+
+describe('ClientListPage delete flow (SOUP-1929)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('shows the resolved display name (not a blank) in the confirm dialog when `name` is omitted', async () => {
+    // Reproduces SOUP-1929 bug #1: the dialog used to bind the raw `client.name`
+    // (blank from /rest/client/index.json) so it read "Are you sure you want to
+    // delete ?". It must now use the same fallback as the table column.
+    const user = userEvent.setup();
+    vi.mocked(listClients).mockResolvedValue([
+      createMockClient({ id: 'c1', name: '', firstName: 'Alice', lastName: 'Smith' }),
+    ]);
+    renderPage();
+
+    await user.click(await screen.findByTestId('client-delete-c1'));
+
+    const modal = await screen.findByTestId('delete-confirmation-modal');
+    expect(modal).toHaveTextContent('Are you sure you want to delete Alice Smith?');
+    expect(modal).not.toHaveTextContent(/delete\s*\?/);
+  });
+
+  it('proceeds with the soft-delete (calls deleteClient) and closes the modal on success', async () => {
+    // Bug #2: the soft-delete must always proceed — there is no relatedList gate.
+    const user = userEvent.setup();
+    vi.mocked(listClients).mockResolvedValue([
+      createMockClient({ id: 'c1', name: 'Alice Smith' }),
+    ]);
+    vi.mocked(deleteClient).mockResolvedValue(undefined);
+    renderPage();
+
+    await user.click(await screen.findByTestId('client-delete-c1'));
+    await user.click(await screen.findByTestId('delete-confirm-button'));
+
+    await waitFor(() => expect(deleteClient).toHaveBeenCalledWith('c1'));
+    // Modal closes only after the DELETE resolves — full round-trip verified.
+    await waitFor(() =>
+      expect(screen.queryByTestId('delete-confirmation-modal')).not.toBeInTheDocument(),
+    );
+  });
+
+  it('keeps the modal open and shows an error message when the delete fails', async () => {
+    const user = userEvent.setup();
+    vi.mocked(listClients).mockResolvedValue([
+      createMockClient({ id: 'c1', name: 'Alice Smith' }),
+    ]);
+    vi.mocked(deleteClient).mockRejectedValue(new Error('500'));
+    renderPage();
+
+    await user.click(await screen.findByTestId('client-delete-c1'));
+    await user.click(await screen.findByTestId('delete-confirm-button'));
+
+    expect(await screen.findByTestId('client-delete-error')).toBeInTheDocument();
+    // Modal stays open so the user can retry rather than silently stalling.
+    expect(screen.getByTestId('delete-confirmation-modal')).toBeInTheDocument();
   });
 });
 

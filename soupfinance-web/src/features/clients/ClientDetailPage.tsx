@@ -9,6 +9,8 @@ import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getClient, deleteClient } from '../../api';
 import { useState } from 'react';
+// Fix (SOUP-1929): never-blank display name for the header + delete dialog.
+import { getClientDisplayName } from './getClientDisplayName';
 
 interface DeleteState {
   isOpen: boolean;
@@ -88,7 +90,7 @@ export function ClientDetailPage() {
           </Link>
           <div className="flex items-center gap-3">
             <h1 className="text-3xl font-black tracking-tight text-text-light dark:text-text-dark">
-              {client.name}
+              {getClientDisplayName(client)}
             </h1>
             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getTypeBadge()}`}>
               {client.clientType === 'INDIVIDUAL' ? (
@@ -108,7 +110,10 @@ export function ClientDetailPage() {
         </div>
         <div className="flex gap-3">
           <button
-            onClick={() => setDeleteState({ isOpen: true })}
+            onClick={() => {
+              deleteMutation.reset(); // clear any prior error on re-open
+              setDeleteState({ isOpen: true });
+            }}
             className="h-10 px-4 rounded-lg border border-danger text-danger font-medium text-sm hover:bg-danger/10"
             data-testid="client-detail-delete"
           >
@@ -251,7 +256,10 @@ export function ClientDetailPage() {
             <div className="flex items-center justify-between border-b border-border-light dark:border-border-dark p-6">
               <p className="text-xl font-bold text-text-light dark:text-text-dark">Delete Client</p>
               <button
-                onClick={() => setDeleteState({ isOpen: false })}
+                onClick={() => {
+                  deleteMutation.reset();
+                  setDeleteState({ isOpen: false });
+                }}
                 className="flex size-8 items-center justify-center rounded-full hover:bg-black/10 dark:hover:bg-white/10"
               >
                 <span className="material-symbols-outlined text-2xl text-subtle-text">close</span>
@@ -267,12 +275,22 @@ export function ClientDetailPage() {
                 <div>
                   <p className="text-text-light dark:text-text-dark">
                     Are you sure you want to delete{' '}
-                    <span className="font-semibold">{client.name}</span>?
+                    <span className="font-semibold">{getClientDisplayName(client)}</span>?
                   </p>
                   <p className="text-subtle-text mt-2 text-sm">
                     This action cannot be undone. Invoices associated with this client will remain
                     but the client reference will be removed.
                   </p>
+                  {/* Fix (SOUP-1929): surface delete failures instead of stalling silently. */}
+                  {deleteMutation.isError && (
+                    <p
+                      className="mt-3 text-sm text-danger"
+                      role="alert"
+                      data-testid="client-delete-error"
+                    >
+                      Could not delete this client. Please try again.
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -280,7 +298,10 @@ export function ClientDetailPage() {
             {/* Modal Footer */}
             <div className="flex justify-end gap-3 border-t border-border-light dark:border-border-dark p-6">
               <button
-                onClick={() => setDeleteState({ isOpen: false })}
+                onClick={() => {
+                  deleteMutation.reset();
+                  setDeleteState({ isOpen: false });
+                }}
                 className="h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm hover:bg-primary/5"
                 data-testid="delete-cancel-button"
               >
