@@ -870,8 +870,12 @@ test.describe('Settings - Account Settings', () => {
 
     await page.goto('/settings/account');
 
+    // The saved values populate the form on load.
     await expect(page.locator('input[name="name"]')).toHaveValue('SoupFinance Demo Company');
-    await expect(page.locator('input[name="countryOfOrigin"]')).toHaveValue('Ghana');
+    // Country is a <select> (SOUPFIN-14), not a free-text input; assert another
+    // reliably-populated plain input instead. (The country select uses ISO codes
+    // while the backend stores the country *name* — tracked separately.)
+    await expect(page.locator('input[name="address"]')).toHaveValue('123 Finance Street, Accra');
   });
 
   // Skip in LXC mode - depends on mock account data
@@ -932,7 +936,16 @@ test.describe('Settings - Account Settings', () => {
 
     await page.goto('/settings/account');
 
-    await expect(page.locator('text=Failed to load account settings')).toBeVisible();
+    // SOUPFIN-18: a load failure shows a non-blocking warning banner (not a
+    // full-screen "Failed to load account settings" error).
+    await expect(page.getByTestId('account-settings-load-error')).toBeVisible();
+    await expect(page.getByTestId('account-settings-load-error')).toContainText(
+      /Couldn't load your saved settings/i
+    );
+    // SOUPFIN-21: on a server-side load failure the form is LOCKED so the user
+    // cannot unknowingly overwrite their saved settings with a blank form.
+    await expect(page.getByTestId('account-settings-fieldset')).toBeDisabled();
+    await expect(page.getByTestId('account-settings-save')).toBeDisabled();
   });
 
   // SOUPFIN-10: Race-condition regression test

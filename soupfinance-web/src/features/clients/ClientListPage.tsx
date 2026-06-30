@@ -282,7 +282,10 @@ export function ClientListPage() {
                           <span className="material-symbols-outlined text-lg">edit</span>
                         </Link>
                         <button
-                          onClick={() => handleDeleteClick(client.id, client.name)}
+                          // Fix (SOUPFIN-21): Pass the resolved display name (not the raw
+                          // `name` field, which is null for corporate clients) so the delete
+                          // confirmation never renders "delete ?" with a blank identifier.
+                          onClick={() => handleDeleteClick(client.id, getDisplayName(client))}
                           className="p-1.5 rounded hover:bg-danger/10 text-subtle-text hover:text-danger transition-colors"
                           title="Delete"
                           data-testid={`client-delete-${client.id}`}

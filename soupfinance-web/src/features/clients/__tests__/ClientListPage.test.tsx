@@ -119,6 +119,59 @@ describe('ClientListPage (SOUPFIN-14 name fallback)', () => {
   });
 });
 
+describe('ClientListPage delete confirmation (SOUPFIN-21)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('shows the resolved company name (not a blank) when deleting a corporate client with null name', async () => {
+    const user = userEvent.setup();
+    // Reproduces SOUPFIN-21 bug #1: a corporate client whose `name` is null
+    // previously rendered "Are you sure you want to delete ?" — the identifier
+    // was blank. The delete button must pass the resolved display name.
+    vi.mocked(listClients).mockResolvedValue([
+      createMockClient({
+        id: 'c9',
+        name: '',
+        firstName: '',
+        lastName: '',
+        companyName: 'Globex Industries',
+        clientType: 'CORPORATE',
+      }),
+    ]);
+    renderPage();
+
+    await waitFor(() => expect(screen.getByTestId('client-delete-c9')).toBeInTheDocument());
+    await user.click(screen.getByTestId('client-delete-c9'));
+
+    const modal = await screen.findByTestId('delete-confirmation-modal');
+    // The company name must appear in the confirmation text.
+    expect(modal).toHaveTextContent('Globex Industries');
+    // And the dangling "delete ?" must NOT appear (blank identifier regression).
+    expect(modal).toHaveTextContent(/delete\s+Globex Industries\s*\?/i);
+  });
+
+  it('uses firstName + lastName in the confirmation for an individual with null name', async () => {
+    const user = userEvent.setup();
+    vi.mocked(listClients).mockResolvedValue([
+      createMockClient({
+        id: 'c10',
+        name: '',
+        firstName: 'Jane',
+        lastName: 'Doe',
+        clientType: 'INDIVIDUAL',
+      }),
+    ]);
+    renderPage();
+
+    await waitFor(() => expect(screen.getByTestId('client-delete-c10')).toBeInTheDocument());
+    await user.click(screen.getByTestId('client-delete-c10'));
+
+    const modal = await screen.findByTestId('delete-confirmation-modal');
+    expect(modal).toHaveTextContent('Jane Doe');
+  });
+});
+
 describe('ClientListPage filter/search empty states (SOUPFIN-16)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
