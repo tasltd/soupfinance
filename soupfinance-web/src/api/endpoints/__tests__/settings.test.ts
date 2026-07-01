@@ -13,7 +13,7 @@
  *      a tenantId (e.g. backend response has no tenantId at all).
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { accountSettingsApi } from '../settings';
+import { accountSettingsApi, isValidAccountSettings } from '../settings';
 import { useAuthStore } from '../../../stores/authStore';
 import apiClient, { accountClient } from '../../client';
 
@@ -139,5 +139,80 @@ describe('accountSettingsApi.get() — SOUPFIN-10 race condition', () => {
     // Assert: settings still load; store user remains null (no spread on null)
     expect(useAuthStore.getState().user).toBeNull();
     expect(accountClient.get).toHaveBeenCalledWith('/account/show/tenant-z.json');
+  });
+});
+
+/**
+ * SOUPFIN-23: A backend session expiry makes /account/show return a 302 redirect to
+ * the TAS login page. The browser follows it and the request resolves 200 with the
+ * login HTML (a string) or a non-account object. accountSettingsApi.get() must treat
+ * that as a load failure (throw) so the page can surface the error banner and lock the
+ * form — instead of rendering a blank, editable form the user could Save over.
+ */
+describe('accountSettingsApi.get() — SOUPFIN-23 redirect-to-login detection', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    useAuthStore.setState({
+      user: {
+        username: 'demo',
+        email: 'demo@test.com',
+        roles: ['ROLE_USER'],
+        tenantId: 'tenant-123',
+      },
+      isAuthenticated: true,
+      isInitialized: true,
+      error: null,
+    });
+  });
+
+  it('throws when the response is the login page HTML (a string, not an Account)', async () => {
+    // A followed 302 to /login returns an HTML document as the body.
+    vi.mocked(accountClient.get).mockResolvedValue({
+      data: '<!DOCTYPE html><html><body>Sign in</body></html>',
+    });
+
+    await expect(accountSettingsApi.get()).rejects.toThrow(/session may have expired/i);
+  });
+
+  it('throws when the response is an object with no account id', async () => {
+    // Some proxies return an empty/marker object rather than HTML on redirect.
+    vi.mocked(accountClient.get).mockResolvedValue({ data: {} });
+
+    await expect(accountSettingsApi.get()).rejects.toThrow(/could not be loaded/i);
+  });
+
+  it('throws when the response is null', async () => {
+    vi.mocked(accountClient.get).mockResolvedValue({ data: null });
+
+    await expect(accountSettingsApi.get()).rejects.toThrow(/could not be loaded/i);
+  });
+
+  it('returns the settings unchanged for a valid Account payload', async () => {
+    const mockSettings = { id: 'tenant-123', name: 'Acme', currency: 'USD' };
+    vi.mocked(accountClient.get).mockResolvedValue({ data: mockSettings });
+
+    const result = await accountSettingsApi.get();
+    expect(result).toEqual(mockSettings);
+  });
+});
+
+/**
+ * SOUPFIN-23: direct coverage for the isValidAccountSettings type guard so the
+ * redirect-detection rule is pinned independent of the network layer.
+ */
+describe('isValidAccountSettings (SOUPFIN-23 type guard)', () => {
+  it('accepts an object with a non-empty string id', () => {
+    expect(isValidAccountSettings({ id: 'abc', name: 'X' })).toBe(true);
+  });
+
+  it('rejects HTML strings, null, arrays, and id-less / empty-id objects', () => {
+    expect(isValidAccountSettings('<html></html>')).toBe(false);
+    expect(isValidAccountSettings(null)).toBe(false);
+    expect(isValidAccountSettings(undefined)).toBe(false);
+    expect(isValidAccountSettings([])).toBe(false);
+    expect(isValidAccountSettings([{ id: 'abc' }])).toBe(false);
+    expect(isValidAccountSettings({ name: 'no-id' })).toBe(false);
+    expect(isValidAccountSettings({ id: '' })).toBe(false);
+    expect(isValidAccountSettings({ id: 123 })).toBe(false);
   });
 });
