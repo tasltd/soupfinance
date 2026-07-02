@@ -411,3 +411,90 @@ describe('AccountSettingsPage (SOUPFIN-18/21 — settings GET failure handling)'
     expect(payload).toMatchObject({ id: 'tenant-123', name: 'Recovered Co' });
   });
 });
+
+/**
+ * SOUPFIN-23: session-expiry redirect handling.
+ *
+ * When the backend session expires, /account/show returns a 302 → TAS login; the
+ * browser follows it and the request resolves 200 with non-account data, so
+ * accountSettingsApi.get() now THROWS (see settings.ts / settings.test.ts). This suite
+ * proves the component's response to that thrown error: it must show the load-error
+ * banner and LOCK the form (fieldset + Save disabled) so the blank/default fields can
+ * never be Saved over the user's real settings. The error carries no HTTP status
+ * (== not a 404), so the SOUPFIN-21 lock engages.
+ */
+describe('AccountSettingsPage (SOUPFIN-23 — session-expiry redirect locks the form)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    useAuthStore.setState({
+      user: { username: 'demo', email: 'demo@example.com', roles: [], tenantId: 'tenant-123' },
+      isAuthenticated: true,
+      isInitialized: true,
+      isLoading: false,
+      error: null,
+      login: vi.fn(),
+      logout: vi.fn(),
+      clearError: vi.fn(),
+      initialize: vi.fn(),
+    } as never);
+  });
+
+  it('locks the form and shows the banner when the settings load fails via a login redirect', async () => {
+    // This is exactly what accountSettingsApi.get() throws when /account/show is a
+    // followed 302→login (see settings.ts SOUPFIN-23 guard). No response.status, so it
+    // behaves like a network error: retried twice before surfacing.
+    vi.mocked(accountSettingsApi.get).mockRejectedValue(
+      new Error(
+        'Account settings could not be loaded — your session may have expired. Please retry or sign in again.'
+      )
+    );
+
+    renderPage();
+
+    const banner = await screen.findByTestId('account-settings-load-error', undefined, {
+      timeout: 9000,
+    });
+    expect(banner).toHaveTextContent(/Couldn't load your saved settings/i);
+    // Form is locked — the blank fields cannot be edited or Saved.
+    expect(screen.getByTestId('account-settings-fieldset')).toBeDisabled();
+    expect(screen.getByTestId('account-settings-save')).toBeDisabled();
+    expect(screen.getByPlaceholderText(/Your company name/i)).toBeDisabled();
+    // The country <select> is disabled too — no field can be overwritten while locked.
+    expect(screen.getByTestId('account-settings-country')).toBeDisabled();
+    // Retry remains available so the user can reload their real settings.
+    expect(screen.getByTestId('account-settings-load-error-retry')).not.toBeDisabled();
+  }, 12000);
+
+  it('unlocks the form once a Retry loads the real settings', async () => {
+    const user = userEvent.setup();
+    // Initial load persistently fails (a login redirect keeps redirecting), so every
+    // retry attempt rejects and the banner appears + the form locks.
+    vi.mocked(accountSettingsApi.get).mockRejectedValue(
+      new Error(
+        'Account settings could not be loaded — your session may have expired. Please retry or sign in again.'
+      )
+    );
+
+    renderPage();
+
+    await screen.findByTestId('account-settings-load-error', undefined, { timeout: 9000 });
+    expect(screen.getByTestId('account-settings-fieldset')).toBeDisabled();
+
+    // Simulate the session recovering: the next fetch returns the real settings.
+    vi.mocked(accountSettingsApi.get).mockResolvedValue({
+      id: 'tenant-123',
+      name: 'Real Company',
+      currency: 'GHS',
+    } as never);
+
+    await user.click(screen.getByTestId('account-settings-load-error-retry'));
+
+    // After a successful reload the banner is gone and the form is editable with the
+    // real, non-blank values populated.
+    await waitFor(() =>
+      expect(screen.queryByTestId('account-settings-load-error')).not.toBeInTheDocument()
+    );
+    expect(screen.getByTestId('account-settings-fieldset')).not.toBeDisabled();
+    expect(screen.getByDisplayValue('Real Company')).toBeInTheDocument();
+  }, 12000);
+});

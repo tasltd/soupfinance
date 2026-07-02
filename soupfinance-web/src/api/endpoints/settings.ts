@@ -354,6 +354,23 @@ export const banksApi = {
 // Account Settings API
 // ============================================================================
 
+/**
+ * Fix (SOUPFIN-23): Type guard that confirms a GET /account/show response is a real
+ * Account payload and not a followed 302→login redirect. A genuine Account always has
+ * a non-empty string `id` (= tenant id). The login page returns HTML (a string) or an
+ * object without an `id`, both of which must be treated as a load failure so the UI can
+ * lock the form instead of rendering an editable blank one. Exported for unit tests.
+ */
+export function isValidAccountSettings(data: unknown): data is AccountSettings {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    !Array.isArray(data) &&
+    typeof (data as AccountSettings).id === 'string' &&
+    (data as AccountSettings).id.length > 0
+  );
+}
+
 export const accountSettingsApi = {
   /**
    * Get current account settings
@@ -388,6 +405,20 @@ export const accountSettingsApi = {
     }
     // Fetch account settings using the tenant ID (= account ID)
     const response = await accountClient.get<AccountSettings>(`/account/show/${tenantId}.json`);
+
+    // Fix (SOUPFIN-23): When the backend session has expired, /account/show returns a
+    // 302 redirect to the TAS login page. The browser follows that redirect and the
+    // request resolves 200 with the login HTML (a string) or an object that is NOT an
+    // Account (no `id`). Because no error is thrown, the caller previously treated this
+    // as a successful-but-empty load: it rendered a blank, editable form and let the
+    // user unknowingly Save over their real settings — and the SOUPFIN-21 lock never
+    // engaged because it keys off a thrown error. Detect the non-account payload here
+    // and throw so the page surfaces the load-error banner and locks the form.
+    if (!isValidAccountSettings(response.data)) {
+      throw new Error(
+        'Account settings could not be loaded — your session may have expired. Please retry or sign in again.'
+      );
+    }
     return response.data;
   },
 
