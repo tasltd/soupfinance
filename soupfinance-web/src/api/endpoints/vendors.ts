@@ -1,6 +1,12 @@
 /**
  * Vendor API endpoints
- * Maps to soupmarkets-web /rest/vendor/* endpoints
+ * Maps to soupmarkets-web /rest/trading/vendor/* endpoints
+ *
+ * Fix (SOUPFIN-25): VendorController lives in the soupbroker.trading package and is
+ * gated by TradingModuleInterceptor, so the controller MUST be addressed via its module
+ * prefix (/rest/trading/vendor/*). Calling the bare /rest/vendor/* path is the documented
+ * convention used by the Angular admin SPA. See .claude/rules/e2e-testing-patterns.md
+ * ("Module-Prefixed Controllers") and grails-domain-source-of-truth.md.
  *
  * CSRF Token Pattern:
  * Changed: Only POST/save operations require CSRF token from create.json endpoint.
@@ -10,7 +16,8 @@
 import apiClient, { toQueryString, getCsrfToken, csrfQueryString } from '../client';
 import type { Vendor, ListParams } from '../../types';
 
-const BASE_URL = '/vendor';
+// Fix (SOUPFIN-25): use the trading module prefix so requests hit the correct controller.
+const BASE_URL = '/trading/vendor';
 
 // =============================================================================
 // Vendor CRUD
@@ -18,7 +25,7 @@ const BASE_URL = '/vendor';
 
 /**
  * List vendors with pagination
- * GET /rest/vendor/index.json
+ * GET /rest/trading/vendor/index.json
  */
 export async function listVendors(params?: ListParams & { search?: string }): Promise<Vendor[]> {
   const query = params ? `?${toQueryString(params)}` : '';
@@ -28,7 +35,7 @@ export async function listVendors(params?: ListParams & { search?: string }): Pr
 
 /**
  * Get single vendor by ID
- * GET /rest/vendor/show/:id.json
+ * GET /rest/trading/vendor/show/:id.json
  */
 export async function getVendor(id: string): Promise<Vendor> {
   const response = await apiClient.get<Vendor>(`${BASE_URL}/show/${id}.json`);
@@ -37,13 +44,16 @@ export async function getVendor(id: string): Promise<Vendor> {
 
 /**
  * Create new vendor
- * POST /rest/vendor/save.json
+ * POST /rest/trading/vendor/save.json
  *
  * CSRF Token Required: Calls create.json first to get SYNCHRONIZER_TOKEN
  */
 export async function createVendor(data: Partial<Vendor>): Promise<Vendor> {
   // Step 1: Get CSRF token from create endpoint
-  const csrf = await getCsrfToken('vendor');
+  // Fix (SOUPFIN-25): pass the module-prefixed controller so create.json resolves to
+  // /rest/trading/vendor/create.json. getCsrfToken derives the response nesting key from
+  // the last path segment ('vendor'), so token extraction still works.
+  const csrf = await getCsrfToken('trading/vendor');
 
   // Step 2: Pass CSRF token as URL query params (Grails withForm reads from request params, not JSON body)
   // NOTE: This requires the Vite proxy to forward session cookies (JSESSIONID) properly.
@@ -58,7 +68,7 @@ export async function createVendor(data: Partial<Vendor>): Promise<Vendor> {
 
 /**
  * Update existing vendor
- * PUT /rest/vendor/update/:id.json
+ * PUT /rest/trading/vendor/update/:id.json
  *
  * Changed: Updates do not require CSRF tokens
  */
@@ -72,7 +82,7 @@ export async function updateVendor(id: string, data: Partial<Vendor>): Promise<V
 
 /**
  * Delete vendor (soft delete)
- * DELETE /rest/vendor/delete/:id.json
+ * DELETE /rest/trading/vendor/delete/:id.json
  */
 export async function deleteVendor(id: string): Promise<void> {
   await apiClient.delete(`${BASE_URL}/delete/${id}.json`);
@@ -84,7 +94,7 @@ export async function deleteVendor(id: string): Promise<void> {
 
 /**
  * Get vendor payment summary
- * GET /rest/vendor/paymentSummary/:id.json
+ * GET /rest/trading/vendor/paymentSummary/:id.json
  */
 export async function getVendorPaymentSummary(vendorId: string): Promise<{
   vendor: Vendor;

@@ -284,9 +284,12 @@ export function csrfQueryString(csrf: CsrfToken): string {
 export async function getCsrfToken(controller: string): Promise<CsrfToken> {
   const response = await apiClient.get<Record<string, unknown>>(`/${controller}/create.json`);
 
-  // The token can be at the root level or nested under the controller name
+  // The token can be at the root level or nested under the controller name.
+  // Fix (SOUPFIN-25): module-prefixed controllers (e.g. 'trading/vendor') nest the token
+  // under the bare controller name ('vendor'), so derive the key from the last path segment.
   const data = response.data;
-  const controllerData = data[controller] as Record<string, unknown> | undefined;
+  const controllerKey = controller.split('/').pop() || controller;
+  const controllerData = data[controllerKey] as Record<string, unknown> | undefined;
 
   // Try to find CSRF token in response - check both root and nested
   const token = (controllerData?.SYNCHRONIZER_TOKEN || data.SYNCHRONIZER_TOKEN) as string | undefined;
@@ -321,7 +324,9 @@ export async function getCsrfTokenForEdit(controller: string, id: string): Promi
   const response = await apiClient.get<Record<string, unknown>>(`/${controller}/edit/${id}.json`);
 
   const data = response.data;
-  const controllerData = data[controller] as Record<string, unknown> | undefined;
+  // Fix (SOUPFIN-25): module-prefix-safe nesting key (see getCsrfToken above).
+  const controllerKey = controller.split('/').pop() || controller;
+  const controllerData = data[controllerKey] as Record<string, unknown> | undefined;
 
   const token = (controllerData?.SYNCHRONIZER_TOKEN || data.SYNCHRONIZER_TOKEN) as string | undefined;
   const uri = (controllerData?.SYNCHRONIZER_URI || data.SYNCHRONIZER_URI) as string | undefined;

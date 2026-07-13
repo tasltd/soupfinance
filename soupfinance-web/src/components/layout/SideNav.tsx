@@ -3,7 +3,7 @@
  * Reference: soupfinance-designs/balance-sheet-report/
  */
 import { NavLink, useLocation } from 'react-router-dom';
-import { useAuthStore, useUIStore } from '../../stores';
+import { useAuthStore, useUIStore, useAccountStore } from '../../stores';
 import { Logo } from '../Logo';
 
 interface NavItem {
@@ -80,6 +80,16 @@ export function SideNav() {
   const { sidebarCollapsed, setSidebarCollapsed, mobileSidebarOpen, setMobileSidebarOpen } =
     useUIStore();
 
+  // Fix (SOUPFIN-25): SERVICES tenants don't use suppliers/inventory, so hide the Vendors
+  // nav item for them. The Vendors REST controller (trading.VendorController) is also gated
+  // by TradingModuleInterceptor for non-TRADING tenants, so surfacing it would 403 anyway.
+  // Only hide when the category is explicitly SERVICES — while settings are still loading
+  // (undefined) or for TRADING/other categories, Vendors stays visible.
+  const businessLicenceCategory = useAccountStore((state) => state.settings?.businessLicenceCategory);
+  const visibleNavItems = navItems.filter(
+    (item) => !(item.path === '/vendors' && businessLicenceCategory === 'SERVICES')
+  );
+
   const isActive = (path: string) => {
     if (path === '/dashboard') return location.pathname === path;
     return location.pathname.startsWith(path);
@@ -142,7 +152,7 @@ export function SideNav() {
 
             {/* Navigation */}
             <nav className="flex flex-col gap-1 mt-4">
-              {navItems.map((item) => (
+              {visibleNavItems.map((item) => (
                 <div key={item.path}>
                   <NavLink
                     to={item.children ? item.children[0].path : item.path}
