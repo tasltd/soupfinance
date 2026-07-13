@@ -13,7 +13,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { agentApi, accountPersonApi, rolesApi } from '../../api/endpoints/settings';
 import type { AgentFormData } from '../../types/settings';
-import { SOUPFINANCE_ROLES, SOUPFINANCE_ROLE_LABELS } from '../../types/settings';
+import { SOUPFINANCE_ROLES, SOUPFINANCE_ROLE_LABELS, getRoleAuthority } from '../../types/settings';
 import { logger } from '../../utils/logger';
 // Added: backend error extraction so the form can surface the real failure (bugs 7, 9 in SOUPFIN-2)
 import { normalizeApiError } from '../../utils/apiError';
@@ -97,10 +97,12 @@ export default function UserFormPage() {
     retry: 1,
   });
 
-  // Filter to relevant roles
-  const availableRoles = allRoles?.filter((role) =>
-    (RELEVANT_ROLES as readonly string[]).includes(role.authority)
-  ) || [];
+  // Filter to relevant roles. Fix (SOUPFIN-24): resolve authority safely — the
+  // backend may send roles without an `authority` field (only `serialised`).
+  const availableRoles = allRoles?.filter((role) => {
+    const authority = getRoleAuthority(role);
+    return authority !== null && (RELEVANT_ROLES as readonly string[]).includes(authority);
+  }) || [];
   const rolesUnavailable = Boolean(rolesError) || (allRoles !== undefined && availableRoles.length === 0);
 
   const {
@@ -509,27 +511,32 @@ export default function UserFormPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {availableRoles.map((role) => (
-                <label
-                  key={role.id}
-                  className="flex items-center gap-3 p-3 rounded-lg border border-border-light dark:border-border-dark hover:bg-primary/5 cursor-pointer"
-                >
-                  <input
-                    type="checkbox"
-                    checked={selectedRoles?.includes(role.authority) || false}
-                    onChange={(e) => handleRoleChange(role.authority, e.target.checked)}
-                    className="w-4 h-4 text-primary border-border-light dark:border-border-dark rounded focus:ring-primary"
-                  />
-                  <div>
-                    <span className="font-medium text-text-light dark:text-text-dark text-sm">
-                      {SOUPFINANCE_ROLE_LABELS[role.authority] || role.authority.replace('ROLE_', '')}
-                    </span>
-                    {role.authority === SOUPFINANCE_ROLES.ADMIN && (
-                      <span className="ml-2 text-xs text-primary">(Full access)</span>
-                    )}
-                  </div>
-                </label>
-              ))}
+              {availableRoles.map((role) => {
+                // availableRoles is already filtered to resolvable authorities;
+                // `?? ''` keeps this type-safe and guards against any edge case.
+                const authority = getRoleAuthority(role) ?? '';
+                return (
+                  <label
+                    key={role.id}
+                    className="flex items-center gap-3 p-3 rounded-lg border border-border-light dark:border-border-dark hover:bg-primary/5 cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedRoles?.includes(authority) || false}
+                      onChange={(e) => handleRoleChange(authority, e.target.checked)}
+                      className="w-4 h-4 text-primary border-border-light dark:border-border-dark rounded focus:ring-primary"
+                    />
+                    <div>
+                      <span className="font-medium text-text-light dark:text-text-dark text-sm">
+                        {SOUPFINANCE_ROLE_LABELS[authority] || authority.replace('ROLE_', '')}
+                      </span>
+                      {authority === SOUPFINANCE_ROLES.ADMIN && (
+                        <span className="ml-2 text-xs text-primary">(Full access)</span>
+                      )}
+                    </div>
+                  </label>
+                );
+              })}
             </div>
           )}
           {errors.roles && <p className="text-danger text-xs mt-2">{errors.roles.message}</p>}
