@@ -17,7 +17,7 @@
  *   - DELETE /rest/bill/delete/:id.json - delete bill
  *   - GET /rest/billPayment/index.json - list payments
  *   - POST /rest/billPayment/save.json - record payment
- *   - GET /rest/vendor/index.json - list vendors for dropdown
+ *   - GET /rest/trading/vendor/index.json - list vendors for dropdown
  */
 import { test, expect } from '@playwright/test';
 import { takeScreenshot, mockTokenValidationApi, mockDashboardApi, isLxcMode, backendTestUsers, setupResponseValidation } from './fixtures';
@@ -249,7 +249,7 @@ async function mockVendorsApi(page: any, vendors = mockVendors) {
   // Mock token validation to keep user authenticated
   await mockTokenValidationApi(page, true);
 
-  await page.route('**/rest/vendor/index.json*', (route: any) => {
+  await page.route('**/rest/trading/vendor/index.json*', (route: any) => {
     route.fulfill({
       status: 200,
       contentType: 'application/json',
