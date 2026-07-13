@@ -1058,7 +1058,7 @@ export async function mockBillDetailApi(
 /**
  * Mock vendors list API
  * CONDITIONAL: Skips mocking in LXC mode
- * GET /rest/vendor/index.json
+ * GET /rest/trading/vendor/index.json
  */
 export async function mockVendorsApi(
   page: Awaited<ReturnType<typeof base.page>>,
@@ -1066,7 +1066,7 @@ export async function mockVendorsApi(
 ) {
   if (isLxcMode()) return;
 
-  await page.route('**/rest/vendor/index.json*', (route) => {
+  await page.route('**/rest/trading/vendor/index.json*', (route) => {
     route.fulfill({
       status: 200,
       contentType: 'application/json',

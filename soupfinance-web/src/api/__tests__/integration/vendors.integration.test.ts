@@ -28,7 +28,7 @@ vi.mock('axios', () => ({
 // Mock CSRF token response
 const mockCsrfToken = {
   SYNCHRONIZER_TOKEN: 'test-csrf-token-123',
-  SYNCHRONIZER_URI: '/vendor/save',
+  SYNCHRONIZER_URI: '/trading/vendor/save',
 };
 
 describe('Vendors API Integration', () => {
@@ -79,7 +79,7 @@ describe('Vendors API Integration', () => {
       const result = await listVendors();
 
       // Assert
-      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/vendor/index.json');
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/trading/vendor/index.json');
       expect(result).toHaveLength(2);
       expect(result[0].name).toBe('Office Supplies Inc');
     });
@@ -96,7 +96,7 @@ describe('Vendors API Integration', () => {
 
       // Assert
       const callUrl = mockAxiosInstance.get.mock.calls[0][0] as string;
-      expect(callUrl).toContain('/vendor/index.json?');
+      expect(callUrl).toContain('/trading/vendor/index.json?');
       expect(callUrl).toContain('max=25');
       expect(callUrl).toContain('offset=50');
       expect(callUrl).toContain('sort=name');
@@ -153,7 +153,7 @@ describe('Vendors API Integration', () => {
       const result = await getVendor('vendor-uuid-123');
 
       // Assert
-      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/vendor/show/vendor-uuid-123.json');
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/trading/vendor/show/vendor-uuid-123.json');
       expect(result.id).toBe('vendor-uuid-123');
       expect(result.paymentTerms).toBe(30);
     });
@@ -196,11 +196,11 @@ describe('Vendors API Integration', () => {
       const result = await createVendor(newVendor);
 
       // Assert - verify CSRF token was fetched
-      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/vendor/create.json');
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/trading/vendor/create.json');
 
       // Assert - verify POST URL includes CSRF token as query params
       const postUrl = mockAxiosInstance.post.mock.calls[0][0] as string;
-      expect(postUrl).toContain('/vendor/save.json?');
+      expect(postUrl).toContain('/trading/vendor/save.json?');
       expect(postUrl).toContain('SYNCHRONIZER_TOKEN=');
       expect(postUrl).toContain('SYNCHRONIZER_URI=');
 
@@ -282,7 +282,7 @@ describe('Vendors API Integration', () => {
 
       // Assert - verify PUT with JSON body including ID but NO CSRF token
       expect(mockAxiosInstance.put).toHaveBeenCalledWith(
-        `/vendor/update/${vendorId}.json`,
+        `/trading/vendor/update/${vendorId}.json`,
         expect.objectContaining({
           id: vendorId,
           name: 'Updated Vendor Name',
@@ -338,7 +338,7 @@ describe('Vendors API Integration', () => {
 
       // Assert
       expect(mockAxiosInstance.delete).toHaveBeenCalledWith(
-        '/vendor/delete/vendor-to-delete-uuid.json'
+        '/trading/vendor/delete/vendor-to-delete-uuid.json'
       );
     });
   });
@@ -370,7 +370,7 @@ describe('Vendors API Integration', () => {
       const result = await getVendorPaymentSummary('vendor-uuid');
 
       // Assert
-      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/vendor/paymentSummary/vendor-uuid.json');
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/trading/vendor/paymentSummary/vendor-uuid.json');
       expect(result.totalBilled).toBe(50000);
       expect(result.totalPaid).toBe(35000);
       expect(result.totalOutstanding).toBe(15000);

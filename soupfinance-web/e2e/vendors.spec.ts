@@ -80,7 +80,7 @@ test.describe('Vendor Management', () => {
     await mockTokenValidationApi(page, true);
 
     // Mock vendor list endpoint
-    await page.route('**/rest/vendor/index.json*', (route) => {
+    await page.route('**/rest/trading/vendor/index.json*', (route) => {
       const url = new URL(route.request().url());
       const search = url.searchParams.get('search') || '';
 
@@ -100,7 +100,7 @@ test.describe('Vendor Management', () => {
     });
 
     // Mock single vendor endpoint
-    await page.route('**/rest/vendor/show/*.json*', (route) => {
+    await page.route('**/rest/trading/vendor/show/*.json*', (route) => {
       const url = route.request().url();
       const idMatch = url.match(/\/show\/([^/.]+)/);
       const vendorId = idMatch ? idMatch[1] : null;
@@ -122,7 +122,7 @@ test.describe('Vendor Management', () => {
     });
 
     // Mock vendor save endpoint
-    await page.route('**/rest/vendor/save*', (route) => {
+    await page.route('**/rest/trading/vendor/save*', (route) => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -137,7 +137,7 @@ test.describe('Vendor Management', () => {
     });
 
     // Mock vendor update endpoint
-    await page.route('**/rest/vendor/update/*', (route) => {
+    await page.route('**/rest/trading/vendor/update/*', (route) => {
       const url = route.request().url();
       const idMatch = url.match(/\/update\/([^/.]+)/);
       const vendorId = idMatch ? idMatch[1] : 'vendor-001';
@@ -154,7 +154,7 @@ test.describe('Vendor Management', () => {
     });
 
     // Mock vendor delete endpoint
-    await page.route('**/rest/vendor/delete/*', (route) => {
+    await page.route('**/rest/trading/vendor/delete/*', (route) => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -188,7 +188,7 @@ test.describe('Vendor Management', () => {
       await mockTokenValidationApi(page, true);
 
       // Delay vendor response
-      await page.route('**/rest/vendor/index.json*', async (route) => {
+      await page.route('**/rest/trading/vendor/index.json*', async (route) => {
         await new Promise((resolve) => setTimeout(resolve, 3000));
         route.fulfill({
           status: 200,
@@ -212,7 +212,7 @@ test.describe('Vendor Management', () => {
       await mockTokenValidationApi(page, true);
 
       // Mock empty vendor list
-      await page.route('**/rest/vendor/index.json*', (route) => {
+      await page.route('**/rest/trading/vendor/index.json*', (route) => {
         route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -233,7 +233,7 @@ test.describe('Vendor Management', () => {
       await mockTokenValidationApi(page, true);
 
       // Mock API error
-      await page.route('**/rest/vendor/index.json*', (route) => {
+      await page.route('**/rest/trading/vendor/index.json*', (route) => {
         route.fulfill({
           status: 500,
           contentType: 'application/json',
