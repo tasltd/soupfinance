@@ -328,6 +328,51 @@ test.describe('Settings - User Management', () => {
       await takeScreenshot(page, 'user-list-page');
     });
 
+    // SOUPFIN-24 regression: the backend returns role objects without an
+    // `authority` field, only `serialised` (e.g. "SbRole(authority:ROLE_USER)").
+    // Previously this crashed the page with
+    // "Cannot read properties of undefined (reading 'replace')".
+    test('renders roles without crashing when authority is only in serialised (SOUPFIN-24)', async ({
+      page,
+    }) => {
+      if (isLxcMode()) {
+        test.skip();
+        return;
+      }
+
+      // User whose authorities mirror the real backend shape that caused the crash
+      const usersWithSerialisedRoles = [
+        {
+          ...mockUsers[0],
+          id: 'user-serialised',
+          firstName: 'Grace',
+          lastName: 'Hopper',
+          emailContacts: [{ id: 'email-gh', email: 'grace.hopper@company.com' }],
+          userAccess: { id: 9, username: 'grace.hopper', enabled: true },
+          // Backend shape from the bug report: no `authority`, only `serialised`
+          authorities: [
+            { id: 4, serialised: 'SbRole(authority:ROLE_USER)' },
+            { id: 5, serialised: 'SbRole(authority:ROLE_ADMIN)' },
+          ],
+        },
+      ] as unknown as typeof mockUsers;
+
+      await mockUserApis(page, usersWithSerialisedRoles);
+
+      await page.goto('/settings/users');
+
+      // Page must render (no crash / ErrorBoundary fallback)
+      await expect(page.getByTestId('user-list-page')).toBeVisible();
+      await expect(page.locator('text=Grace Hopper')).toBeVisible();
+
+      // Roles resolve to their friendly labels parsed out of `serialised`
+      await expect(page.getByText('User, Administrator')).toBeVisible();
+      // And the "No role" fallback pill must NOT appear for this user
+      await expect(page.getByText('No role')).toHaveCount(0);
+
+      await takeScreenshot(page, 'user-list-serialised-roles');
+    });
+
     // Skip mock-only tests in LXC mode - these require controlled API responses
     test('shows loading state while fetching', async ({ page }) => {
       if (isLxcMode()) {

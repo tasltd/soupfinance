@@ -9,7 +9,7 @@ import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { agentApi } from '../../api/endpoints/settings';
 import type { Agent } from '../../types/settings';
-import { SOUPFINANCE_ROLE_LABELS } from '../../types/settings';
+import { getRoleLabel } from '../../types/settings';
 import { logger } from '../../utils/logger';
 // Added: normalize backend error for the list-level error banner
 import { normalizeApiError } from '../../utils/apiError';
@@ -70,10 +70,15 @@ export default function UserListPage() {
   // pill instead of a bare dash (bug 10 in SOUPFIN-2)
   const getUserRoles = (agent: Agent): string | null => {
     if (!agent.authorities || agent.authorities.length === 0) return null;
-    return agent.authorities
+    // Fix (SOUPFIN-24): resolve each role safely — the backend may send roles
+    // without an `authority` field (only `serialised`), which previously crashed
+    // this page with "Cannot read properties of undefined (reading 'replace')".
+    // getRoleLabel() returns null for unresolvable roles; we skip those.
+    const labels = agent.authorities
       .slice(0, 3)
-      .map((role) => SOUPFINANCE_ROLE_LABELS[role.authority] || role.authority.replace('ROLE_', ''))
-      .join(', ');
+      .map(getRoleLabel)
+      .filter((label): label is string => Boolean(label));
+    return labels.length > 0 ? labels.join(', ') : null;
   };
 
   // Changed: distinguish email vs username vs missing so the user-list table is

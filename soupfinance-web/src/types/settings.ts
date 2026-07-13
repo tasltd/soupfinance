@@ -26,7 +26,11 @@ export interface PhoneContact {
 
 export interface SbRole {
   id: number;
-  authority: string;
+  // NOTE: backend may omit `authority` and only send `serialised`
+  // (e.g. "SbRole(authority:ROLE_USER)") — see getRoleAuthority() below.
+  authority?: string;
+  serialised?: string; // Grails serialised form, e.g. "SbRole(authority:ROLE_USER)"
+  class?: string; // Grails domain class name on FK references
 }
 
 export interface SbRoleGroup {
@@ -249,3 +253,23 @@ export const SOUPFINANCE_ROLE_LABELS: Record<string, string> = {
   ROLE_LEDGER_ACCOUNT: 'Chart of Accounts',
   ROLE_VENDOR: 'Vendors',
 };
+
+// Added (SOUPFIN-24): the backend may return role objects without an `authority`
+// field, only a `serialised` form like "SbRole(authority:ROLE_USER)". Reading
+// `role.authority.replace(...)` directly crashes the User Management page.
+// These helpers resolve the authority safely and return null when it can't be
+// determined, so callers can skip the role instead of throwing.
+
+/** Extracts a role's authority string, falling back to parsing `serialised`. */
+export function getRoleAuthority(role: SbRole): string | null {
+  if (role.authority) return role.authority;
+  const match = role.serialised?.match(/authority:\s*([A-Za-z0-9_]+)/);
+  return match ? match[1] : null;
+}
+
+/** Human-friendly label for a role, or null when the authority is unresolvable. */
+export function getRoleLabel(role: SbRole): string | null {
+  const authority = getRoleAuthority(role);
+  if (!authority) return null;
+  return SOUPFINANCE_ROLE_LABELS[authority] || authority.replace('ROLE_', '');
+}

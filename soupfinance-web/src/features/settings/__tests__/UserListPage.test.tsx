@@ -134,6 +134,64 @@ describe('UserListPage row display (SOUPFIN-2 bug 10)', () => {
     expect(screen.queryByText('No role')).not.toBeInTheDocument();
   });
 
+  // Regression tests for SOUPFIN-24: the page crashed with
+  // "Cannot read properties of undefined (reading 'replace')" when the backend
+  // returned role objects without an `authority` field, only `serialised`.
+  it('does not crash and resolves roles from `serialised` when authority is absent', async () => {
+    vi.mocked(agentApi.list).mockResolvedValue([
+      makeAgent({
+        userAccess: { id: 1, username: 'ada', enabled: true },
+        // Shape the backend actually returns: no `authority`, only `serialised`
+        authorities: [
+          { id: 4, serialised: 'SbRole(authority:ROLE_USER)' },
+          { id: 5, serialised: 'SbRole(authority:ROLE_ADMIN)' },
+        ] as Agent['authorities'],
+      }),
+    ]);
+
+    renderPage();
+
+    // Renders the friendly labels parsed out of `serialised` (joined in one cell)
+    // — and no "No role" pill
+    expect(await screen.findByText('User, Administrator')).toBeInTheDocument();
+    expect(screen.queryByText('No role')).not.toBeInTheDocument();
+  });
+
+  it('falls back to the "No role" pill when a role has neither authority nor serialised', async () => {
+    vi.mocked(agentApi.list).mockResolvedValue([
+      makeAgent({
+        userAccess: { id: 1, username: 'ada', enabled: true },
+        // Malformed role object — must not crash, must render "No role"
+        authorities: [{ id: 9 }] as Agent['authorities'],
+      }),
+    ]);
+
+    renderPage();
+
+    // Row still renders (name visible) and the role column shows the warning pill
+    expect(await screen.findByText('Ada Lovelace')).toBeInTheDocument();
+    expect(screen.getByText('No role')).toBeInTheDocument();
+  });
+
+  it('handles a mix of resolvable and unresolvable roles without crashing', async () => {
+    vi.mocked(agentApi.list).mockResolvedValue([
+      makeAgent({
+        userAccess: { id: 1, username: 'ada', enabled: true },
+        authorities: [
+          { id: 1, authority: 'ROLE_ADMIN' },
+          { id: 9 }, // unresolvable — should be skipped, not crash
+          { id: 4, serialised: 'SbRole(authority:ROLE_USER)' },
+        ] as Agent['authorities'],
+      }),
+    ]);
+
+    renderPage();
+
+    // Unresolvable role is skipped; resolvable ones still render (joined in one cell)
+    expect(await screen.findByText('Administrator, User')).toBeInTheDocument();
+    expect(screen.queryByText('No role')).not.toBeInTheDocument();
+  });
+
   it('surfaces the backend error message in the error state', async () => {
     const err = Object.assign(new Error('Backend failure'), {
       isAxiosError: true,
