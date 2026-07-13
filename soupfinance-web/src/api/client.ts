@@ -284,9 +284,13 @@ export function csrfQueryString(csrf: CsrfToken): string {
 export async function getCsrfToken(controller: string): Promise<CsrfToken> {
   const response = await apiClient.get<Record<string, unknown>>(`/${controller}/create.json`);
 
-  // The token can be at the root level or nested under the controller name
+  // The token can be at the root level or nested under the controller name.
+  // Fix (SOUPFIN-25): controller may be module-prefixed (e.g. 'trading/vendor') for the
+  // URL, but the backend nests the token under the bare controller name ('vendor'), so
+  // use the last path segment for the nested lookup. Single-segment names are unchanged.
   const data = response.data;
-  const controllerData = data[controller] as Record<string, unknown> | undefined;
+  const nestedKey = controller.split('/').pop() as string;
+  const controllerData = data[nestedKey] as Record<string, unknown> | undefined;
 
   // Try to find CSRF token in response - check both root and nested
   const token = (controllerData?.SYNCHRONIZER_TOKEN || data.SYNCHRONIZER_TOKEN) as string | undefined;
@@ -320,8 +324,11 @@ export async function getCsrfToken(controller: string): Promise<CsrfToken> {
 export async function getCsrfTokenForEdit(controller: string, id: string): Promise<CsrfToken> {
   const response = await apiClient.get<Record<string, unknown>>(`/${controller}/edit/${id}.json`);
 
+  // Fix (SOUPFIN-25): use the last path segment for the nested lookup so module-prefixed
+  // controllers (e.g. 'trading/vendor') still resolve the token nested under 'vendor'.
   const data = response.data;
-  const controllerData = data[controller] as Record<string, unknown> | undefined;
+  const nestedKey = controller.split('/').pop() as string;
+  const controllerData = data[nestedKey] as Record<string, unknown> | undefined;
 
   const token = (controllerData?.SYNCHRONIZER_TOKEN || data.SYNCHRONIZER_TOKEN) as string | undefined;
   const uri = (controllerData?.SYNCHRONIZER_URI || data.SYNCHRONIZER_URI) as string | undefined;

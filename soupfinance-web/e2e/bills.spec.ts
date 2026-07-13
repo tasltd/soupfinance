@@ -249,7 +249,7 @@ async function mockVendorsApi(page: any, vendors = mockVendors) {
   // Mock token validation to keep user authenticated
   await mockTokenValidationApi(page, true);
 
-  await page.route('**/rest/vendor/index.json*', (route: any) => {
+  await page.route('**/vendor/index.json*', (route: any) => {
     route.fulfill({
       status: 200,
       contentType: 'application/json',

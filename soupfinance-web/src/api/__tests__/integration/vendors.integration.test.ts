@@ -28,7 +28,7 @@ vi.mock('axios', () => ({
 // Mock CSRF token response
 const mockCsrfToken = {
   SYNCHRONIZER_TOKEN: 'test-csrf-token-123',
-  SYNCHRONIZER_URI: '/vendor/save',
+  SYNCHRONIZER_URI: '/trading/vendor/save',
 };
 
 describe('Vendors API Integration', () => {
@@ -79,7 +79,7 @@ describe('Vendors API Integration', () => {
       const result = await listVendors();
 
       // Assert
-      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/vendor/index.json');
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/trading/vendor/index.json');
       expect(result).toHaveLength(2);
       expect(result[0].name).toBe('Office Supplies Inc');
     });
@@ -96,7 +96,7 @@ describe('Vendors API Integration', () => {
 
       // Assert
       const callUrl = mockAxiosInstance.get.mock.calls[0][0] as string;
-      expect(callUrl).toContain('/vendor/index.json?');
+      expect(callUrl).toContain('/trading/vendor/index.json?');
       expect(callUrl).toContain('max=25');
       expect(callUrl).toContain('offset=50');
       expect(callUrl).toContain('sort=name');
@@ -153,7 +153,7 @@ describe('Vendors API Integration', () => {
       const result = await getVendor('vendor-uuid-123');
 
       // Assert
-      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/vendor/show/vendor-uuid-123.json');
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/trading/vendor/show/vendor-uuid-123.json');
       expect(result.id).toBe('vendor-uuid-123');
       expect(result.paymentTerms).toBe(30);
     });
@@ -196,11 +196,11 @@ describe('Vendors API Integration', () => {
       const result = await createVendor(newVendor);
 
       // Assert - verify CSRF token was fetched
-      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/vendor/create.json');
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/trading/vendor/create.json');
 
       // Assert - verify POST URL includes CSRF token as query params
       const postUrl = mockAxiosInstance.post.mock.calls[0][0] as string;
-      expect(postUrl).toContain('/vendor/save.json?');
+      expect(postUrl).toContain('/trading/vendor/save.json?');
       expect(postUrl).toContain('SYNCHRONIZER_TOKEN=');
       expect(postUrl).toContain('SYNCHRONIZER_URI=');
 
@@ -282,7 +282,7 @@ describe('Vendors API Integration', () => {
 
       // Assert - verify PUT with JSON body including ID but NO CSRF token
       expect(mockAxiosInstance.put).toHaveBeenCalledWith(
-        `/vendor/update/${vendorId}.json`,
+        `/trading/vendor/update/${vendorId}.json`,
         expect.objectContaining({
           id: vendorId,
           name: 'Updated Vendor Name',
@@ -338,7 +338,7 @@ describe('Vendors API Integration', () => {
 
       // Assert
       expect(mockAxiosInstance.delete).toHaveBeenCalledWith(
-        '/vendor/delete/vendor-to-delete-uuid.json'
+        '/trading/vendor/delete/vendor-to-delete-uuid.json'
       );
     });
   });
@@ -370,7 +370,7 @@ describe('Vendors API Integration', () => {
       const result = await getVendorPaymentSummary('vendor-uuid');
 
       // Assert
-      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/vendor/paymentSummary/vendor-uuid.json');
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/trading/vendor/paymentSummary/vendor-uuid.json');
       expect(result.totalBilled).toBe(50000);
       expect(result.totalPaid).toBe(35000);
       expect(result.totalOutstanding).toBe(15000);
@@ -464,6 +464,67 @@ describe('Vendors API Integration', () => {
 
       // Act & Assert
       await expect(deleteVendor('vendor-with-bills')).rejects.toEqual(mockError);
+    });
+  });
+
+  // ==========================================================================
+  // Module Prefix Regression Guard (SOUPFIN-25)
+  // VendorController lives in the soupbroker.trading package, so every vendor
+  // endpoint MUST be reached under the /trading/vendor/* prefix. This block
+  // pins that convention so the bare /vendor/* path cannot silently return.
+  // ==========================================================================
+  describe('Trading module prefix (SOUPFIN-25)', () => {
+    it('every CRUD + report call is prefixed with /trading/vendor', async () => {
+      // Arrange
+      mockAxiosInstance.get.mockResolvedValue({
+        data: { SYNCHRONIZER_TOKEN: 'tok', SYNCHRONIZER_URI: '/trading/vendor/save' },
+      });
+      mockAxiosInstance.post.mockResolvedValue({ data: { id: 'v1' } });
+      mockAxiosInstance.put.mockResolvedValue({ data: { id: 'v1' } });
+      mockAxiosInstance.delete.mockResolvedValue({ data: {} });
+
+      vi.resetModules();
+      const vendors = await import('../../endpoints/vendors');
+
+      // Act
+      await vendors.listVendors();
+      await vendors.getVendor('v1');
+      await vendors.createVendor({ name: 'Acme' });
+      await vendors.updateVendor('v1', { name: 'Acme 2' });
+      await vendors.deleteVendor('v1');
+      await vendors.getVendorPaymentSummary('v1');
+
+      // Assert — collect every URL passed to the mocked client
+      const urls = [
+        ...mockAxiosInstance.get.mock.calls,
+        ...mockAxiosInstance.post.mock.calls,
+        ...mockAxiosInstance.put.mock.calls,
+        ...mockAxiosInstance.delete.mock.calls,
+      ].map((call) => call[0] as string);
+
+      expect(urls.length).toBeGreaterThan(0);
+      for (const url of urls) {
+        expect(url.startsWith('/trading/vendor/')).toBe(true);
+        // Guard against the pre-fix bare route sneaking back in
+        expect(url.startsWith('/vendor/')).toBe(false);
+      }
+    });
+
+    it('createVendor requests the CSRF token from the trading-prefixed create route', async () => {
+      // Arrange
+      mockAxiosInstance.get.mockResolvedValue({
+        data: { SYNCHRONIZER_TOKEN: 'tok', SYNCHRONIZER_URI: '/trading/vendor/save' },
+      });
+      mockAxiosInstance.post.mockResolvedValue({ data: { id: 'v1' } });
+
+      vi.resetModules();
+      const { createVendor } = await import('../../endpoints/vendors');
+
+      // Act
+      await createVendor({ name: 'Acme' });
+
+      // Assert — CSRF token is fetched from /trading/vendor/create.json, not /vendor/create.json
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/trading/vendor/create.json');
     });
   });
 });

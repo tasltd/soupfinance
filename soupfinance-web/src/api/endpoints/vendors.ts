@@ -10,7 +10,10 @@
 import apiClient, { toQueryString, getCsrfToken, csrfQueryString } from '../client';
 import type { Vendor, ListParams } from '../../types';
 
-const BASE_URL = '/vendor';
+// Fix (SOUPFIN-25): VendorController lives in the `soupbroker.trading` package, so it is
+// reached under the `trading` module prefix (/rest/trading/vendor/*). The bare /rest/vendor/*
+// path was relying on the generic Grails mapping and is not the canonical route.
+const BASE_URL = '/trading/vendor';
 
 // =============================================================================
 // Vendor CRUD
@@ -43,7 +46,9 @@ export async function getVendor(id: string): Promise<Vendor> {
  */
 export async function createVendor(data: Partial<Vendor>): Promise<Vendor> {
   // Step 1: Get CSRF token from create endpoint
-  const csrf = await getCsrfToken('vendor');
+  // Fix (SOUPFIN-25): Use the trading-prefixed controller so the returned SYNCHRONIZER_URI
+  // matches the /trading/vendor/save.json target (Grails withForm validates the URI).
+  const csrf = await getCsrfToken('trading/vendor');
 
   // Step 2: Pass CSRF token as URL query params (Grails withForm reads from request params, not JSON body)
   // NOTE: This requires the Vite proxy to forward session cookies (JSESSIONID) properly.

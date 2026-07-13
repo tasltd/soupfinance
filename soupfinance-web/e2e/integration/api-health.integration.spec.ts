@@ -95,8 +95,8 @@ test.describe('Backend API Health Checks', () => {
   });
 
   test.describe('Vendor Endpoints', () => {
-    test('GET /rest/vendor/index.json - list vendors', async ({ request }) => {
-      const response = await request.get(`${API_BASE}/rest/vendor/index.json`, {
+    test('GET /rest/trading/vendor/index.json - list vendors', async ({ request }) => {
+      const response = await request.get(`${API_BASE}/rest/trading/vendor/index.json`, {
         headers: { 'X-Auth-Token': authToken },
       });
 
