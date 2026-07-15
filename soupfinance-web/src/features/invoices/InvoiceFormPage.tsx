@@ -493,7 +493,11 @@ export function InvoiceFormPage() {
           </button>
           <button
             onClick={handleSaveDraft}
-            disabled={isPending}
+            // Fix (SOUPFIN-27): also disable while the client's accountServices FK
+            // is still resolving. Prevents the race where a submit fires before the
+            // portfolio detail returns (surfaced the "Still loading…" block) and
+            // makes E2E clicks deterministic — Playwright auto-waits for enabled.
+            disabled={isPending || accountServicesResolving}
             className="h-10 px-4 rounded-lg bg-primary/20 text-primary font-bold text-sm hover:bg-primary/30 disabled:opacity-50"
             data-testid="invoice-form-save-draft-button"
           >
@@ -501,7 +505,8 @@ export function InvoiceFormPage() {
           </button>
           <button
             onClick={handleSaveAndSend}
-            disabled={isPending}
+            // Fix (SOUPFIN-27): see save-draft button above.
+            disabled={isPending || accountServicesResolving}
             className="h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90 disabled:opacity-50"
             data-testid="invoice-form-save-send-button"
           >

@@ -503,6 +503,54 @@ describe('InvoiceFormPage', () => {
     });
 
     /**
+     * §1 (flake guard) — while the portfolio FK fetch is in flight, BOTH save
+     * buttons must be disabled so a submit can never race the in-flight
+     * resolution (the "Still loading…" block). Once the fetch completes they
+     * re-enable. This is what makes the E2E create flow deterministic.
+     */
+    it('disables the save buttons while the accountServices FK is resolving, then re-enables', async () => {
+      const user = userEvent.setup();
+      const listClient: Client = {
+        id: 'c-slow',
+        name: 'Slow Resolve Corp',
+        clientType: 'CORPORATE' as ClientType,
+        portfolioList: [{ id: 'pf-slow', serialised: 'Portfolio ref' }], // bare ref, no FK
+        dateCreated: '2024-01-01T00:00:00Z',
+        lastUpdated: '2024-01-01T00:00:00Z',
+      };
+      vi.mocked(listClients).mockResolvedValue([listClient]);
+      vi.mocked(listTaxRates).mockResolvedValue([{ id: 'tax-none', name: 'No Tax', rate: 0 }]);
+      vi.mocked(listInvoiceServices).mockResolvedValue([]);
+
+      // Hold the portfolio fetch open so the "resolving" window is observable.
+      let resolvePortfolio!: (v: { id: string; accountServices: { id: string } }) => void;
+      vi.mocked(getClientPortfolio).mockReturnValue(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        new Promise<any>((resolve) => {
+          resolvePortfolio = resolve;
+        })
+      );
+
+      renderInvoiceFormPage();
+
+      await screen.findByText('Slow Resolve Corp');
+      const saveDraft = screen.getByTestId('invoice-form-save-draft-button');
+      const saveSend = screen.getByTestId('invoice-form-save-send-button');
+      expect(saveDraft).toBeEnabled();
+
+      await user.selectOptions(screen.getByTestId('invoice-client-select'), 'c-slow');
+
+      // In-flight: both save buttons disabled.
+      await waitFor(() => expect(saveDraft).toBeDisabled());
+      expect(saveSend).toBeDisabled();
+
+      // Resolved: buttons re-enable.
+      resolvePortfolio({ id: 'pf-slow', accountServices: { id: 'as-slow' } });
+      await waitFor(() => expect(saveDraft).toBeEnabled());
+      expect(saveSend).toBeEnabled();
+    });
+
+    /**
      * §2 — The dropdown renders exactly one option per Client (keyed by id),
      * and falls back to firstName + lastName when the client's `name` is blank.
      */

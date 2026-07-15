@@ -126,11 +126,20 @@ test.describe('SOUPFIN-27: Invoice AccountServices resolution', () => {
     await expect(page.getByTestId('invoice-form-page')).toBeVisible({ timeout: 15000 });
     await takeScreenshot(page, 'soupfin27-form-loaded');
 
+    // Selecting the client kicks off the portfolio-detail fetch that resolves the
+    // accountServices FK. Wait for that response deterministically so the save
+    // below never races the in-flight resolution ("the time flaking thing").
+    const portfolioResolved = page.waitForResponse((r: any) =>
+      /\/rest\/clientPortfolio\/show\//.test(r.url())
+    );
     await page.getByTestId('invoice-client-select').selectOption('client-globex');
+    await portfolioResolved;
 
     // The old bug surfaced "This client has no linked account services." — it must
     // NOT appear once the portfolio detail resolves the FK.
     await expect(page.getByText(/no linked account services/i)).toHaveCount(0);
+    // Save is disabled until the FK resolves; it must now be enabled.
+    await expect(page.getByTestId('invoice-form-save-draft-button')).toBeEnabled();
     await takeScreenshot(page, 'soupfin27-client-selected-resolved');
 
     // Fill the rest of the form.
