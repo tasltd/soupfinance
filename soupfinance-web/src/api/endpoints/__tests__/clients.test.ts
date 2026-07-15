@@ -339,4 +339,95 @@ describe('clients API', () => {
       expect(result.id).toBe('as-100');
     });
   });
+
+  // ==========================================================================
+  // SOUPFIN-27: portfolio-based accountServices resolution + display name
+  // ==========================================================================
+  describe('getClientPortfolio (SOUPFIN-27)', () => {
+    it('GETs /clientPortfolio/show/{id}.json and returns the nested accountServices FK', async () => {
+      mockGet.mockResolvedValueOnce({
+        data: { id: 'pf-1', accountServices: { id: 'as-9', serialised: 'Acme' } },
+      });
+      vi.resetModules();
+      const { getClientPortfolio } = await import('../clients');
+
+      const result = await getClientPortfolio('pf-1');
+
+      expect(mockGet).toHaveBeenCalledWith('/clientPortfolio/show/pf-1.json');
+      expect(result.accountServices?.id).toBe('as-9');
+    });
+  });
+
+  describe('resolveAccountServicesId (SOUPFIN-27)', () => {
+    it('returns the nested FK directly when the list already carries it (no fetch)', async () => {
+      vi.resetModules();
+      const { resolveAccountServicesId } = await import('../clients');
+      const client = {
+        id: 'c-1',
+        name: 'Has Nested',
+        clientType: 'CORPORATE' as const,
+        portfolioList: [{ id: 'pf-1', accountServices: { id: 'as-nested' } }],
+      };
+
+      const id = await resolveAccountServicesId(client as never);
+
+      expect(id).toBe('as-nested');
+      // No portfolio fetch needed when the FK is already present.
+      expect(mockGet).not.toHaveBeenCalled();
+    });
+
+    it('fetches the portfolio detail when the list omits accountServices (the real backend shape)', async () => {
+      mockGet.mockResolvedValueOnce({
+        data: { id: 'pf-2', accountServices: { id: 'as-fetched' } },
+      });
+      vi.resetModules();
+      const { resolveAccountServicesId } = await import('../clients');
+      const client = {
+        id: 'c-2',
+        name: 'Bare Ref',
+        clientType: 'CORPORATE' as const,
+        portfolioList: [{ id: 'pf-2', serialised: 'ref only' }], // no accountServices
+      };
+
+      const id = await resolveAccountServicesId(client as never);
+
+      expect(mockGet).toHaveBeenCalledWith('/clientPortfolio/show/pf-2.json');
+      expect(id).toBe('as-fetched');
+    });
+
+    it('returns empty string when the client has no portfolio at all', async () => {
+      vi.resetModules();
+      const { resolveAccountServicesId } = await import('../clients');
+      const client = { id: 'c-3', name: 'No Portfolio', clientType: 'CORPORATE' as const };
+
+      const id = await resolveAccountServicesId(client as never);
+
+      expect(id).toBe('');
+      expect(mockGet).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getClientDisplayName (SOUPFIN-27)', () => {
+    it('prefers the client name when present', async () => {
+      vi.resetModules();
+      const { getClientDisplayName } = await import('../clients');
+      expect(getClientDisplayName({ name: 'Acme Corp' } as never)).toBe('Acme Corp');
+    });
+
+    it('falls back to firstName + lastName for individuals with a blank name', async () => {
+      vi.resetModules();
+      const { getClientDisplayName } = await import('../clients');
+      expect(
+        getClientDisplayName({ name: '', firstName: 'Ada', lastName: 'Lovelace' } as never)
+      ).toBe('Ada Lovelace');
+    });
+
+    it('falls back to companyName, then email, then a stable placeholder', async () => {
+      vi.resetModules();
+      const { getClientDisplayName } = await import('../clients');
+      expect(getClientDisplayName({ name: '', companyName: 'Globex' } as never)).toBe('Globex');
+      expect(getClientDisplayName({ name: '', email: 'a@b.co' } as never)).toBe('a@b.co');
+      expect(getClientDisplayName({ name: '' } as never)).toBe('Unnamed client');
+    });
+  });
 });

@@ -27,9 +27,18 @@ vi.mock('../../../api/endpoints/invoices', () => ({
 }));
 
 // Changed: Component imports listClients from clients.ts for the Client dropdown
-vi.mock('../../../api/endpoints/clients', () => ({
-  listClients: vi.fn(),
-}));
+// SOUPFIN-27: also imports getClientPortfolio (resolves the accountServices FK the
+// list omits) and getClientDisplayName (pure helper — keep the real impl).
+vi.mock('../../../api/endpoints/clients', async () => {
+  const actual = await vi.importActual<typeof import('../../../api/endpoints/clients')>(
+    '../../../api/endpoints/clients'
+  );
+  return {
+    ...actual,
+    listClients: vi.fn(),
+    getClientPortfolio: vi.fn(),
+  };
+});
 
 // Changed: Component imports listTaxRates, listInvoiceServices, and DEFAULT_CURRENCIES from domainData
 // Fix: Added DEFAULT_CURRENCIES to mock — component uses it for currency dropdown
@@ -62,7 +71,7 @@ vi.mock('react-router-dom', async () => {
 
 import { getInvoice, createInvoice, updateInvoice, sendInvoice } from '../../../api/endpoints/invoices';
 // Changed: Component uses listClients for Client dropdown (not listInvoices)
-import { listClients } from '../../../api/endpoints/clients';
+import { listClients, getClientPortfolio } from '../../../api/endpoints/clients';
 import { listTaxRates, listInvoiceServices } from '../../../api/endpoints/domainData';
 
 // ============================================================================
@@ -114,15 +123,18 @@ function createMockInvoice(overrides: Partial<Invoice> = {}): Invoice {
  * The form shows clients from listClients() and resolves their accountServices FK.
  */
 function createMockClient(overrides: Partial<Client> = {}): Client {
-  // Fix: Include portfolioList with nested accountServices (matches backend response)
   const asId = (overrides.accountServices as { id: string } | undefined)?.id || 'as-123';
   const asSer = (overrides.accountServices as { serialised?: string } | undefined)?.serialised || 'Acme Corporation';
+  const clientId = overrides.id || 'client-1';
+  // SOUPFIN-27: keep the nested accountServices here as a convenience for the
+  // getClientPortfolio resolver in setupDefaultMocks; the component itself does
+  // NOT rely on the list carrying it (see the dedicated regression tests that
+  // omit it). Give each client a unique portfolio id so the resolver maps 1:1.
   return {
-    id: 'client-1',
+    id: clientId,
     name: 'Acme Corporation',
     clientType: 'INDIVIDUAL' as ClientType,
-    // Fix: accountServicesId resolves via portfolioList[0].accountServices.id
-    portfolioList: [{ id: 'portfolio-1', accountServices: { id: asId, serialised: asSer } }],
+    portfolioList: [{ id: `portfolio-${clientId}`, accountServices: { id: asId, serialised: asSer } }],
     accountServices: { id: asId, serialised: asSer },
     dateCreated: '2024-01-01T00:00:00Z',
     lastUpdated: '2024-01-01T00:00:00Z',
@@ -136,6 +148,17 @@ function createMockClient(overrides: Partial<Client> = {}): Client {
  */
 function setupDefaultMocks(clientsForDropdown = [createMockClient()]) {
   vi.mocked(listClients).mockResolvedValue(clientsForDropdown);
+  // SOUPFIN-27: resolve the portfolio's accountServices FK from the dropdown
+  // clients so tests exercise the real fetch path. Maps portfolioId → the
+  // accountServices carried on the corresponding mock client.
+  vi.mocked(getClientPortfolio).mockImplementation(async (portfolioId: string) => {
+    const owner = clientsForDropdown.find((c) =>
+      c.portfolioList?.some((p) => p.id === portfolioId)
+    );
+    const as = owner?.portfolioList?.[0]?.accountServices ||
+      owner?.accountServices || { id: 'as-123', serialised: 'Acme Corporation' };
+    return { id: portfolioId, accountServices: as };
+  });
   vi.mocked(listTaxRates).mockResolvedValue([
     { id: 'tax-none', name: 'No Tax', rate: 0 },
     { id: 'tax-vat-15', name: 'VAT 15%', rate: 15 },
@@ -379,6 +402,170 @@ describe('InvoiceFormPage', () => {
       await user.selectOptions(select, 'selected-client');
 
       expect(select).toHaveValue('selected-client');
+    });
+  });
+
+  // ==========================================================================
+  // SOUPFIN-27 regressions
+  // ==========================================================================
+  describe('SOUPFIN-27: account services resolution & client dropdown', () => {
+    /**
+     * §1 — The real /rest/client/index.json list response returns portfolio
+     * entries WITHOUT the nested accountServices object. Invoice creation must
+     * still succeed by fetching the portfolio detail to resolve the FK.
+     */
+    it('resolves accountServices via getClientPortfolio when the list omits it, then creates the invoice', async () => {
+      const user = userEvent.setup();
+      // Client as the backend really returns it: portfolio entry is a bare ref.
+      const listClient: Client = {
+        id: 'c-real',
+        name: 'Real Backend Corp',
+        clientType: 'CORPORATE' as ClientType,
+        portfolioList: [{ id: 'pf-real', serialised: 'Portfolio ref' }], // NO accountServices
+        dateCreated: '2024-01-01T00:00:00Z',
+        lastUpdated: '2024-01-01T00:00:00Z',
+      };
+      vi.mocked(listClients).mockResolvedValue([listClient]);
+      vi.mocked(listTaxRates).mockResolvedValue([{ id: 'tax-none', name: 'No Tax', rate: 0 }]);
+      vi.mocked(listInvoiceServices).mockResolvedValue([]);
+      // The portfolio detail endpoint DOES carry the accountServices FK.
+      vi.mocked(getClientPortfolio).mockResolvedValue({
+        id: 'pf-real',
+        accountServices: { id: 'as-resolved', serialised: 'Real Backend Corp' },
+      });
+      vi.mocked(createInvoice).mockResolvedValue(createMockInvoice());
+
+      renderInvoiceFormPage();
+
+      await screen.findByText('Real Backend Corp');
+      await user.selectOptions(screen.getByTestId('invoice-client-select'), 'c-real');
+
+      // The FK fetch must have been triggered for the selected client's portfolio.
+      await waitFor(() => expect(getClientPortfolio).toHaveBeenCalledWith('pf-real'));
+
+      const dueDateInput = screen.getByTestId('invoice-due-date-input');
+      await user.clear(dueDateInput);
+      await user.type(dueDateInput, '2026-02-28');
+      const descInput = screen.getByTestId('invoice-item-description-0');
+      await user.clear(descInput);
+      await user.type(descInput, 'Service');
+      const priceInput = screen.getByTestId('invoice-item-unitPrice-0');
+      await user.clear(priceInput);
+      await user.type(priceInput, '100');
+
+      await user.click(screen.getByTestId('invoice-form-save-draft-button'));
+
+      // Round-trip: creation happened AND the payload carries the resolved FK,
+      // NOT an empty accountServices (the old blocked-creation bug).
+      await waitFor(() => expect(createInvoice).toHaveBeenCalled());
+      const payload = vi.mocked(createInvoice).mock.calls[0][0] as Record<string, unknown>;
+      expect(payload.accountServices).toEqual({ id: 'as-resolved' });
+      // The blocking error message must NOT have been shown.
+      expect(screen.queryByText(/no account services/i)).not.toBeInTheDocument();
+    });
+
+    /**
+     * §1 (negative) — A client whose portfolio genuinely has no accountServices
+     * still surfaces the warning and blocks submission.
+     */
+    it('warns and blocks creation when the portfolio has no accountServices', async () => {
+      const user = userEvent.setup();
+      const listClient: Client = {
+        id: 'c-empty',
+        name: 'No Services Corp',
+        clientType: 'CORPORATE' as ClientType,
+        portfolioList: [{ id: 'pf-empty', serialised: 'Portfolio ref' }],
+        dateCreated: '2024-01-01T00:00:00Z',
+        lastUpdated: '2024-01-01T00:00:00Z',
+      };
+      vi.mocked(listClients).mockResolvedValue([listClient]);
+      vi.mocked(listTaxRates).mockResolvedValue([{ id: 'tax-none', name: 'No Tax', rate: 0 }]);
+      vi.mocked(listInvoiceServices).mockResolvedValue([]);
+      vi.mocked(getClientPortfolio).mockResolvedValue({ id: 'pf-empty' }); // no accountServices
+
+      renderInvoiceFormPage();
+
+      await screen.findByText('No Services Corp');
+      await user.selectOptions(screen.getByTestId('invoice-client-select'), 'c-empty');
+
+      // Inline warning appears once resolution completes with no FK.
+      await screen.findByText(/no linked account services/i);
+
+      const descInput = screen.getByTestId('invoice-item-description-0');
+      await user.clear(descInput);
+      await user.type(descInput, 'Service');
+      await user.click(screen.getByTestId('invoice-form-save-draft-button'));
+
+      await waitFor(() =>
+        expect(screen.getByTestId('invoice-form-error-message')).toHaveTextContent(/no account services/i)
+      );
+      expect(createInvoice).not.toHaveBeenCalled();
+    });
+
+    /**
+     * §2 — The dropdown renders exactly one option per Client (keyed by id),
+     * and falls back to firstName + lastName when the client's `name` is blank.
+     */
+    it('renders one option per client and falls back to first + last name when name is blank', async () => {
+      const namedClient = createMockClient({ id: 'c-named', name: 'Named Corp' });
+      const unnamedIndividual: Client = {
+        id: 'c-indiv',
+        name: '',
+        firstName: 'Ada',
+        lastName: 'Lovelace',
+        clientType: 'INDIVIDUAL' as ClientType,
+        portfolioList: [
+          { id: 'pf-a', serialised: 'Portfolio A' },
+          { id: 'pf-b', serialised: 'Portfolio B' },
+        ], // two portfolios must NOT produce two dropdown rows
+        dateCreated: '2024-01-01T00:00:00Z',
+        lastUpdated: '2024-01-01T00:00:00Z',
+      };
+      setupDefaultMocks([namedClient, unnamedIndividual]);
+
+      renderInvoiceFormPage();
+
+      await screen.findByText('Named Corp');
+      // Individual with blank name shows first + last, not a portfolio serialised.
+      expect(screen.getByText('Ada Lovelace')).toBeInTheDocument();
+      expect(screen.queryByText('Portfolio A')).not.toBeInTheDocument();
+      expect(screen.queryByText('Portfolio B')).not.toBeInTheDocument();
+
+      const select = screen.getByTestId('invoice-client-select');
+      const options = within(select).getAllByRole('option');
+      // placeholder + exactly 2 clients (NOT 3 from the 2-portfolio client)
+      expect(options).toHaveLength(3);
+    });
+
+    /**
+     * §3 — The ?clientId URL parameter pre-selects the matching client.
+     */
+    it('pre-selects the client from the ?clientId URL parameter', async () => {
+      const mockClients = [
+        createMockClient({ id: 'c-1', name: 'First Corp' }),
+        createMockClient({ id: 'c-2', name: 'Second Corp' }),
+      ];
+      setupDefaultMocks(mockClients);
+
+      renderInvoiceFormPage({ route: '/invoices/new?clientId=c-2', path: '/invoices/new' });
+
+      await screen.findByText('Second Corp');
+      await waitFor(() =>
+        expect(screen.getByTestId('invoice-client-select')).toHaveValue('c-2')
+      );
+    });
+
+    /**
+     * §3 (negative) — An unknown ?clientId leaves the dropdown on the placeholder.
+     */
+    it('ignores an unknown ?clientId and keeps the placeholder', async () => {
+      const mockClients = [createMockClient({ id: 'c-1', name: 'First Corp' })];
+      setupDefaultMocks(mockClients);
+
+      renderInvoiceFormPage({ route: '/invoices/new?clientId=does-not-exist', path: '/invoices/new' });
+
+      await screen.findByText('First Corp');
+      expect(screen.getByTestId('invoice-client-select')).toHaveValue('');
     });
   });
 

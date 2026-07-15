@@ -22,10 +22,10 @@
  * Changed (2026-02-06): Replaced accountServices dropdown with Client dropdown
  */
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getInvoice, createInvoice, updateInvoice, sendInvoice } from '../../api/endpoints/invoices';
-import { listClients, createClient } from '../../api/endpoints/clients';
+import { listClients, createClient, getClientPortfolio, getClientDisplayName } from '../../api/endpoints/clients';
 import { listTaxRates, listInvoiceServices } from '../../api/endpoints/domainData';
 import { useFormatCurrency } from '../../stores';
 import { DEFAULT_CURRENCIES } from '../../api/endpoints/domainData';
@@ -44,6 +44,10 @@ interface LineItem {
 export function InvoiceFormPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  // Fix (SOUPFIN-27 §3): honor ?clientId=<uuid> from the client detail page's
+  // "Create Invoice" quick action so the dropdown pre-selects that client.
+  const clientIdParam = searchParams.get('clientId');
   const queryClient = useQueryClient();
   const formatCurrency = useFormatCurrency();
   const isEdit = !!id;
@@ -82,10 +86,31 @@ export function InvoiceFormPage() {
     queryFn: () => listClients({ max: 100 }),
   });
 
-  // Fix: Resolve accountServicesId through client's portfolioList (not direct accountServices)
-  // Client → portfolioList[0] → accountServices.id
+  // Fix (SOUPFIN-27 §1): Resolve accountServicesId through the client's portfolio.
+  // The /rest/client/index.json list response returns portfolioList entries as
+  // bare references ({ id, class, serialised }) WITHOUT the nested
+  // accountServices object — so reading portfolioList[0].accountServices.id off
+  // the list always yielded '' and blocked invoice creation for every client.
+  // Instead, after a client is selected, fetch its first portfolio's detail
+  // (/rest/clientPortfolio/show/{portfolioId}.json), which does include the FK.
   const selectedClient = clients?.find((c) => c.id === selectedClientId);
-  const resolvedAccountServicesId = selectedClient?.portfolioList?.[0]?.accountServices?.id || '';
+  const selectedPortfolioId = selectedClient?.portfolioList?.[0]?.id;
+
+  const { data: selectedPortfolio, isLoading: portfolioLoading } = useQuery({
+    queryKey: ['client-portfolio', selectedPortfolioId],
+    queryFn: () => getClientPortfolio(selectedPortfolioId!),
+    enabled: !!selectedPortfolioId,
+  });
+
+  // Prefer the freshly-fetched portfolio FK; fall back to any nested value the
+  // list happened to carry (e.g. in tests / eager-loading backends).
+  const resolvedAccountServicesId =
+    selectedPortfolio?.accountServices?.id ||
+    selectedClient?.portfolioList?.[0]?.accountServices?.id ||
+    '';
+
+  // True while we still can't rule out a resolvable FK (portfolio fetch pending).
+  const accountServicesResolving = !!selectedPortfolioId && portfolioLoading && !resolvedAccountServicesId;
 
   // Fetch tax rates for dropdown
   const { data: taxRates } = useQuery({
@@ -153,6 +178,19 @@ export function InvoiceFormPage() {
       }
     }
   }, [invoice, clients, selectedClientId]);
+
+  // Fix (SOUPFIN-27 §3): Pre-select the client from the ?clientId URL parameter
+  // (used by the "Create Invoice" quick action on the client detail page).
+  // Only applies in create mode — edit mode resolves the client from the invoice.
+  useEffect(() => {
+    if (!isEdit && clientIdParam && clients && !selectedClientId) {
+      const match = clients.find((c) => c.id === clientIdParam);
+      if (match) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- Pre-selecting client from URL param
+        setSelectedClientId(match.id);
+      }
+    }
+  }, [isEdit, clientIdParam, clients, selectedClientId]);
 
   // Create mutation (draft)
   const createMutation = useMutation({
@@ -333,6 +371,11 @@ export function InvoiceFormPage() {
       setFormError('Please select a client');
       return null;
     }
+    if (accountServicesResolving) {
+      // The portfolio FK fetch is still in flight — ask the user to retry.
+      setFormError('Still loading the client’s account services. Please try again in a moment.');
+      return null;
+    }
     if (!resolvedAccountServicesId) {
       // Edge case: client exists but has no accountServices linked
       setFormError('Selected client has no account services. Please choose a different client.');
@@ -495,9 +538,11 @@ export function InvoiceFormPage() {
                   data-testid="invoice-client-select"
                 >
                   <option value="">Select a client</option>
+                  {/* Fix (SOUPFIN-27 §2): key by client.id and show the client's
+                      own name — one option per Client, never per portfolio entry. */}
                   {clients?.map((client) => (
                     <option key={client.id} value={client.id}>
-                      {client.name}
+                      {getClientDisplayName(client)}
                     </option>
                   ))}
                 </select>
@@ -518,8 +563,13 @@ export function InvoiceFormPage() {
                   {showNewClientForm ? 'Cancel' : 'New Client'}
                 </button>
               </div>
-              {/* NOTE: Show warning if selected client has no accountServices */}
-              {selectedClientId && !resolvedAccountServicesId && (
+              {/* NOTE: Resolving the FK requires a portfolio fetch — show a
+                  neutral hint while it loads, and only warn once it truly can't
+                  be resolved (SOUPFIN-27). */}
+              {selectedClientId && accountServicesResolving && (
+                <p className="text-xs text-subtle-text mt-1">Resolving account services…</p>
+              )}
+              {selectedClientId && !accountServicesResolving && !resolvedAccountServicesId && (
                 <p className="text-xs text-danger mt-1">This client has no linked account services.</p>
               )}
 
