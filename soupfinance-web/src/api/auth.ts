@@ -8,6 +8,9 @@
  * 2. Corporate 2FA: OTP-based via requestOTP() + verifyOTP()
  */
 import apiClient, { toFormData } from './client';
+// Added (SOUPFIN-29): translate raw AxiosError ("Request failed with status code 401")
+// into a user-friendly message before it reaches the store / UI.
+import { getLoginErrorMessage } from './errors';
 
 // User type returned from login
 export interface AuthUser {
@@ -53,11 +56,19 @@ export interface OTPResponse {
  */
 export async function login(email: string, password: string, rememberMe: boolean = false): Promise<AuthUser> {
   // Use JSON format for login (backend config: useJsonCredentials = true)
-  const response = await apiClient.post<LoginResponse>(
-    '/api/login',
-    { username: email, password },
-    { headers: { 'Content-Type': 'application/json' } }
-  );
+  // Changed (SOUPFIN-29): Catch auth failures and rethrow with a user-friendly
+  // message. Without this, a 401 propagates the raw AxiosError whose `.message`
+  // is "Request failed with status code 401", which the store then shows to the user.
+  let response: Awaited<ReturnType<typeof apiClient.post<LoginResponse>>>;
+  try {
+    response = await apiClient.post<LoginResponse>(
+      '/api/login',
+      { username: email, password },
+      { headers: { 'Content-Type': 'application/json' } }
+    );
+  } catch (err) {
+    throw new Error(getLoginErrorMessage(err));
+  }
   const { access_token, username, roles } = response.data;
 
   // Changed: Choose storage based on rememberMe preference
@@ -201,12 +212,21 @@ export function hasAnyRole(roles: string[]): boolean {
 export async function requestOTP(contact: string): Promise<{ message: string }> {
   const formData = toFormData({ contact });
 
-  const response = await apiClient.post<{ message: string }>(
-    '/client/authenticate.json',
-    formData
-  );
-
-  return response.data;
+  // Changed (SOUPFIN-29): surface a friendly message instead of the raw AxiosError.
+  try {
+    const response = await apiClient.post<{ message: string }>(
+      '/client/authenticate.json',
+      formData
+    );
+    return response.data;
+  } catch (err) {
+    throw new Error(
+      getLoginErrorMessage(
+        err,
+        "We couldn't send a verification code. Please check the email or phone number and try again.",
+      ),
+    );
+  }
 }
 
 /**
@@ -221,10 +241,18 @@ export async function requestOTP(contact: string): Promise<{ message: string }> 
 export async function verifyOTP(code: string): Promise<AuthUser> {
   const formData = toFormData({ code });
 
-  const response = await apiClient.post<OTPResponse>(
-    '/client/verifyCode.json',
-    formData
-  );
+  // Changed (SOUPFIN-29): surface a friendly message instead of the raw AxiosError.
+  let response: Awaited<ReturnType<typeof apiClient.post<OTPResponse>>>;
+  try {
+    response = await apiClient.post<OTPResponse>(
+      '/client/verifyCode.json',
+      formData
+    );
+  } catch (err) {
+    throw new Error(
+      getLoginErrorMessage(err, 'Invalid or expired verification code. Please try again.'),
+    );
+  }
 
   const { access_token, username, email, roles, tenantId, corporateId } = response.data;
 

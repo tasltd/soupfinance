@@ -16,8 +16,8 @@ import { defineConfig, devices } from '@playwright/test';
 // Integration test port (different from mock tests to allow parallel runs)
 const INTEGRATION_TEST_PORT = 5181;
 
-// LXC Backend URL
-const LXC_BACKEND_URL = 'http://10.115.213.183:9090';
+// Removed (SOUPFIN-29 cleanup): unused LXC_BACKEND_URL const (dead code, tripped lint).
+// The LXC backend proxy target is configured via .env.lxc / VITE_PROXY_TARGET, not here.
 
 export default defineConfig({
   testDir: './e2e/integration',
