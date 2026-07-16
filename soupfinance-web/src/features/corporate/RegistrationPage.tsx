@@ -25,6 +25,8 @@ import { useNavigate } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { registerTenant } from '../../api/endpoints/registration';
 import type { TenantRegistration, BusinessType } from '../../api/endpoints/registration';
+// Fix (SOUPFIN-29): friendly fallback instead of raw Axios "status code" text
+import { getApiErrorMessage } from '../../api/errors';
 // Changed: Import shared country/currency data from domainData (single source of truth)
 import {
   DEFAULT_COUNTRIES,
@@ -103,7 +105,10 @@ export function RegistrationPage() {
       if (backendData?.errors) {
         setValidationErrors(backendData.errors);
       } else {
-        const errorMessage = backendData?.message || backendData?.error || error.message || 'Registration failed. Please try again.';
+        // Prefer explicit backend validation messages; fall back to a parsed
+        // friendly message (never the raw "Request failed with status code" text).
+        const errorMessage =
+          backendData?.message || backendData?.error || getApiErrorMessage(error) || 'Registration failed. Please try again.';
         setValidationErrors({ form: errorMessage });
       }
     },

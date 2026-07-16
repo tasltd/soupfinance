@@ -135,10 +135,11 @@ describe('authStore', () => {
       expect(authApi.login).toHaveBeenCalledWith('user@test.com', 'password', true)
     })
 
-    it('sets error and clears user on login failure', async () => {
+    // Changed (SOUPFIN-29): a raw non-Axios Error must NOT be surfaced verbatim;
+    // getLoginErrorMessage returns a safe generic message instead.
+    it('sets a friendly error and clears user on login failure', async () => {
       // Arrange
-      const errorMessage = 'Invalid credentials'
-      vi.mocked(authApi.login).mockRejectedValue(new Error(errorMessage))
+      vi.mocked(authApi.login).mockRejectedValue(new Error('Request failed with status code 401'))
 
       // Act
       await act(async () => {
@@ -154,7 +155,57 @@ describe('authStore', () => {
       expect(state.user).toBeNull()
       expect(state.isAuthenticated).toBe(false)
       expect(state.isLoading).toBe(false)
-      expect(state.error).toBe(errorMessage)
+      // Must be a friendly message, never the raw Axios "status code" text
+      expect(state.error).toBe('Unable to sign in. Please try again.')
+      expect(state.error).not.toContain('status code')
+    })
+
+    // Added (SOUPFIN-29): the real production path — an AxiosError with a 401
+    // response must render "Invalid username or password.", not the raw message.
+    it('maps an Axios 401 to "Invalid username or password."', async () => {
+      // Arrange: duck-typed AxiosError as produced by the response interceptor
+      const axiosError = Object.assign(new Error('Request failed with status code 401'), {
+        isAxiosError: true,
+        config: { url: '/api/login' },
+        response: { status: 401, data: { error: 'Bad credentials' } },
+      })
+      vi.mocked(authApi.login).mockRejectedValue(axiosError)
+
+      // Act
+      await act(async () => {
+        try {
+          await useAuthStore.getState().login('test@example.com', 'wrongpassword')
+        } catch {
+          // Expected to throw
+        }
+      })
+
+      // Assert
+      const state = useAuthStore.getState()
+      expect(state.error).toBe('Invalid username or password.')
+      expect(state.error).not.toContain('status code')
+      expect(state.error).not.toContain('Bad credentials')
+    })
+
+    // Added (SOUPFIN-29): descriptive account-state messages pass through so the
+    // LoginPage can still show the Resend Confirmation link.
+    it('passes through a descriptive "email not confirmed" backend message', async () => {
+      const axiosError = Object.assign(new Error('Request failed with status code 403'), {
+        isAxiosError: true,
+        config: { url: '/api/login' },
+        response: { status: 403, data: { message: 'Your email is not confirmed yet.' } },
+      })
+      vi.mocked(authApi.login).mockRejectedValue(axiosError)
+
+      await act(async () => {
+        try {
+          await useAuthStore.getState().login('test@example.com', 'password')
+        } catch {
+          // Expected
+        }
+      })
+
+      expect(useAuthStore.getState().error).toBe('Your email is not confirmed yet.')
     })
 
     it('throws error to caller on login failure', async () => {
@@ -180,8 +231,8 @@ describe('authStore', () => {
         }
       })
 
-      // Assert: Should use fallback message for non-Error types
-      expect(useAuthStore.getState().error).toBe('Login failed')
+      // Assert: Should use safe fallback message for non-Error types (SOUPFIN-29)
+      expect(useAuthStore.getState().error).toBe('Unable to sign in. Please try again.')
     })
 
     it('clears previous error before new login attempt', async () => {

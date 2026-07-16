@@ -189,3 +189,60 @@ export function parseApiError(error: unknown): ParsedApiError {
 export function getApiErrorMessage(error: unknown): string {
   return parseApiError(error).message;
 }
+
+// Backend messages that describe an account STATE problem (not bad credentials).
+// These must pass through verbatim on the login screen so the LoginPage can
+// detect them (e.g. the "email not confirmed" case shows a Resend link).
+// Keep in loose sync with UNCONFIRMED_PATTERNS in features/auth/LoginPage.tsx.
+// Stems (no trailing \b) so inflected forms match: confirmed/confirming,
+// activated, verified, disabled, locked, suspended, expired.
+const ACCOUNT_STATE_PATTERNS =
+  /\b(confirm|verif|activat|disabl|lock|suspend|expir|pending)/i;
+
+/**
+ * Login-specific error message.
+ *
+ * SOUPFIN-29: on the login screen a 401/403 must read "Invalid username or
+ * password." — NOT the raw Axios "Request failed with status code 401", and
+ * NOT parseApiError's generic 401="Session expired" (wrong for a fresh sign-in
+ * attempt). Descriptive account-state messages from the backend (email not
+ * confirmed, account locked, etc.) are passed through verbatim so the UI can
+ * still surface the Resend Confirmation link and similar guidance.
+ *
+ * Also covers the signup path indirectly: registration uses getApiErrorMessage,
+ * this helper is only for the two auth login flows (admin login + OTP verify).
+ */
+export function getLoginErrorMessage(error: unknown): string {
+  if (error && typeof error === 'object' && (error as Record<string, unknown>).isAxiosError === true) {
+    const axErr = error as AxiosError;
+
+    // No response at all → connection failure/timeout
+    if (!axErr.response) {
+      return 'Unable to reach the server. Check your internet connection and try again.';
+    }
+
+    const status = axErr.response.status;
+    const serverMessage = extractServerMessage(axErr.response.data);
+
+    if (status === 401 || status === 403) {
+      // Pass through descriptive account-state guidance (email not confirmed,
+      // account locked, etc.) so the LoginPage can react to it. Otherwise this
+      // is a plain bad-credentials rejection.
+      if (serverMessage && ACCOUNT_STATE_PATTERNS.test(serverMessage)) {
+        return serverMessage;
+      }
+      return 'Invalid username or password.';
+    }
+
+    if (status >= 500) {
+      return 'The server is temporarily unavailable. Please try again in a moment.';
+    }
+
+    // Other 4xx (e.g. 400 malformed request) — prefer a useful backend message,
+    // never the raw "status code" text.
+    return serverMessage || 'Unable to sign in. Please try again.';
+  }
+
+  // Non-Axios error — avoid leaking internal messages on the login screen.
+  return 'Unable to sign in. Please try again.';
+}
