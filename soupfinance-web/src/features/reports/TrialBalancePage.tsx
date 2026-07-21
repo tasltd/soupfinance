@@ -9,6 +9,7 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getTrialBalance, exportFinanceReport, type ReportFilters } from '../../api/endpoints/reports';
+import { formatDisplayDate } from '../../utils/date';
 import type { TrialBalanceItem } from '../../types';
 
 // Added: Trial balance uses subset of LedgerGroup (excludes 'INCOME' which is aliased to 'REVENUE')
@@ -228,7 +229,8 @@ export function TrialBalancePage() {
           </h1>
           <p className="text-subtle-text">
             Debit and credit balances for all accounts
-            {trialBalance?.asOf && ` as of ${trialBalance.asOf}`}
+            {/* Fix (SOUPFIN-30 #12): format the as-of date for display (was raw ISO). */}
+            {trialBalance?.asOf && ` as of ${formatDisplayDate(trialBalance.asOf)}`}
           </p>
         </div>
 

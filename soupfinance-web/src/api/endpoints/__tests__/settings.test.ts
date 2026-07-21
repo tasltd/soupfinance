@@ -13,7 +13,7 @@
  *      a tenantId (e.g. backend response has no tenantId at all).
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { accountSettingsApi, isValidAccountSettings } from '../settings';
+import { accountSettingsApi, banksApi, isValidAccountSettings } from '../settings';
 import { useAuthStore } from '../../../stores/authStore';
 import apiClient, { accountClient } from '../../client';
 
@@ -214,5 +214,41 @@ describe('isValidAccountSettings (SOUPFIN-23 type guard)', () => {
     expect(isValidAccountSettings({ name: 'no-id' })).toBe(false);
     expect(isValidAccountSettings({ id: '' })).toBe(false);
     expect(isValidAccountSettings({ id: 123 })).toBe(false);
+  });
+});
+
+// Fix (SOUPFIN-30 #10): the Add Bank Account form's bank dropdown was empty.
+// banksApi.list() must yield the bank array whether the backend returns a bare
+// array or a wrapped envelope, and drop malformed rows.
+describe('banksApi.list() — SOUPFIN-30 #10 resilient parsing', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('returns a bare array of banks (with ids) unchanged', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({
+      data: [
+        { id: 'b1', name: 'Absa Bank Ghana Limited' },
+        { id: 'b2', name: 'GCB Bank' },
+      ],
+    });
+    const banks = await banksApi.list();
+    expect(banks.map((b) => b.name)).toEqual(['Absa Bank Ghana Limited', 'GCB Bank']);
+  });
+
+  it('unwraps a { bankList } / { resultList } envelope', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({ data: { bankList: [{ id: 'b1', name: 'GCB' }] } });
+    expect((await banksApi.list()).map((b) => b.id)).toEqual(['b1']);
+
+    vi.mocked(apiClient.get).mockResolvedValue({ data: { resultList: [{ id: 'b9', name: 'Fidelity' }] } });
+    expect((await banksApi.list()).map((b) => b.id)).toEqual(['b9']);
+  });
+
+  it('drops malformed rows and returns [] for an unexpected shape', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({ data: [{ id: 'b1', name: 'Ok' }, { name: 'No id' }, null] });
+    expect((await banksApi.list()).map((b) => b.id)).toEqual(['b1']);
+
+    vi.mocked(apiClient.get).mockResolvedValue({ data: { unexpected: true } });
+    expect(await banksApi.list()).toEqual([]);
   });
 });

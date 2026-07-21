@@ -27,3 +27,28 @@ export function sanitizeDateInputValue(value?: string | number | null): string {
   // Only forward strictly-shaped YYYY-MM-DD values; reject anything else.
   return /^\d{4}-\d{2}-\d{2}$/.test(datePart) ? datePart : '';
 }
+
+/**
+ * Added (SOUPFIN-30 #12): Format a date value for human-readable *display*
+ * (report subtitles, "As of" labels) as e.g. "July 21, 2026". Aging and Trial
+ * Balance reports were rendering the raw ISO/YYYY-MM-DD value (e.g.
+ * "as of 2026-07-21") while Balance Sheet/Cash Flow formatted theirs.
+ *
+ * Parses the date parts manually to avoid the UTC-midnight timezone shift that
+ * `new Date('2026-07-21')` introduces (which can render the previous day in
+ * negative-offset timezones). Returns '' for unusable input so callers can hide
+ * the suffix rather than print "Invalid Date".
+ */
+export function formatDisplayDate(value?: string | number | null): string {
+  const sanitized = sanitizeDateInputValue(value);
+  if (!sanitized) return '';
+  const [year, month, day] = sanitized.split('-').map(Number);
+  // Construct in local time from explicit parts (no timezone shift).
+  const date = new Date(year, month - 1, day);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+}

@@ -12,6 +12,7 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { listLedgerTransactions, listLedgerAccounts } from '../../api/endpoints/ledger';
 import { useFormatCurrency } from '../../stores';
+import { sanitizeDateInputValue } from '../../utils/date';
 import { ApiErrorState } from '../../components/feedback';
 import type { LedgerTransaction, LedgerAccount, LedgerState } from '../../types';
 
@@ -134,7 +135,9 @@ export function LedgerTransactionsPage() {
             <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">From</label>
             <input
               type="date"
-              value={startDate}
+              // Fix (SOUPFIN-30 #5): sanitize so an empty/invalid value renders the
+              // native placeholder instead of a "0/0/0" zero-date.
+              value={sanitizeDateInputValue(startDate)}
               onChange={(e) => setStartDate(e.target.value)}
               className="w-full h-10 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-3 text-sm text-text-light dark:text-text-dark focus:border-primary focus:ring-1 focus:ring-primary/50"
               data-testid="start-date-filter"
@@ -146,7 +149,8 @@ export function LedgerTransactionsPage() {
             <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">To</label>
             <input
               type="date"
-              value={endDate}
+              // Fix (SOUPFIN-30 #5): sanitize empty/invalid value → native placeholder.
+              value={sanitizeDateInputValue(endDate)}
               onChange={(e) => setEndDate(e.target.value)}
               className="w-full h-10 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-3 text-sm text-text-light dark:text-text-dark focus:border-primary focus:ring-1 focus:ring-primary/50"
               data-testid="end-date-filter"

@@ -343,10 +343,25 @@ export const rolesApi = {
 export const banksApi = {
   /**
    * List available banks
+   *
+   * Fix (SOUPFIN-30 #10): The bank dropdown showed only "Select a bank" / "Other".
+   * Harden the parsing so a wrapped response ({ bankList } / { banks }) or a
+   * paginated envelope ({ resultList }) still yields the bank array, and sort by
+   * name so the (large) list is browsable. Returns [] on an unexpected shape so
+   * the caller can fall back to the "Other (specify)" free-text path.
    */
   list: async (): Promise<Bank[]> => {
-    const response = await apiClient.get<Bank[]>('/bank/index.json?max=1000');
-    return response.data;
+    const response = await apiClient.get('/bank/index.json?max=1000&sort=name&order=asc');
+    const data = response.data as unknown;
+    let banks: Bank[] = [];
+    if (Array.isArray(data)) {
+      banks = data as Bank[];
+    } else if (data && typeof data === 'object') {
+      const wrapped = data as Record<string, unknown>;
+      const candidate = wrapped.bankList ?? wrapped.banks ?? wrapped.resultList;
+      if (Array.isArray(candidate)) banks = candidate as Bank[];
+    }
+    return banks.filter((b) => b && b.id);
   },
 };
 

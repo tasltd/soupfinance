@@ -13,8 +13,10 @@ import type { AccountBankDetailsFormData } from '../../types/settings';
 // Changed: Import shared currency data from domainData (single source of truth)
 import { DEFAULT_CURRENCIES, listCurrencies } from '../../api/endpoints/domainData';
 import type { Currency as DomainCurrency } from '../../api/endpoints/domainData';
+// Fix (SOUPFIN-30 #11): use the shared (transformed) ledger account loader.
+import { listLedgerAccounts } from '../../api/endpoints/ledger';
+import type { LedgerAccount as FullLedgerAccount } from '../../types';
 import { logger } from '../../utils/logger';
-import apiClient from '../../api/client';
 
 // Form validation schema
 // Fix (SOUPFIN-14): Bank is required (matches backend constraint). Either pick a known
@@ -43,12 +45,11 @@ const bankAccountSchema = z
 
 type BankAccountFormValues = z.infer<typeof bankAccountSchema>;
 
-// Ledger Account interface for dropdown
-interface LedgerAccount {
+// Fix (SOUPFIN-30 #11): dropdown row shape derived from the shared LedgerAccount.
+interface BankLedgerOption {
   id: string;
   name: string;
   accountNumber: string;
-  accountType?: string;
 }
 
 export default function BankAccountFormPage() {
@@ -76,19 +77,22 @@ export default function BankAccountFormPage() {
     queryFn: banksApi.list,
   });
 
-  // Fetch ledger accounts (Bank/Cash type for linking)
+  // Fetch ledger accounts (Bank/Cash = ASSET group) for linking.
+  // Fix (SOUPFIN-30 #11): The old query filtered on `acc.accountNumber` — a field
+  // the backend does not send — so the dropdown was always empty. Use the shared
+  // (transformed) loader, keep ASSET-group accounts, and label with the account
+  // number/code that transformLedgerAccount() now populates.
   const { data: ledgerAccounts } = useQuery({
     queryKey: ['ledgerAccounts', 'bank'],
-    queryFn: async (): Promise<LedgerAccount[]> => {
-      // Fetch bank/cash type ledger accounts for linking
-      const response = await apiClient.get<LedgerAccount[]>('/ledgerAccount/index.json?max=500');
-      // Filter to bank/cash accounts or return all if type not available
-      return response.data.filter(
-        (acc) =>
-          acc.accountNumber?.startsWith('1') || // Assets
-          acc.name?.toLowerCase().includes('bank') ||
-          acc.name?.toLowerCase().includes('cash')
-      );
+    queryFn: async (): Promise<BankLedgerOption[]> => {
+      const accounts: FullLedgerAccount[] = await listLedgerAccounts({ max: 1000 });
+      return accounts
+        .filter((acc) => acc.ledgerGroup === 'ASSET')
+        .map((acc) => ({
+          id: acc.id,
+          name: acc.name,
+          accountNumber: acc.number || acc.code || '',
+        }));
     },
   });
 
@@ -354,7 +358,7 @@ export default function BankAccountFormPage() {
               <option value="">Not linked (select to link)</option>
               {ledgerAccounts?.map((account) => (
                 <option key={account.id} value={account.id}>
-                  {account.accountNumber} - {account.name}
+                  {account.accountNumber ? `${account.accountNumber} - ${account.name}` : account.name}
                 </option>
               ))}
             </select>

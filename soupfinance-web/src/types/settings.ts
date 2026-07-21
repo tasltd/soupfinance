@@ -67,8 +67,10 @@ export interface Agent {
   phoneContacts?: PhoneContact[];
   userAccess?: {
     id: number;
-    username: string;
-    enabled: boolean;
+    // Changed (SOUPFIN-30 #9): optional — the backend often serialises userAccess
+    // as a shallow FK ({ id, class }) with no username on the agent list response.
+    username?: string;
+    enabled?: boolean;
     accountLocked?: boolean;
   };
   account?: { id: string; name?: string };
@@ -80,6 +82,10 @@ export interface Agent {
   lastSeen?: string;
   dateCreated?: string;
   lastUpdated?: string;
+  // Added (SOUPFIN-30 #9): Grails display string, format
+  // "First Last, Access:username". Used to recover the login username when the
+  // `userAccess` FK is serialised shallow (only { id, class }, no username).
+  simpleID?: string;
 }
 
 export interface AgentFormData {

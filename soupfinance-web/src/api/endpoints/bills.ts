@@ -26,6 +26,41 @@ function formatDateField(isoDatetime?: string): string {
 }
 
 /**
+ * Fix (SOUPFIN-30 #1): Resolve a vendor's display name from its Grails FK
+ * reference. The backend does NOT send `vendor.name` on the bill list/detail
+ * response — only `vendor.serialised`, which uses Vendor.getSimpleID():
+ * "SYMBOL (Name)[VendorType]" (e.g. "(Ayawaso West Municipal Assembly)" when
+ * the symbol is blank). We extract the text inside the first parentheses; if
+ * there are no parentheses we fall back to the trimmed serialised string.
+ */
+export function extractVendorName(vendor?: { name?: string; serialised?: string } | null): string {
+  if (!vendor) return '';
+  if (vendor.name) return vendor.name;
+  const serialised = vendor.serialised?.trim();
+  if (!serialised) return '';
+  const match = serialised.match(/\(([^)]*)\)/);
+  return (match ? match[1] : serialised).trim();
+}
+
+/**
+ * Fix (SOUPFIN-30 #1, #2): Normalise a raw bill from the backend so the list,
+ * detail, and edit views render correctly:
+ *   - vendor.name is resolved from vendor.serialised (backend omits `name`)
+ *   - billDate / paymentDate are stripped of their ISO time component
+ *     (e.g. "2023-07-10T00:00:00Z" → "2023-07-10")
+ */
+function transformBill(raw: Bill): Bill {
+  return {
+    ...raw,
+    vendor: raw.vendor
+      ? { ...raw.vendor, name: extractVendorName(raw.vendor) }
+      : raw.vendor,
+    billDate: formatDateField(raw.billDate) || raw.billDate,
+    paymentDate: formatDateField(raw.paymentDate) || raw.paymentDate,
+  };
+}
+
+/**
  * Safely extract a string from a value that may be a Grails FK/enum reference object.
  * Grails serializes enums and FKs as { id, class, serialised } objects.
  * This helper returns the serialised string or the value itself if it's already a string.
@@ -66,16 +101,44 @@ function transformPayment(raw: BillPayment): BillPayment {
 export async function listBills(params?: ListParams): Promise<Bill[]> {
   const query = params ? `?${toQueryString(params)}` : '';
   const response = await apiClient.get<Bill[]>(`${BASE_URL}/index.json${query}`);
-  return response.data;
+  // Fix (SOUPFIN-30 #1, #2): resolve vendor name + format dates for display.
+  return (response.data || []).map(transformBill);
 }
 
 /**
  * Get single bill by ID
  * GET /rest/bill/show/:id.json
+ *
+ * Fix (SOUPFIN-30 #3): The bill show response returns `billItemList: null`
+ * (line items are only FK references there), so — mirroring getInvoice() — we
+ * fetch the full line items separately from /rest/billItem/index.json. Without
+ * this, the edit form's line-item rows populated blank/zero.
  */
 export async function getBill(id: string): Promise<Bill> {
   const response = await apiClient.get<Bill>(`${BASE_URL}/show/${id}.json`);
-  return response.data;
+  const bill = response.data;
+
+  // Fetch full bill items separately (bill response has only FK references / null)
+  try {
+    const itemsResponse = await apiClient.get<BillItem[]>(
+      `/billItem/index.json?bill.id=${id}&max=100`
+    );
+    if (itemsResponse.data && Array.isArray(itemsResponse.data)) {
+      // Normalise each item — backend omits taxRate/amount on the list response.
+      bill.billItemList = itemsResponse.data.map((item) => ({
+        ...item,
+        quantity: Number(item.quantity) || 0,
+        unitPrice: Number(item.unitPrice) || 0,
+        taxRate: Number(item.taxRate) || 0,
+        amount: item.amount != null ? Number(item.amount) : (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0),
+      }));
+    }
+  } catch {
+    // If items fetch fails, keep whatever the bill response had
+    console.warn('Failed to fetch bill items separately');
+  }
+
+  return transformBill(bill);
 }
 
 /**
