@@ -17,6 +17,7 @@ import { getBill, createBill, updateBill } from '../../api/endpoints/bills';
 import { listVendors } from '../../api/endpoints/vendors';
 import { listTaxRates, listBillServices, DEFAULT_CURRENCIES } from '../../api/endpoints/domainData';
 import { useFormatCurrency } from '../../stores';
+import { sanitizeDateInputValue } from '../../utils/date';
 import type { BillItem } from '../../types';
 
 // Added: Line item type for form state (without id for new items)
@@ -82,8 +83,11 @@ export function BillFormPage() {
   useEffect(() => {
     if (bill) {
       setVendorId(bill.vendor?.id || '');
-      setBillDate(bill.billDate || '');
-      setPaymentDate(bill.paymentDate || '');
+      // Fix (SOUPFIN-30 #3): sanitize dates so the native <input type="date">
+      // binds them. The backend may still send raw ISO ("2023-07-10T00:00:00Z")
+      // which the input rejects, leaving the field blank on edit.
+      setBillDate(sanitizeDateInputValue(bill.billDate));
+      setPaymentDate(sanitizeDateInputValue(bill.paymentDate));
       setNotes(bill.notes || '');
       setPurchaseOrderNumber(bill.purchaseOrderNumber || '');
       setSalesOrderNumber(bill.salesOrderNumber || '');

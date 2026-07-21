@@ -14,6 +14,7 @@ import {
   exportFinanceReport,
   type ReportFilters,
 } from '../../api/endpoints/reports';
+import { formatDisplayDate } from '../../utils/date';
 import type { AgingReport, AgingItem } from '../../types';
 
 // Fix(SOUPFIN-11/SOUPFIN-16): Earliest date users can pick for historical aging analysis.
@@ -375,7 +376,8 @@ export function AgingReportsPage() {
           </h1>
           <p className="text-subtle-text">
             Outstanding receivables and payables by age as of{' '}
-            <span className="font-medium text-text-light dark:text-text-dark">{asOfDate}</span>
+            {/* Fix (SOUPFIN-30 #12): format the date for display (was raw ISO). */}
+            <span className="font-medium text-text-light dark:text-text-dark">{formatDisplayDate(asOfDate)}</span>
           </p>
         </div>
 

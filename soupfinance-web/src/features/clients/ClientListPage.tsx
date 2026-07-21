@@ -138,6 +138,12 @@ export function ClientListPage() {
           </span>
           <input
             type="search"
+            /* Fix (SOUPFIN-30 #6): give the field an id/name + aria-label so it is
+               labelled for assistive tech (was flagged "No label associated with a
+               form field" / "should have an id or name attribute"). */
+            id="client-search"
+            name="client-search"
+            aria-label="Search clients"
             placeholder="Search clients..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -148,6 +154,10 @@ export function ClientListPage() {
 
         {/* Type Filter — Fix (SOUPFIN-16): visual ring when active so user can see filter is applied. */}
         <select
+          /* Fix (SOUPFIN-30 #6): id/name + aria-label for the unlabelled filter. */
+          id="client-type-filter"
+          name="client-type-filter"
+          aria-label="Filter clients by type"
           value={typeFilter}
           onChange={(e) => setTypeFilter(e.target.value as ClientType | '')}
           className={`h-10 px-4 rounded-lg border bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary/20 focus:outline-none ${

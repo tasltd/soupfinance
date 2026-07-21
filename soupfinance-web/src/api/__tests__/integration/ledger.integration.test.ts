@@ -103,14 +103,19 @@ describe('Ledger API Integration', () => {
     });
   });
 
+  // Changed (SOUPFIN-30 #8): The backend cannot filter ledger accounts by
+  // `ledgerGroup` (it is derived from the account's category, not a column), so
+  // listLedgerAccountsByGroup now fetches all accounts (?max=1000) and filters
+  // client-side on the derived group.
   describe('listLedgerAccountsByGroup', () => {
-    it('fetches accounts by ASSET group', async () => {
-      // Arrange
-      const mockAssets = [
+    it('fetches all accounts and returns only the requested (ASSET) group', async () => {
+      // Arrange — a mix of groups; only ASSET rows should survive the filter.
+      const mockAccounts = [
         { id: 'acc-1', code: '1010', name: 'Cash', ledgerGroup: 'ASSET' },
         { id: 'acc-2', code: '1020', name: 'Bank', ledgerGroup: 'ASSET' },
+        { id: 'acc-3', code: '2000', name: 'Payables', ledgerGroup: 'LIABILITY' },
       ];
-      mockAxiosInstance.get.mockResolvedValue({ data: mockAssets });
+      mockAxiosInstance.get.mockResolvedValue({ data: mockAccounts });
 
       vi.resetModules();
       const { listLedgerAccountsByGroup } = await import('../../endpoints/ledger');
@@ -120,7 +125,7 @@ describe('Ledger API Integration', () => {
 
       // Assert
       expect(mockAxiosInstance.get).toHaveBeenCalledWith(
-        '/ledgerAccount/index.json?ledgerGroup=ASSET'
+        '/ledgerAccount/index.json?max=1000'
       );
       expect(result).toHaveLength(2);
       expect(result.every(acc => acc.ledgerGroup === 'ASSET')).toBe(true);
@@ -138,7 +143,7 @@ describe('Ledger API Integration', () => {
 
       // Assert
       expect(mockAxiosInstance.get).toHaveBeenCalledWith(
-        '/ledgerAccount/index.json?ledgerGroup=LIABILITY'
+        '/ledgerAccount/index.json?max=1000'
       );
     });
 
@@ -154,7 +159,7 @@ describe('Ledger API Integration', () => {
 
       // Assert
       expect(mockAxiosInstance.get).toHaveBeenCalledWith(
-        '/ledgerAccount/index.json?ledgerGroup=EQUITY'
+        '/ledgerAccount/index.json?max=1000'
       );
     });
 
@@ -170,7 +175,7 @@ describe('Ledger API Integration', () => {
 
       // Assert
       expect(mockAxiosInstance.get).toHaveBeenCalledWith(
-        '/ledgerAccount/index.json?ledgerGroup=INCOME'
+        '/ledgerAccount/index.json?max=1000'
       );
     });
 
@@ -186,7 +191,7 @@ describe('Ledger API Integration', () => {
 
       // Assert
       expect(mockAxiosInstance.get).toHaveBeenCalledWith(
-        '/ledgerAccount/index.json?ledgerGroup=EXPENSE'
+        '/ledgerAccount/index.json?max=1000'
       );
     });
   });

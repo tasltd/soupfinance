@@ -28,6 +28,59 @@ import type {
 // Ledger Accounts (Chart of Accounts)
 // =============================================================================
 
+// Fix (SOUPFIN-30 #4, #7, #8): Known ledger groups, used to derive the group
+// from the category's serialised string.
+const KNOWN_LEDGER_GROUPS: LedgerGroup[] = ['ASSET', 'LIABILITY', 'EQUITY', 'INCOME', 'EXPENSE', 'REVENUE'];
+
+/**
+ * Fix (SOUPFIN-30 #8): Derive the LedgerGroup from a raw ledger account.
+ *
+ * The backend does NOT send a top-level `ledgerGroup`. It sends
+ * `ledgerAccountCategory` as a Grails FK reference whose `serialised` string is
+ * produced by LedgerAccountCategory.toString() and always *ends* with the group
+ * enum, e.g. "Short-term Liabilities < LIABILITY". We read the last segment
+ * after the final ` < ` and match it against the known groups (falling back to
+ * a whole-string scan for safety).
+ */
+export function deriveLedgerGroup(raw: Partial<LedgerAccount>): LedgerGroup | undefined {
+  // Prefer an already-present group (e.g. mock data / future backend field).
+  if (raw.ledgerGroup && KNOWN_LEDGER_GROUPS.includes(raw.ledgerGroup)) {
+    return raw.ledgerGroup;
+  }
+  const serialised = (raw.ledgerAccountCategory as { serialised?: string } | undefined)?.serialised || '';
+  if (!serialised) return undefined;
+  const lastSegment = serialised.split('<').pop()?.trim().toUpperCase() || '';
+  const exact = KNOWN_LEDGER_GROUPS.find((g) => g === lastSegment);
+  if (exact) return exact;
+  // Fallback: scan the whole serialised string for any known group token.
+  const upper = serialised.toUpperCase();
+  return KNOWN_LEDGER_GROUPS.find((g) => upper.includes(g));
+}
+
+/**
+ * Fix (SOUPFIN-30 #4, #7, #8): Normalise a raw ledger account for the frontend.
+ *
+ * The backend LedgerAccount JSON has `name`, `number` (nullable), `quickReference`
+ * and `ledgerAccountCategory` (FK), but NO top-level `code`, `ledgerGroup`,
+ * `isActive` or `balance`. Without mapping these, the Chart of Accounts renders
+ * blank (grouping by undefined ledgerGroup), account dropdowns show
+ * "undefined - Name", and voucher account filters return zero options.
+ */
+export function transformLedgerAccount(raw: LedgerAccount): LedgerAccount {
+  // `code` drives display + sorting (ChartOfAccountsPage sorts by code.localeCompare).
+  // Backend has no `code`; use `number` ("5000") when present, else quickReference.
+  const rawRecord = raw as unknown as { number?: string; quickReference?: string; archived?: boolean; balance?: number };
+  const code = raw.code || rawRecord.number || rawRecord.quickReference || '';
+  return {
+    ...raw,
+    code,
+    number: rawRecord.number || raw.number,
+    ledgerGroup: deriveLedgerGroup(raw) ?? raw.ledgerGroup,
+    isActive: raw.isActive ?? (rawRecord.archived === true ? false : true),
+    balance: raw.balance ?? rawRecord.balance ?? 0,
+  };
+}
+
 /**
  * List all ledger accounts
  * GET /rest/ledgerAccount/index.json
@@ -35,18 +88,29 @@ import type {
 export async function listLedgerAccounts(params?: ListParams): Promise<LedgerAccount[]> {
   const query = params ? `?${toQueryString(params)}` : '';
   const response = await apiClient.get<LedgerAccount[]>(`/ledgerAccount/index.json${query}`);
-  return response.data;
+  // Fix (SOUPFIN-30 #4, #7, #8): map raw backend rows to the frontend shape.
+  return (response.data || []).map(transformLedgerAccount);
 }
 
 /**
  * List ledger accounts by group (ASSET, LIABILITY, EQUITY, INCOME, EXPENSE)
- * GET /rest/ledgerAccount/index.json?ledgerGroup=:group
+ *
+ * Fix (SOUPFIN-30 #8): The backend cannot filter by `ledgerGroup` (it is derived
+ * from the account's category, not a queryable column), so we fetch, transform,
+ * then filter client-side on the derived group. INCOME/REVENUE are treated as
+ * equivalent since the backend uses both.
  */
 export async function listLedgerAccountsByGroup(group: LedgerGroup): Promise<LedgerAccount[]> {
   const response = await apiClient.get<LedgerAccount[]>(
-    `/ledgerAccount/index.json?ledgerGroup=${group}`
+    `/ledgerAccount/index.json?max=1000`
   );
-  return response.data;
+  const accounts = (response.data || []).map(transformLedgerAccount);
+  const equivalent = (g?: LedgerGroup) =>
+    g === group || (
+      (group === 'INCOME' || group === 'REVENUE') &&
+      (g === 'INCOME' || g === 'REVENUE')
+    );
+  return accounts.filter((a) => equivalent(a.ledgerGroup));
 }
 
 /**
@@ -55,7 +119,7 @@ export async function listLedgerAccountsByGroup(group: LedgerGroup): Promise<Led
  */
 export async function getLedgerAccount(id: string): Promise<LedgerAccount> {
   const response = await apiClient.get<LedgerAccount>(`/ledgerAccount/show/${id}.json`);
-  return response.data;
+  return transformLedgerAccount(response.data);
 }
 
 /**

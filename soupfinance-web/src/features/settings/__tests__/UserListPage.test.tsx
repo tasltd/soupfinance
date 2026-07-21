@@ -92,6 +92,26 @@ describe('UserListPage row display (SOUPFIN-2 bug 10)', () => {
     expect(screen.getByText('@alovelace')).toBeInTheDocument();
   });
 
+  // Fix (SOUPFIN-30 #9): the backend serialises userAccess as a shallow FK
+  // ({ id, class }) with NO username on the agent list response — the username
+  // is only recoverable from `simpleID` ("First Last, Access:username"). The
+  // column must show that username, never the job title (designation).
+  it('recovers @username from simpleID when userAccess has no username', async () => {
+    vi.mocked(agentApi.list).mockResolvedValue([
+      makeAgent({
+        designation: 'Compliance Officer',
+        userAccess: { id: 9 }, // shallow FK — no username
+        simpleID: 'Ada Lovelace, Access:ada.lovelace',
+      }),
+    ]);
+
+    renderPage();
+
+    expect(await screen.findByText('@ada.lovelace')).toBeInTheDocument();
+    // The designation must NOT be used as the contact value.
+    expect(screen.queryByText('Compliance Officer')?.textContent).not.toBe('@ada.lovelace');
+  });
+
   it('renders italic "No contact info" when nothing is available', async () => {
     vi.mocked(agentApi.list).mockResolvedValue([makeAgent({})]);
 
