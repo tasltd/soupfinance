@@ -124,6 +124,26 @@ describe('ledger account transform (SOUPFIN-30)', () => {
     });
   });
 
+  describe('ledgerGroupMatches (#8)', () => {
+    it('matches an exact group and rejects a different one', async () => {
+      vi.resetModules();
+      const { ledgerGroupMatches } = await import('../ledger');
+      expect(ledgerGroupMatches('ASSET', 'ASSET')).toBe(true);
+      expect(ledgerGroupMatches('EXPENSE', 'ASSET')).toBe(false);
+      expect(ledgerGroupMatches(undefined, 'ASSET')).toBe(false);
+    });
+
+    it('treats INCOME and REVENUE as equivalent in both directions', async () => {
+      vi.resetModules();
+      const { ledgerGroupMatches } = await import('../ledger');
+      expect(ledgerGroupMatches('REVENUE', 'INCOME')).toBe(true);
+      expect(ledgerGroupMatches('INCOME', 'REVENUE')).toBe(true);
+      // income-like equivalence must NOT leak into other groups
+      expect(ledgerGroupMatches('REVENUE', 'EXPENSE')).toBe(false);
+      expect(ledgerGroupMatches('EXPENSE', 'INCOME')).toBe(false);
+    });
+  });
+
   describe('listLedgerAccountsByGroup (#8)', () => {
     it('filters client-side by the derived group (backend cannot filter)', async () => {
       mockGet.mockResolvedValueOnce({

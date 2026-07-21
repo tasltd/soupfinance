@@ -21,7 +21,7 @@ import { Select, type SelectOption } from '../../components/forms/Select';
 import { DatePicker } from '../../components/forms/DatePicker';
 import { Textarea } from '../../components/forms/Textarea';
 import { Radio, type RadioOption } from '../../components/forms/Radio';
-import { createVoucher } from '../../api/endpoints/ledger';
+import { createVoucher, ledgerGroupMatches } from '../../api/endpoints/ledger';
 import { useLedgerAccounts } from '../../hooks/useLedgerAccounts';
 import { usePaymentMethods } from '../../hooks/usePaymentMethods';
 import { DEFAULT_CURRENCIES } from '../../api/endpoints/domainData';
@@ -207,7 +207,7 @@ export function VoucherFormPage() {
   // Changed: Filter accounts by ledger group for bank/cash selection (ASSET accounts)
   const cashAccountOptions: SelectOption[] = useMemo(() =>
     (accounts || [])
-      .filter((account) => account.ledgerGroup === 'ASSET')
+      .filter((account) => ledgerGroupMatches(account.ledgerGroup, 'ASSET'))
       .map((account) => ({
         value: account.id,
         label: `${account.code} - ${account.name}`,
@@ -218,7 +218,7 @@ export function VoucherFormPage() {
   // Changed: Filter accounts by ledger group for expense selection
   const expenseAccountOptions: SelectOption[] = useMemo(() =>
     (accounts || [])
-      .filter((account) => account.ledgerGroup === 'EXPENSE')
+      .filter((account) => ledgerGroupMatches(account.ledgerGroup, 'EXPENSE'))
       .map((account) => ({
         value: account.id,
         label: `${account.code} - ${account.name}`,
@@ -226,10 +226,14 @@ export function VoucherFormPage() {
     [accounts]
   );
 
-  // Changed: Filter accounts by ledger group for income selection
+  // Changed: Filter accounts by ledger group for income selection.
+  // Fix (SOUPFIN-30 #8): ledgerGroupMatches treats INCOME and REVENUE as
+  // equivalent — the backend derives the group from the account category's
+  // serialised string, which may end in "< REVENUE" rather than "< INCOME".
+  // Filtering on INCOME alone left the receipt voucher's income dropdown empty.
   const incomeAccountOptions: SelectOption[] = useMemo(() =>
     (accounts || [])
-      .filter((account) => account.ledgerGroup === 'INCOME')
+      .filter((account) => ledgerGroupMatches(account.ledgerGroup, 'INCOME'))
       .map((account) => ({
         value: account.id,
         label: `${account.code} - ${account.name}`,

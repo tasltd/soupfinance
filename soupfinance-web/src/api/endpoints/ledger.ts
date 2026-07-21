@@ -93,6 +93,20 @@ export async function listLedgerAccounts(params?: ListParams): Promise<LedgerAcc
 }
 
 /**
+ * Fix (SOUPFIN-30 #8): Does an account's (derived) ledger group match a target
+ * group for dropdown/filtering purposes? INCOME and REVENUE are treated as
+ * equivalent because the backend derives the group from the account category's
+ * serialised string and uses both tokens interchangeably. Shared by
+ * listLedgerAccountsByGroup and the voucher account dropdowns so the equivalence
+ * rule lives in one place.
+ */
+export function ledgerGroupMatches(accountGroup: LedgerGroup | undefined, target: LedgerGroup): boolean {
+  if (accountGroup === target) return true;
+  const incomeLike = (g?: LedgerGroup) => g === 'INCOME' || g === 'REVENUE';
+  return incomeLike(target) && incomeLike(accountGroup);
+}
+
+/**
  * List ledger accounts by group (ASSET, LIABILITY, EQUITY, INCOME, EXPENSE)
  *
  * Fix (SOUPFIN-30 #8): The backend cannot filter by `ledgerGroup` (it is derived
@@ -105,12 +119,7 @@ export async function listLedgerAccountsByGroup(group: LedgerGroup): Promise<Led
     `/ledgerAccount/index.json?max=1000`
   );
   const accounts = (response.data || []).map(transformLedgerAccount);
-  const equivalent = (g?: LedgerGroup) =>
-    g === group || (
-      (group === 'INCOME' || group === 'REVENUE') &&
-      (g === 'INCOME' || g === 'REVENUE')
-    );
-  return accounts.filter((a) => equivalent(a.ledgerGroup));
+  return accounts.filter((a) => ledgerGroupMatches(a.ledgerGroup, group));
 }
 
 /**
