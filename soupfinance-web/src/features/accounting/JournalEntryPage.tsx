@@ -8,7 +8,7 @@
  */
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -130,7 +130,6 @@ export function JournalEntryPage() {
     register,
     control,
     handleSubmit,
-    watch,
     reset,
     formState: { errors },
   } = useForm<JournalEntryFormData>({
@@ -176,7 +175,14 @@ export function JournalEntryPage() {
   });
 
   // Added: Watch all lines to calculate totals in real-time
-  const watchedLines = watch('lines');
+  //
+  // Fix (SOUPFIN-30 #16): this used `watch('lines')`, which reads straight out
+  // of react-hook-form's internal `_formValues`. That array is mutated in place,
+  // so its *reference* never changes — the `useMemo` below therefore never
+  // re-ran and "Total Debits"/"Total Credits" stayed frozen at 0.00 no matter
+  // what was typed, which also left the Balanced indicator lying. `useWatch`
+  // returns a fresh value per update, so the memo invalidates correctly.
+  const watchedLines = useWatch({ control, name: 'lines' }) ?? [];
 
   // Added: Calculate totals from watched line values
   const { totalDebit, totalCredit, isBalanced, difference } = useMemo(() => {

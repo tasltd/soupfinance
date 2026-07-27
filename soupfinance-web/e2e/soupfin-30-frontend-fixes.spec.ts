@@ -259,6 +259,12 @@ test.describe('SOUPFIN-30 #16b/c — journal entry money fields', () => {
     await debit.pressSequentially('150.25');
     await expect(debit).toHaveValue('150.25');
 
+    // Regression guard: MoneyInput must keep forwarding react-hook-form's
+    // onChange, otherwise the field renders a value the running totals never
+    // see. The totals are also the second place the tenant currency shows up.
+    await expect(page.getByTestId('journal-entry-total-debit')).toHaveText('GH₵150.25');
+    await expect(page.getByTestId('journal-entry-total-credit')).toHaveText('GH₵0.00');
+
     await shot(page, 'journal-entry-currency-and-validation');
   });
 });

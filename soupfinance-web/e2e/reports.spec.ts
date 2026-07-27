@@ -1037,8 +1037,13 @@ test.describe('Aging Reports', () => {
     await expect(datePicker).toHaveValue('2024-03-15');
 
     // Min attribute should be set so the native picker exposes earlier years.
+    // Fix (SOUPFIN-30): the page's AGING_MIN_DATE is '1900-01-01'; this
+    // assertion still pinned the older '2000-01-01' literal. Assert the actual
+    // requirement — a floor at or before 2000 so historical years stay
+    // reachable — instead of one specific date the component may widen again.
     const minAttr = await datePicker.getAttribute('min');
-    expect(minAttr).toBe('2000-01-01');
+    expect(minAttr).toBeTruthy();
+    expect(new Date(minAttr!).getTime()).toBeLessThanOrEqual(new Date('2000-01-01').getTime());
   });
 
   test('renders both A/R and A/P tables', async ({ page }) => {
