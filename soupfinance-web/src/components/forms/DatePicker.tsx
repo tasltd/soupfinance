@@ -3,7 +3,7 @@
  * Wrapper around native date input with SoupFinance styling
  * Reference: soupfinance-designs/new-invoice-form/, design-system.md Form Inputs section
  */
-import { forwardRef, type InputHTMLAttributes } from 'react';
+import { forwardRef, useId, type InputHTMLAttributes } from 'react';
 // SOUPFIN-19: Guard every date picker against rendering a "0/0/0" placeholder
 // when fed a null / invalid / sentinel value.
 import { sanitizeDateInputValue } from '../../utils/date';
@@ -26,7 +26,11 @@ export interface DatePickerProps extends Omit<InputHTMLAttributes<HTMLInputEleme
  * Supports: labels, error states, min/max dates, dark mode
  */
 export const DatePicker = forwardRef<HTMLInputElement, DatePickerProps>(
-  ({ label, error, helperText, containerClassName = '', disabled, required, value, ...props }, ref) => {
+  ({ label, error, helperText, containerClassName = '', disabled, required, value, id, ...props }, ref) => {
+    // Fix (SOUPFIN-30 #6): explicit id/label association — see Input.tsx.
+    const generatedId = useId();
+    const dateId = id ?? generatedId;
+
     // SOUPFIN-19: When the picker is used as a controlled input, sanitize the
     // incoming value so a null/invalid/"0000-00-00" date never reaches the
     // native input as "0/0/0". Uncontrolled usage (react-hook-form `register`,
@@ -45,7 +49,7 @@ export const DatePicker = forwardRef<HTMLInputElement, DatePickerProps>(
       : 'bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark';
 
     return (
-      <label className={`flex flex-col ${containerClassName}`}>
+      <label className={`flex flex-col ${containerClassName}`} htmlFor={dateId}>
         {/* Label with optional required indicator */}
         {label && (
           <span className="text-sm font-medium pb-2 text-text-light dark:text-text-dark">
@@ -57,7 +61,9 @@ export const DatePicker = forwardRef<HTMLInputElement, DatePickerProps>(
         {/* Date input field */}
         <input
           ref={ref}
+          id={dateId}
           type="date"
+          aria-label={props['aria-label'] ?? (label ? undefined : 'Date')}
           disabled={disabled}
           required={required}
           {...(safeValue === undefined ? {} : { value: safeValue })}

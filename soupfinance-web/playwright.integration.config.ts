@@ -16,8 +16,11 @@ import { defineConfig, devices } from '@playwright/test';
 // Integration test port (different from mock tests to allow parallel runs)
 const INTEGRATION_TEST_PORT = 5181;
 
-// LXC Backend URL
-const LXC_BACKEND_URL = 'http://10.115.213.183:9090';
+// NOTE: the LXC backend URL is NOT configured here. The webServer below runs
+// `npm run dev:lxc`, so Vite loads `VITE_PROXY_TARGET` from .env.lxc /
+// .env.lxc.local and proxies /rest, /account and /client itself. A duplicate
+// constant here would silently drift from the real target (it was previously
+// declared and never read).
 
 export default defineConfig({
   testDir: './e2e/integration',

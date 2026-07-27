@@ -489,6 +489,11 @@ export function InvoiceFormPage() {
               </label>
               <div className="flex gap-2">
                 <select
+                  // Fix (SOUPFIN-30 #6): id/name/aria-label so the field is
+                  // properly labelled for assistive tech and DevTools.
+                  id="invoice-client"
+                  name="clientId"
+                  aria-label="Client"
                   value={selectedClientId}
                   onChange={(e) => setSelectedClientId(e.target.value)}
                   className="flex-1 h-12 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-3 text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/50"

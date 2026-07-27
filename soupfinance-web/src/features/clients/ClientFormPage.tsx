@@ -65,6 +65,12 @@ export function ClientFormPage() {
   // Changed: InvoiceClientType → ClientType (matches backend domain soupbroker.kyc.Client)
   const [clientType, setClientType] = useState<ClientType>('INDIVIDUAL');
 
+  // Fix (SOUPFIN-30 #14): when EDITING a client that resolved to INDIVIDUAL,
+  // the Corporate type tab must not be offered — an existing individual record
+  // has no company fields to fill, and switching it would submit an invalid
+  // payload. Set once from the loaded record; creation still shows both tabs.
+  const [isEditingIndividual, setIsEditingIndividual] = useState(false);
+
   // React Hook Form setup
   const {
     register,
@@ -149,6 +155,9 @@ export function ClientFormPage() {
         taxNumber: client.taxNumber || '',
       });
       setClientType(resolvedType);
+      // Fix (SOUPFIN-30 #14): remember that this record is an individual so the
+      // Corporate tab stays hidden for the lifetime of the edit session.
+      setIsEditingIndividual(resolvedType === 'INDIVIDUAL');
     }
   }, [client, reset]);
 
@@ -283,7 +292,11 @@ export function ClientFormPage() {
           <h2 className="text-lg font-bold text-text-light dark:text-text-dark mb-4">
             Client Type <span className="text-danger">*</span>
           </h2>
-          <div className="grid grid-cols-2 gap-4 max-w-md">
+          {/* Fix (SOUPFIN-30 #14): collapse to a single column when the Corporate
+              tab is hidden so the lone Individual tab doesn't stretch oddly. */}
+          <div
+            className={`grid gap-4 max-w-md ${isEditingIndividual ? 'grid-cols-1' : 'grid-cols-2'}`}
+          >
             <button
               type="button"
               onClick={() => {
@@ -313,6 +326,8 @@ export function ClientFormPage() {
                 </span>
               </div>
             </button>
+            {/* Fix (SOUPFIN-30 #14): hidden when editing an individual client. */}
+            {!isEditingIndividual && (
             <button
               type="button"
               onClick={() => {
@@ -341,6 +356,7 @@ export function ClientFormPage() {
                 </span>
               </div>
             </button>
+            )}
           </div>
           <input type="hidden" {...register('clientType')} />
         </div>

@@ -3,7 +3,7 @@
  * Reusable text input with label, error state, and helper text
  * Reference: soupfinance-designs/new-invoice-form/, design-system.md Form Inputs section
  */
-import { forwardRef, type InputHTMLAttributes } from 'react';
+import { forwardRef, useId, type InputHTMLAttributes } from 'react';
 
 // Added: Props interface for Input component with all supported options
 export interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'className'> {
@@ -22,7 +22,14 @@ export interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 
  * Supports: labels, error states, helper text, dark mode, disabled states
  */
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, helperText, containerClassName = '', disabled, required, ...props }, ref) => {
+  ({ label, error, helperText, containerClassName = '', disabled, required, id, ...props }, ref) => {
+    // Fix (SOUPFIN-30 #6): every field needs an `id` so the label is explicitly
+    // associated and the browser stops reporting "A form field element should
+    // have an id or name attribute" / "No label associated with a form field".
+    // Callers may still pass their own `id`; otherwise we generate a stable one.
+    const generatedId = useId();
+    const inputId = id ?? generatedId;
+
     // Added: Compute border color based on error state
     const borderClass = error
       ? 'border-danger focus:border-danger focus:ring-danger/20'
@@ -34,7 +41,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
       : 'bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark';
 
     return (
-      <label className={`flex flex-col ${containerClassName}`}>
+      <label className={`flex flex-col ${containerClassName}`} htmlFor={inputId}>
         {/* Label with optional required indicator */}
         {label && (
           <span className="text-sm font-medium pb-2 text-text-light dark:text-text-dark">
@@ -46,6 +53,10 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         {/* Input field */}
         <input
           ref={ref}
+          id={inputId}
+          // Fix (SOUPFIN-30 #6): fall back to the label text for an accessible
+          // name when the field renders without a visible <label>.
+          aria-label={props['aria-label'] ?? (label ? undefined : props.placeholder)}
           disabled={disabled}
           required={required}
           className={`
