@@ -8,6 +8,9 @@ After completing any fix or code change, immediately re-read this CLAUDE.md befo
 ## Development Commands
 
 ```bash
+# First-time setup in a fresh clone/worktree (node_modules is git-ignored)
+npm install              # Without this, `vitest: not found` / `tsc: not found`
+
 # Development
 npm run dev              # Start dev server (localhost:5173, mock/no backend)
 npm run dev:lxc          # Start with LXC backend (uses .env.lxc, port 9090)
@@ -83,6 +86,8 @@ Features: `accounting` (vouchers, journal entries, transaction register), `auth`
 - **endpoints/ledger.ts**: Ledger accounts, transactions, vouchers (payment/receipt/deposit), journal entries (multi-line). CSRF only needed for POST/save; PUT/DELETE do not require CSRF
 - **endpoints/domainData.ts**: Shared domain data lookups — tax rates and payment terms are **hardcoded** (no backend endpoint); service descriptions from `/rest/serviceDescription/index.json`; **payment methods** from `/rest/paymentMethod/index.json` (domain class, dynamic)
 - **endpoints/settings.ts**: 6 sub-APIs: `agentApi` (staff CRUD), `accountBankDetailsApi` (bank accounts), `accountPersonApi` (directors/signatories), `rolesApi` (`/sbRole/index.json`), `banksApi` (`/bank/index.json`), `accountSettingsApi` (reads `tenantId` from auth store → `GET /account/show/{tenantId}.json`)
+- **endpoints/report-schedules.ts**: Scheduled reports CRUD via `/rest/reportSchedule/*` — plus pause/resume and execution history. UI at `/reports/scheduled` (`ScheduledReportsPage.tsx`)
+- **errors.ts**: `parseApiError()` / `getApiErrorMessage()` — see "API Error Handling" below
 
 Key patterns:
 - Backend uses `application/json` content type (migrated from form-urlencoded 2026-01). **Exception:** OTP endpoints (`/client/authenticate.json`, `/client/verifyCode.json`) still use FormData
@@ -127,6 +132,24 @@ const individual = normalizeToObject(response.individual);
 const normalized = normalizeClientAccountResponse(response.data);
 // Handles: accountServices (→array), portfolioAccountServicesList (→array), individual (→object)
 ```
+
+### API Error Handling & Module Gating (CRITICAL)
+
+The SoupFinance tenant runs a **SERVICES license category**, so several backend modules (Ledger, Accounting, Voucher, PaymentMethod) are **not enabled** and their endpoints return **403** — the same status the backend uses for "this user lacks the role". The frontend distinguishes the two so users see "ask your admin to enable Ledger" instead of `Request failed with status code 403`.
+
+**Three overlapping error helpers exist.** They are not interchangeable — match the one already used by the feature you are editing, and prefer `api/errors.ts` for new code:
+
+| Module | Exports | Used by |
+|--------|---------|---------|
+| `src/api/errors.ts` (**newest, richest — prefer this**) | `parseApiError()`, `getApiErrorMessage()`, `ApiErrorKind` (`module_disabled` \| `forbidden` \| `unauthorized` \| `not_found` \| `server_error` \| …) | accounting pages, ledger pages, `ApiErrorState`, `ModuleDisabledBanner` |
+| `src/utils/apiErrors.ts` | `isModuleDisabledError()` | `payments/PaymentFormPage`, `payments/PaymentListPage` |
+| `src/utils/apiError.ts` | `normalizeApiError()` | `settings/UserListPage`, `settings/UserFormPage` |
+
+**Two presentation components** (`src/components/feedback/`):
+- **`ApiErrorState`** — full-page replacement for a failed list/page load; branches on `ApiErrorKind` for icon + tone (retry vs contact admin)
+- **`ModuleDisabledBanner`** — inline banner on *form* pages (Journal Entry, Voucher). The form still renders so the layout is visible, but the banner explains why account dropdowns are empty rather than letting the user submit into a guaranteed 403
+
+**Do not swallow errors into empty state.** A `.catch(() => null)` in an endpoint makes a 500 look like "no data" — `isError` never fires and the page renders an empty table. Let the error propagate so `ApiErrorState` can render it.
 
 ### Runtime Validation (`src/schemas/`)
 Optional Zod schemas for API response validation:
@@ -189,6 +212,7 @@ Settings page → accountSettingsApi.get()
 - **useLedgerAccounts**: Chart of accounts queries with `getMockAccounts()` for tests
 - **useTransactions**: Unified transaction register (journal entries + vouchers) with `UnifiedTransaction` type
 - **usePaymentMethods**: Fetches `PaymentMethod` domain objects from `/rest/paymentMethod/index.json` (5-min staleTime)
+- **useGsapAnimations**: Cinematic entrance/transition animations (`useDashboardEntrance()` and friends). **Declarative, not imperative** — tag elements with `data-anim="kpi-card"` / `data-anim="hero-heading"` and attach the hook's `containerRef`; do not write ad-hoc `gsap.from()` calls in components. Uses `gsap.context()` for automatic cleanup
 
 ### Type Definitions (`src/types/`)
 All domain types mirror soupmarkets-web Grails domain classes:
@@ -198,8 +222,12 @@ All domain types mirror soupmarkets-web Grails domain classes:
 ### Routing (`src/App.tsx`)
 - `ProtectedRoute`: Requires authentication, validates token on mount, shows loading during `isInitialized` check
 - `PublicRoute`: Redirects to dashboard if already authenticated, waits for initialization
-- Routes follow REST conventions: `/invoices`, `/invoices/new`, `/invoices/:id`, `/invoices/:id/edit`
+- Routes follow REST conventions: `/invoices`, `/invoices/new`, `/invoices/:id`, `/invoices/:id/edit` — same shape for `/bills`, `/vendors`, `/clients`
+- **Ledger and Accounting are separate route trees** (a frequent source of wrong E2E URLs): `/ledger/accounts` (Chart of Accounts) and `/ledger/transactions` vs `/accounting/transactions` (Transaction Register). There is no bare `/ledger` or `/accounting` route
 - Accounting routes use type-based URLs: `/accounting/voucher/payment`, `/accounting/voucher/receipt`, `/accounting/journal-entry/:id`
+- Reports: `/reports/pnl` (NOT `/reports/profit-loss`), `/reports/balance-sheet`, `/reports/cash-flow`, `/reports/aging` (single page for AR+AP, NOT `/reports/ar-aging`), `/reports/trial-balance`, `/reports/scheduled`
+- Settings are nested children of `/settings`: `account` (NOT `/settings/company` or `/settings/profile`), `users`, `bank-accounts`
+- Unmatched paths (`*`) redirect to `/dashboard` — a typo'd route silently lands on the dashboard rather than 404ing
 - Onboarding routes: `/onboarding/company`, `/onboarding/directors`, `/onboarding/documents`, `/onboarding/status`
 - Public (unauthenticated) routes: `/login`, `/register`, `/verify`, `/confirm-email`, `/resend-confirmation`, `/forgot-password`, `/reset-password`
 
@@ -291,7 +319,21 @@ reports.integration.spec.ts      # Finance reports
 settings.integration.spec.ts     # Settings pages
 ```
 
-Use `backendTestUsers` from `e2e/fixtures.ts` for credentials. **768 unit tests** across 26 test files (all passing). **362 mock E2E tests** (15 spec files). **165/170 integration tests** pass against LXC backend (0 failed, 5 skipped: trial balance timeout + voucher timeouts + bill CRUD redirect). See `e2e/integration/INTEGRATION-TEST-RESULTS.md` for detailed results.
+Use `backendTestUsers` from `e2e/fixtures.ts` for credentials.
+
+**Test inventory** (verified 2026-08-03 — re-run the commands rather than trusting these numbers if they look stale):
+
+| Suite | Count | Verify with |
+|-------|-------|-------------|
+| Unit (Vitest) | **1095 tests / 53 files**, all passing | `npm run test:run` |
+| Mock E2E (Playwright) | **392 tests / 20 spec files**, all passing on Firefox | `npx playwright test --list` |
+| LXC integration E2E | 165/170 pass (0 failed, 5 skipped: trial balance + voucher timeouts, bill CRUD redirect) | `npm run test:e2e:lxc` |
+
+See `e2e/integration/INTEGRATION-TEST-RESULTS.md` for detailed integration results.
+
+**First E2E run in a fresh clone/worktree needs the browser binary:** `npx playwright install firefox`. Playwright pins an exact build (currently `firefox-1497`) and ignores other Firefox revisions already in `~/.cache/ms-playwright/`. Without it the whole suite "fails" in 4–12 ms per test with `browserType.launch: Executable doesn't exist` — which reads like a mass regression but is just a missing download.
+
+**Per-issue regression specs:** Bug fixes get their own spec file named after the PM issue — `soupfin-16-v2-fixes.spec.ts`, `soupfin-21-frontend-bugs.spec.ts`, `soupfin-23-account-settings-redirect.spec.ts`, `soup-1836-clients.spec.ts`. Follow this convention for new fixes rather than growing the feature specs. Other non-feature specs: `landing-page.spec.ts`, `user-journeys.spec.ts`, `onboarding.spec.ts`, `registration.spec.ts`, `branding-theme.spec.ts`.
 
 ### Integration Test Patterns (CRITICAL)
 
@@ -390,8 +432,19 @@ Form pages need mocks for ALL API endpoints they call. If `page.goto` times out,
 - Dashboard: `/rest/invoice/index.json`, `/rest/bill/index.json`
 - Always mock `mockTokenValidationApi(page, true)` for auth + account settings (currency)
 
-### E2E Browser Default: Firefox
-All Playwright E2E tests use Firefox as the default browser. Configure `playwright.config.ts` with `browserName: 'firefox'`. Screenshots must be captured at key validation points (page load, form interactions, assertions). See `~/.claude/docs/e2e-validation-rules.md` for full E2E rules.
+### E2E Browser: Firefox
+
+All three Playwright configs define exactly one project each, on Firefox (`{ ...devices['Desktop Firefox'] }`):
+
+| Config | Project name |
+|--------|--------------|
+| `playwright.config.ts` | `firefox` |
+| `playwright.lxc.config.ts` | `firefox` |
+| `playwright.integration.config.ts` | `integration-firefox` |
+
+Test output is labelled `[firefox]` / `[integration-firefox]`. Do NOT add a `chromium` or `webkit` project unless cross-browser coverage is explicitly requested — a second project silently doubles the suite and lets a Firefox-only regression hide behind a Chromium pass.
+
+Screenshots must still be captured at key validation points (page load, form interactions, assertions).
 
 ## Key Conventions
 

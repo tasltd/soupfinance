@@ -90,6 +90,21 @@ describe('MoneyInput — rejects non-numeric input (SOUPFIN-30 #16)', () => {
     expect(event).toBe(false);
   });
 
+  // Regression guard (Firefox): Chromium silently drops letters typed into an
+  // <input type="number">, Firefox keeps them in the raw buffer and only
+  // reports `.value` as "". Relying on the browser therefore left the reported
+  // "money field accepts letters" bug alive on Firefox — the component must
+  // reject them itself.
+  it.each(['a', 'z', 'A', 'Z', 'q', 'x'])('blocks the letter "%s"', (key) => {
+    render(<MoneyInput label="Debit" data-testid="amount" />);
+    expect(fireEvent.keyDown(screen.getByTestId('amount'), { key })).toBe(false);
+  });
+
+  it.each(['$', ',', '/', ' ', '*', '(', '#'])('blocks the symbol "%s"', (key) => {
+    render(<MoneyInput label="Debit" data-testid="amount" />);
+    expect(fireEvent.keyDown(screen.getByTestId('amount'), { key })).toBe(false);
+  });
+
   it.each(['0', '5', '9', '.', 'Backspace', 'Tab', 'ArrowLeft', 'Delete'])(
     'allows the "%s" key',
     (key) => {
@@ -99,10 +114,38 @@ describe('MoneyInput — rejects non-numeric input (SOUPFIN-30 #16)', () => {
     }
   );
 
+  it.each(['Home', 'End', 'Enter', 'ArrowRight', 'ArrowUp', 'Shift'])(
+    'allows the navigation/editing key "%s"',
+    (key) => {
+      render(<MoneyInput label="Debit" data-testid="amount" />);
+      expect(fireEvent.keyDown(screen.getByTestId('amount'), { key })).toBe(true);
+    }
+  );
+
+  // Blocking every printable non-digit must not break copy/paste/select-all,
+  // whose letters arrive as ordinary single-character keys with a modifier.
+  it.each([
+    ['v', { ctrlKey: true }],
+    ['c', { ctrlKey: true }],
+    ['a', { ctrlKey: true }],
+    ['v', { metaKey: true }],
+    ['x', { metaKey: true }],
+  ])('allows the "%s" shortcut when a modifier is held', (key, modifiers) => {
+    render(<MoneyInput label="Debit" data-testid="amount" />);
+    expect(fireEvent.keyDown(screen.getByTestId('amount'), { key, ...modifiers })).toBe(true);
+  });
+
   it('still calls a caller-supplied onKeyDown for allowed keys', () => {
     const onKeyDown = vi.fn();
     render(<MoneyInput label="Debit" data-testid="amount" onKeyDown={onKeyDown} />);
     fireEvent.keyDown(screen.getByTestId('amount'), { key: '5' });
+    expect(onKeyDown).toHaveBeenCalledTimes(1);
+  });
+
+  it('still calls a caller-supplied onKeyDown for blocked keys', () => {
+    const onKeyDown = vi.fn();
+    render(<MoneyInput label="Debit" data-testid="amount" onKeyDown={onKeyDown} />);
+    fireEvent.keyDown(screen.getByTestId('amount'), { key: 'a' });
     expect(onKeyDown).toHaveBeenCalledTimes(1);
   });
 

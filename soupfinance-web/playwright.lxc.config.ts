@@ -86,11 +86,11 @@ export default defineConfig({
     actionTimeout: 15000,
   },
 
-  // Configure projects for major browsers
+  // Changed: Firefox is the mandated default browser for all E2E runs.
   projects: [
     {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      name: 'firefox',
+      use: { ...devices['Desktop Firefox'] },
     },
   ],
 

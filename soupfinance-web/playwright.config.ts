@@ -1,7 +1,7 @@
 /**
  * Playwright E2E Test Configuration
  * Base URL: http://localhost:5180 (dedicated E2E test port to avoid conflicts)
- * Browser: Chromium headless
+ * Browser: Firefox headless (project-wide default — see ~/.claude/docs/e2e-validation-rules.md)
  * Screenshots on failure enabled
  *
  * NOTE: Uses port 5180 instead of 5173 to avoid conflicts with other services
@@ -66,11 +66,13 @@ export default defineConfig({
     headless: true,
   },
 
-  // Configure projects for major browsers
+  // Changed: Firefox is the mandated default browser for all E2E runs.
+  // Do not add chromium/webkit projects without an explicit cross-browser request —
+  // an extra project silently doubles the suite and hides Firefox-only regressions.
   projects: [
     {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      name: 'firefox',
+      use: { ...devices['Desktop Firefox'] },
     },
   ],
 
