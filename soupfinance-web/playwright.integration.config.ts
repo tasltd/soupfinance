@@ -58,10 +58,11 @@ export default defineConfig({
     },
   },
 
+  // Changed: Firefox is the mandated default browser for all E2E runs.
   projects: [
     {
-      name: 'integration-chromium',
-      use: { ...devices['Desktop Chrome'] },
+      name: 'integration-firefox',
+      use: { ...devices['Desktop Firefox'] },
     },
   ],
 

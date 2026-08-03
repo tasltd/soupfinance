@@ -249,9 +249,14 @@ test.describe('SOUPFIN-30 #16b/c — journal entry money fields', () => {
     await debit.pressSequentially('abc');
     await expect(debit).toHaveValue('');
 
-    // `e`, `E`, `+` and `-` are the characters a bare <input type="number">
-    // accepts (scientific-notation grammar) while reporting the field as empty —
-    // MoneyInput blocks them outright.
+    // The letters above must be blocked by MoneyInput itself, not by the
+    // browser: Chromium discards them, but Firefox keeps them in the control's
+    // raw buffer and only reports `.value` as "". If the component ever stops
+    // blocking them, the digits below land on top of a leftover "abc" and this
+    // assertion sees "" instead of "15".
+    //
+    // `e`, `E`, `+` and `-` are additionally legal in a bare <input
+    // type="number"> (scientific-notation grammar) — MoneyInput blocks those too.
     await debit.pressSequentially('1e5');
     await expect(debit).toHaveValue('15');
     await debit.fill('');

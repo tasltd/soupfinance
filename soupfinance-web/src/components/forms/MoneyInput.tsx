@@ -20,8 +20,28 @@
 import { forwardRef, useId, type InputHTMLAttributes } from 'react';
 import { useCurrencySymbol } from '../../stores';
 
-/** Keys that `type="number"` permits but that are never valid in an amount. */
-const BLOCKED_KEYS = ['e', 'E', '+', '-'];
+/**
+ * The only printable characters an amount may contain.
+ *
+ * Fix (Firefox): we used to block just `e`, `E`, `+` and `-`, relying on the
+ * browser to drop every other letter. Chromium does; **Firefox does not** — it
+ * keeps the letters in the control's raw buffer and merely reports `.value` as
+ * `""`. So on Firefox typing `abc` left an invisible `abc` behind, and the next
+ * digit produced `abc1`, which still reads as empty — the exact "letters are
+ * accepted" bug this component exists to fix. Allow-listing is the only
+ * browser-independent guard.
+ */
+const ALLOWED_CHARACTER = /^[0-9.]$/;
+
+/**
+ * True for keys that must always pass through: editing/navigation keys
+ * (`Backspace`, `ArrowLeft`, `Tab`, `Enter`, ...) and any shortcut combo
+ * (copy, paste, select-all). Printable keys are exactly the single-character
+ * ones, so `key.length > 1` cleanly separates the two groups.
+ */
+function isNonPrintableKey(event: React.KeyboardEvent<HTMLInputElement>): boolean {
+  return event.key.length > 1 || event.ctrlKey || event.metaKey || event.altKey;
+}
 
 /**
  * Left padding must clear the currency prefix. Symbols are 1–3 characters
@@ -79,9 +99,9 @@ export const MoneyInput = forwardRef<HTMLInputElement, MoneyInputProps>(
       ? 'border-danger focus:border-danger focus:ring-danger/20'
       : 'border-border-light dark:border-border-dark focus:border-primary focus:ring-primary/20';
 
-    /** Reject the letter/sign keys `type="number"` would otherwise accept. */
+    /** Reject every printable key that is not a digit or a decimal point. */
     const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-      if (BLOCKED_KEYS.includes(event.key)) {
+      if (!isNonPrintableKey(event) && !ALLOWED_CHARACTER.test(event.key)) {
         event.preventDefault();
       }
       onKeyDown?.(event);
