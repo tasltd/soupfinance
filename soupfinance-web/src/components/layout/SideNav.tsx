@@ -107,9 +107,13 @@ export function SideNav() {
           ${mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
         `}
       >
-        <div className="flex flex-col justify-between p-4 h-full">
+        {/* Fix (SOUPFIN-30 #16): `min-h-0` + a scrollable nav column. Expanding
+            Reports (7 children) or Accounting pushed the nav past the viewport
+            height; without min-h-0 the flex children refused to shrink, so the
+            logo/Logout block was squashed and sub-items were clipped. */}
+        <div className="flex flex-col justify-between p-4 h-full min-h-0">
           {/* Logo & Company */}
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-4 min-h-0 flex-1 overflow-y-auto">
             <div className="flex items-center gap-3 px-3">
               {/* Logo */}
               {sidebarCollapsed ? (
@@ -202,8 +206,9 @@ export function SideNav() {
             </nav>
           </div>
 
-          {/* Bottom Links */}
-          <div className="flex flex-col gap-1">
+          {/* Bottom Links — shrink-0 keeps Help/Logout pinned and full height
+              even when the nav column above overflows (SOUPFIN-30 #16). */}
+          <div className="flex flex-col gap-1 shrink-0 pt-2">
             <button
               className="flex items-center gap-3 px-3 py-2 rounded-lg text-subtle-text hover:bg-primary/5 hover:text-text-light dark:hover:text-text-dark transition-colors"
             >

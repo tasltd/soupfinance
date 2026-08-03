@@ -36,7 +36,22 @@ import {
   mockTokenValidationApi,
   takeScreenshot,
   setupResponseValidation,
+  installUnmockedApiGuard,
+  mockAmbientApi,
+  type UnmockedApiGuard,
 } from './fixtures';
+
+// Added: Guard against endpoints no mock handles. In mock mode Vite still
+// proxies unmocked /rest/* calls to VITE_PROXY_TARGET; a real backend there
+// answers 401, and the client.ts interceptor then redirects the page to /login
+// mid-test — surfacing as an unrelated "testid never appeared" timeout.
+// Installed first in every beforeEach so specific mocks take precedence
+// (Playwright matches route handlers in reverse registration order).
+let apiGuard: UnmockedApiGuard | undefined;
+
+test.afterEach(() => {
+  apiGuard?.assertNone();
+});
 
 // ===========================================================================
 // Additional Mock Data for User Journeys
@@ -267,6 +282,17 @@ async function mockAccountingApi(page: any) {
     });
   });
 
+  // Added: The transaction register merges journal-entry groups with vouchers,
+  // so it also lists ledgerTransactionGroup — a separate controller from
+  // ledgerTransaction above.
+  await page.route('**/rest/ledgerTransactionGroup/index.json*', (route: any) => {
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([mockJournalEntry]),
+    });
+  });
+
   // Journal entry save
   await page.route('**/rest/ledgerTransactionGroup/save*', (route: any) => {
     route.fulfill({
@@ -301,6 +327,8 @@ async function mockAccountingApi(page: any) {
 
 test.describe('User Journey: Accounts Receivable', () => {
   test.beforeEach(async ({ page }) => {
+    apiGuard = await installUnmockedApiGuard(page);
+    await mockAmbientApi(page);
     await page.addInitScript(() => {
       localStorage.clear();
     });
@@ -451,6 +479,8 @@ test.describe('User Journey: Accounts Receivable', () => {
 
 test.describe('User Journey: Accounts Payable', () => {
   test.beforeEach(async ({ page }) => {
+    apiGuard = await installUnmockedApiGuard(page);
+    await mockAmbientApi(page);
     await page.addInitScript(() => {
       localStorage.clear();
     });
@@ -539,6 +569,8 @@ test.describe('User Journey: Accounts Payable', () => {
 
 test.describe('User Journey: Vendor Management', () => {
   test.beforeEach(async ({ page }) => {
+    apiGuard = await installUnmockedApiGuard(page);
+    await mockAmbientApi(page);
     await setupAuth(page);
     await mockTokenValidationApi(page, true);
   });
@@ -616,6 +648,8 @@ test.describe('User Journey: Vendor Management', () => {
 
 test.describe('User Journey: Financial Reporting', () => {
   test.beforeEach(async ({ page }) => {
+    apiGuard = await installUnmockedApiGuard(page);
+    await mockAmbientApi(page);
     await setupAuth(page);
     await mockTokenValidationApi(page, true);
     await mockAllReportsApi(page);
@@ -713,6 +747,8 @@ test.describe('User Journey: Financial Reporting', () => {
 
 test.describe('User Journey: KYC Onboarding', () => {
   test.beforeEach(async ({ page }) => {
+    apiGuard = await installUnmockedApiGuard(page);
+    await mockAmbientApi(page);
     await page.addInitScript(() => {
       localStorage.clear();
     });
@@ -821,6 +857,8 @@ test.describe('User Journey: KYC Onboarding', () => {
 
 test.describe('User Journey: Accounting Workflow', () => {
   test.beforeEach(async ({ page }) => {
+    apiGuard = await installUnmockedApiGuard(page);
+    await mockAmbientApi(page);
     await setupAuth(page);
     await mockTokenValidationApi(page, true);
     await mockAccountingApi(page);
@@ -914,6 +952,8 @@ test.describe('User Journey: Accounting Workflow', () => {
 
 test.describe('Cross-Journey Navigation', () => {
   test.beforeEach(async ({ page }) => {
+    apiGuard = await installUnmockedApiGuard(page);
+    await mockAmbientApi(page);
     await setupAuth(page);
     await mockTokenValidationApi(page, true);
     await mockDashboardApi(page);

@@ -382,8 +382,14 @@ test.describe('Ledger Management', () => {
       await page.goto('/ledger/accounts');
 
       // Should show error state
+      // Fix (SOUPFIN-30): the bespoke "Failed to load accounts" copy was
+      // replaced by the shared ApiErrorState card (SOUPFIN-9), which renders a
+      // parsed title/message and tags the failure kind. Assert that contract
+      // rather than the retired literal string.
       await expect(page.getByTestId('coa-error')).toBeVisible();
-      await expect(page.locator('text=Failed to load accounts')).toBeVisible();
+      await expect(page.getByTestId('coa-error')).toHaveAttribute('data-error-kind', 'server_error');
+      await expect(page.getByTestId('coa-error-title')).toHaveText('Server error');
+      await expect(page.getByTestId('coa-error-retry')).toBeVisible();
 
       await takeScreenshot(page, 'chart-of-accounts-error');
     });
@@ -643,8 +649,12 @@ test.describe('Ledger Management', () => {
       await page.goto('/ledger/transactions');
 
       // Should show error state
+      // Fix (SOUPFIN-30): see the Chart of Accounts error test — the literal
+      // "Failed to load transactions" copy no longer exists post-SOUPFIN-9.
       await expect(page.getByTestId('ledger-error')).toBeVisible();
-      await expect(page.locator('text=Failed to load transactions')).toBeVisible();
+      await expect(page.getByTestId('ledger-error')).toHaveAttribute('data-error-kind', 'server_error');
+      await expect(page.getByTestId('ledger-error-title')).toHaveText('Server error');
+      await expect(page.getByTestId('ledger-error-retry')).toBeVisible();
 
       await takeScreenshot(page, 'ledger-transactions-error');
     });

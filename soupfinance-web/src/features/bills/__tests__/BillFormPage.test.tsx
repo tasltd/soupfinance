@@ -951,4 +951,57 @@ describe('BillFormPage', () => {
       });
     });
   });
+
+  // ==========================================================================
+  // SOUPFIN-30 #15 — "+" button beside the vendor dropdown
+  // ==========================================================================
+  describe('add-vendor button (SOUPFIN-30 #15)', () => {
+    it('renders a "+" button beside the vendor dropdown', async () => {
+      vi.mocked(listVendors).mockResolvedValue([createMockVendor()]);
+      renderBillFormPage();
+
+      const addButton = await screen.findByTestId('bill-vendor-add-button');
+      expect(addButton).toBeInTheDocument();
+      expect(addButton).toHaveAttribute('aria-label', 'Add new vendor');
+    });
+
+    it('is a type="button" so it cannot submit the half-filled bill', async () => {
+      vi.mocked(listVendors).mockResolvedValue([createMockVendor()]);
+      renderBillFormPage();
+
+      const addButton = await screen.findByTestId('bill-vendor-add-button');
+      expect(addButton).toHaveAttribute('type', 'button');
+    });
+
+    it('opens the vendor create page in a new tab instead of navigating away', async () => {
+      const user = userEvent.setup();
+      const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+      vi.mocked(listVendors).mockResolvedValue([createMockVendor()]);
+      renderBillFormPage();
+
+      await user.click(await screen.findByTestId('bill-vendor-add-button'));
+
+      expect(openSpy).toHaveBeenCalledWith('/vendors/new', '_blank', 'noopener,noreferrer');
+      // The in-progress form must NOT be navigated away from.
+      expect(mockNavigate).not.toHaveBeenCalled();
+      openSpy.mockRestore();
+    });
+
+    it('gives the vendor select an id/name/aria-label (SOUPFIN-30 #6)', async () => {
+      vi.mocked(listVendors).mockResolvedValue([createMockVendor()]);
+      renderBillFormPage();
+
+      const select = await screen.findByTestId('bill-vendor-select');
+      expect(select).toHaveAttribute('id', 'bill-vendor');
+      expect(select).toHaveAttribute('name', 'vendorId');
+      expect(select).toHaveAttribute('aria-label', 'Vendor');
+    });
+
+    it('still renders the "+" button when the vendor list is empty', async () => {
+      vi.mocked(listVendors).mockResolvedValue([]);
+      renderBillFormPage();
+
+      expect(await screen.findByTestId('bill-vendor-add-button')).toBeInTheDocument();
+    });
+  });
 });

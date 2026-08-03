@@ -695,6 +695,29 @@ export async function mockInvoicesApi(
       body: JSON.stringify(invoices),
     });
   });
+
+  // Added: `invoiceItem` / `invoicePayment` are SEPARATE controllers — the
+  // `**/rest/invoice/**` pattern above does NOT cover them (distinct path
+  // segments). getInvoice() fetches items, and the payments list fetches
+  // unscoped invoicePayments. Unmocked these 401 via the Vite proxy and bounce
+  // the page to /login.
+  await page.route('**/rest/invoiceItem/index.json*', (route) => {
+    const invoiceId = new URL(route.request().url()).searchParams.get('invoice.id');
+    const invoice = invoices.find((i) => i.id === invoiceId);
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(invoice?.invoiceItemList ?? []),
+    });
+  });
+
+  await page.route('**/rest/invoicePayment/index.json*', (route) => {
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([]),
+    });
+  });
 }
 
 // ===========================================================================
@@ -766,6 +789,27 @@ export async function mockCorporateApi(
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({ ...mockCorporate, ...corporate, id: corporateId }),
+    });
+  });
+
+  // Added: The KYC status page also loads directors and documents for the
+  // corporate. `corporateAccountPerson` / `corporateDocuments` are separate
+  // controllers not covered by the `corporate/...` patterns above. Empty
+  // defaults — mockDirectorsApi / mockDocumentsApi register afterwards and take
+  // precedence when a test needs real data.
+  await page.route('**/rest/corporateAccountPerson/index.json*', (route) => {
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([]),
+    });
+  });
+
+  await page.route('**/rest/corporateDocuments/index.json*', (route) => {
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([]),
     });
   });
 }
@@ -1033,6 +1077,27 @@ export async function mockBillsApi(
       body: JSON.stringify(bills),
     });
   });
+
+  // Added: getBill() and the bill detail/edit pages also fetch line items, and
+  // the payments list fetches unscoped billPayments. Unmocked these 401 via the
+  // Vite proxy and bounce the page to /login.
+  await page.route('**/rest/billItem/index.json*', (route) => {
+    const billId = new URL(route.request().url()).searchParams.get('bill.id');
+    const bill = bills.find((b) => b.id === billId);
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(bill?.items ?? []),
+    });
+  });
+
+  await page.route('**/rest/billPayment/index.json*', (route) => {
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([]),
+    });
+  });
 }
 
 /**
@@ -1134,6 +1199,165 @@ export async function authenticateWithBackend(
   await page.waitForURL(/\/(dashboard|$)/, { timeout: 10000 });
 
   return user;
+}
+
+// ===========================================================================
+// Ambient API Mocks
+// ===========================================================================
+
+/**
+ * PaymentMethod is a domain-class FK, not a string enum — dropdowns render
+ * `paymentMethod.name`. Matches /rest/paymentMethod/index.json.
+ */
+export const mockPaymentMethods = [
+  { id: 'pm-001', name: 'Bank Transfer', class: 'soupbroker.finance.PaymentMethod' },
+  { id: 'pm-002', name: 'Cash', class: 'soupbroker.finance.PaymentMethod' },
+  { id: 'pm-003', name: 'Cheque', class: 'soupbroker.finance.PaymentMethod' },
+];
+
+/**
+ * Mock the endpoints that fire on essentially ANY authenticated page, rather
+ * than belonging to one feature:
+ *
+ * - `POST /rest/frontendLog/batch.json` — frontendLogger flushes captured
+ *   console/JS errors. Fires from every page the moment anything logs an error.
+ * - `GET /rest/paymentMethod/index.json` — usePaymentMethods(), used by every
+ *   payment/voucher form.
+ * - `GET /rest/serviceDescription/index.json` — invoice and bill line-item pickers.
+ * - `GET /rest/client/index.json` — client pickers on invoice and receipt-voucher forms.
+ * - `GET /rest/ledgerAccount/index.json` — account pickers on payment, voucher
+ *   and journal-entry forms.
+ *
+ * Left unmocked these proxy to VITE_PROXY_TARGET; a real backend there answers
+ * 401 and the client.ts interceptor redirects the page to /login mid-test.
+ *
+ * Safe empty//lookup defaults only — a test that asserts on this data should
+ * register its own route AFTER this call, which then takes precedence
+ * (Playwright matches route handlers in reverse registration order).
+ *
+ * CONDITIONAL: Skips mocking in LXC mode.
+ */
+export async function mockAmbientApi(page: import('@playwright/test').Page) {
+  if (isLxcMode()) return;
+
+  const json = (body: unknown) => ({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify(body),
+  });
+
+  await page.route('**/rest/frontendLog/batch.json*', (route) =>
+    route.fulfill(json({ received: 0 }))
+  );
+  await page.route('**/rest/paymentMethod/index.json*', (route) =>
+    route.fulfill(json(mockPaymentMethods))
+  );
+  await page.route('**/rest/serviceDescription/index.json*', (route) =>
+    route.fulfill(json([]))
+  );
+  await page.route('**/rest/client/index.json*', (route) => route.fulfill(json([])));
+  await page.route('**/rest/ledgerAccount/index.json*', (route) => route.fulfill(json([])));
+}
+
+// ===========================================================================
+// Unmocked API Guard
+// ===========================================================================
+
+/**
+ * Handle returned by installUnmockedApiGuard.
+ */
+export interface UnmockedApiGuard {
+  /** `METHOD /path?query` for every backend call no explicit mock handled. */
+  readonly calls: string[];
+  /** Throw with the full list if any backend call went unmocked. */
+  assertNone(context?: string): void;
+}
+
+// Added: Backend path prefixes the Vite dev server proxies (see vite.config.ts).
+//
+// Anchored at the FIRST path segment on purpose. A loose glob like
+// `**/client/**` also matches Vite's own `/node_modules/vite/dist/client/env.mjs`
+// and stubbing that out breaks the HMR client on every page. Anchoring also
+// keeps SPA routes clear: `/clients/new` and `/accounting/transactions` do not
+// match, because the segment must be exactly `client` / `account`.
+const PROXIED_API_PATTERNS = [
+  /^https?:\/\/[^/]+\/rest\//,
+  /^https?:\/\/[^/]+\/account\//,
+  /^https?:\/\/[^/]+\/client\//,
+];
+
+/**
+ * Fail loudly on API calls that no mock handles, instead of silently 401-ing.
+ *
+ * In mock mode the Vite dev server still proxies unmocked `/rest/*` calls to
+ * whatever listens on VITE_PROXY_TARGET (default `http://localhost:9090`). On a
+ * machine running a real backend those come back 401, and the `client.ts`
+ * response interceptor clears credentials and redirects to `/login` — so the
+ * test fails far from the cause, with a bare "testid never appeared" timeout.
+ *
+ * This guard intercepts anything the explicit mocks miss and answers 503 (which
+ * does NOT trigger the auth redirect), recording the URL so `assertNone()` can
+ * name the exact endpoints that need mocking.
+ *
+ * MUST be installed BEFORE the specific mocks: Playwright matches route handlers
+ * in reverse registration order, so the last-registered mock wins and the guard
+ * only sees what nothing else claimed.
+ *
+ * No-op in LXC mode, where hitting the real backend is the point.
+ *
+ * Usage:
+ * ```typescript
+ * let guard: UnmockedApiGuard;
+ *
+ * test.beforeEach(async ({ page }) => {
+ *   guard = await installUnmockedApiGuard(page);   // FIRST
+ *   await mockTokenValidationApi(page, true);      // then the mocks
+ * });
+ *
+ * test.afterEach(() => guard.assertNone());
+ * ```
+ */
+export async function installUnmockedApiGuard(
+  page: import('@playwright/test').Page
+): Promise<UnmockedApiGuard> {
+  const calls: string[] = [];
+
+  const guard: UnmockedApiGuard = {
+    calls,
+    assertNone(context?: string) {
+      if (calls.length === 0) return;
+      const unique = [...new Set(calls)].sort();
+      throw new Error(
+        `${context ? `${context}: ` : ''}${unique.length} unmocked backend ` +
+          `endpoint(s) were called. In mock mode these proxy to ` +
+          `VITE_PROXY_TARGET and a 401 would redirect the page to /login. ` +
+          `Add mocks for:\n  ${unique.join('\n  ')}`
+      );
+    },
+  };
+
+  if (isLxcMode()) return guard;
+
+  for (const pattern of PROXIED_API_PATTERNS) {
+    await page.route(pattern, (route) => {
+      const request = route.request();
+      const { pathname, search } = new URL(request.url());
+      calls.push(`${request.method()} ${pathname}${search}`);
+
+      // 503, not 401 — a 401 here would trigger the client.ts redirect to
+      // /login and hide the real cause behind a navigation timeout.
+      route.fulfill({
+        status: 503,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          error: 'UnmockedEndpoint',
+          message: `No E2E mock registered for ${request.method()} ${pathname}`,
+        }),
+      });
+    });
+  }
+
+  return guard;
 }
 
 /**

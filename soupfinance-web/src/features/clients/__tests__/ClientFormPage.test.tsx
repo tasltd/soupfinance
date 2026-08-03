@@ -95,15 +95,52 @@ describe('ClientFormPage (SOUPFIN-14 fixes)', () => {
     expect(firstNameInput.value).toBe('Alice');
   });
 
-  it('keeps the clientType toggle enabled while editing so misclassified records can be corrected', async () => {
-    vi.mocked(getClient).mockResolvedValue(createMockClient());
+  // Changed (SOUPFIN-30 #14): editing an INDIVIDUAL no longer offers the
+  // Corporate tab at all. The "keep the toggle enabled" guarantee from
+  // SOUPFIN-14 still applies to CORPORATE records (see the next test), where a
+  // misclassified individual can still be corrected back.
+  it('hides the Corporate tab when editing an INDIVIDUAL client (SOUPFIN-30 #14)', async () => {
+    vi.mocked(getClient).mockResolvedValue(createMockClient({ clientType: 'INDIVIDUAL' }));
     renderEditPage('client-abc');
 
     await waitFor(() => expect(screen.getByTestId('client-type-individual')).toBeInTheDocument());
     const individualButton = screen.getByTestId('client-type-individual') as HTMLButtonElement;
+    expect(individualButton.disabled).toBe(false);
+    expect(screen.queryByTestId('client-type-corporate')).not.toBeInTheDocument();
+  });
+
+  it('keeps BOTH clientType tabs enabled when editing a CORPORATE client so misclassified records can be corrected', async () => {
+    vi.mocked(getClient).mockResolvedValue(
+      createMockClient({
+        clientType: 'CORPORATE',
+        firstName: '',
+        lastName: '',
+        companyName: 'Acme Corp',
+      })
+    );
+    renderEditPage('client-abc');
+
+    await waitFor(() => expect(screen.getByTestId('client-type-corporate')).toBeInTheDocument());
+    const individualButton = screen.getByTestId('client-type-individual') as HTMLButtonElement;
     const corporateButton = screen.getByTestId('client-type-corporate') as HTMLButtonElement;
     expect(individualButton.disabled).toBe(false);
     expect(corporateButton.disabled).toBe(false);
+  });
+
+  it('shows BOTH clientType tabs when CREATING a new client (SOUPFIN-30 #14 must not affect creation)', async () => {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+    render(
+      <QueryClientProvider client={qc}>
+        <MemoryRouter initialEntries={['/clients/new']}>
+          <Routes>
+            <Route path="/clients/new" element={<ClientFormPage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
+
+    expect(screen.getByTestId('client-type-individual')).toBeInTheDocument();
+    expect(screen.getByTestId('client-type-corporate')).toBeInTheDocument();
   });
 
   it('renders Company Information when editing a CORPORATE client with companyName but no individual fields', async () => {
