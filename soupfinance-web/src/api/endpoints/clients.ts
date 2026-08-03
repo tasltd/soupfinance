@@ -102,6 +102,48 @@ export async function getClient(id: string): Promise<Client> {
 }
 
 /**
+ * Merge a freshly-created AccountServices into a Client's `portfolioList` so the
+ * invoice form can resolve the FK via `client.portfolioList[0].accountServices.id`.
+ *
+ * Fix (SOUPFIN-28): `createAccountServicesForClient` returns the full
+ * AccountServices (including its `id`), but the `/rest/client/show` re-fetch
+ * omits `accountServices` from portfolio entries. Without re-injecting the FK
+ * here, the newly-linked AccountServices ID is lost and the invoice form reports
+ * the client as having no linked account services.
+ *
+ * The injection is defensive:
+ *   - No `portfolioList` at all → create one with a single linked entry
+ *   - Empty `portfolioList` → push a linked entry
+ *   - First entry missing `accountServices` → back-fill it
+ *   - First entry already has an `accountServices.id` (backend supplied it) → keep it
+ */
+function injectAccountServicesLink(
+  client: Client,
+  accountServices: AccountServices
+): Client {
+  // Build the FK reference shape used across the app (`{ id, serialised?, class? }`).
+  // `class` is not declared on the AccountServices type but Grails includes it at
+  // runtime; fall back to the known domain class so the ref is always complete.
+  const asRef = {
+    id: accountServices.id,
+    serialised: accountServices.serialised,
+    class:
+      (accountServices as { class?: string }).class ??
+      'soupbroker.kyc.AccountServices',
+  };
+
+  const portfolioList = client.portfolioList ? [...client.portfolioList] : [];
+
+  if (portfolioList.length === 0) {
+    portfolioList.push({ id: accountServices.id, accountServices: asRef });
+  } else if (!portfolioList[0].accountServices?.id) {
+    portfolioList[0] = { ...portfolioList[0], accountServices: asRef };
+  }
+
+  return { ...client, portfolioList };
+}
+
+/**
  * Create a new client AND its initial AccountServices.
  * POST /rest/client/save.json + POST /rest/accountServices/save.json?forClient={id}
  *
@@ -118,6 +160,8 @@ export async function getClient(id: string): Promise<Client> {
  *   2. POST /rest/accountServices/save.json?forClient={id} → creates AccountServices
  *      and the ClientPortfolio join row that links them
  *   3. GET /rest/client/show/{id}.json → re-fetch so portfolioList is populated
+ *   4. Inject the AccountServices FK into portfolioList[0] (see SOUPFIN-28) so the
+ *      link survives even when the backend show endpoint omits it
  *
  * If step 2 fails the Client is still returned (it can be repaired later via the
  * full Client management page), but the caller will see the missing-AccountServices
@@ -137,8 +181,11 @@ export async function createClient(data: Record<string, unknown>): Promise<Clien
   // Step 3 (Fix SOUPFIN-1): Create the AccountServices and ClientPortfolio link.
   // Without this, the new Client has no `portfolioList[].accountServices` and
   // cannot be selected as an invoice recipient.
+  // Fix (SOUPFIN-28): Capture the returned AccountServices — its `id` is the FK
+  // the invoice form needs, and it must not be discarded.
+  let accountServices: AccountServices;
   try {
-    await createAccountServicesForClient(newClient.id);
+    accountServices = await createAccountServicesForClient(newClient.id);
   } catch (error) {
     // Non-fatal: the Client exists and can be repaired manually. Surface a
     // warning so the user-facing error path stays informative.
@@ -149,8 +196,23 @@ export async function createClient(data: Record<string, unknown>): Promise<Clien
     return newClient;
   }
 
-  // Step 4: Re-fetch so `portfolioList` reflects the new ClientPortfolio row.
-  return await getClient(newClient.id);
+  // Step 4: Re-fetch so `portfolioList` reflects the new ClientPortfolio row,
+  // then inject the captured AccountServices FK (SOUPFIN-28). The re-fetch keeps
+  // any richer metadata the backend populated; the injection guarantees the FK
+  // is present even if the show endpoint omitted it. If the re-fetch fails, fall
+  // back to the save response so the link is still resolvable.
+  let client: Client;
+  try {
+    client = await getClient(newClient.id);
+  } catch (error) {
+    console.warn(
+      `[createClient] Client ${newClient.id} re-fetch failed; returning save response:`,
+      error
+    );
+    client = newClient;
+  }
+
+  return injectAccountServicesLink(client, accountServices);
 }
 
 /**
