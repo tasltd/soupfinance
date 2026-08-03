@@ -50,7 +50,10 @@ describe('UserListPage row display (SOUPFIN-2 bug 10)', () => {
     vi.clearAllMocks();
   });
 
-  it('renders @username + "No email on file" when emailContacts is missing', async () => {
+  // Changed (SOUPFIN-33 #5): the secondary "No email on file" line contradicted the
+  // identifier rendered right above it. Once the column resolves a username the row
+  // must show ONLY that — no conflicting "missing" note.
+  it('renders @username alone (no "No email on file") when emailContacts is missing', async () => {
     vi.mocked(agentApi.list).mockResolvedValue([
       makeAgent({
         userAccess: { id: 1, username: 'ada', enabled: true },
@@ -60,7 +63,29 @@ describe('UserListPage row display (SOUPFIN-2 bug 10)', () => {
     renderPage();
 
     expect(await screen.findByText('@ada')).toBeInTheDocument();
-    expect(screen.getByText('No email on file')).toBeInTheDocument();
+    expect(screen.queryByText('No email on file')).not.toBeInTheDocument();
+  });
+
+  it('recovers the username from simpleID and still omits the "No email" note', async () => {
+    vi.mocked(agentApi.list).mockResolvedValue([
+      makeAgent({ simpleID: 'Ada Lovelace, Access:ada.lovelace' }),
+    ]);
+
+    renderPage();
+
+    expect(await screen.findByText('@ada.lovelace')).toBeInTheDocument();
+    expect(screen.queryByText('No email on file')).not.toBeInTheDocument();
+  });
+
+  it('still reports missing contact info when there is NO email AND no username', async () => {
+    // Regression guard: dropping the secondary note must not swallow the genuinely
+    // empty case, which has no identifier to show at all.
+    vi.mocked(agentApi.list).mockResolvedValue([makeAgent()]);
+
+    renderPage();
+
+    expect(await screen.findByText('No contact info')).toBeInTheDocument();
+    expect(screen.queryByText('No email on file')).not.toBeInTheDocument();
   });
 
   it('renders email when emailContacts is present and hides username when same', async () => {

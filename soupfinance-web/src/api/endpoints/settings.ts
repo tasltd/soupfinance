@@ -340,6 +340,40 @@ export const rolesApi = {
 // Banks API
 // ============================================================================
 
+/**
+ * Fix (SOUPFIN-33 #3): Collapse the bank list to one entry per distinct bank name.
+ *
+ * `GET /rest/bank/index.json` emits a row per associated record rather than per bank,
+ * so the Edit Bank Account dropdown listed each bank ~15 times. Dedupe on a normalised
+ * name (case-folded, whitespace-collapsed, trimmed) — NOT on `id`, because the
+ * duplicates carry distinct ids, which is exactly why they all rendered.
+ *
+ * Deliberately conservative: entries are only merged when their names match after
+ * normalisation. Near-misses that are genuinely separate backend rows ("Access" vs
+ * "Access Bank (Ghana) Plc", "GCB Bank Limited" vs "Ghana Commercial Bank (GCB)") are
+ * preserved rather than guessed at, and no name-shape heuristic is applied — filtering
+ * out "non-bank-looking" names would silently drop legitimate banks. The remaining
+ * seed-data defects (a personal name in the bank table, the "High BAnk" typo) are a
+ * backend data-quality fix tracked separately.
+ *
+ * The first occurrence wins, so the backend's `sort=name` ordering is preserved.
+ * Rows with a blank/whitespace-only name are dropped — they render as an empty,
+ * unselectable option.
+ *
+ * Exported for unit testing.
+ */
+export function dedupeBanksByName(banks: Bank[]): Bank[] {
+  const seen = new Set<string>();
+  const result: Bank[] = [];
+  for (const bank of banks) {
+    const key = String(bank?.name ?? '').trim().replace(/\s+/g, ' ').toLowerCase();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    result.push(bank);
+  }
+  return result;
+}
+
 export const banksApi = {
   /**
    * List available banks
@@ -349,6 +383,11 @@ export const banksApi = {
    * paginated envelope ({ resultList }) still yields the bank array, and sort by
    * name so the (large) list is browsable. Returns [] on an unexpected shape so
    * the caller can fall back to the "Other (specify)" free-text path.
+   *
+   * Fix (SOUPFIN-33 #3): The backend returns one `bank` row per associated record,
+   * so every bank arrived ~15 times ("Absa Bank Ghana Limited" x15, "GCB Bank
+   * Limited" x15, ...) making the dropdown unusable. Collapse to one option per
+   * distinct bank name — see dedupeBanksByName.
    */
   list: async (): Promise<Bank[]> => {
     const response = await apiClient.get('/bank/index.json?max=1000&sort=name&order=asc');
@@ -361,7 +400,7 @@ export const banksApi = {
       const candidate = wrapped.bankList ?? wrapped.banks ?? wrapped.resultList;
       if (Array.isArray(candidate)) banks = candidate as Bank[];
     }
-    return banks.filter((b) => b && b.id);
+    return dedupeBanksByName(banks.filter((b) => b && b.id));
   },
 };
 
