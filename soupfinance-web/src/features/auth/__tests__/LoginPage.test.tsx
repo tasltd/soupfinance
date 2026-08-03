@@ -262,6 +262,50 @@ describe('LoginPage', () => {
       // Assert
       expect(screen.getByText('Network error occurred')).toBeInTheDocument()
     })
+
+    // Added (SOUPFIN-29): the friendly invalid-credentials message renders and the
+    // raw "Request failed with status code 401" is never surfaced.
+    it('displays the friendly invalid-credentials message', () => {
+      // Arrange
+      useAuthStore.setState({ error: 'Invalid username or password.' })
+
+      // Act
+      renderLoginPage()
+
+      // Assert
+      expect(screen.getByText('Invalid username or password.')).toBeInTheDocument()
+      expect(screen.queryByText(/status code/i)).not.toBeInTheDocument()
+    })
+
+    // Added (SOUPFIN-29): an unconfirmed-email backend message still triggers the
+    // "Resend confirmation email" link (UNCONFIRMED_PATTERNS match).
+    it('shows the resend-confirmation link when the error indicates an unconfirmed email', () => {
+      // Arrange
+      useAuthStore.setState({ error: 'Your email is not confirmed. Please check your inbox.' })
+
+      // Act
+      renderLoginPage()
+
+      // Assert
+      expect(
+        screen.getByTestId('login-resend-confirmation-link'),
+      ).toBeInTheDocument()
+    })
+
+    // Added (SOUPFIN-29): a generic invalid-credentials error must NOT show the
+    // resend link (avoids nudging users toward the wrong recovery path).
+    it('does not show the resend link for a generic invalid-credentials error', () => {
+      // Arrange
+      useAuthStore.setState({ error: 'Invalid username or password.' })
+
+      // Act
+      renderLoginPage()
+
+      // Assert
+      expect(
+        screen.queryByTestId('login-resend-confirmation-link'),
+      ).not.toBeInTheDocument()
+    })
   })
 
   describe('loading state', () => {

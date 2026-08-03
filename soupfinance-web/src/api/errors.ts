@@ -65,12 +65,42 @@ function extractServerMessage(data: unknown): string | null {
   if (typeof data === 'string') return data.length > 0 && data.length < 300 ? data : null;
   if (typeof data === 'object') {
     const obj = data as Record<string, unknown>;
-    for (const key of ['error', 'message', 'errorMessage', 'detail']) {
+    // Changed (SOUPFIN-29): Include `error_description` — the Spring Security REST
+    // plugin (backing /rest/api/login) returns auth failures as { error, error_description }.
+    for (const key of ['error_description', 'error', 'message', 'errorMessage', 'detail']) {
       const value = obj[key];
       if (typeof value === 'string' && value.length > 0 && value.length < 300) return value;
     }
   }
   return null;
+}
+
+/**
+ * Generic, non-actionable auth failure phrases that the backend / Spring Security
+ * REST plugin emits for a bad login (SOUPFIN-29). These are HTTP/OAuth jargon, not
+ * something a user can act on, so they get replaced with a friendly message.
+ * Anything NOT on this list (e.g. "Your email is not confirmed") is treated as a
+ * descriptive message and surfaced verbatim so callers like LoginPage can still
+ * detect the unconfirmed-email case and offer a resend link.
+ */
+const GENERIC_AUTH_FAILURE_PHRASES = [
+  'bad credentials',
+  'unauthorized',
+  'authentication failed',
+  'authentication error',
+  'access denied',
+  'access_denied',
+  'invalid_grant',
+  'invalid_request',
+  'invalid token',
+  'no message available',
+  'forbidden',
+];
+
+/** True when a server message is a generic auth-failure code rather than a helpful sentence. */
+function isGenericAuthFailure(message: string): boolean {
+  const lower = message.trim().toLowerCase();
+  return GENERIC_AUTH_FAILURE_PHRASES.some((phrase) => lower === phrase || lower.includes(phrase));
 }
 
 /**
@@ -187,5 +217,51 @@ export function parseApiError(error: unknown): ParsedApiError {
  * (e.g., toast messages). Equivalent to `parseApiError(err).message`.
  */
 export function getApiErrorMessage(error: unknown): string {
+  return parseApiError(error).message;
+}
+
+/**
+ * Produce a user-friendly message for a failed LOGIN / authentication attempt
+ * (SOUPFIN-29). The generic `parseApiError` treats 401 as "Session expired",
+ * which is wrong when the user is actively trying to sign in — a 401/403 here
+ * means the credentials were rejected.
+ *
+ * Rules:
+ *  - 401/403: if the backend returned a *descriptive* message (e.g. "Your email
+ *    is not confirmed", "Account is locked"), surface it verbatim so the UI can
+ *    react (LoginPage matches it against UNCONFIRMED_PATTERNS to show a resend
+ *    link). Otherwise — including a raw AxiosError with no useful body, or a
+ *    generic "Bad credentials"/"Unauthorized" — show "Invalid username or
+ *    password." NEVER "Request failed with status code 401".
+ *  - Everything else (network, timeout, 5xx): defer to parseApiError so the user
+ *    gets "Connection problem" / "Server error" instead of a bare status string.
+ *
+ * @param fallback - message used for the credentials-rejected case (default
+ *   "Invalid username or password."). Callers wanting different copy can override.
+ */
+export function getLoginErrorMessage(
+  error: unknown,
+  fallback = 'Invalid username or password.',
+): string {
+  if (error && typeof error === 'object' && (error as Record<string, unknown>).isAxiosError === true) {
+    const axErr = error as AxiosError;
+    const status = axErr.response?.status;
+
+    // Credentials rejected (401) or blocked (403 on the auth endpoint).
+    if (status === 401 || status === 403) {
+      const serverMessage = extractServerMessage(axErr.response?.data);
+      if (serverMessage && !isGenericAuthFailure(serverMessage)) {
+        return serverMessage;
+      }
+      return fallback;
+    }
+
+    // No response (network/timeout) or non-auth status → use the general parser
+    // which yields "Connection problem" / "Server error" etc. But guard against
+    // its 401 branch (already handled above) leaking "Session expired".
+    return parseApiError(error).message;
+  }
+
+  // Non-axios thrown value.
   return parseApiError(error).message;
 }

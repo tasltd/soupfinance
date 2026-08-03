@@ -11,7 +11,7 @@
  * which is what production code produces anyway.
  */
 import { describe, it, expect } from 'vitest';
-import { parseApiError, getApiErrorMessage } from '../errors';
+import { parseApiError, getApiErrorMessage, getLoginErrorMessage } from '../errors';
 
 // Build a duck-typed axios error matching the shape the response interceptor
 // sees in production (config.url + response.status + response.data).
@@ -167,6 +167,112 @@ describe('parseApiError', () => {
       expect(typeof message).toBe('string');
       expect(message).toContain('Ledger');
       expect(message).not.toContain('status code');
+    });
+  });
+
+  // ==========================================================================
+  // getLoginErrorMessage (SOUPFIN-29) — friendly messages for failed logins.
+  // ==========================================================================
+  describe('getLoginErrorMessage', () => {
+    it('maps a bare 401 (no body) to "Invalid username or password."', () => {
+      // This is the exact SOUPFIN-29 bug: raw AxiosError.message was
+      // "Request failed with status code 401" leaking to the user.
+      const error = makeAxiosError(401, '/api/login');
+
+      const message = getLoginErrorMessage(error);
+
+      expect(message).toBe('Invalid username or password.');
+      expect(message).not.toContain('status code');
+    });
+
+    it('maps a 401 with a generic "Bad credentials" body to the friendly message', () => {
+      const error = makeAxiosError(401, '/api/login', { error: 'Bad credentials' });
+
+      const message = getLoginErrorMessage(error);
+
+      expect(message).toBe('Invalid username or password.');
+    });
+
+    it.each(['Unauthorized', 'invalid_grant', 'Authentication failed', 'Access Denied'])(
+      'replaces generic auth-failure phrase %s with the friendly message',
+      (phrase) => {
+        const error = makeAxiosError(401, '/api/login', { error: phrase });
+
+        expect(getLoginErrorMessage(error)).toBe('Invalid username or password.');
+      },
+    );
+
+    it('surfaces a descriptive backend message verbatim (e.g. email not confirmed)', () => {
+      // LoginPage relies on this to detect UNCONFIRMED_PATTERNS and show a resend link.
+      const error = makeAxiosError(401, '/api/login', {
+        error_description: 'Your email is not confirmed. Please check your inbox.',
+      });
+
+      const message = getLoginErrorMessage(error);
+
+      expect(message).toBe('Your email is not confirmed. Please check your inbox.');
+      expect(message.toLowerCase()).toContain('not confirmed');
+    });
+
+    it('reads Spring Security REST error_description before generic error code', () => {
+      const error = makeAxiosError(401, '/api/login', {
+        error: 'invalid_grant',
+        error_description: 'Account is locked. Contact your administrator.',
+      });
+
+      expect(getLoginErrorMessage(error)).toBe('Account is locked. Contact your administrator.');
+    });
+
+    it('maps a 403 on the auth endpoint to the friendly credentials message', () => {
+      const error = makeAxiosError(403, '/api/login');
+
+      expect(getLoginErrorMessage(error)).toBe('Invalid username or password.');
+    });
+
+    it('honours a custom fallback (used by OTP verify)', () => {
+      const error = makeAxiosError(401, '/client/verifyCode.json');
+
+      const message = getLoginErrorMessage(error, 'Invalid or expired verification code.');
+
+      expect(message).toBe('Invalid or expired verification code.');
+    });
+
+    it('defers to parseApiError for network failures (no response)', () => {
+      const error = makeAxiosError(undefined, '/api/login');
+
+      const message = getLoginErrorMessage(error);
+
+      // Should be the network message, NOT "Invalid username or password."
+      expect(message.toLowerCase()).toContain('could not reach the server');
+    });
+
+    it('defers to parseApiError for 5xx (never "Session expired", never raw status)', () => {
+      const error = makeAxiosError(500, '/api/login');
+
+      const message = getLoginErrorMessage(error);
+
+      expect(message).not.toContain('status code');
+      expect(message).not.toContain('Session expired');
+      expect(message.toLowerCase()).toContain('something went wrong');
+    });
+
+    it('never surfaces "Session expired" for a login 401 (regression guard)', () => {
+      // parseApiError(401) says "Session expired" — wrong when actively logging in.
+      const error = makeAxiosError(401, '/api/login');
+
+      expect(getLoginErrorMessage(error)).not.toContain('Session expired');
+    });
+
+    it('handles a native Error thrown before the request (non-axios)', () => {
+      const message = getLoginErrorMessage(new Error('boom'));
+
+      expect(message).toBe('boom');
+    });
+
+    it('handles unknown thrown values', () => {
+      const message = getLoginErrorMessage('exploded');
+
+      expect(message.toLowerCase()).toContain('unexpected error');
     });
   });
 });
