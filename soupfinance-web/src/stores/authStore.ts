@@ -9,6 +9,9 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { login as apiLogin, logout as apiLogout, getCurrentUser, type AuthUser } from '../api/auth';
 import apiClient from '../api/client';
+// Fix (SOUPFIN-29): translate raw Axios "Request failed with status code 401"
+// into a user-friendly login error message.
+import { getLoginErrorMessage } from '../api/errors';
 
 interface AuthState {
   user: AuthUser | null;
@@ -51,7 +54,11 @@ export const useAuthStore = create<AuthState>()(
             error: null,
           });
         } catch (err) {
-          const message = err instanceof Error ? err.message : 'Login failed';
+          // Fix (SOUPFIN-29): never surface the raw Axios status-code message.
+          // getLoginErrorMessage maps 401/403 → "Invalid username or password."
+          // while passing through descriptive backend messages (e.g. email not
+          // confirmed) so LoginPage can still show the Resend Confirmation link.
+          const message = getLoginErrorMessage(err);
           set({
             user: null,
             isAuthenticated: false,

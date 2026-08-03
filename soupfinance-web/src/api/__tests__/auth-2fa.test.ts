@@ -81,10 +81,14 @@ describe('2FA Authentication Flow', () => {
       expect(result.message).toBe('OTP sent via SMS');
     });
 
+    // Changed (SOUPFIN-29): requestOTP now rethrows a user-friendly Error (never the
+    // raw AxiosError). A descriptive backend message is surfaced verbatim.
     it('throws error when OTP request fails', async () => {
       // Arrange
       const contact = 'invalid@company.com';
       const mockError = {
+        isAxiosError: true,
+        config: { url: '/client/authenticate.json' },
         response: {
           status: 404,
           data: { message: 'Contact not found' },
@@ -92,14 +96,17 @@ describe('2FA Authentication Flow', () => {
       };
       (apiClient.post as ReturnType<typeof vi.fn>).mockRejectedValue(mockError);
 
-      // Act & Assert
-      await expect(requestOTP(contact)).rejects.toEqual(mockError);
+      // Act & Assert — descriptive backend message surfaced, no raw status string
+      await expect(requestOTP(contact)).rejects.toThrow('Contact not found');
+      await expect(requestOTP(contact)).rejects.not.toThrow(/status code/);
     });
 
     it('handles rate limiting errors', async () => {
       // Arrange
       const contact = 'user@company.com';
       const mockError = {
+        isAxiosError: true,
+        config: { url: '/client/authenticate.json' },
         response: {
           status: 429,
           data: { message: 'Too many OTP requests. Please try again later.' },
@@ -108,7 +115,7 @@ describe('2FA Authentication Flow', () => {
       (apiClient.post as ReturnType<typeof vi.fn>).mockRejectedValue(mockError);
 
       // Act & Assert
-      await expect(requestOTP(contact)).rejects.toEqual(mockError);
+      await expect(requestOTP(contact)).rejects.toThrow('Too many OTP requests. Please try again later.');
       expect(mockError.response.status).toBe(429);
     });
   });
@@ -201,10 +208,14 @@ describe('2FA Authentication Flow', () => {
       expect(result.roles).toEqual([]);
     });
 
+    // Changed (SOUPFIN-29): verifyOTP now rethrows a user-friendly Error. A
+    // descriptive backend message is surfaced verbatim; token is still not stored.
     it('throws error on invalid OTP code', async () => {
       // Arrange
       const code = '00000';
       const mockError = {
+        isAxiosError: true,
+        config: { url: '/client/verifyCode.json' },
         response: {
           status: 401,
           data: { message: 'Invalid OTP code' },
@@ -212,8 +223,9 @@ describe('2FA Authentication Flow', () => {
       };
       (apiClient.post as ReturnType<typeof vi.fn>).mockRejectedValue(mockError);
 
-      // Act & Assert
-      await expect(verifyOTP(code)).rejects.toEqual(mockError);
+      // Act & Assert — descriptive backend message surfaced, no raw status string
+      await expect(verifyOTP(code)).rejects.toThrow('Invalid OTP code');
+      await expect(verifyOTP(code)).rejects.not.toThrow(/status code/);
 
       // Verify token was NOT stored
       expect(localStorage.getItem('access_token')).toBeNull();
@@ -224,6 +236,8 @@ describe('2FA Authentication Flow', () => {
       // Arrange
       const code = '99999';
       const mockError = {
+        isAxiosError: true,
+        config: { url: '/client/verifyCode.json' },
         response: {
           status: 410,
           data: { message: 'OTP code has expired' },
@@ -232,7 +246,7 @@ describe('2FA Authentication Flow', () => {
       (apiClient.post as ReturnType<typeof vi.fn>).mockRejectedValue(mockError);
 
       // Act & Assert
-      await expect(verifyOTP(code)).rejects.toEqual(mockError);
+      await expect(verifyOTP(code)).rejects.toThrow('OTP code has expired');
     });
   });
 

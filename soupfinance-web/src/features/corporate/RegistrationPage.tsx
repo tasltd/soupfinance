@@ -24,6 +24,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { registerTenant } from '../../api/endpoints/registration';
+// Added (SOUPFIN-29): friendly fallback message instead of raw "Request failed with status code 400"
+import { getApiErrorMessage } from '../../api/errors';
 import type { TenantRegistration, BusinessType } from '../../api/endpoints/registration';
 // Changed: Import shared country/currency data from domainData (single source of truth)
 import {
@@ -103,7 +105,14 @@ export function RegistrationPage() {
       if (backendData?.errors) {
         setValidationErrors(backendData.errors);
       } else {
-        const errorMessage = backendData?.message || backendData?.error || error.message || 'Registration failed. Please try again.';
+        // Changed (SOUPFIN-29): prefer explicit backend message/error, then fall back to
+        // getApiErrorMessage (never the raw "Request failed with status code 400"), and
+        // finally to fixed copy so an empty parsed message can never render a blank banner.
+        const errorMessage =
+          backendData?.message ||
+          backendData?.error ||
+          getApiErrorMessage(error) ||
+          'Registration failed. Please try again.';
         setValidationErrors({ form: errorMessage });
       }
     },

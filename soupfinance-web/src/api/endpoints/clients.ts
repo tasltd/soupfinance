@@ -144,6 +144,71 @@ function injectAccountServicesLink(
 }
 
 /**
+ * ClientPortfolio detail (mirrors soupbroker.kyc.ClientPortfolio).
+ * The nested `accountServices` FK is only fully populated on the detail
+ * endpoint — the `/rest/client/index.json` list response returns portfolio
+ * entries as bare references (`{ id, class, serialised }`) with NO nested
+ * `accountServices`. See getClientPortfolio below.
+ */
+export interface ClientPortfolio {
+  id: string;
+  accountServices?: { id: string; serialised?: string; class?: string };
+  serialised?: string;
+  class?: string;
+}
+
+/**
+ * Get a single ClientPortfolio by ID (resolves the AccountServices FK).
+ * GET /rest/clientPortfolio/show/:id.json
+ *
+ * Fix (SOUPFIN-27): `GET /rest/client/index.json` omits the nested
+ * `accountServices` object inside each `portfolioList` entry — they only
+ * carry `{ id, class, serialised }`. Invoices reference `accountServices.id`
+ * as their FK, so the invoice form must resolve it here after a client is
+ * selected. On the backend, `ClientPortfolio.accountServices` uses
+ * `fetch:'join', lazy:false`, so the show endpoint always includes it.
+ */
+export async function getClientPortfolio(id: string): Promise<ClientPortfolio> {
+  const response = await apiClient.get<ClientPortfolio>(
+    `/clientPortfolio/show/${id}.json`
+  );
+  return response.data;
+}
+
+/**
+ * Resolve a Client's AccountServices FK id (the invoice recipient).
+ *
+ * Preference order:
+ *   1. If the list response already carried a nested accountServices (e.g. in
+ *      tests or a future backend that eager-loads it), use it directly.
+ *   2. Otherwise fetch the first portfolio's detail via getClientPortfolio.
+ *
+ * Returns an empty string when the client has no portfolio at all.
+ */
+export async function resolveAccountServicesId(client: Client): Promise<string> {
+  const first = client.portfolioList?.[0];
+  if (!first) return '';
+  if (first.accountServices?.id) return first.accountServices.id;
+  const portfolio = await getClientPortfolio(first.id);
+  return portfolio.accountServices?.id || '';
+}
+
+/**
+ * Build a human-readable display name for a Client dropdown option.
+ *
+ * Fix (SOUPFIN-27): the dropdown must be keyed by `client.id` and show the
+ * client's own name — never a portfolio's `serialised` string. KYC Individual
+ * clients store their name on `firstName`/`lastName` and may have a blank
+ * `name`, so fall back through the available identifiers.
+ *
+ * Re-exported rather than reimplemented: SOUP-1929 already introduced this exact
+ * fallback chain at features/clients/getClientDisplayName for the client table and
+ * the delete dialog. Two copies would drift, and a drifted copy is worse than
+ * either — the dropdown and the table would disagree about the same client's name.
+ */
+export { getClientDisplayName } from '../../features/clients/getClientDisplayName';
+
+/**
  * Create a new client AND its initial AccountServices.
  * POST /rest/client/save.json + POST /rest/accountServices/save.json?forClient={id}
  *

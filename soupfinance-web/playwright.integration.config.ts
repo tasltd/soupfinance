@@ -19,8 +19,8 @@ const INTEGRATION_TEST_PORT = 5181;
 // NOTE: the LXC backend URL is NOT configured here. The webServer below runs
 // `npm run dev:lxc`, so Vite loads `VITE_PROXY_TARGET` from .env.lxc /
 // .env.lxc.local and proxies /rest, /account and /client itself. A duplicate
-// constant here would silently drift from the real target (it was previously
-// declared and never read).
+// constant here would silently drift from the real target — it was previously
+// declared, never read, and tripped lint as dead code.
 
 export default defineConfig({
   testDir: './e2e/integration',
