@@ -748,10 +748,37 @@ describe('Reports API', () => {
       });
     });
 
-    it('does not throw when backend rejects (catches API errors)', async () => {
-      // If getAccountTransactions throws (e.g., 500), Cash Flow page should still
-      // render an empty statement instead of crashing the whole page.
+    // Fix(SOUPFIN-30): this test previously asserted the OPPOSITE — that a
+    // rejected request resolves to an empty statement. That encoded a silent
+    // failure as intended behaviour: React Query never saw a rejection, so
+    // `isError` stayed false and the Cash Flow page rendered
+    // "No cash flow activities" for a 500. A failed request was
+    // indistinguishable from a genuinely empty period, and it contradicted the
+    // E2E spec "Cash Flow Statement Report > shows error state on API failure".
+    // Request failures must now propagate so the page can show its error state.
+    it('propagates backend rejections so the page can render its error state', async () => {
       (apiClient.get as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('boom'));
+
+      await expect(
+        getCashFlowStatement({ from: '2026-05-01', to: '2026-05-25' })
+      ).rejects.toThrow('boom');
+    });
+
+    it('propagates a 500 HTTP error rather than reporting an empty period', async () => {
+      const httpError = Object.assign(new Error('Request failed with status code 500'), {
+        response: { status: 500, data: { error: 'Server error' } },
+      });
+      (apiClient.get as ReturnType<typeof vi.fn>).mockRejectedValue(httpError);
+
+      await expect(
+        getCashFlowStatement({ from: '2026-05-01', to: '2026-05-25' })
+      ).rejects.toMatchObject({ response: { status: 500 } });
+    });
+
+    it('still resolves to an empty statement for a SUCCESSFUL but empty response', async () => {
+      // The distinction that matters: empty !== failed. A 200 with no rows is a
+      // legitimately empty period and must NOT surface as an error.
+      (apiClient.get as ReturnType<typeof vi.fn>).mockResolvedValue({ data: [] });
 
       await expect(
         getCashFlowStatement({ from: '2026-05-01', to: '2026-05-25' })

@@ -8,7 +8,7 @@
  */
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -17,8 +17,12 @@ import { Input } from '../../components/forms/Input';
 import { Select, type SelectOption } from '../../components/forms/Select';
 import { DatePicker } from '../../components/forms/DatePicker';
 import { Textarea } from '../../components/forms/Textarea';
+// Added (SOUPFIN-30 #16): currency-aware amount input that rejects letters
+import { MoneyInput } from '../../components/forms/MoneyInput';
 import { createJournalEntry, getTransactionGroup, updateJournalEntry } from '../../api/endpoints/ledger';
 import { useLedgerAccounts } from '../../hooks/useLedgerAccounts';
+// Added (SOUPFIN-30 #16): tenant-currency formatter for the debit/credit totals.
+import { useFormatCurrency } from '../../stores';
 // Added (SOUPFIN-9): explain disabled module + parse submit errors
 import { ModuleDisabledBanner } from '../../components/feedback';
 import { getApiErrorMessage } from '../../api/errors';
@@ -109,6 +113,9 @@ export function JournalEntryPage() {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { data: accounts, isLoading: _accountsLoading, error: accountsError } = useLedgerAccounts();
 
+  // Fix (SOUPFIN-30 #16): totals follow the tenant currency, not a hardcoded USD.
+  const formatCurrency = useFormatCurrency();
+
   // Added: Convert accounts to select options format
   const accountOptions: SelectOption[] = useMemo(() =>
     (accounts || []).map(account => ({
@@ -123,7 +130,6 @@ export function JournalEntryPage() {
     register,
     control,
     handleSubmit,
-    watch,
     reset,
     formState: { errors },
   } = useForm<JournalEntryFormData>({
@@ -169,7 +175,14 @@ export function JournalEntryPage() {
   });
 
   // Added: Watch all lines to calculate totals in real-time
-  const watchedLines = watch('lines');
+  //
+  // Fix (SOUPFIN-30 #16): this used `watch('lines')`, which reads straight out
+  // of react-hook-form's internal `_formValues`. That array is mutated in place,
+  // so its *reference* never changes — the `useMemo` below therefore never
+  // re-ran and "Total Debits"/"Total Credits" stayed frozen at 0.00 no matter
+  // what was typed, which also left the Balanced indicator lying. `useWatch`
+  // returns a fresh value per update, so the memo invalidates correctly.
+  const watchedLines = useWatch({ control, name: 'lines' }) ?? [];
 
   // Added: Calculate totals from watched line values
   const { totalDebit, totalCredit, isBalanced, difference } = useMemo(() => {
@@ -241,13 +254,9 @@ export function JournalEntryPage() {
   // Added: Wrapper for save and post - currently same as save, can be extended for posted status
   const handleSaveAndPost = handleSubmit(onSubmit);
 
-  // Added: Format currency for display
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(amount);
-  };
+  // Fix (SOUPFIN-30 #16): the totals were hardcoded to USD, so a GHS tenant saw
+  // "$0.00" underneath fields prefixed with GH₵. Use the tenant's configured
+  // currency, the same source the amount fields read.
 
   // Added: Show loading state while fetching existing entry data
   if (isEditMode && isLoadingGroup) {
@@ -416,12 +425,16 @@ export function JournalEntryPage() {
 
         {/* Line Items Table */}
         <div className="overflow-x-auto">
-          <table className="w-full text-sm" data-testid="journal-entry-lines-table">
+          {/* Fix (SOUPFIN-30 #16): the amount columns were 15% each, which left
+              the input too narrow to show both a multi-character currency prefix
+              (e.g. "GH₵") and the typed value — the amount appeared truncated.
+              `min-w` keeps them usable on narrow viewports (the wrapper scrolls). */}
+          <table className="w-full min-w-[860px] text-sm" data-testid="journal-entry-lines-table">
             <thead className="text-xs text-subtle-text uppercase bg-background-light dark:bg-background-dark">
               <tr>
-                <th className="px-4 py-3 text-left font-semibold w-[40%]">Account</th>
-                <th className="px-4 py-3 text-right font-semibold w-[15%]">Debit</th>
-                <th className="px-4 py-3 text-right font-semibold w-[15%]">Credit</th>
+                <th className="px-4 py-3 text-left font-semibold w-[32%]">Account</th>
+                <th className="px-4 py-3 text-right font-semibold w-[19%]">Debit</th>
+                <th className="px-4 py-3 text-right font-semibold w-[19%]">Credit</th>
                 <th className="px-4 py-3 text-left font-semibold w-[25%]">Description</th>
                 <th className="px-4 py-3 text-center font-semibold w-[5%]"></th>
               </tr>
@@ -445,38 +458,30 @@ export function JournalEntryPage() {
                     />
                   </td>
 
-                  {/* Debit Amount */}
+                  {/* Debit Amount
+                      Fix (SOUPFIN-30 #16): MoneyInput renders the *tenant's*
+                      currency symbol (₵ for GHS, $ for USD, ...) instead of a
+                      hardcoded "$", and rejects letters that a bare
+                      <input type="number"> would otherwise accept. */}
                   <td className="px-4 py-3">
-                    <div className="relative">
-                      <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-subtle-text text-sm">$</span>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        placeholder="0.00"
-                        disabled={isReadOnly}
-                        {...register(`lines.${index}.debitAmount`, { valueAsNumber: true })}
-                        className="w-full h-12 pl-7 pr-4 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark text-right text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed"
-                        data-testid={`journal-entry-line-${index}-debit`}
-                      />
-                    </div>
+                    <MoneyInput
+                      placeholder="0.00"
+                      aria-label={`Line ${index + 1} debit amount`}
+                      disabled={isReadOnly}
+                      {...register(`lines.${index}.debitAmount`, { valueAsNumber: true })}
+                      data-testid={`journal-entry-line-${index}-debit`}
+                    />
                   </td>
 
                   {/* Credit Amount */}
                   <td className="px-4 py-3">
-                    <div className="relative">
-                      <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-subtle-text text-sm">$</span>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        placeholder="0.00"
-                        disabled={isReadOnly}
-                        {...register(`lines.${index}.creditAmount`, { valueAsNumber: true })}
-                        className="w-full h-12 pl-7 pr-4 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark text-right text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed"
-                        data-testid={`journal-entry-line-${index}-credit`}
-                      />
-                    </div>
+                    <MoneyInput
+                      placeholder="0.00"
+                      aria-label={`Line ${index + 1} credit amount`}
+                      disabled={isReadOnly}
+                      {...register(`lines.${index}.creditAmount`, { valueAsNumber: true })}
+                      data-testid={`journal-entry-line-${index}-credit`}
+                    />
                   </td>
 
                   {/* Line Description */}

@@ -177,8 +177,17 @@ function AgingTable({
           <h4 className="text-base font-bold text-text-light dark:text-text-dark mb-2">
             No outstanding {title.toLowerCase().replace(' aging', '')}
           </h4>
-          <p className="text-subtle-text text-sm">
-            All {entityLabel.toLowerCase()}s are current as of this date.
+          {/*
+            Fix (SOUPFIN-30 #13): render the pluralised sentence as ONE text node.
+            `All {expr}s are current` compiles to three sibling text nodes
+            (["All ", entity, "s are current..."]). Anything that joins sibling
+            text nodes with a separator — accessibility-tree serialisers and the
+            a11y scanners used in V19 testing — reads that back as
+            "All customer s are current". Interpolating in a single template
+            literal leaves exactly one text node, so it cannot be split.
+          */}
+          <p className="text-subtle-text text-sm" data-testid={`${testIdPrefix}-empty-message`}>
+            {`All ${entityLabel.toLowerCase()}s are current as of this date.`}
           </p>
         </div>
       ) : (
