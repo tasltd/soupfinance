@@ -1,15 +1,42 @@
 /**
- * Unit tests for SideNav (SOUPFIN-30 #16 — "fix sidebar distortion when the
- * reports tab is selected").
+ * Unit tests for SideNav. Two independent concerns live here, kept as separate
+ * describe blocks because they were authored against different bugs:
  *
- * Reports has 7 sub-items. When it expanded, the nav column grew past the
- * viewport height; because the flex children could not shrink (`min-h-0` was
- * missing) the logo and the Help/Logout block were squashed and the sub-items
- * were clipped. The fix makes the nav column scroll and pins the bottom block.
+ *  1. SOUPFIN-30 #16 — "fix sidebar distortion when the reports tab is
+ *     selected". Reports has 7 sub-items. When it expanded, the nav column grew
+ *     past the viewport height; because the flex children could not shrink
+ *     (`min-h-0` was missing) the logo and the Help/Logout block were squashed
+ *     and the sub-items were clipped. The fix makes the nav column scroll and
+ *     pins the bottom block.
+ *
+ *  2. SOUPFIN-25 — category-aware navigation visibility. The Vendors nav item
+ *     must be hidden for SERVICES tenants (they have no suppliers/inventory)
+ *     and shown for TRADING tenants. When the tenant's business category is
+ *     unknown (settings not yet loaded), items default to visible so nothing
+ *     disappears during the initial load.
+ *
+ * Only `useAccountStore` is mocked — the real `useUIStore`/`useAuthStore` are
+ * kept so the layout assertions above exercise the same code path they always
+ * did. Mocking the whole stores barrel would break `useUIStore.setState()`.
  */
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import type { BusinessLicenceCategory } from '../../../types/settings';
+
+// Driven per-test; `undefined` models "account settings not loaded yet".
+let mockBusinessCategory: BusinessLicenceCategory | undefined;
+
+vi.mock('../../../stores', async () => {
+  const actual = await vi.importActual<typeof import('../../../stores')>('../../../stores');
+  return {
+    ...actual,
+    useAccountStore: (
+      selector: (s: { settings: { businessLicenceCategory?: BusinessLicenceCategory } | null }) => unknown
+    ) => selector({ settings: { businessLicenceCategory: mockBusinessCategory } }),
+  };
+});
+
 import { SideNav } from '../SideNav';
 import { useUIStore } from '../../../stores';
 
@@ -31,6 +58,9 @@ function navColumn(container: HTMLElement): HTMLElement {
 describe('SideNav layout does not distort when a long section expands', () => {
   beforeEach(() => {
     useUIStore.setState({ sidebarCollapsed: false, mobileSidebarOpen: false });
+    // TRADING keeps every nav item visible, so the layout assertions below are
+    // measured against the full-length nav (the worst case for distortion).
+    mockBusinessCategory = 'TRADING';
   });
 
   it('renders every Reports sub-item when the Reports section is active', () => {
@@ -89,5 +119,63 @@ describe('SideNav layout does not distort when a long section expands', () => {
     useUIStore.setState({ sidebarCollapsed: true });
     const { container } = renderAt('/reports/aging');
     expect(navColumn(container).className).toContain('min-h-0');
+  });
+});
+
+describe('SideNav — category-aware visibility (SOUPFIN-25)', () => {
+  beforeEach(() => {
+    useUIStore.setState({ sidebarCollapsed: false, mobileSidebarOpen: false });
+    mockBusinessCategory = undefined;
+  });
+
+  it('hides the Vendors item for SERVICES tenants', () => {
+    mockBusinessCategory = 'SERVICES';
+    renderAt('/dashboard');
+
+    expect(screen.queryByText('Vendors')).not.toBeInTheDocument();
+    // Grafted from variant B: guard against over-filtering. Hiding Vendors must
+    // not take unrelated items with it — a filter bug that dropped everything
+    // would still satisfy the assertion above on its own.
+    expect(screen.getByText('Dashboard')).toBeInTheDocument();
+    expect(screen.getByText('Invoices')).toBeInTheDocument();
+    expect(screen.getByText('Clients')).toBeInTheDocument();
+  });
+
+  it('shows the Vendors item for TRADING tenants', () => {
+    mockBusinessCategory = 'TRADING';
+    renderAt('/dashboard');
+
+    expect(screen.getByText('Vendors')).toBeInTheDocument();
+  });
+
+  it('shows the Vendors item for other non-SERVICES categories (e.g. BROKER)', () => {
+    mockBusinessCategory = 'BROKER';
+    renderAt('/dashboard');
+
+    expect(screen.getByText('Vendors')).toBeInTheDocument();
+  });
+
+  it('defaults to showing Vendors when the category is unknown (settings not loaded)', () => {
+    mockBusinessCategory = undefined;
+    renderAt('/dashboard');
+
+    expect(screen.getByText('Vendors')).toBeInTheDocument();
+  });
+
+  it('keeps Vendors hidden for SERVICES even when the sidebar is collapsed', () => {
+    // Collapsed mode hides labels but still renders the item, so a label-only
+    // assertion would pass even if the filter did nothing. Assert on the route.
+    mockBusinessCategory = 'SERVICES';
+    useUIStore.setState({ sidebarCollapsed: true });
+    const { container } = renderAt('/dashboard');
+
+    expect(container.querySelector('a[href="/vendors"]')).toBeNull();
+  });
+
+  it('renders the Vendors link to /vendors for TRADING tenants', () => {
+    mockBusinessCategory = 'TRADING';
+    const { container } = renderAt('/dashboard');
+
+    expect(container.querySelector('a[href="/vendors"]')).not.toBeNull();
   });
 });

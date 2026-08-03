@@ -242,7 +242,8 @@ const responseValidators: Array<{
     },
   },
   {
-    pattern: /\/rest\/vendor\/(?:index|show)/,
+    // SOUPFIN-25: VendorController is under the `trading` module prefix; match both paths.
+    pattern: /\/rest\/(?:trading\/)?vendor\/(?:index|show)/,
     validate: (data: unknown) => {
       if (Array.isArray(data)) {
         data.forEach((v, i) => validateVendorShape(v as Record<string, unknown>, `Response.vendor[${i}]`));
