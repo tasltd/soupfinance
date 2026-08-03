@@ -19,7 +19,7 @@ vi.mock('../../../api', () => ({
   deleteClient: vi.fn(),
 }));
 
-import { listClients } from '../../../api';
+import { listClients, deleteClient } from '../../../api';
 
 function createMockClient(overrides: Partial<Client> = {}): Client {
   return {
@@ -169,6 +169,54 @@ describe('ClientListPage delete confirmation (SOUPFIN-21)', () => {
 
     const modal = await screen.findByTestId('delete-confirmation-modal');
     expect(modal).toHaveTextContent('Jane Doe');
+    // Grafted from SOUP-1929: pin the negative too. Asserting the name is
+    // present does not by itself prove the blank-identifier regression is gone,
+    // because "delete ?" could still render alongside it.
+    expect(modal).not.toHaveTextContent(/delete\s*\?/);
+  });
+});
+
+// Kept as a separate suite (SOUP-1929) rather than folded into the one above:
+// these exercise the delete ROUND-TRIP (success and failure), not the label
+// resolution, and main previously had no coverage of either path.
+describe('ClientListPage delete flow (SOUP-1929)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('proceeds with the soft-delete (calls deleteClient) and closes the modal on success', async () => {
+    // Bug #2: the soft-delete must always proceed — there is no relatedList gate.
+    const user = userEvent.setup();
+    vi.mocked(listClients).mockResolvedValue([
+      createMockClient({ id: 'c1', name: 'Alice Smith' }),
+    ]);
+    vi.mocked(deleteClient).mockResolvedValue(undefined);
+    renderPage();
+
+    await user.click(await screen.findByTestId('client-delete-c1'));
+    await user.click(await screen.findByTestId('delete-confirm-button'));
+
+    await waitFor(() => expect(deleteClient).toHaveBeenCalledWith('c1'));
+    // Modal closes only after the DELETE resolves — full round-trip verified.
+    await waitFor(() =>
+      expect(screen.queryByTestId('delete-confirmation-modal')).not.toBeInTheDocument(),
+    );
+  });
+
+  it('keeps the modal open and shows an error message when the delete fails', async () => {
+    const user = userEvent.setup();
+    vi.mocked(listClients).mockResolvedValue([
+      createMockClient({ id: 'c1', name: 'Alice Smith' }),
+    ]);
+    vi.mocked(deleteClient).mockRejectedValue(new Error('500'));
+    renderPage();
+
+    await user.click(await screen.findByTestId('client-delete-c1'));
+    await user.click(await screen.findByTestId('delete-confirm-button'));
+
+    expect(await screen.findByTestId('client-delete-error')).toBeInTheDocument();
+    // Modal stays open so the user can retry rather than silently stalling.
+    expect(screen.getByTestId('delete-confirmation-modal')).toBeInTheDocument();
   });
 });
 
