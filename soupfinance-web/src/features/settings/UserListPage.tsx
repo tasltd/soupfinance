@@ -105,7 +105,11 @@ export default function UserListPage() {
       return { primary: email, secondary: `@${username}` };
     }
     if (email) return { primary: email };
-    if (username) return { primary: `@${username}`, secondary: 'No email on file' };
+    // Fix (SOUPFIN-33 #5): the "No email on file" secondary line contradicted the
+    // username rendered directly above it — the column shows a valid identifier, so
+    // the note read as a conflicting error. Only the primary value is shown now; the
+    // "nothing at all" case below still reports missing contact info.
+    if (username) return { primary: `@${username}` };
     return { primary: 'No contact info', isPlaceholder: true };
   };
 
@@ -139,8 +143,12 @@ export default function UserListPage() {
         <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-subtle-text text-xl">
           search
         </span>
+        {/* Fix (SOUPFIN-33 #6): id/name + aria-label — the search field had no label. */}
         <input
           type="search"
+          id="user-search"
+          name="user-search"
+          aria-label="Search users"
           placeholder="Search users..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}

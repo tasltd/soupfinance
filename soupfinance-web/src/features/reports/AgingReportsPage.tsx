@@ -15,6 +15,8 @@ import {
   type ReportFilters,
 } from '../../api/endpoints/reports';
 import { formatDisplayDate } from '../../utils/date';
+// Fix (SOUPFIN-33 #4): tenant-currency formatter (was hardcoded USD/"$0.00").
+import { useFormatCurrency } from '../../stores';
 import type { AgingReport, AgingItem } from '../../types';
 
 // Fix(SOUPFIN-11/SOUPFIN-16): Earliest date users can pick for historical aging analysis.
@@ -36,15 +38,13 @@ function getTodayDate(): string {
   return new Date().toISOString().split('T')[0];
 }
 
-// Added: Format currency with proper thousands separator
-function formatCurrency(amount: number, currency = 'USD'): string {
-  if (amount === 0) return '$0.00';
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: 2,
-  }).format(amount);
-}
+/*
+ * Fix (SOUPFIN-33 #4): the module-level formatCurrency() that used to live here
+ * hardcoded `$0.00` / Intl 'en-US' + 'USD', so a GHS tenant saw the whole A/P and
+ * A/R aging tables in dollars while every other report rendered GH₵. Both consumers
+ * are React components, so they now call useFormatCurrency() (account-store backed)
+ * and re-render if the tenant currency changes.
+ */
 
 // Added: Get color class for aging amounts based on bucket
 function getAmountColorClass(bucket: 'current' | 'days30' | 'days60' | 'days90' | 'over90', amount: number): string {
@@ -120,6 +120,10 @@ function AgingTable({
   exportLoading,
   testIdPrefix,
 }: AgingTableProps) {
+  // Fix (SOUPFIN-33 #4): amounts follow the tenant's configured currency (GH₵ for
+  // GHS accounts), matching the A/R table and the rest of the reports module.
+  const formatCurrency = useFormatCurrency();
+
   return (
     <div
       className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden"
@@ -313,6 +317,9 @@ function AgingTable({
  * Aging Reports Page Component
  */
 export function AgingReportsPage() {
+  // Fix (SOUPFIN-33 #4): summary cards use the tenant currency, not a hardcoded "$".
+  const formatCurrency = useFormatCurrency();
+
   // Added: As-of date filter state with default to today
   const defaultDate = useMemo(() => getTodayDate(), []);
   const [asOfDate, setAsOfDate] = useState<string>(defaultDate);
@@ -417,12 +424,17 @@ export function AgingReportsPage() {
 
         {/* As Of Date Picker */}
         <div className="flex items-center gap-3">
-          <label className="flex items-center gap-2">
+          {/* Fix (SOUPFIN-33 #6): the label wrapped only the icon/text — it pointed at no
+              control. Bind it to the picker with htmlFor/id. */}
+          <label className="flex items-center gap-2" htmlFor="aging-as-of-date">
             <span className="material-symbols-outlined text-lg text-subtle-text">schedule</span>
             <span className="text-sm font-medium text-text-light dark:text-text-dark">As of:</span>
           </label>
           <input
             type="date"
+            id="aging-as-of-date"
+            name="aging-as-of-date"
+            aria-label="Aging reports as-of date"
             value={asOfDate}
             onChange={(e) => setAsOfDate(e.target.value)}
             min={AGING_MIN_DATE}

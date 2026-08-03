@@ -12,8 +12,10 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { listLedgerTransactions, listLedgerAccounts } from '../../api/endpoints/ledger';
 import { useFormatCurrency } from '../../stores';
-import { sanitizeDateInputValue } from '../../utils/date';
 import { ApiErrorState } from '../../components/feedback';
+// Fix (SOUPFIN-33 #1/#6): labelled date filter — supplies id/name/label association
+// and an explicit "no date selected" description (see DateFilterField).
+import { DateFilterField } from '../../components/forms';
 import type { LedgerTransaction, LedgerAccount, LedgerState } from '../../types';
 
 // Added: Transaction status type for filtering
@@ -114,8 +116,17 @@ export function LedgerTransactionsPage() {
         <div className="flex flex-wrap gap-4 items-end">
           {/* Account Filter */}
           <div className="flex-1 min-w-[200px]">
-            <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Account</label>
+            {/* Fix (SOUPFIN-33 #6): bind the label and give the control an id/name. */}
+            <label
+              className="block text-sm font-medium text-text-light dark:text-text-dark mb-1"
+              htmlFor="ledger-account-filter"
+            >
+              Account
+            </label>
             <select
+              id="ledger-account-filter"
+              name="ledger-account-filter"
+              aria-label="Filter transactions by account"
               value={accountId}
               onChange={(e) => setAccountId(e.target.value)}
               className="w-full h-10 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-3 text-sm text-text-light dark:text-text-dark focus:border-primary focus:ring-1 focus:ring-primary/50"
@@ -131,36 +142,39 @@ export function LedgerTransactionsPage() {
           </div>
 
           {/* Start Date */}
-          <div className="min-w-[150px]">
-            <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">From</label>
-            <input
-              type="date"
-              // Fix (SOUPFIN-30 #5): sanitize so an empty/invalid value renders the
-              // native placeholder instead of a "0/0/0" zero-date.
-              value={sanitizeDateInputValue(startDate)}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="w-full h-10 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-3 text-sm text-text-light dark:text-text-dark focus:border-primary focus:ring-1 focus:ring-primary/50"
-              data-testid="start-date-filter"
-            />
-          </div>
+          {/* Fix (SOUPFIN-33 #1/#6): DateFilterField supplies the id/name + <label htmlFor>
+              the raw input lacked, so the empty picker is announced by name instead of as
+              three anonymous "0" spinbuttons. */}
+          <DateFilterField
+            label="From"
+            ariaLabel="Filter transactions from date"
+            id="ledger-start-date-filter"
+            value={startDate}
+            onChange={setStartDate}
+            containerClassName="min-w-[150px]"
+            className="w-full h-10 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-3 text-sm text-text-light dark:text-text-dark focus:border-primary focus:ring-1 focus:ring-primary/50"
+            data-testid="start-date-filter"
+          />
 
           {/* End Date */}
-          <div className="min-w-[150px]">
-            <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">To</label>
-            <input
-              type="date"
-              // Fix (SOUPFIN-30 #5): sanitize empty/invalid value → native placeholder.
-              value={sanitizeDateInputValue(endDate)}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="w-full h-10 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-3 text-sm text-text-light dark:text-text-dark focus:border-primary focus:ring-1 focus:ring-primary/50"
-              data-testid="end-date-filter"
-            />
-          </div>
+          <DateFilterField
+            label="To"
+            ariaLabel="Filter transactions to date"
+            id="ledger-end-date-filter"
+            value={endDate}
+            onChange={setEndDate}
+            containerClassName="min-w-[150px]"
+            className="w-full h-10 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-3 text-sm text-text-light dark:text-text-dark focus:border-primary focus:ring-1 focus:ring-primary/50"
+            data-testid="end-date-filter"
+          />
 
           {/* Status Filter */}
           <div className="min-w-[140px]">
-            <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Status</label>
+            <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1" htmlFor="ledger-status-filter">Status</label>
             <select
+              id="ledger-status-filter"
+              name="ledger-status-filter"
+              aria-label="Filter transactions by status"
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as TransactionStatus)}
               className="w-full h-10 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-3 text-sm text-text-light dark:text-text-dark focus:border-primary focus:ring-1 focus:ring-primary/50"
