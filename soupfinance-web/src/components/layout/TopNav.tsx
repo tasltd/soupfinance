@@ -30,8 +30,13 @@ export function TopNav() {
           <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-subtle-text">
             search
           </span>
+          {/* Fix (SOUPFIN-33 #6): this global search renders on EVERY authenticated page,
+              so one unlabelled field counted against every page's a11y audit. */}
           <input
             type="search"
+            id="global-search"
+            name="global-search"
+            aria-label={t('header.search')}
             placeholder={t('header.search')}
             className="w-64 pl-10 pr-4 py-2 rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-sm placeholder:text-subtle-text focus:border-primary focus:ring-2 focus:ring-primary/20"
           />

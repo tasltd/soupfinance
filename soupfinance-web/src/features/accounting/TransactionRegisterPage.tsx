@@ -28,6 +28,8 @@ import { ApiErrorState, useToast } from '../../components/feedback';
 // shared DatePicker uses (SOUPFIN-19) so a null/sentinel/malformed value never
 // renders as the confusing "0/0/0" placeholder the user reported.
 import { sanitizeDateInputValue } from '../../utils/date';
+// Fix (SOUPFIN-33 #1/#6): labelled date filter (id/name + <label htmlFor> + empty hint).
+import { DateFilterField } from '../../components/forms';
 
 // =============================================================================
 // Added: Type definitions for filtering
@@ -527,8 +529,13 @@ export function TransactionRegisterPage() {
                 <div className="text-subtle-text dark:text-subtle-text-dark flex border-none bg-surface-light dark:bg-surface-dark items-center justify-center pl-4 rounded-l-lg border-r-0 border border-border-light dark:border-border-dark">
                   <span className="material-symbols-outlined">search</span>
                 </div>
+                {/* Fix (SOUPFIN-33 #6): id/name + aria-label — the wrapping <label> has
+                    no text, so the field had no accessible name. */}
                 <input
-                  type="text"
+                  type="search"
+                  id="transaction-search"
+                  name="transaction-search"
+                  aria-label="Search transactions by ID, description, or amount"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-r-lg text-text-light dark:text-text-dark focus:outline-0 focus:ring-1 focus:ring-primary border-none bg-surface-light dark:bg-surface-dark h-full placeholder:text-subtle-text dark:placeholder:text-subtle-text-dark px-4 pl-2 text-base font-normal leading-normal border border-l-0 border-border-light dark:border-border-dark"
@@ -542,31 +549,38 @@ export function TransactionRegisterPage() {
           {/* Added: Inline Filter Bar */}
           <div className="flex flex-wrap items-center gap-3 p-4 bg-surface-light dark:bg-background-dark rounded-lg border border-border-light dark:border-border-dark">
             {/* Date Range */}
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-text-light dark:text-subtle-text-dark">From:</label>
-              <input
-                type="date"
-                value={sanitizeDateInputValue(filters.startDate)}
-                onChange={(e) => handleFilterChange('startDate', e.target.value)}
-                className="form-input h-9 px-3 rounded-lg border border-border-light dark:border-border-dark bg-transparent dark:bg-surface-dark text-sm dark:text-text-dark"
-                data-testid="filter-start-date"
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-text-light dark:text-subtle-text-dark">To:</label>
-              <input
-                type="date"
-                value={sanitizeDateInputValue(filters.endDate)}
-                onChange={(e) => handleFilterChange('endDate', e.target.value)}
-                className="form-input h-9 px-3 rounded-lg border border-border-light dark:border-border-dark bg-transparent dark:bg-surface-dark text-sm dark:text-text-dark"
-                data-testid="filter-end-date"
-              />
-            </div>
+            {/* Fix (SOUPFIN-33 #1/#6): the sibling <label> had no htmlFor and the input no
+                id, leaving the empty native picker unnamed (reported as "0/0/0"). */}
+            <DateFilterField
+              label="From:"
+              ariaLabel="Filter transactions from date"
+              id="register-start-date"
+              value={filters.startDate}
+              onChange={(v) => handleFilterChange('startDate', v)}
+              containerClassName="flex items-center gap-2"
+              labelClassName="text-sm font-medium text-text-light dark:text-subtle-text-dark"
+              className="form-input h-9 px-3 rounded-lg border border-border-light dark:border-border-dark bg-transparent dark:bg-surface-dark text-sm dark:text-text-dark"
+              data-testid="filter-start-date"
+            />
+            <DateFilterField
+              label="To:"
+              ariaLabel="Filter transactions to date"
+              id="register-end-date"
+              value={filters.endDate}
+              onChange={(v) => handleFilterChange('endDate', v)}
+              containerClassName="flex items-center gap-2"
+              labelClassName="text-sm font-medium text-text-light dark:text-subtle-text-dark"
+              className="form-input h-9 px-3 rounded-lg border border-border-light dark:border-border-dark bg-transparent dark:bg-surface-dark text-sm dark:text-text-dark"
+              data-testid="filter-end-date"
+            />
 
             {/* Status Filter */}
             <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-text-light dark:text-subtle-text-dark">Status:</label>
+              <label className="text-sm font-medium text-text-light dark:text-subtle-text-dark" htmlFor="register-status-filter">Status:</label>
               <select
+                id="register-status-filter"
+                name="register-status-filter"
+                aria-label="Filter transactions by status"
                 value={filters.status}
                 onChange={(e) => handleFilterChange('status', e.target.value)}
                 className="form-select h-9 px-3 rounded-lg border border-border-light dark:border-border-dark bg-transparent dark:bg-surface-dark text-sm dark:text-text-dark"
@@ -582,8 +596,11 @@ export function TransactionRegisterPage() {
 
             {/* Type Filter */}
             <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-text-light dark:text-subtle-text-dark">Type:</label>
+              <label className="text-sm font-medium text-text-light dark:text-subtle-text-dark" htmlFor="register-type-filter">Type:</label>
               <select
+                id="register-type-filter"
+                name="register-type-filter"
+                aria-label="Filter transactions by type"
                 value={filters.type}
                 onChange={(e) => handleFilterChange('type', e.target.value)}
                 className="form-select h-9 px-3 rounded-lg border border-border-light dark:border-border-dark bg-transparent dark:bg-surface-dark text-sm dark:text-text-dark"
@@ -598,9 +615,12 @@ export function TransactionRegisterPage() {
 
             {/* Account Filter */}
             <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-text-light dark:text-subtle-text-dark">Account:</label>
+              <label className="text-sm font-medium text-text-light dark:text-subtle-text-dark" htmlFor="register-account-filter">Account:</label>
               <input
                 type="text"
+                id="register-account-filter"
+                name="register-account-filter"
+                aria-label="Filter transactions by account code"
                 value={filters.accountId}
                 onChange={(e) => handleFilterChange('accountId', e.target.value)}
                 placeholder="e.g., 1010"

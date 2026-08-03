@@ -119,8 +119,11 @@ function ScheduleFormModal({ schedule, onSubmit, onClose, isSubmitting }: Schedu
         <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-4">
           {/* Name */}
           <div>
-            <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Schedule Name</label>
+            <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1" htmlFor="schedule-name">Schedule Name</label>
             <input
+              id="schedule-name"
+              name="schedule-name"
+              aria-label="Schedule name"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -132,8 +135,11 @@ function ScheduleFormModal({ schedule, onSubmit, onClose, isSubmitting }: Schedu
 
           {/* Report Type */}
           <div>
-            <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Report Type</label>
+            <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1" htmlFor="schedule-report-type">Report Type</label>
             <select
+              id="schedule-report-type"
+              name="schedule-report-type"
+              aria-label="Report type"
               value={reportType}
               onChange={(e) => setReportType(e.target.value as ReportType)}
               className="w-full px-3 py-2 rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark"
@@ -147,8 +153,11 @@ function ScheduleFormModal({ schedule, onSubmit, onClose, isSubmitting }: Schedu
           {/* Frequency + Date Range */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Frequency</label>
+              <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1" htmlFor="schedule-frequency">Frequency</label>
               <select
+              id="schedule-frequency"
+              name="schedule-frequency"
+              aria-label="Schedule frequency"
                 value={frequency}
                 onChange={(e) => setFrequency(e.target.value as ScheduleFrequency)}
                 className="w-full px-3 py-2 rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark"
@@ -159,8 +168,11 @@ function ScheduleFormModal({ schedule, onSubmit, onClose, isSubmitting }: Schedu
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Date Range</label>
+              <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1" htmlFor="schedule-date-range">Date Range</label>
               <select
+              id="schedule-date-range"
+              name="schedule-date-range"
+              aria-label="Report date range"
                 value={dateRangeType}
                 onChange={(e) => setDateRangeType(e.target.value as DateRangeType)}
                 className="w-full px-3 py-2 rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark"
@@ -174,8 +186,11 @@ function ScheduleFormModal({ schedule, onSubmit, onClose, isSubmitting }: Schedu
 
           {/* Export Format */}
           <div>
-            <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Export Format</label>
+            <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1" htmlFor="schedule-export-format">Export Format</label>
             <select
+              id="schedule-export-format"
+              name="schedule-export-format"
+              aria-label="Export format"
               value={exportFormat}
               onChange={(e) => setExportFormat(e.target.value as ExportFormat)}
               className="w-full px-3 py-2 rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark"
@@ -188,8 +203,11 @@ function ScheduleFormModal({ schedule, onSubmit, onClose, isSubmitting }: Schedu
 
           {/* Recipients */}
           <div>
-            <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Recipients</label>
+            <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1" htmlFor="schedule-recipients">Recipients</label>
             <input
+              id="schedule-recipients"
+              name="schedule-recipients"
+              aria-label="Recipient email addresses"
               type="text"
               value={recipients}
               onChange={(e) => setRecipients(e.target.value)}
@@ -202,8 +220,11 @@ function ScheduleFormModal({ schedule, onSubmit, onClose, isSubmitting }: Schedu
 
           {/* Email Subject */}
           <div>
-            <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Email Subject (optional)</label>
+            <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1" htmlFor="schedule-email-subject">Email Subject (optional)</label>
             <input
+              id="schedule-email-subject"
+              name="schedule-email-subject"
+              aria-label="Email subject"
               type="text"
               value={emailSubject}
               onChange={(e) => setEmailSubject(e.target.value)}
@@ -214,8 +235,11 @@ function ScheduleFormModal({ schedule, onSubmit, onClose, isSubmitting }: Schedu
 
           {/* Email Message */}
           <div>
-            <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Email Message (optional)</label>
+            <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1" htmlFor="schedule-email-message">Email Message (optional)</label>
             <textarea
+              id="schedule-email-message"
+              name="schedule-email-message"
+              aria-label="Email message body"
               value={emailMessage}
               onChange={(e) => setEmailMessage(e.target.value)}
               rows={3}
