@@ -277,16 +277,15 @@ export function getLoginErrorMessage(
     // Credentials rejected (401) or blocked (403 on the auth endpoint).
     if (status === 401 || status === 403) {
       const serverMessage = extractServerMessage(axErr.response?.data);
-      // Both guards apply: the message must look like actionable account state
-      // AND must not be a generic auth code. The whitelist alone would pass a
-      // hypothetical "invalid_grant: token expired"; the blacklist alone would
-      // pass any unrecognised backend string straight to the user.
-      if (
-        serverMessage &&
-        ACCOUNT_STATE_PATTERNS.test(serverMessage) &&
-        !isGenericAuthFailure(serverMessage)
-      ) {
-        return serverMessage;
+      if (serverMessage) {
+        // An account-state message wins outright, even when it also contains a
+        // jargon phrase ("Access denied — account locked"): the state is the part
+        // the user can act on, and suppressing it would hide the resend/unlock path.
+        if (ACCOUNT_STATE_PATTERNS.test(serverMessage)) return serverMessage;
+        // Otherwise surface anything that is not pure auth jargon. Descriptive
+        // rejections carry no state word but are still worth reading — "Invalid
+        // OTP code", "Too many attempts". Only the blacklist is a hard filter.
+        if (!isGenericAuthFailure(serverMessage)) return serverMessage;
       }
       return fallback;
     }
