@@ -106,9 +106,13 @@ export function RegistrationPage() {
         setValidationErrors(backendData.errors);
       } else {
         // Changed (SOUPFIN-29): prefer explicit backend message/error, then fall back to
-        // getApiErrorMessage (never the raw "Request failed with status code 400").
+        // getApiErrorMessage (never the raw "Request failed with status code 400"), and
+        // finally to fixed copy so an empty parsed message can never render a blank banner.
         const errorMessage =
-          backendData?.message || backendData?.error || getApiErrorMessage(error);
+          backendData?.message ||
+          backendData?.error ||
+          getApiErrorMessage(error) ||
+          'Registration failed. Please try again.';
         setValidationErrors({ form: errorMessage });
       }
     },

@@ -270,9 +270,85 @@ describe('parseApiError', () => {
     });
 
     it('handles unknown thrown values', () => {
+      // Asserted as a property rather than exact copy: the sibling suite below
+      // pins the exact string ("Unable to sign in. Please try again."), which is
+      // deliberately login-specific instead of parseApiError's generic
+      // "unexpected error". What matters at this layer is that a non-Error throw
+      // yields readable guidance and leaks nothing internal.
       const message = getLoginErrorMessage('exploded');
 
-      expect(message.toLowerCase()).toContain('unexpected error');
+      expect(message).not.toContain('status code');
+      expect(message).not.toContain('exploded');
+      expect(message.length).toBeGreaterThan(0);
     });
+  });
+});
+
+describe('getLoginErrorMessage (SOUPFIN-29)', () => {
+  it.each<number>([401, 403])(
+    'maps %d with no body to "Invalid username or password."',
+    (status) => {
+      const error = makeAxiosError(status, '/api/login');
+
+      const message = getLoginErrorMessage(error);
+
+      expect(message).toBe('Invalid username or password.');
+      // CRITICAL: the whole point of the ticket — never leak the raw Axios text
+      expect(message).not.toContain('status code');
+    },
+  );
+
+  it('maps 401 with a generic "Bad credentials" body to the friendly message', () => {
+    // Spring Security typically returns a jargon message we do NOT want to show
+    const error = makeAxiosError(401, '/api/login', { error: 'Bad credentials' });
+
+    const message = getLoginErrorMessage(error);
+
+    expect(message).toBe('Invalid username or password.');
+    expect(message).not.toContain('Bad credentials');
+  });
+
+  it.each<string>([
+    'Your email is not confirmed. Please check your inbox.',
+    'Account not activated',
+    'This account has been locked. Contact support.',
+    'Registration is pending confirmation.',
+  ])('passes through descriptive account-state message: %s', (serverMessage) => {
+    const error = makeAxiosError(403, '/api/login', { message: serverMessage });
+
+    const result = getLoginErrorMessage(error);
+
+    // Passed through verbatim so LoginPage can react (e.g. show Resend link)
+    expect(result).toBe(serverMessage);
+  });
+
+  it('returns a connection message when there is no response (network failure)', () => {
+    const error = makeAxiosError(undefined, '/api/login');
+
+    const message = getLoginErrorMessage(error);
+
+    expect(message).toMatch(/reach the server|connection/i);
+    expect(message).not.toContain('status code');
+  });
+
+  it('maps 5xx to a temporary-unavailable message', () => {
+    const error = makeAxiosError(503, '/api/login');
+
+    const message = getLoginErrorMessage(error);
+
+    expect(message).toMatch(/temporarily unavailable|try again/i);
+    expect(message).not.toContain('status code');
+  });
+
+  it('never leaks raw messages for non-Axios errors', () => {
+    const message = getLoginErrorMessage(new Error('Request failed with status code 401'));
+
+    expect(message).toBe('Unable to sign in. Please try again.');
+    expect(message).not.toContain('status code');
+  });
+
+  it('handles unknown thrown values without leaking', () => {
+    expect(getLoginErrorMessage('boom')).toBe('Unable to sign in. Please try again.');
+    expect(getLoginErrorMessage(undefined)).toBe('Unable to sign in. Please try again.');
   });
 });

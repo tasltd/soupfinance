@@ -220,6 +220,26 @@ export function getApiErrorMessage(error: unknown): string {
   return parseApiError(error).message;
 }
 
+// Backend messages that describe an account STATE problem (not bad credentials).
+// These must pass through verbatim on the login screen so the LoginPage can
+// detect them (e.g. the "email not confirmed" case shows a Resend link).
+// Keep in loose sync with UNCONFIRMED_PATTERNS in features/auth/LoginPage.tsx.
+// Stems (no trailing \b) so inflected forms match: confirmed/confirming,
+// activated, verified, disabled, locked, suspended, expired.
+const ACCOUNT_STATE_PATTERNS =
+  /\b(confirm|verif|activat|disabl|lock|suspend|expir|pending)/i;
+
+/** Copy shown when nothing more specific — and safe — can be said about a login failure. */
+const LOGIN_GENERIC_FAILURE = 'Unable to sign in. Please try again.';
+
+/**
+ * Axios's own `message` strings. A caller that already wrapped an AxiosError and
+ * rethrew `new Error(err.message)` would otherwise smuggle the exact text this
+ * ticket exists to suppress in through the native-Error branch below.
+ */
+const RAW_AXIOS_MESSAGE =
+  /request failed with status code|network error|timeout of \d+ms exceeded/i;
+
 /**
  * Produce a user-friendly message for a failed LOGIN / authentication attempt
  * (SOUPFIN-29). The generic `parseApiError` treats 401 as "Session expired",
@@ -227,17 +247,24 @@ export function getApiErrorMessage(error: unknown): string {
  * means the credentials were rejected.
  *
  * Rules:
- *  - 401/403: if the backend returned a *descriptive* message (e.g. "Your email
- *    is not confirmed", "Account is locked"), surface it verbatim so the UI can
- *    react (LoginPage matches it against UNCONFIRMED_PATTERNS to show a resend
- *    link). Otherwise — including a raw AxiosError with no useful body, or a
- *    generic "Bad credentials"/"Unauthorized" — show "Invalid username or
- *    password." NEVER "Request failed with status code 401".
- *  - Everything else (network, timeout, 5xx): defer to parseApiError so the user
- *    gets "Connection problem" / "Server error" instead of a bare status string.
+ *  - 401/403: surface the backend message verbatim **only** when it describes an
+ *    account STATE the user can act on ("Your email is not confirmed", "Account
+ *    is locked") — LoginPage matches it against UNCONFIRMED_PATTERNS to show a
+ *    resend link. Anything else — an empty body, or OAuth/Spring jargon like
+ *    "Bad credentials" / "invalid_grant" / "Access Denied" — becomes the
+ *    friendly fallback. NEVER "Request failed with status code 401".
+ *  - Network / 5xx: defer to parseApiError so the copy stays consistent with the
+ *    rest of the app ("We could not reach the server…", "Something went wrong on
+ *    our side…") rather than drifting into a second set of strings.
+ *  - Other 4xx: prefer the backend's own message, else the login fallback.
+ *  - Non-Axios throw: pass a genuine Error message through (it is usually a real
+ *    client-side validation message worth reading), unless it is Axios text that
+ *    leaked via a rethrow. Anything else gets the generic login copy — a bare
+ *    string or undefined carries no message worth showing on a login screen.
  *
  * @param fallback - message used for the credentials-rejected case (default
- *   "Invalid username or password."). Callers wanting different copy can override.
+ *   "Invalid username or password."). The OTP verify flow overrides it with
+ *   "Invalid or expired verification code."
  */
 export function getLoginErrorMessage(
   error: unknown,
@@ -250,18 +277,34 @@ export function getLoginErrorMessage(
     // Credentials rejected (401) or blocked (403 on the auth endpoint).
     if (status === 401 || status === 403) {
       const serverMessage = extractServerMessage(axErr.response?.data);
-      if (serverMessage && !isGenericAuthFailure(serverMessage)) {
+      // Both guards apply: the message must look like actionable account state
+      // AND must not be a generic auth code. The whitelist alone would pass a
+      // hypothetical "invalid_grant: token expired"; the blacklist alone would
+      // pass any unrecognised backend string straight to the user.
+      if (
+        serverMessage &&
+        ACCOUNT_STATE_PATTERNS.test(serverMessage) &&
+        !isGenericAuthFailure(serverMessage)
+      ) {
         return serverMessage;
       }
       return fallback;
     }
 
-    // No response (network/timeout) or non-auth status → use the general parser
-    // which yields "Connection problem" / "Server error" etc. But guard against
-    // its 401 branch (already handled above) leaking "Session expired".
-    return parseApiError(error).message;
+    // No response (network/timeout) or 5xx → the general parser. Its 401 branch
+    // ("Session expired") is unreachable here because 401 is handled above.
+    if (!axErr.response || (status !== undefined && status >= 500)) {
+      return parseApiError(error).message;
+    }
+
+    // Other 4xx (e.g. 400 malformed request) — prefer a useful backend message,
+    // never the raw "status code" text.
+    return extractServerMessage(axErr.response.data) || LOGIN_GENERIC_FAILURE;
   }
 
-  // Non-axios thrown value.
-  return parseApiError(error).message;
+  if (error instanceof Error && error.message && !RAW_AXIOS_MESSAGE.test(error.message)) {
+    return error.message;
+  }
+
+  return LOGIN_GENERIC_FAILURE;
 }
