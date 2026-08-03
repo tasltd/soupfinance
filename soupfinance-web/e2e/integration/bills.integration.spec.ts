@@ -115,7 +115,7 @@ test.describe('Bill Integration Tests', () => {
       const token = await getAuthToken(page);
 
       // First, get a vendor to associate with the bill
-      const vendorResponse = await page.request.get(`${API_BASE}/rest/vendor/index.json`, {
+      const vendorResponse = await page.request.get(`${API_BASE}/rest/trading/vendor/index.json`, {
         headers: { 'X-Auth-Token': token },
       });
 

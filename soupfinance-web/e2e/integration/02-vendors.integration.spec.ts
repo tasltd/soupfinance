@@ -90,7 +90,7 @@ async function createVendorViaApi(
   try {
     // Fix: Route through Vite proxy (relative URLs) to get Api-Authorization header
     // Direct API calls to backend lack this header, causing 403/302
-    const csrfResponse = await page.request.get('/rest/vendor/create.json', {
+    const csrfResponse = await page.request.get('/rest/trading/vendor/create.json', {
       headers: { 'X-Auth-Token': token },
       maxRedirects: 0,
     });
@@ -112,7 +112,7 @@ async function createVendorViaApi(
     if (csrfUri) queryParams.set('SYNCHRONIZER_URI', csrfUri);
     const queryString = queryParams.toString();
 
-    const saveUrl = `/rest/vendor/save.json${queryString ? '?' + queryString : ''}`;
+    const saveUrl = `/rest/trading/vendor/save.json${queryString ? '?' + queryString : ''}`;
     const saveResponse = await page.request.post(saveUrl, {
       headers: {
         'X-Auth-Token': token,
@@ -140,7 +140,7 @@ async function createVendorViaApi(
       if (csrfToken) formData.set('SYNCHRONIZER_TOKEN', csrfToken);
       if (csrfUri) formData.set('SYNCHRONIZER_URI', csrfUri);
 
-      const formResponse = await page.request.post('/rest/vendor/save.json', {
+      const formResponse = await page.request.post('/rest/trading/vendor/save.json', {
         headers: {
           'X-Auth-Token': token,
           'Content-Type': 'application/x-www-form-urlencoded',
@@ -323,7 +323,7 @@ test.describe('Vendor Integration Tests', () => {
     // Fix: Verify vendor exists via API first (fast and reliable)
     const token = await getAuthToken(page);
     const apiResponse = await page.request.get(
-      `/rest/vendor/show/${persistentVendorId}.json`,
+      `/rest/trading/vendor/show/${persistentVendorId}.json`,
       { headers: { 'X-Auth-Token': token } }
     );
     expect(apiResponse.ok()).toBe(true);
@@ -513,7 +513,7 @@ test.describe('Vendor Integration Tests', () => {
     if (!listLoaded) {
       // Verify vendor via API instead of list UI
       const token = await getAuthToken(page);
-      const apiResponse = await page.request.get(`/rest/vendor/show/${persistentVendorId}.json`, {
+      const apiResponse = await page.request.get(`/rest/trading/vendor/show/${persistentVendorId}.json`, {
         headers: { 'X-Auth-Token': token },
       });
       expect(apiResponse.ok()).toBe(true);
@@ -540,7 +540,7 @@ test.describe('Vendor Integration Tests', () => {
     const token = await getAuthToken(page);
 
     // Fetch existing vendors from seed data (not the one we created)
-    const response = await page.request.get('/rest/vendor/index.json?max=5&sort=name&order=asc', {
+    const response = await page.request.get('/rest/trading/vendor/index.json?max=5&sort=name&order=asc', {
       headers: { 'X-Auth-Token': token },
     });
 
@@ -662,7 +662,7 @@ test.describe('Vendor Integration Tests', () => {
   test('can delete vendor from detail page', async ({ page }) => {
     // Fix: Use existing vendor from seed data (since DELETE doesn't persist anyway)
     const token = await getAuthToken(page);
-    const response = await page.request.get('/rest/vendor/index.json?max=10&sort=name&order=desc', {
+    const response = await page.request.get('/rest/trading/vendor/index.json?max=10&sort=name&order=desc', {
       headers: { 'X-Auth-Token': token },
     });
 

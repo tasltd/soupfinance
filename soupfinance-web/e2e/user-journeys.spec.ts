@@ -596,7 +596,7 @@ test.describe('User Journey: Vendor Management', () => {
     await expect(page).toHaveURL(/\/vendors$/);
 
     // Step 4: View vendor detail
-    await page.route('**/rest/vendor/show/vendor-001*', (route) => {
+    await page.route('**/vendor/show/vendor-001*', (route) => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
