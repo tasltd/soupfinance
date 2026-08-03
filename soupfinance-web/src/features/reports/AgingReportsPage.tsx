@@ -82,7 +82,21 @@ const AGE_BUCKETS = [
 interface AgingTableProps {
   title: string;
   icon: string;
+  /**
+   * Fix (SOUPFIN-35): the empty-state heading used to be derived with
+   * `title.toLowerCase().replace(' aging', '')`, which destroyed the acronym
+   * and rendered "No outstanding a/r". Casing is content, not a transform —
+   * pass the short label already cased instead of deriving it.
+   */
+  shortLabel: string; // "A/R" | "A/P"
   entityLabel: string; // "Customer" for A/R, "Vendor" for A/P
+  /**
+   * Plural, lowercase form for the empty-state sentence ("customers are
+   * current"). Explicit for the same reason as `shortLabel`: deriving it with
+   * `entityLabel.toLowerCase() + 's'` happens to read correctly for "Customer"
+   * and "Vendor", but silently breaks on an acronym or an irregular plural.
+   */
+  entityPlural: string; // "customers" | "vendors"
   data: AgingReport | undefined;
   isLoading: boolean;
   isError: boolean;
@@ -95,7 +109,9 @@ interface AgingTableProps {
 function AgingTable({
   title,
   icon,
+  shortLabel,
   entityLabel,
+  entityPlural,
   data,
   isLoading,
   isError,
@@ -174,8 +190,17 @@ function AgingTable({
           <span className="material-symbols-outlined text-5xl text-subtle-text/50 mb-3">
             {icon}
           </span>
-          <h4 className="text-base font-bold text-text-light dark:text-text-dark mb-2">
-            No outstanding {title.toLowerCase().replace(' aging', '')}
+          {/*
+            Single template literal, for the same reason as the sentence below:
+            `No outstanding {shortLabel}` would compile to two sibling text
+            nodes and an a11y serialiser joining them with a space reads
+            "No outstanding  A/R" (doubled space). See SOUPFIN-30 #13.
+          */}
+          <h4
+            className="text-base font-bold text-text-light dark:text-text-dark mb-2"
+            data-testid={`${testIdPrefix}-empty-heading`}
+          >
+            {`No outstanding ${shortLabel}`}
           </h4>
           {/*
             Fix (SOUPFIN-30 #13): render the pluralised sentence as ONE text node.
@@ -187,7 +212,7 @@ function AgingTable({
             literal leaves exactly one text node, so it cannot be split.
           */}
           <p className="text-subtle-text text-sm" data-testid={`${testIdPrefix}-empty-message`}>
-            {`All ${entityLabel.toLowerCase()}s are current as of this date.`}
+            {`All ${entityPlural} are current as of this date.`}
           </p>
         </div>
       ) : (
@@ -434,7 +459,9 @@ export function AgingReportsPage() {
         <AgingTable
           title="A/R Aging"
           icon="receipt_long"
+          shortLabel="A/R"
           entityLabel="Customer"
+          entityPlural="customers"
           data={arAgingData}
           isLoading={arLoading}
           isError={arIsError}
@@ -448,7 +475,9 @@ export function AgingReportsPage() {
         <AgingTable
           title="A/P Aging"
           icon="payments"
+          shortLabel="A/P"
           entityLabel="Vendor"
+          entityPlural="vendors"
           data={apAgingData}
           isLoading={apLoading}
           isError={apIsError}
