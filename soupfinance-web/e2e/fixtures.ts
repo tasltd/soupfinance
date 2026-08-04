@@ -1132,7 +1132,7 @@ export async function mockVendorsApi(
 ) {
   if (isLxcMode()) return;
 
-  await page.route('**/rest/vendor/index.json*', (route) => {
+  await page.route('**/vendor/index.json*', (route) => {
     route.fulfill({
       status: 200,
       contentType: 'application/json',

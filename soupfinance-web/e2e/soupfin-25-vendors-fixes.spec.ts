@@ -14,7 +14,7 @@
  */
 import { test, expect, type Page } from '@playwright/test';
 import type { BusinessLicenceCategory } from '../src/types/settings';
-import { mockTokenValidationApi, takeScreenshot, isLxcMode } from './fixtures';
+import { mockTokenValidationApi, mockDashboardApi, takeScreenshot, isLxcMode } from './fixtures';
 
 async function setupMockAuth(page: Page) {
   await page.addInitScript(() => {
@@ -77,6 +77,9 @@ test.describe('SOUPFIN-25 #2 — Vendors nav visibility by business category', (
     }
     await setupMockAuth(page);
     await mockTokenValidationApi(page, true);
+    // Fix: the dashboard fetches invoices + bills on mount. Without these routes the
+    // page never finishes loading and dashboard-page never becomes visible.
+    await mockDashboardApi(page);
     await mockBusinessCategory(page, 'SERVICES');
 
     await page.goto('/dashboard');
@@ -101,6 +104,8 @@ test.describe('SOUPFIN-25 #2 — Vendors nav visibility by business category', (
     }
     await setupMockAuth(page);
     await mockTokenValidationApi(page, true);
+    // Fix: see above — the dashboard's own data endpoints must be mocked for it to render.
+    await mockDashboardApi(page);
     await mockBusinessCategory(page, 'TRADING');
 
     // Fix 1 validation: intercept ONLY the trading-prefixed vendor list route.
