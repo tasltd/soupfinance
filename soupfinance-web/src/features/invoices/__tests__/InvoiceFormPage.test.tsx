@@ -24,6 +24,9 @@ vi.mock('../../../api/endpoints/invoices', () => ({
   createInvoice: vi.fn(),
   updateInvoice: vi.fn(),
   sendInvoice: vi.fn(),
+  // Added (SOUPFIN-37): line items are now persisted through their own
+  // endpoint so their tax survives the save.
+  createInvoiceItem: vi.fn(),
 }));
 
 // Changed: Component imports listClients from clients.ts for the Client dropdown
@@ -69,7 +72,13 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
-import { getInvoice, createInvoice, updateInvoice, sendInvoice } from '../../../api/endpoints/invoices';
+import {
+  getInvoice,
+  createInvoice,
+  updateInvoice,
+  sendInvoice,
+  createInvoiceItem,
+} from '../../../api/endpoints/invoices';
 // Changed: Component uses listClients for Client dropdown (not listInvoices)
 import { listClients, getClientPortfolio } from '../../../api/endpoints/clients';
 import { listTaxRates, listInvoiceServices } from '../../../api/endpoints/domainData';
@@ -146,6 +155,14 @@ function createMockClient(overrides: Partial<Client> = {}): Client {
  * PURPOSE: Set up common mocks so the component can render without errors.
  * Changed: Component calls listClients, listTaxRates, and listInvoiceServices on mount.
  */
+/**
+ * Real TaxEntry UUIDs as returned by /rest/taxEntry/index.json.
+ * Changed (SOUPFIN-37): these used to be synthetic (`tax-vat-15`), which hid
+ * the bug — the ids the form sends must be resolvable backend FKs.
+ */
+const VAT_TAX_ENTRY_ID = 'ff80818186941f2701869cb315b11dda';
+const NHIL_TAX_ENTRY_ID = 'ff80818173ca7d260173ca8249e70001';
+
 function setupDefaultMocks(clientsForDropdown = [createMockClient()]) {
   vi.mocked(listClients).mockResolvedValue(clientsForDropdown);
   // SOUPFIN-27: resolve the portfolio's accountServices FK from the dropdown
@@ -160,10 +177,14 @@ function setupDefaultMocks(clientsForDropdown = [createMockClient()]) {
     return { id: portfolioId, accountServices: as };
   });
   vi.mocked(listTaxRates).mockResolvedValue([
-    { id: 'tax-none', name: 'No Tax', rate: 0 },
-    { id: 'tax-vat-15', name: 'VAT 15%', rate: 15 },
+    { id: '', name: 'No Tax', rate: 0 },
+    { id: VAT_TAX_ENTRY_ID, name: 'VAT- STANDARD', rate: 15 },
+    { id: NHIL_TAX_ENTRY_ID, name: 'National Health Insurance Levy', rate: 2.5 },
   ]);
   vi.mocked(listInvoiceServices).mockResolvedValue([]);
+  vi.mocked(createInvoiceItem).mockResolvedValue({
+    id: 'new-item-1',
+  } as unknown as Awaited<ReturnType<typeof createInvoiceItem>>);
 }
 
 function createQueryClient() {
@@ -792,6 +813,162 @@ describe('InvoiceFormPage', () => {
 
       await waitFor(() => {
         expect(createInvoice).toHaveBeenCalled();
+      });
+    });
+
+    // =====================================================================
+    // SOUPFIN-37 regression guards.
+    //
+    // The defect: the form previewed a discounted, taxed total but saved a
+    // bare subtotal, because line items went out as `invoiceItemList[N].*`
+    // params and the backend's applyItemFields() copies only description,
+    // quantity and unitPrice off those. Tax was dropped; discount had no
+    // backend field to land in at all.
+    // =====================================================================
+    describe('line-item tax persistence (SOUPFIN-37)', () => {
+      /** Fills the form far enough to submit, then submits. */
+      async function fillAndSubmit(
+        user: ReturnType<typeof userEvent.setup>,
+        opts: { taxEntryId?: string; quantity?: string; unitPrice?: string } = {}
+      ) {
+        const { taxEntryId, quantity = '2', unitPrice = '1500' } = opts;
+
+        await screen.findByText('Test Corp');
+        await user.selectOptions(screen.getByTestId('invoice-client-select'), 'c-1');
+
+        const dueDateInput = screen.getByTestId('invoice-due-date-input');
+        await user.clear(dueDateInput);
+        await user.type(dueDateInput, '2026-09-10');
+
+        const descInput = screen.getByTestId('invoice-item-description-0');
+        await user.clear(descInput);
+        await user.type(descInput, 'Advisory');
+
+        const qtyInput = screen.getByTestId('invoice-item-quantity-0');
+        await user.clear(qtyInput);
+        await user.type(qtyInput, quantity);
+
+        const priceInput = screen.getByTestId('invoice-item-unitPrice-0');
+        await user.clear(priceInput);
+        await user.type(priceInput, unitPrice);
+
+        if (taxEntryId !== undefined) {
+          await user.selectOptions(screen.getByTestId('invoice-item-taxRate-0'), taxEntryId);
+        }
+
+        await user.click(screen.getByTestId('invoice-form-save-draft-button'));
+      }
+
+      function setupCreateMocks() {
+        setupDefaultMocks([
+          createMockClient({
+            id: 'c-1',
+            name: 'Test Corp',
+            accountServices: { id: 'as-1', serialised: 'Test Corp' },
+          }),
+        ]);
+        vi.mocked(createInvoice).mockResolvedValue(createMockInvoice({ id: 'inv-new' }));
+      }
+
+      it('sends the selected TaxEntry UUID with the created line item', async () => {
+        const user = userEvent.setup();
+        setupCreateMocks();
+        renderInvoiceFormPage();
+
+        await fillAndSubmit(user, { taxEntryId: VAT_TAX_ENTRY_ID });
+
+        await waitFor(() => {
+          expect(createInvoiceItem).toHaveBeenCalledWith('inv-new', {
+            description: 'Advisory',
+            quantity: 2,
+            unitPrice: 1500,
+            taxEntryIds: [VAT_TAX_ENTRY_ID],
+          });
+        });
+      });
+
+      it('creates line items against the invoice returned by createInvoice', async () => {
+        const user = userEvent.setup();
+        setupCreateMocks();
+        renderInvoiceFormPage();
+
+        await fillAndSubmit(user, { taxEntryId: NHIL_TAX_ENTRY_ID });
+
+        // Ordering matters: the item cannot be attached before its invoice exists.
+        await waitFor(() => expect(createInvoiceItem).toHaveBeenCalled());
+        expect(createInvoice).toHaveBeenCalled();
+        expect(vi.mocked(createInvoiceItem).mock.calls[0][0]).toBe('inv-new');
+      });
+
+      it('sends no tax ids when "No Tax" is selected', async () => {
+        const user = userEvent.setup();
+        setupCreateMocks();
+        renderInvoiceFormPage();
+
+        await fillAndSubmit(user, { taxEntryId: '' });
+
+        await waitFor(() => expect(createInvoiceItem).toHaveBeenCalled());
+        expect(vi.mocked(createInvoiceItem).mock.calls[0][1].taxEntryIds).toEqual([]);
+      });
+
+      it('does NOT send new line items as invoiceItemList params', async () => {
+        // This is the exact shape that caused the bug: any item sent this way
+        // is stripped down to description/quantity/unitPrice by the backend.
+        const user = userEvent.setup();
+        setupCreateMocks();
+        renderInvoiceFormPage();
+
+        await fillAndSubmit(user, { taxEntryId: VAT_TAX_ENTRY_ID });
+
+        await waitFor(() => expect(createInvoice).toHaveBeenCalled());
+        const payload = vi.mocked(createInvoice).mock.calls[0][0] as Record<string, unknown>;
+        const indexedItemKeys = Object.keys(payload).filter((k) => k.startsWith('invoiceItemList['));
+        expect(indexedItemKeys).toEqual([]);
+      });
+
+      it('skips blank line items rather than creating empty ones', async () => {
+        const user = userEvent.setup();
+        setupCreateMocks();
+        renderInvoiceFormPage();
+
+        // Add a second, untouched row — it must not be persisted.
+        await screen.findByText('Test Corp');
+        await user.click(screen.getByTestId('invoice-add-item-button'));
+        await fillAndSubmit(user, { taxEntryId: VAT_TAX_ENTRY_ID });
+
+        await waitFor(() => expect(createInvoiceItem).toHaveBeenCalled());
+        expect(createInvoiceItem).toHaveBeenCalledTimes(1);
+      });
+
+      it('previews a total of subtotal + tax, with no discount applied', async () => {
+        const user = userEvent.setup();
+        setupCreateMocks();
+        renderInvoiceFormPage();
+
+        await screen.findByText('Test Corp');
+        const qtyInput = screen.getByTestId('invoice-item-quantity-0');
+        await user.clear(qtyInput);
+        await user.type(qtyInput, '2');
+        const priceInput = screen.getByTestId('invoice-item-unitPrice-0');
+        await user.clear(priceInput);
+        await user.type(priceInput, '1500');
+        await user.selectOptions(screen.getByTestId('invoice-item-taxRate-0'), VAT_TAX_ENTRY_ID);
+
+        // 2 x 1500 = 3000 subtotal, +15% = 450 tax, 3450 total.
+        await waitFor(() => {
+          expect(screen.getByTestId('invoice-subtotal')).toHaveTextContent('3,000.00');
+        });
+        expect(screen.getByTestId('invoice-tax')).toHaveTextContent('450.00');
+        expect(screen.getByTestId('invoice-total')).toHaveTextContent('3,450.00');
+      });
+
+      it('no longer renders a discount input the backend cannot store', async () => {
+        setupCreateMocks();
+        renderInvoiceFormPage();
+
+        await screen.findByTestId('invoice-item-description-0');
+        expect(screen.queryByTestId('invoice-item-discountPercent-0')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('invoice-discount')).not.toBeInTheDocument();
       });
     });
 
