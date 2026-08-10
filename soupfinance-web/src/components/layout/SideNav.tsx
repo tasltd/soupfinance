@@ -4,6 +4,7 @@
  */
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuthStore, useUIStore, useAccountStore } from '../../stores';
+import type { BusinessLicenceCategory } from '../../types/settings';
 import { Logo } from '../Logo';
 
 interface NavItem {
@@ -11,10 +12,9 @@ interface NavItem {
   icon: string;
   path: string;
   children?: { label: string; path: string }[];
-  // Added (SOUPFIN-25): tenants whose businessLicenceCategory is in this set do NOT see the item.
-  // Vendors are a TRADING-module concept (suppliers/market makers); SERVICES tenants get a
-  // 403 from the backend TradingModuleInterceptor, so the nav entry must be hidden for them.
-  hideForCategories?: string[];
+  // Added (SOUPFIN-25): business categories for which this item is hidden.
+  // e.g. SERVICES tenants don't use suppliers/inventory, so Vendors is hidden.
+  hideForCategories?: BusinessLicenceCategory[];
 }
 
 // Changed (2026-01-28): Added Vendors, Accounting section, Trial Balance to Reports
@@ -23,8 +23,7 @@ const navItems: NavItem[] = [
   { label: 'Invoices', icon: 'receipt_long', path: '/invoices' },
   { label: 'Bills', icon: 'receipt', path: '/bills' },
   // Added: Vendors navigation item
-  // Changed (SOUPFIN-25): Hidden for SERVICES tenants — they don't use suppliers/inventory and
-  // the backend TradingModuleInterceptor returns 403 for tenants without the TRADING module.
+  // Fix (SOUPFIN-25): hidden for SERVICES tenants (no suppliers/inventory)
   { label: 'Vendors', icon: 'storefront', path: '/vendors', hideForCategories: ['SERVICES'] },
   // Added: Clients navigation item (gap analysis §4.5 - was only reachable via invoice form)
   { label: 'Clients', icon: 'people', path: '/clients' },
@@ -83,21 +82,15 @@ export function SideNav() {
   const location = useLocation();
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
-  // Added (SOUPFIN-25): tenant business category drives module-gated nav visibility
-  const businessLicenceCategory = useAccountStore(
-    (state) => state.settings?.businessLicenceCategory
-  );
+  // Added (SOUPFIN-25): tenant business category drives category-specific nav visibility.
+  const businessCategory = useAccountStore((state) => state.settings?.businessLicenceCategory);
   const { sidebarCollapsed, setSidebarCollapsed, mobileSidebarOpen, setMobileSidebarOpen } =
     useUIStore();
 
-  // Added (SOUPFIN-25): filter out items hidden for the current tenant's business category
-  // (e.g. Vendors is hidden for SERVICES tenants). When the category is not yet loaded,
-  // nothing is hidden — items only disappear once we positively know the category.
+  // Added (SOUPFIN-25): hide items flagged for the current tenant's business category.
+  // When the category is unknown (settings not yet loaded), items are shown by default.
   const visibleNavItems = navItems.filter(
-    (item) =>
-      !item.hideForCategories ||
-      !businessLicenceCategory ||
-      !item.hideForCategories.includes(businessLicenceCategory)
+    (item) => !(businessCategory && item.hideForCategories?.includes(businessCategory))
   );
 
   const isActive = (path: string) => {
@@ -127,9 +120,13 @@ export function SideNav() {
           ${mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
         `}
       >
-        <div className="flex flex-col justify-between p-4 h-full">
+        {/* Fix (SOUPFIN-30 #16): `min-h-0` + a scrollable nav column. Expanding
+            Reports (7 children) or Accounting pushed the nav past the viewport
+            height; without min-h-0 the flex children refused to shrink, so the
+            logo/Logout block was squashed and sub-items were clipped. */}
+        <div className="flex flex-col justify-between p-4 h-full min-h-0">
           {/* Logo & Company */}
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-4 min-h-0 flex-1 overflow-y-auto">
             <div className="flex items-center gap-3 px-3">
               {/* Logo */}
               {sidebarCollapsed ? (
@@ -222,8 +219,9 @@ export function SideNav() {
             </nav>
           </div>
 
-          {/* Bottom Links */}
-          <div className="flex flex-col gap-1">
+          {/* Bottom Links — shrink-0 keeps Help/Logout pinned and full height
+              even when the nav column above overflows (SOUPFIN-30 #16). */}
+          <div className="flex flex-col gap-1 shrink-0 pt-2">
             <button
               className="flex items-center gap-3 px-3 py-2 rounded-lg text-subtle-text hover:bg-primary/5 hover:text-text-light dark:hover:text-text-dark transition-colors"
             >

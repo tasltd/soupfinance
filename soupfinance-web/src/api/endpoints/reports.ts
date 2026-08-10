@@ -605,7 +605,16 @@ export async function getCashFlowStatement(filters: ReportFilters): Promise<Cash
   // "t is not iterable" when the for...of loop ran. We now coerce to an array
   // and accept several shapes: AccountTransactionEntry[] | { resultList: [...] } |
   // { ledgerTransactionList: [...] } | { accountTransactionList: [...] } | null.
-  const rawTransactions: unknown = await getAccountTransactions(filters).catch(() => null);
+  // Fix(SOUPFIN-30): do NOT swallow request failures here. This used to be
+  // `.catch(() => null)`, which turned a 500/network error into an empty
+  // statement — React Query never saw a rejection, `isError` stayed false, and
+  // the page rendered "No cash flow activities" instead of the error state.
+  // A failed request became indistinguishable from a genuinely empty period.
+  // The SOUPFIN-11 protection this catch was added for ("t is not iterable" on
+  // a non-array payload) is fully handled by normalizeTransactions below, which
+  // coerces null/objects/unknown shapes to []. So we let real errors propagate
+  // and keep the shape-normalisation.
+  const rawTransactions: unknown = await getAccountTransactions(filters);
   const transactions: AccountTransactionEntry[] = normalizeTransactions(rawTransactions);
 
   // Group transactions by type (simplified categorization)

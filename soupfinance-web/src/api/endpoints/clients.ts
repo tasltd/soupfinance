@@ -102,6 +102,113 @@ export async function getClient(id: string): Promise<Client> {
 }
 
 /**
+ * Merge a freshly-created AccountServices into a Client's `portfolioList` so the
+ * invoice form can resolve the FK via `client.portfolioList[0].accountServices.id`.
+ *
+ * Fix (SOUPFIN-28): `createAccountServicesForClient` returns the full
+ * AccountServices (including its `id`), but the `/rest/client/show` re-fetch
+ * omits `accountServices` from portfolio entries. Without re-injecting the FK
+ * here, the newly-linked AccountServices ID is lost and the invoice form reports
+ * the client as having no linked account services.
+ *
+ * The injection is defensive:
+ *   - No `portfolioList` at all → create one with a single linked entry
+ *   - Empty `portfolioList` → push a linked entry
+ *   - First entry missing `accountServices` → back-fill it
+ *   - First entry already has an `accountServices.id` (backend supplied it) → keep it
+ */
+function injectAccountServicesLink(
+  client: Client,
+  accountServices: AccountServices
+): Client {
+  // Build the FK reference shape used across the app (`{ id, serialised?, class? }`).
+  // `class` is not declared on the AccountServices type but Grails includes it at
+  // runtime; fall back to the known domain class so the ref is always complete.
+  const asRef = {
+    id: accountServices.id,
+    serialised: accountServices.serialised,
+    class:
+      (accountServices as { class?: string }).class ??
+      'soupbroker.kyc.AccountServices',
+  };
+
+  const portfolioList = client.portfolioList ? [...client.portfolioList] : [];
+
+  if (portfolioList.length === 0) {
+    portfolioList.push({ id: accountServices.id, accountServices: asRef });
+  } else if (!portfolioList[0].accountServices?.id) {
+    portfolioList[0] = { ...portfolioList[0], accountServices: asRef };
+  }
+
+  return { ...client, portfolioList };
+}
+
+/**
+ * ClientPortfolio detail (mirrors soupbroker.kyc.ClientPortfolio).
+ * The nested `accountServices` FK is only fully populated on the detail
+ * endpoint — the `/rest/client/index.json` list response returns portfolio
+ * entries as bare references (`{ id, class, serialised }`) with NO nested
+ * `accountServices`. See getClientPortfolio below.
+ */
+export interface ClientPortfolio {
+  id: string;
+  accountServices?: { id: string; serialised?: string; class?: string };
+  serialised?: string;
+  class?: string;
+}
+
+/**
+ * Get a single ClientPortfolio by ID (resolves the AccountServices FK).
+ * GET /rest/clientPortfolio/show/:id.json
+ *
+ * Fix (SOUPFIN-27): `GET /rest/client/index.json` omits the nested
+ * `accountServices` object inside each `portfolioList` entry — they only
+ * carry `{ id, class, serialised }`. Invoices reference `accountServices.id`
+ * as their FK, so the invoice form must resolve it here after a client is
+ * selected. On the backend, `ClientPortfolio.accountServices` uses
+ * `fetch:'join', lazy:false`, so the show endpoint always includes it.
+ */
+export async function getClientPortfolio(id: string): Promise<ClientPortfolio> {
+  const response = await apiClient.get<ClientPortfolio>(
+    `/clientPortfolio/show/${id}.json`
+  );
+  return response.data;
+}
+
+/**
+ * Resolve a Client's AccountServices FK id (the invoice recipient).
+ *
+ * Preference order:
+ *   1. If the list response already carried a nested accountServices (e.g. in
+ *      tests or a future backend that eager-loads it), use it directly.
+ *   2. Otherwise fetch the first portfolio's detail via getClientPortfolio.
+ *
+ * Returns an empty string when the client has no portfolio at all.
+ */
+export async function resolveAccountServicesId(client: Client): Promise<string> {
+  const first = client.portfolioList?.[0];
+  if (!first) return '';
+  if (first.accountServices?.id) return first.accountServices.id;
+  const portfolio = await getClientPortfolio(first.id);
+  return portfolio.accountServices?.id || '';
+}
+
+/**
+ * Build a human-readable display name for a Client dropdown option.
+ *
+ * Fix (SOUPFIN-27): the dropdown must be keyed by `client.id` and show the
+ * client's own name — never a portfolio's `serialised` string. KYC Individual
+ * clients store their name on `firstName`/`lastName` and may have a blank
+ * `name`, so fall back through the available identifiers.
+ *
+ * Re-exported rather than reimplemented: SOUP-1929 already introduced this exact
+ * fallback chain at features/clients/getClientDisplayName for the client table and
+ * the delete dialog. Two copies would drift, and a drifted copy is worse than
+ * either — the dropdown and the table would disagree about the same client's name.
+ */
+export { getClientDisplayName } from '../../features/clients/getClientDisplayName';
+
+/**
  * Create a new client AND its initial AccountServices.
  * POST /rest/client/save.json + POST /rest/accountServices/save.json?forClient={id}
  *
@@ -118,6 +225,8 @@ export async function getClient(id: string): Promise<Client> {
  *   2. POST /rest/accountServices/save.json?forClient={id} → creates AccountServices
  *      and the ClientPortfolio join row that links them
  *   3. GET /rest/client/show/{id}.json → re-fetch so portfolioList is populated
+ *   4. Inject the AccountServices FK into portfolioList[0] (see SOUPFIN-28) so the
+ *      link survives even when the backend show endpoint omits it
  *
  * If step 2 fails the Client is still returned (it can be repaired later via the
  * full Client management page), but the caller will see the missing-AccountServices
@@ -137,8 +246,11 @@ export async function createClient(data: Record<string, unknown>): Promise<Clien
   // Step 3 (Fix SOUPFIN-1): Create the AccountServices and ClientPortfolio link.
   // Without this, the new Client has no `portfolioList[].accountServices` and
   // cannot be selected as an invoice recipient.
+  // Fix (SOUPFIN-28): Capture the returned AccountServices — its `id` is the FK
+  // the invoice form needs, and it must not be discarded.
+  let accountServices: AccountServices;
   try {
-    await createAccountServicesForClient(newClient.id);
+    accountServices = await createAccountServicesForClient(newClient.id);
   } catch (error) {
     // Non-fatal: the Client exists and can be repaired manually. Surface a
     // warning so the user-facing error path stays informative.
@@ -149,8 +261,23 @@ export async function createClient(data: Record<string, unknown>): Promise<Clien
     return newClient;
   }
 
-  // Step 4: Re-fetch so `portfolioList` reflects the new ClientPortfolio row.
-  return await getClient(newClient.id);
+  // Step 4: Re-fetch so `portfolioList` reflects the new ClientPortfolio row,
+  // then inject the captured AccountServices FK (SOUPFIN-28). The re-fetch keeps
+  // any richer metadata the backend populated; the injection guarantees the FK
+  // is present even if the show endpoint omitted it. If the re-fetch fails, fall
+  // back to the save response so the link is still resolvable.
+  let client: Client;
+  try {
+    client = await getClient(newClient.id);
+  } catch (error) {
+    console.warn(
+      `[createClient] Client ${newClient.id} re-fetch failed; returning save response:`,
+      error
+    );
+    client = newClient;
+  }
+
+  return injectAccountServicesLink(client, accountServices);
 }
 
 /**

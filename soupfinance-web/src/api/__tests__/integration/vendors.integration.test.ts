@@ -466,4 +466,65 @@ describe('Vendors API Integration', () => {
       await expect(deleteVendor('vendor-with-bills')).rejects.toEqual(mockError);
     });
   });
+
+  // ==========================================================================
+  // Module Prefix Regression Guard (SOUPFIN-25)
+  // VendorController lives in the soupbroker.trading package, so every vendor
+  // endpoint MUST be reached under the /trading/vendor/* prefix. This block
+  // pins that convention so the bare /vendor/* path cannot silently return.
+  // ==========================================================================
+  describe('Trading module prefix (SOUPFIN-25)', () => {
+    it('every CRUD + report call is prefixed with /trading/vendor', async () => {
+      // Arrange
+      mockAxiosInstance.get.mockResolvedValue({
+        data: { SYNCHRONIZER_TOKEN: 'tok', SYNCHRONIZER_URI: '/trading/vendor/save' },
+      });
+      mockAxiosInstance.post.mockResolvedValue({ data: { id: 'v1' } });
+      mockAxiosInstance.put.mockResolvedValue({ data: { id: 'v1' } });
+      mockAxiosInstance.delete.mockResolvedValue({ data: {} });
+
+      vi.resetModules();
+      const vendors = await import('../../endpoints/vendors');
+
+      // Act
+      await vendors.listVendors();
+      await vendors.getVendor('v1');
+      await vendors.createVendor({ name: 'Acme' });
+      await vendors.updateVendor('v1', { name: 'Acme 2' });
+      await vendors.deleteVendor('v1');
+      await vendors.getVendorPaymentSummary('v1');
+
+      // Assert — collect every URL passed to the mocked client
+      const urls = [
+        ...mockAxiosInstance.get.mock.calls,
+        ...mockAxiosInstance.post.mock.calls,
+        ...mockAxiosInstance.put.mock.calls,
+        ...mockAxiosInstance.delete.mock.calls,
+      ].map((call) => call[0] as string);
+
+      expect(urls.length).toBeGreaterThan(0);
+      for (const url of urls) {
+        expect(url.startsWith('/trading/vendor/')).toBe(true);
+        // Guard against the pre-fix bare route sneaking back in
+        expect(url.startsWith('/vendor/')).toBe(false);
+      }
+    });
+
+    it('createVendor requests the CSRF token from the trading-prefixed create route', async () => {
+      // Arrange
+      mockAxiosInstance.get.mockResolvedValue({
+        data: { SYNCHRONIZER_TOKEN: 'tok', SYNCHRONIZER_URI: '/trading/vendor/save' },
+      });
+      mockAxiosInstance.post.mockResolvedValue({ data: { id: 'v1' } });
+
+      vi.resetModules();
+      const { createVendor } = await import('../../endpoints/vendors');
+
+      // Act
+      await createVendor({ name: 'Acme' });
+
+      // Assert — CSRF token is fetched from /trading/vendor/create.json, not /vendor/create.json
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/trading/vendor/create.json');
+    });
+  });
 });

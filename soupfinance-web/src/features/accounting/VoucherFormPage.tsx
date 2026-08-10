@@ -21,7 +21,11 @@ import { Select, type SelectOption } from '../../components/forms/Select';
 import { DatePicker } from '../../components/forms/DatePicker';
 import { Textarea } from '../../components/forms/Textarea';
 import { Radio, type RadioOption } from '../../components/forms/Radio';
-import { createVoucher } from '../../api/endpoints/ledger';
+// Added (SOUPFIN-30 #16): currency-aware amount input that rejects letters
+import { MoneyInput } from '../../components/forms/MoneyInput';
+// Added (SOUPFIN-30 #16): tenant-currency formatter for displayed amounts.
+import { useFormatCurrency } from '../../stores';
+import { createVoucher, ledgerGroupMatches } from '../../api/endpoints/ledger';
 import { useLedgerAccounts } from '../../hooks/useLedgerAccounts';
 import { usePaymentMethods } from '../../hooks/usePaymentMethods';
 import { DEFAULT_CURRENCIES } from '../../api/endpoints/domainData';
@@ -207,7 +211,7 @@ export function VoucherFormPage() {
   // Changed: Filter accounts by ledger group for bank/cash selection (ASSET accounts)
   const cashAccountOptions: SelectOption[] = useMemo(() =>
     (accounts || [])
-      .filter((account) => account.ledgerGroup === 'ASSET')
+      .filter((account) => ledgerGroupMatches(account.ledgerGroup, 'ASSET'))
       .map((account) => ({
         value: account.id,
         label: `${account.code} - ${account.name}`,
@@ -218,7 +222,7 @@ export function VoucherFormPage() {
   // Changed: Filter accounts by ledger group for expense selection
   const expenseAccountOptions: SelectOption[] = useMemo(() =>
     (accounts || [])
-      .filter((account) => account.ledgerGroup === 'EXPENSE')
+      .filter((account) => ledgerGroupMatches(account.ledgerGroup, 'EXPENSE'))
       .map((account) => ({
         value: account.id,
         label: `${account.code} - ${account.name}`,
@@ -226,10 +230,14 @@ export function VoucherFormPage() {
     [accounts]
   );
 
-  // Changed: Filter accounts by ledger group for income selection
+  // Changed: Filter accounts by ledger group for income selection.
+  // Fix (SOUPFIN-30 #8): ledgerGroupMatches treats INCOME and REVENUE as
+  // equivalent — the backend derives the group from the account category's
+  // serialised string, which may end in "< REVENUE" rather than "< INCOME".
+  // Filtering on INCOME alone left the receipt voucher's income dropdown empty.
   const incomeAccountOptions: SelectOption[] = useMemo(() =>
     (accounts || [])
-      .filter((account) => account.ledgerGroup === 'INCOME')
+      .filter((account) => ledgerGroupMatches(account.ledgerGroup, 'INCOME'))
       .map((account) => ({
         value: account.id,
         label: `${account.code} - ${account.name}`,
@@ -312,13 +320,9 @@ export function VoucherFormPage() {
   // Note: Currently same as save draft - future enhancement will add post workflow
   const handleApproveAndPost = handleSubmit(onSubmit);
 
-  // Added: Format currency for display
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(amount);
-  };
+  // Fix (SOUPFIN-30 #16): display amounts in the tenant's configured currency
+  // instead of a hardcoded USD, matching the MoneyInput prefix above.
+  const formatCurrency = useFormatCurrency();
 
   // Added: Get dynamic label for beneficiary/payer based on voucher type
   const beneficiaryLabel = isPaymentType ? 'Beneficiary' : 'Payer';
@@ -630,39 +634,19 @@ export function VoucherFormPage() {
         </div>
         <div className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Added: Amount input with currency prefix */}
-            <div className="flex flex-col">
-              <label className="text-sm font-medium pb-2 text-text-light dark:text-text-dark">
-                Amount <span className="text-danger">*</span>
-              </label>
-              <div className="relative">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-4 text-subtle-text text-base font-medium">$</span>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder="0.00"
-                  {...register('amount', { valueAsNumber: true })}
-                  className={`
-                    w-full h-12 pl-8 pr-4 rounded-lg border text-right text-lg font-bold
-                    ${errors.amount
-                      ? 'border-danger focus:border-danger focus:ring-danger/20'
-                      : 'border-border-light dark:border-border-dark focus:border-primary focus:ring-primary/20'
-                    }
-                    bg-surface-light dark:bg-surface-dark
-                    text-text-light dark:text-text-dark
-                    focus:outline-none focus:ring-2
-                  `}
-                  data-testid="voucher-amount-input"
-                />
-              </div>
-              {errors.amount && (
-                <span className="text-sm text-danger mt-1.5 flex items-center gap-1">
-                  <span className="material-symbols-outlined text-base">error</span>
-                  {errors.amount.message}
-                </span>
-              )}
-            </div>
+            {/* Amount input.
+                Fix (SOUPFIN-30 #16): MoneyInput shows the tenant's configured
+                currency symbol rather than a hardcoded "$", and rejects the
+                letter/sign keys a bare <input type="number"> accepts. */}
+            <MoneyInput
+              label="Amount"
+              required
+              placeholder="0.00"
+              inputClassName="text-lg font-bold"
+              error={errors.amount?.message}
+              {...register('amount', { valueAsNumber: true })}
+              data-testid="voucher-amount-input"
+            />
 
             {/* Added: Amount preview card */}
             <div className="flex items-center">

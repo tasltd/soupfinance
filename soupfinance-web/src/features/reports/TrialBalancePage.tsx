@@ -9,6 +9,7 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getTrialBalance, exportFinanceReport, type ReportFilters } from '../../api/endpoints/reports';
+import { formatDisplayDate } from '../../utils/date';
 import type { TrialBalanceItem } from '../../types';
 
 // Added: Trial balance uses subset of LedgerGroup (excludes 'INCOME' which is aliased to 'REVENUE')
@@ -228,7 +229,8 @@ export function TrialBalancePage() {
           </h1>
           <p className="text-subtle-text">
             Debit and credit balances for all accounts
-            {trialBalance?.asOf && ` as of ${trialBalance.asOf}`}
+            {/* Fix (SOUPFIN-30 #12): format the as-of date for display (was raw ISO). */}
+            {trialBalance?.asOf && ` as of ${formatDisplayDate(trialBalance.asOf)}`}
           </p>
         </div>
 
@@ -275,8 +277,13 @@ export function TrialBalancePage() {
             <span className="text-sm font-medium text-text-light dark:text-text-dark pb-2">
               From Date
             </span>
+            {/* Fix (SOUPFIN-33 #6): id/name so the field is programmatically identifiable
+                (the wrapping <label> already supplies the implicit association). */}
             <input
               type="date"
+              id="trial-balance-from"
+              name="trial-balance-from"
+              aria-label="Trial balance from date"
               value={filters.from}
               min={REPORT_MIN_DATE}
               onChange={(e) => handleFilterChange('from', e.target.value)}
@@ -292,6 +299,9 @@ export function TrialBalancePage() {
             </span>
             <input
               type="date"
+              id="trial-balance-to"
+              name="trial-balance-to"
+              aria-label="Trial balance to date"
               value={filters.to}
               min={REPORT_MIN_DATE}
               onChange={(e) => handleFilterChange('to', e.target.value)}
@@ -389,7 +399,10 @@ export function TrialBalancePage() {
               No accounts found
             </h3>
             <p className="text-subtle-text max-w-md mx-auto">
-              No account balances found between {filters.from} and {filters.to}.
+              {/* Fix (SOUPFIN-33 #2): format the range like the subtitle on line ~233
+                  instead of interpolating the raw YYYY-MM-DD filter values. */}
+              No account balances found between {formatDisplayDate(filters.from)} and{' '}
+              {formatDisplayDate(filters.to)}.
               Try widening the date range, or check that your chart of accounts
               has posted ledger transactions for this period.
             </p>

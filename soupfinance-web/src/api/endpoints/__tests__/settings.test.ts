@@ -13,7 +13,7 @@
  *      a tenantId (e.g. backend response has no tenantId at all).
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { accountSettingsApi, isValidAccountSettings } from '../settings';
+import { accountSettingsApi, banksApi, dedupeBanksByName, isValidAccountSettings } from '../settings';
 import { useAuthStore } from '../../../stores/authStore';
 import apiClient, { accountClient } from '../../client';
 
@@ -214,5 +214,152 @@ describe('isValidAccountSettings (SOUPFIN-23 type guard)', () => {
     expect(isValidAccountSettings({ name: 'no-id' })).toBe(false);
     expect(isValidAccountSettings({ id: '' })).toBe(false);
     expect(isValidAccountSettings({ id: 123 })).toBe(false);
+  });
+});
+
+// Fix (SOUPFIN-30 #10): the Add Bank Account form's bank dropdown was empty.
+// banksApi.list() must yield the bank array whether the backend returns a bare
+// array or a wrapped envelope, and drop malformed rows.
+describe('banksApi.list() — SOUPFIN-30 #10 resilient parsing', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('returns a bare array of banks (with ids) unchanged', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({
+      data: [
+        { id: 'b1', name: 'Absa Bank Ghana Limited' },
+        { id: 'b2', name: 'GCB Bank' },
+      ],
+    });
+    const banks = await banksApi.list();
+    expect(banks.map((b) => b.name)).toEqual(['Absa Bank Ghana Limited', 'GCB Bank']);
+  });
+
+  it('unwraps a { bankList } / { resultList } envelope', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({ data: { bankList: [{ id: 'b1', name: 'GCB' }] } });
+    expect((await banksApi.list()).map((b) => b.id)).toEqual(['b1']);
+
+    vi.mocked(apiClient.get).mockResolvedValue({ data: { resultList: [{ id: 'b9', name: 'Fidelity' }] } });
+    expect((await banksApi.list()).map((b) => b.id)).toEqual(['b9']);
+  });
+
+  it('drops malformed rows and returns [] for an unexpected shape', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({ data: [{ id: 'b1', name: 'Ok' }, { name: 'No id' }, null] });
+    expect((await banksApi.list()).map((b) => b.id)).toEqual(['b1']);
+
+    vi.mocked(apiClient.get).mockResolvedValue({ data: { unexpected: true } });
+    expect(await banksApi.list()).toEqual([]);
+  });
+});
+
+/**
+ * Fix (SOUPFIN-33 #3): the Edit Bank Account form's bank dropdown listed roughly 15
+ * copies of every bank. The backend `/rest/bank/index.json` seed table genuinely
+ * contains those duplicate rows — each with a DISTINCT id — so de-duplicating by id
+ * changes nothing. The dropdown is keyed on what the user reads, so the frontend
+ * collapses on the normalised NAME instead.
+ *
+ * Deliberately conservative: no name-shape heuristics. Near-miss spellings that are
+ * plausibly different institutions are kept rather than silently dropped — hiding a
+ * real bank is a worse failure than showing one extra option.
+ */
+describe('dedupeBanksByName() — SOUPFIN-33 #3 duplicate bank options', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('collapses ~15 duplicates per bank down to one option each, first occurrence wins', () => {
+    // Reproduces the reported shape: the same two banks repeated 15x with unique ids.
+    const banks = Array.from({ length: 15 }, (_, i) => [
+      { id: `gcb-${i}`, name: 'GCB Bank' },
+      { id: `absa-${i}`, name: 'Absa Bank Ghana Limited' },
+    ]).flat();
+    expect(banks).toHaveLength(30);
+
+    const result = dedupeBanksByName(banks);
+
+    expect(result.map((b) => b.name)).toEqual(['GCB Bank', 'Absa Bank Ghana Limited']);
+    // First-occurrence-wins keeps the ordering stable across reloads.
+    expect(result.map((b) => b.id)).toEqual(['gcb-0', 'absa-0']);
+  });
+
+  it('matches case-insensitively and ignores surrounding / repeated whitespace', () => {
+    const result = dedupeBanksByName([
+      { id: '1', name: 'GCB Bank' },
+      { id: '2', name: '  gcb bank  ' },
+      { id: '3', name: 'GCB   Bank' },
+      { id: '4', name: 'gCb BaNk' },
+    ]);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe('1');
+  });
+
+  it('KEEPS genuinely distinct names that merely look similar', () => {
+    // "Access" and "Access Bank (Ghana) Plc" may be different records; dropping
+    // either would hide a selectable bank from the user.
+    const result = dedupeBanksByName([
+      { id: '1', name: 'Access' },
+      { id: '2', name: 'Access Bank (Ghana) Plc' },
+      { id: '3', name: 'GCB Bank' },
+      { id: '4', name: 'GCB Bank Limited' },
+    ]);
+
+    expect(result.map((b) => b.name)).toEqual([
+      'Access',
+      'Access Bank (Ghana) Plc',
+      'GCB Bank',
+      'GCB Bank Limited',
+    ]);
+  });
+
+  it('drops rows with a blank, whitespace-only, or missing name', () => {
+    const result = dedupeBanksByName([
+      { id: '1', name: 'GCB Bank' },
+      { id: '2', name: '' },
+      { id: '3', name: '   ' },
+      { id: '4' } as Parameters<typeof dedupeBanksByName>[0][number],
+    ]);
+
+    expect(result.map((b) => b.id)).toEqual(['1']);
+  });
+
+  it('passes an empty list and an already-unique list straight through', () => {
+    expect(dedupeBanksByName([])).toEqual([]);
+
+    const unique = [
+      { id: '1', name: 'GCB Bank' },
+      { id: '2', name: 'Fidelity Bank' },
+    ];
+    expect(dedupeBanksByName(unique)).toEqual(unique);
+  });
+
+  it('banksApi.list() de-duplicates a bare array end to end', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({
+      data: [
+        { id: 'b1', name: 'GCB Bank' },
+        { id: 'b2', name: 'GCB Bank' },
+        { id: 'b3', name: 'Fidelity Bank' },
+      ],
+    });
+
+    const banks = await banksApi.list();
+    expect(banks.map((b) => b.name)).toEqual(['GCB Bank', 'Fidelity Bank']);
+  });
+
+  it('banksApi.list() de-duplicates inside a { bankList } envelope too', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({
+      data: {
+        bankList: [
+          { id: 'b1', name: 'Absa Bank Ghana Limited' },
+          { id: 'b2', name: 'absa bank ghana limited' },
+          { id: 'b3', name: '' },
+        ],
+      },
+    });
+
+    const banks = await banksApi.list();
+    expect(banks.map((b) => b.id)).toEqual(['b1']);
   });
 });

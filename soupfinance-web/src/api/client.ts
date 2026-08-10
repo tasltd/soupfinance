@@ -274,22 +274,25 @@ export function csrfQueryString(csrf: CsrfToken): string {
  * IMPORTANT: Grails reads SYNCHRONIZER_TOKEN from request parameters, NOT from JSON body.
  * Use csrfQueryString() to append tokens to the URL instead of including them in the body.
  *
- * @param controller - The controller name (e.g., 'vendor', 'ledgerAccount', 'bill')
+ * @param controller - The controller name (e.g., 'vendor', 'ledgerAccount', 'bill'). May be
+ *   module-prefixed ('trading/vendor', 'finance/bill'): the prefix is used for the URL, but
+ *   the nested-token lookup uses only the last segment because that is how Grails nests it.
  * @returns CSRF token object to pass to csrfQueryString()
  *
  * @example
- * const csrf = await getCsrfToken('vendor');
- * await apiClient.post(`/vendor/save.json?${csrfQueryString(csrf)}`, data);
+ * const csrf = await getCsrfToken('trading/vendor');
+ * await apiClient.post(`/trading/vendor/save.json?${csrfQueryString(csrf)}`, data);
  */
 export async function getCsrfToken(controller: string): Promise<CsrfToken> {
   const response = await apiClient.get<Record<string, unknown>>(`/${controller}/create.json`);
 
-  // The token can be at the root level or nested under the controller name
-  // Changed (SOUPFIN-25): For module-prefixed controllers (e.g. 'trading/vendor') the backend
-  // nests the token under the bare domain key ('vendor'), so use the last path segment.
+  // The token can be at the root level or nested under the controller name.
+  // Fix (SOUPFIN-25): controller may be module-prefixed (e.g. 'trading/vendor') for the
+  // URL, but the backend nests the token under the bare controller name ('vendor'), so
+  // use the last path segment for the nested lookup. Single-segment names are unchanged.
   const data = response.data;
-  const controllerKey = controller.split('/').pop() ?? controller;
-  const controllerData = data[controllerKey] as Record<string, unknown> | undefined;
+  const nestedKey = controller.split('/').pop() ?? controller;
+  const controllerData = data[nestedKey] as Record<string, unknown> | undefined;
 
   // Try to find CSRF token in response - check both root and nested
   const token = (controllerData?.SYNCHRONIZER_TOKEN || data.SYNCHRONIZER_TOKEN) as string | undefined;
@@ -323,10 +326,11 @@ export async function getCsrfToken(controller: string): Promise<CsrfToken> {
 export async function getCsrfTokenForEdit(controller: string, id: string): Promise<CsrfToken> {
   const response = await apiClient.get<Record<string, unknown>>(`/${controller}/edit/${id}.json`);
 
-  // Changed (SOUPFIN-25): module-prefixed controllers nest under the bare domain key
+  // Fix (SOUPFIN-25): use the last path segment for the nested lookup so module-prefixed
+  // controllers (e.g. 'trading/vendor') still resolve the token nested under 'vendor'.
   const data = response.data;
-  const controllerKey = controller.split('/').pop() ?? controller;
-  const controllerData = data[controllerKey] as Record<string, unknown> | undefined;
+  const nestedKey = controller.split('/').pop() ?? controller;
+  const controllerData = data[nestedKey] as Record<string, unknown> | undefined;
 
   const token = (controllerData?.SYNCHRONIZER_TOKEN || data.SYNCHRONIZER_TOKEN) as string | undefined;
   const uri = (controllerData?.SYNCHRONIZER_URI || data.SYNCHRONIZER_URI) as string | undefined;

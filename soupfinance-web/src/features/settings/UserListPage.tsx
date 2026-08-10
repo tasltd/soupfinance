@@ -81,18 +81,35 @@ export default function UserListPage() {
     return labels.length > 0 ? labels.join(', ') : null;
   };
 
+  // Fix (SOUPFIN-30 #9): The "Email / Username" column must show the user's
+  // email/username — never their job title. The backend serialises `userAccess`
+  // as a shallow FK ({ id, class }) with NO username, and `emailContacts` is
+  // usually null on the agent list response, so the old lookup found nothing.
+  // Recover the username from `agent.simpleID` ("First Last, Access:username")
+  // when `userAccess.username` is absent.
+  const getUsername = (agent: Agent): string | undefined => {
+    if (agent.userAccess?.username) return agent.userAccess.username;
+    // simpleID format: "First Last, Access:the.username"
+    const match = agent.simpleID?.match(/Access:\s*([^\s,]+)/i);
+    return match?.[1];
+  };
+
   // Changed: distinguish email vs username vs missing so the user-list table is
   // never just a row of dashes (bug 10 in SOUPFIN-2)
   const getUserContact = (
     agent: Agent
   ): { primary: string; secondary?: string; isPlaceholder?: boolean } => {
     const email = agent.emailContacts?.[0]?.email;
-    const username = agent.userAccess?.username;
+    const username = getUsername(agent);
     if (email && username && email !== username) {
       return { primary: email, secondary: `@${username}` };
     }
     if (email) return { primary: email };
-    if (username) return { primary: `@${username}`, secondary: 'No email on file' };
+    // Fix (SOUPFIN-33 #5): the "No email on file" secondary line contradicted the
+    // username rendered directly above it — the column shows a valid identifier, so
+    // the note read as a conflicting error. Only the primary value is shown now; the
+    // "nothing at all" case below still reports missing contact info.
+    if (username) return { primary: `@${username}` };
     return { primary: 'No contact info', isPlaceholder: true };
   };
 
@@ -126,8 +143,12 @@ export default function UserListPage() {
         <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-subtle-text text-xl">
           search
         </span>
+        {/* Fix (SOUPFIN-33 #6): id/name + aria-label — the search field had no label. */}
         <input
           type="search"
+          id="user-search"
+          name="user-search"
+          aria-label="Search users"
           placeholder="Search users..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}

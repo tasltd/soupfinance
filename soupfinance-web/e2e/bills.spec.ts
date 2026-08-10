@@ -17,7 +17,7 @@
  *   - DELETE /rest/bill/delete/:id.json - delete bill
  *   - GET /rest/billPayment/index.json - list payments
  *   - POST /rest/billPayment/save.json - record payment
- *   - GET /rest/trading/vendor/index.json - list vendors for dropdown
+ *   - GET /rest/vendor/index.json - list vendors for dropdown
  */
 import { test, expect } from '@playwright/test';
 import { takeScreenshot, mockTokenValidationApi, mockDashboardApi, isLxcMode, backendTestUsers, setupResponseValidation } from './fixtures';
@@ -240,6 +240,18 @@ async function mockBillDetailApi(page: any, bill: typeof mockBills[0]) {
       body: JSON.stringify(bill),
     });
   });
+
+  // Fix (SOUPFIN-30 #3): getBill() fetches the line items separately because the
+  // show response returns `billItemList: null`. Without this route the request
+  // reached an absent backend, and the resulting 401 redirected the page to
+  // /login before any detail assertion could run.
+  await page.route('**/rest/billItem/index.json*', (route: any) => {
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(bill.billItemList ?? []),
+    });
+  });
 }
 
 async function mockVendorsApi(page: any, vendors = mockVendors) {
@@ -249,11 +261,33 @@ async function mockVendorsApi(page: any, vendors = mockVendors) {
   // Mock token validation to keep user authenticated
   await mockTokenValidationApi(page, true);
 
-  await page.route('**/rest/trading/vendor/index.json*', (route: any) => {
+  await page.route('**/vendor/index.json*', (route: any) => {
     route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify(vendors),
+    });
+  });
+
+  // Fix (SOUPFIN-30): the bill form also loads its service-description options,
+  // and getBill() fetches billItem rows separately (the show response returns
+  // billItemList: null). Neither endpoint was mocked, so in mock mode both fell
+  // through to an absent backend; the 401 tripped the client's auth interceptor
+  // and redirected the page to /login, which is why the bill form/detail
+  // assertions failed with "element(s) not found".
+  await page.route('**/rest/serviceDescription/index.json*', (route: any) => {
+    route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+  });
+
+  await page.route('**/rest/billItem/index.json*', (route: any) => {
+    const url = route.request().url();
+    const billIdMatch = url.match(/bill\.id=([^&]+)/);
+    const billId = billIdMatch ? decodeURIComponent(billIdMatch[1]) : null;
+    const bill = mockBills.find((b) => b.id === billId);
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(bill?.billItemList ?? []),
     });
   });
 }

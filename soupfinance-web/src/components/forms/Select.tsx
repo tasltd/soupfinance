@@ -3,7 +3,7 @@
  * Reusable dropdown select with label, error state, and helper text
  * Reference: soupfinance-designs/new-invoice-form/, design-system.md Form Inputs section
  */
-import { forwardRef, type SelectHTMLAttributes } from 'react';
+import { forwardRef, useId, type SelectHTMLAttributes } from 'react';
 
 // Added: Option interface for type-safe option arrays
 export interface SelectOption {
@@ -42,10 +42,15 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
       containerClassName = '',
       disabled,
       required,
+      id,
       ...props
     },
     ref
   ) => {
+    // Fix (SOUPFIN-30 #6): explicit id/label association — see Input.tsx.
+    const generatedId = useId();
+    const selectId = id ?? generatedId;
+
     // Added: Compute border color based on error state
     const borderClass = error
       ? 'border-danger focus:border-danger focus:ring-danger/20'
@@ -57,7 +62,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
       : 'bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark';
 
     return (
-      <label className={`flex flex-col ${containerClassName}`}>
+      <label className={`flex flex-col ${containerClassName}`} htmlFor={selectId}>
         {/* Label with optional required indicator */}
         {label && (
           <span className="text-sm font-medium pb-2 text-text-light dark:text-text-dark">
@@ -70,6 +75,10 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
         <div className="relative">
           <select
             ref={ref}
+            id={selectId}
+            // Fix (SOUPFIN-30 #6): fall back to the placeholder for an accessible
+            // name when the select renders without a visible <label>.
+            aria-label={props['aria-label'] ?? (label ? undefined : placeholder)}
             disabled={disabled}
             required={required}
             className={`

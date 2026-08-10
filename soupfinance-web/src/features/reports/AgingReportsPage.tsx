@@ -14,6 +14,9 @@ import {
   exportFinanceReport,
   type ReportFilters,
 } from '../../api/endpoints/reports';
+import { formatDisplayDate } from '../../utils/date';
+// Fix (SOUPFIN-33 #4): tenant-currency formatter (was hardcoded USD/"$0.00").
+import { useFormatCurrency } from '../../stores';
 import type { AgingReport, AgingItem } from '../../types';
 
 // Fix(SOUPFIN-11/SOUPFIN-16): Earliest date users can pick for historical aging analysis.
@@ -35,15 +38,13 @@ function getTodayDate(): string {
   return new Date().toISOString().split('T')[0];
 }
 
-// Added: Format currency with proper thousands separator
-function formatCurrency(amount: number, currency = 'USD'): string {
-  if (amount === 0) return '$0.00';
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: 2,
-  }).format(amount);
-}
+/*
+ * Fix (SOUPFIN-33 #4): the module-level formatCurrency() that used to live here
+ * hardcoded `$0.00` / Intl 'en-US' + 'USD', so a GHS tenant saw the whole A/P and
+ * A/R aging tables in dollars while every other report rendered GH₵. Both consumers
+ * are React components, so they now call useFormatCurrency() (account-store backed)
+ * and re-render if the tenant currency changes.
+ */
 
 // Added: Get color class for aging amounts based on bucket
 function getAmountColorClass(bucket: 'current' | 'days30' | 'days60' | 'days90' | 'over90', amount: number): string {
@@ -81,7 +82,21 @@ const AGE_BUCKETS = [
 interface AgingTableProps {
   title: string;
   icon: string;
+  /**
+   * Fix (SOUPFIN-35): the empty-state heading used to be derived with
+   * `title.toLowerCase().replace(' aging', '')`, which destroyed the acronym
+   * and rendered "No outstanding a/r". Casing is content, not a transform —
+   * pass the short label already cased instead of deriving it.
+   */
+  shortLabel: string; // "A/R" | "A/P"
   entityLabel: string; // "Customer" for A/R, "Vendor" for A/P
+  /**
+   * Plural, lowercase form for the empty-state sentence ("customers are
+   * current"). Explicit for the same reason as `shortLabel`: deriving it with
+   * `entityLabel.toLowerCase() + 's'` happens to read correctly for "Customer"
+   * and "Vendor", but silently breaks on an acronym or an irregular plural.
+   */
+  entityPlural: string; // "customers" | "vendors"
   data: AgingReport | undefined;
   isLoading: boolean;
   isError: boolean;
@@ -94,7 +109,9 @@ interface AgingTableProps {
 function AgingTable({
   title,
   icon,
+  shortLabel,
   entityLabel,
+  entityPlural,
   data,
   isLoading,
   isError,
@@ -103,6 +120,10 @@ function AgingTable({
   exportLoading,
   testIdPrefix,
 }: AgingTableProps) {
+  // Fix (SOUPFIN-33 #4): amounts follow the tenant's configured currency (GH₵ for
+  // GHS accounts), matching the A/R table and the rest of the reports module.
+  const formatCurrency = useFormatCurrency();
+
   return (
     <div
       className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden"
@@ -173,11 +194,29 @@ function AgingTable({
           <span className="material-symbols-outlined text-5xl text-subtle-text/50 mb-3">
             {icon}
           </span>
-          <h4 className="text-base font-bold text-text-light dark:text-text-dark mb-2">
-            No outstanding {title.toLowerCase().replace(' aging', '')}
+          {/*
+            Single template literal, for the same reason as the sentence below:
+            `No outstanding {shortLabel}` would compile to two sibling text
+            nodes and an a11y serialiser joining them with a space reads
+            "No outstanding  A/R" (doubled space). See SOUPFIN-30 #13.
+          */}
+          <h4
+            className="text-base font-bold text-text-light dark:text-text-dark mb-2"
+            data-testid={`${testIdPrefix}-empty-heading`}
+          >
+            {`No outstanding ${shortLabel}`}
           </h4>
-          <p className="text-subtle-text text-sm">
-            All {entityLabel.toLowerCase()}s are current as of this date.
+          {/*
+            Fix (SOUPFIN-30 #13): render the pluralised sentence as ONE text node.
+            `All {expr}s are current` compiles to three sibling text nodes
+            (["All ", entity, "s are current..."]). Anything that joins sibling
+            text nodes with a separator — accessibility-tree serialisers and the
+            a11y scanners used in V19 testing — reads that back as
+            "All customer s are current". Interpolating in a single template
+            literal leaves exactly one text node, so it cannot be split.
+          */}
+          <p className="text-subtle-text text-sm" data-testid={`${testIdPrefix}-empty-message`}>
+            {`All ${entityPlural} are current as of this date.`}
           </p>
         </div>
       ) : (
@@ -278,6 +317,9 @@ function AgingTable({
  * Aging Reports Page Component
  */
 export function AgingReportsPage() {
+  // Fix (SOUPFIN-33 #4): summary cards use the tenant currency, not a hardcoded "$".
+  const formatCurrency = useFormatCurrency();
+
   // Added: As-of date filter state with default to today
   const defaultDate = useMemo(() => getTodayDate(), []);
   const [asOfDate, setAsOfDate] = useState<string>(defaultDate);
@@ -375,18 +417,24 @@ export function AgingReportsPage() {
           </h1>
           <p className="text-subtle-text">
             Outstanding receivables and payables by age as of{' '}
-            <span className="font-medium text-text-light dark:text-text-dark">{asOfDate}</span>
+            {/* Fix (SOUPFIN-30 #12): format the date for display (was raw ISO). */}
+            <span className="font-medium text-text-light dark:text-text-dark">{formatDisplayDate(asOfDate)}</span>
           </p>
         </div>
 
         {/* As Of Date Picker */}
         <div className="flex items-center gap-3">
-          <label className="flex items-center gap-2">
+          {/* Fix (SOUPFIN-33 #6): the label wrapped only the icon/text — it pointed at no
+              control. Bind it to the picker with htmlFor/id. */}
+          <label className="flex items-center gap-2" htmlFor="aging-as-of-date">
             <span className="material-symbols-outlined text-lg text-subtle-text">schedule</span>
             <span className="text-sm font-medium text-text-light dark:text-text-dark">As of:</span>
           </label>
           <input
             type="date"
+            id="aging-as-of-date"
+            name="aging-as-of-date"
+            aria-label="Aging reports as-of date"
             value={asOfDate}
             onChange={(e) => setAsOfDate(e.target.value)}
             min={AGING_MIN_DATE}
@@ -423,7 +471,9 @@ export function AgingReportsPage() {
         <AgingTable
           title="A/R Aging"
           icon="receipt_long"
+          shortLabel="A/R"
           entityLabel="Customer"
+          entityPlural="customers"
           data={arAgingData}
           isLoading={arLoading}
           isError={arIsError}
@@ -437,7 +487,9 @@ export function AgingReportsPage() {
         <AgingTable
           title="A/P Aging"
           icon="payments"
+          shortLabel="A/P"
           entityLabel="Vendor"
+          entityPlural="vendors"
           data={apAgingData}
           isLoading={apLoading}
           isError={apIsError}

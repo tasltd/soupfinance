@@ -88,8 +88,12 @@ export function VendorListPage() {
         <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-subtle-text text-xl">
           search
         </span>
+        {/* Fix (SOUPFIN-33 #6): id/name + aria-label — the search field had no label. */}
         <input
           type="search"
+          id="vendor-search"
+          name="vendor-search"
+          aria-label="Search vendors"
           placeholder="Search vendors..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}

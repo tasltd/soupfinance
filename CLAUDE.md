@@ -61,6 +61,7 @@ After completing any fix or code change, immediately re-read this CLAUDE.md befo
 | **Domain Architecture** | [.claude/rules/soupfinance-domain-architecture.md](.claude/rules/soupfinance-domain-architecture.md) | `www.soupfinance.com` = landing (NO login), `app.soupfinance.com` = React app |
 | **Backend Tenant** | [.claude/rules/soupfinance-backend-tenant.md](.claude/rules/soupfinance-backend-tenant.md) | Uses TAS tenant at `tas.soupmarkets.com`, registration via `/account/*` |
 | **Backend Changes** | [.claude/rules/backend-changes-workflow.md](.claude/rules/backend-changes-workflow.md) | Do NOT modify backend directly; create plans in `plans/` |
+| **SOUPFIN-13 Directive** | [plans/soupfin-13-backend-consolidation-directive.md](plans/soupfin-13-backend-consolidation-directive.md) | All SOUPFIN-1..11 backend resolutions live in **soupmarkets-web**, not here — see for issue→area→plan mapping |
 | **Gradle Concurrency** | [.claude/rules/gradle-concurrent-tasks.md](.claude/rules/gradle-concurrent-tasks.md) | NEVER run concurrent Gradle tasks in same project |
 | **Port Configuration** | [.claude/rules/port-configuration.md](.claude/rules/port-configuration.md) | Vite 5173, E2E 5180, Storybook 6006, Backend 9090 |
 | **Design System** | [.claude/rules/soupfinance-design-system.md](.claude/rules/soupfinance-design-system.md) | Tailwind v4 tokens, Manrope font, Material Symbols icons |
@@ -126,6 +127,21 @@ The frontend uses two Axios instances in `soupfinance-web/src/api/client.ts`:
 
 **NEVER use `apiClient` for `/account/` endpoints** — it produces `/rest/account/...` which returns 403 on production. Both clients share the same interceptors (X-Auth-Token auth, 401 redirect, logging).
 
+### Module Gating: 403 Does Not Mean "Permission Denied"
+
+The SoupFinance tenant runs a **SERVICES license category**, so Ledger, Accounting, Voucher and PaymentMethod modules are **not enabled** — their endpoints return **403**, the same status the backend uses for a genuine role failure. Grails resolves controllers by *name*, so module interceptors reject by controller name rather than URL prefix.
+
+The frontend distinguishes the two cases so users get "ask your admin to enable Ledger" instead of `Request failed with status code 403`:
+
+| Surface | Component | Behaviour |
+|---------|-----------|-----------|
+| List / read-only pages | `ApiErrorState` | Full-page error; branches on `ApiErrorKind` for icon + tone (retry vs contact admin) |
+| Form pages (Journal Entry, Voucher) | `ModuleDisabledBanner` | Form still renders so layout is visible; banner explains empty dropdowns instead of letting the user submit into a guaranteed 403 |
+
+**Never `.catch(() => null)` in an endpoint** — a swallowed 500 renders as an empty table, `isError` never fires, and the failure looks like "no data". Let it propagate.
+
+Three overlapping error helpers exist (`api/errors.ts` — prefer for new code; `utils/apiErrors.ts`; `utils/apiError.ts`). See `soupfinance-web/CLAUDE.md` → "API Error Handling & Module Gating" for which feature uses which.
+
 ---
 
 ## Architecture
@@ -135,14 +151,16 @@ The frontend uses two Axios instances in `soupfinance-web/src/api/client.ts`:
 ```
 api/                    # Axios client + endpoint modules
 ├── client.ts          # Base instance, auth interceptors, CSRF helpers, response normalization
+├── errors.ts          # parseApiError/getApiErrorMessage — 403 "module disabled" vs "forbidden"
 └── endpoints/         # Feature-specific: invoices, bills, vendors, clients, ledger, corporate,
                        #   reports, report-schedules (scheduled reports CRUD), email, registration,
                        #   settings, domainData
 components/
-├── layout/            # MainLayout, AuthLayout, SideNav, TopNav
+├── layout/            # MainLayout, AuthLayout, SideNav, TopNav, LanguageSwitcher
 ├── forms/             # Input, Select, Textarea, Checkbox, Radio, DatePicker
-├── feedback/          # AlertBanner, Spinner, Toast, Tooltip, ToastProvider
-├── tables/            # Data table components
+├── feedback/          # AlertBanner, Spinner, Toast, Tooltip, ToastProvider,
+│                      #   ApiErrorState (full-page error), ModuleDisabledBanner (inline, form pages)
+├── Logo.tsx           # Brand mark (uses dark: variants, no darkMode prop)
 └── ErrorBoundary.tsx  # Global React error boundary
 features/              # Page components by domain (auth, dashboard, invoices, bills, vendors,
 │                      #   payments, ledger, accounting, reports, clients, corporate, settings)
@@ -275,7 +293,9 @@ Screenshots should be taken after login, after key form submissions, after navig
 
 ### Unit Tests (Vitest + React Testing Library)
 
-**768 tests** across **26 test files** (all passing).
+**1095 tests** across **53 test files**, all passing (verified 2026-08-03 via `npm run test:run`).
+
+**Fresh clone/worktree:** run `npm install` first — `node_modules` is git-ignored, and without it `npm run test:run` fails with `vitest: not found`.
 
 - Axios globally mocked in `src/test/setup.ts` — no real HTTP in unit tests
 - Render with `QueryClientProvider` + `MemoryRouter` wrappers
@@ -299,7 +319,9 @@ Screenshots should be taken after login, after key form submissions, after navig
 - Use `data-testid` attributes: `{feature}-page`, `{feature}-form`, `{feature}-submit-button`, `{feature}-table`
 - Handle session expiry in LXC mode before asserting
 - Integration tests live in `e2e/integration/` and follow `*.integration.spec.ts` naming (only run against LXC backend)
-- **15 mock E2E test files** in `e2e/` (362 tests) and **14 integration test files** in `e2e/integration/` (5 numbered + 9 non-numbered, 165/170 pass on LXC backend, 0 failed, 5 skipped)
+- **20 mock E2E test files** in `e2e/` (392 tests) and **14 integration test files** in `e2e/integration/` (5 numbered + 9 non-numbered, 165/170 pass on LXC backend, 0 failed, 5 skipped)
+- A fresh clone/worktree needs `npx playwright install firefox` before the first run — Playwright pins one exact build and ignores other Firefox revisions in the cache. Missing it makes all 392 tests fail in 4–12 ms with `browserType.launch: Executable doesn't exist`, which looks like a mass regression but is only a missing download
+- Bug fixes get a per-issue regression spec named after the PM issue (`soupfin-21-frontend-bugs.spec.ts`, `soup-1836-clients.spec.ts`) rather than growing the feature specs
 - Integration test patterns: never `networkidle` (use `domcontentloaded` + auth wait), `maxRedirects: 0` on direct API calls, `safeApiGet` wrapper for crash resilience
 
 ### Test Credentials (LXC Backend)
@@ -312,8 +334,13 @@ Screenshots should be taken after login, after key form submissions, after navig
 
 ---
 
-### E2E Browser Default: Firefox
-All Playwright E2E tests use Firefox as the default browser. Configure `playwright.config.ts` with `browserName: 'firefox'`. Screenshots must be captured at key validation points (page load, form interactions, assertions). See `~/.claude/docs/e2e-validation-rules.md` for full E2E rules.
+### E2E Browser: Firefox
+
+All three Playwright configs (`playwright.config.ts`, `playwright.lxc.config.ts`, `playwright.integration.config.ts`) define a single Firefox project each — `firefox`, `firefox`, and `integration-firefox` respectively. Output is labelled `[firefox]`.
+
+Do NOT add a `chromium` or `webkit` project unless cross-browser coverage is explicitly requested — a second project doubles the suite and lets a Firefox-only regression hide behind a Chromium pass.
+
+Screenshots must still be captured at key validation points (page load, form interactions, assertions).
 
 ## Local Backend (LXC)
 

@@ -3,7 +3,7 @@
  * Reusable multi-line text input with label and error state
  * Reference: soupfinance-designs/new-invoice-form/, design-system.md Form Inputs section
  */
-import { forwardRef, type TextareaHTMLAttributes } from 'react';
+import { forwardRef, useId, type TextareaHTMLAttributes } from 'react';
 
 // Added: Props interface for Textarea component
 export interface TextareaProps extends Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, 'className'> {
@@ -22,7 +22,11 @@ export interface TextareaProps extends Omit<TextareaHTMLAttributes<HTMLTextAreaE
  * Supports: labels, error states, helper text, dark mode, resizable
  */
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
-  ({ label, error, helperText, containerClassName = '', disabled, required, rows = 3, ...props }, ref) => {
+  ({ label, error, helperText, containerClassName = '', disabled, required, rows = 3, id, ...props }, ref) => {
+    // Fix (SOUPFIN-30 #6): explicit id/label association — see Input.tsx.
+    const generatedId = useId();
+    const textareaId = id ?? generatedId;
+
     // Added: Compute border color based on error state
     const borderClass = error
       ? 'border-danger focus:border-danger focus:ring-danger/20'
@@ -34,7 +38,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
       : 'bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark';
 
     return (
-      <label className={`flex flex-col ${containerClassName}`}>
+      <label className={`flex flex-col ${containerClassName}`} htmlFor={textareaId}>
         {/* Label with optional required indicator */}
         {label && (
           <span className="text-sm font-medium pb-2 text-text-light dark:text-text-dark">
@@ -46,6 +50,8 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
         {/* Textarea field */}
         <textarea
           ref={ref}
+          id={textareaId}
+          aria-label={props['aria-label'] ?? (label ? undefined : props.placeholder)}
           disabled={disabled}
           required={required}
           rows={rows}

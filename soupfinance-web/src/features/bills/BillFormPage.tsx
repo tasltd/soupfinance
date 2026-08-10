@@ -17,6 +17,9 @@ import { getBill, createBill, updateBill } from '../../api/endpoints/bills';
 import { listVendors } from '../../api/endpoints/vendors';
 import { listTaxRates, listBillServices, DEFAULT_CURRENCIES } from '../../api/endpoints/domainData';
 import { useFormatCurrency } from '../../stores';
+import { sanitizeDateInputValue } from '../../utils/date';
+// Added (SOUPFIN-30 #15): create a vendor without leaving this form
+import { AddEntityButton } from '../../components/forms/AddEntityButton';
 import type { BillItem } from '../../types';
 
 // Added: Line item type for form state (without id for new items)
@@ -82,8 +85,11 @@ export function BillFormPage() {
   useEffect(() => {
     if (bill) {
       setVendorId(bill.vendor?.id || '');
-      setBillDate(bill.billDate || '');
-      setPaymentDate(bill.paymentDate || '');
+      // Fix (SOUPFIN-30 #3): sanitize dates so the native <input type="date">
+      // binds them. The backend may still send raw ISO ("2023-07-10T00:00:00Z")
+      // which the input rejects, leaving the field blank on edit.
+      setBillDate(sanitizeDateInputValue(bill.billDate));
+      setPaymentDate(sanitizeDateInputValue(bill.paymentDate));
       setNotes(bill.notes || '');
       setPurchaseOrderNumber(bill.purchaseOrderNumber || '');
       setSalesOrderNumber(bill.salesOrderNumber || '');
@@ -330,23 +336,36 @@ export function BillFormPage() {
               <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
                 Vendor <span className="text-danger">*</span>
               </label>
-              <select
-                value={vendorId}
-                onChange={(e) => setVendorId(e.target.value)}
-                className="w-full h-12 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-3 text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/50"
-                data-testid="bill-vendor-select"
-              >
-                <option value="">Select a vendor</option>
-                {vendorsLoading ? (
-                  <option disabled>Loading vendors...</option>
-                ) : (
-                  vendors?.map((vendor) => (
-                    <option key={vendor.id} value={vendor.id}>
-                      {vendor.name}
-                    </option>
-                  ))
-                )}
-              </select>
+              {/* Fix (SOUPFIN-30 #15): "+" opens the vendor create page in a new
+                  tab so an in-progress bill isn't lost, then refreshes this list. */}
+              <div className="flex items-center gap-2">
+                <select
+                  id="bill-vendor"
+                  name="vendorId"
+                  aria-label="Vendor"
+                  value={vendorId}
+                  onChange={(e) => setVendorId(e.target.value)}
+                  className="w-full h-12 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-3 text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/50"
+                  data-testid="bill-vendor-select"
+                >
+                  <option value="">Select a vendor</option>
+                  {vendorsLoading ? (
+                    <option disabled>Loading vendors...</option>
+                  ) : (
+                    vendors?.map((vendor) => (
+                      <option key={vendor.id} value={vendor.id}>
+                        {vendor.name}
+                      </option>
+                    ))
+                  )}
+                </select>
+                <AddEntityButton
+                  to="/vendors/new"
+                  label="Add new vendor"
+                  queryKey={['vendors']}
+                  testId="bill-vendor-add-button"
+                />
+              </div>
             </div>
 
             {/* Changed: Bill Date (backend: billDate, previously misnamed as issueDate) */}

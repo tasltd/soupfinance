@@ -2,12 +2,6 @@
  * Vendor API endpoints
  * Maps to soupmarkets-web /rest/trading/vendor/* endpoints
  *
- * Fix (SOUPFIN-25): VendorController lives in the `soupbroker.trading` package and is
- * gated by TradingModuleInterceptor, so it must be addressed under the `trading` module
- * prefix — matching the documented convention and the Angular admin SPA (`/trading/vendor`).
- * The bare `/rest/vendor/*` path resolves to the same controller but does not follow the
- * module-prefixed convention.
- *
  * CSRF Token Pattern:
  * Changed: Only POST/save operations require CSRF token from create.json endpoint.
  * PUT (update) and DELETE operations do NOT require CSRF tokens.
@@ -16,7 +10,9 @@
 import apiClient, { toQueryString, getCsrfToken, csrfQueryString } from '../client';
 import type { Vendor, ListParams } from '../../types';
 
-// Changed (SOUPFIN-25): Added `trading/` module prefix — VendorController is under the trading module
+// Fix (SOUPFIN-25): VendorController lives in the `soupbroker.trading` package, so it is
+// reached under the `trading` module prefix (/rest/trading/vendor/*). The bare /rest/vendor/*
+// path was relying on the generic Grails mapping and is not the canonical route.
 const BASE_URL = '/trading/vendor';
 
 // =============================================================================
@@ -50,7 +46,8 @@ export async function getVendor(id: string): Promise<Vendor> {
  */
 export async function createVendor(data: Partial<Vendor>): Promise<Vendor> {
   // Step 1: Get CSRF token from create endpoint
-  // Changed (SOUPFIN-25): Use module-prefixed controller path so the URL is /rest/trading/vendor/create.json
+  // Fix (SOUPFIN-25): Use the trading-prefixed controller so the returned SYNCHRONIZER_URI
+  // matches the /trading/vendor/save.json target (Grails withForm validates the URI).
   const csrf = await getCsrfToken('trading/vendor');
 
   // Step 2: Pass CSRF token as URL query params (Grails withForm reads from request params, not JSON body)

@@ -292,8 +292,14 @@ test.describe('Settings - User Management', () => {
       });
     });
 
-    // Mock account person endpoints
-    await page.route('**/rest/accountPerson/*', (route) => {
+    // Mock account person endpoints.
+    // Fix: the glob must be `**` — a single `*` does not match across `/`, so
+    // `**/rest/accountPerson/*` missed the real call
+    // `/rest/accountPerson/show/ap-001.json` (mock user-001 carries an
+    // accountPerson, so the edit form fetches it). The unmatched request then
+    // reached the dev proxy, 401'd, and the auth interceptor bounced the page
+    // to /login mid-test.
+    await page.route('**/rest/accountPerson/**', (route) => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',

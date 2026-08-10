@@ -692,7 +692,16 @@ test.describe('Payment Management', () => {
         });
       });
 
-      await page.route('**/rest/billPayment/index.json*', (route) => {
+      // Fix: the form fires THREE queries — invoices, bills and payment methods
+      // (see PaymentFormPage). Only the invoice one may hang; the other two must
+      // resolve immediately or they fall through to the dev proxy, 401, and the
+      // auth interceptor redirects to /login before the assertion runs. This
+      // previously passed on Chromium only because it won that race.
+      await page.route('**/rest/bill/index.json*', (route) => {
+        route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+      });
+
+      await page.route('**/rest/paymentMethod/index.json*', (route) => {
         route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
       });
 

@@ -154,6 +154,23 @@ test.describe('Accounting Module', () => {
       });
     });
 
+    // Fix (SOUPFIN-30): the voucher form reads PaymentMethod domain rows via
+    // usePaymentMethods(). Leaving this endpoint unmocked let the request fall
+    // through to a backend that is not running in mock mode; the resulting 401
+    // tripped the client's auth interceptor, which redirected the whole page to
+    // /login — so every Voucher Form Page assertion failed with "element(s) not
+    // found" while the real cause was a missing route.
+    await page.route('**/rest/paymentMethod/index.json*', (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([
+          { id: 'pm-1', name: 'Bank Transfer', class: 'soupbroker.finance.PaymentMethod' },
+          { id: 'pm-2', name: 'Cash', class: 'soupbroker.finance.PaymentMethod' },
+        ]),
+      });
+    });
+
     // Changed: Mock transaction groups endpoint (for journal entries)
     // useTransactions hook calls listTransactionGroups which hits this endpoint
     await page.route('**/rest/ledgerTransactionGroup/index.json*', (route) => {
@@ -282,7 +299,7 @@ test.describe('Accounting Module', () => {
     });
 
     // Mock vendors endpoint
-    await page.route('**/rest/trading/vendor/index.json*', (route) => {
+    await page.route('**/vendor/index.json*', (route) => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -406,9 +423,13 @@ test.describe('Accounting Module', () => {
 
       await page.goto('/accounting/transactions');
 
-      // Should show error state
+      // Should show error state.
+      // Fix (SOUPFIN-30): the retry control moved into the shared ApiErrorState
+      // component (SOUPFIN-9), which derives its test id from the card's own —
+      // `transaction-error-retry`. The old standalone `retry-button` id no
+      // longer exists, so this assertion had been failing ever since.
       await expect(page.getByTestId('transaction-error')).toBeVisible();
-      await expect(page.getByTestId('retry-button')).toBeVisible();
+      await expect(page.getByTestId('transaction-error-retry')).toBeVisible();
 
       await takeScreenshot(page, 'transaction-register-error');
     });

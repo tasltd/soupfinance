@@ -16,9 +16,11 @@ import { defineConfig, devices } from '@playwright/test';
 // Integration test port (different from mock tests to allow parallel runs)
 const INTEGRATION_TEST_PORT = 5181;
 
-// LXC Backend URL — consumed by the dev server the webServer block starts,
-// via VITE_PROXY_TARGET, rather than referenced directly in this config.
-export const LXC_BACKEND_URL = 'http://10.115.213.183:9090';
+// NOTE: the LXC backend URL is NOT configured here. The webServer below runs
+// `npm run dev:lxc`, so Vite loads `VITE_PROXY_TARGET` from .env.lxc /
+// .env.lxc.local and proxies /rest, /account and /client itself. A duplicate
+// constant here would silently drift from the real target — it was previously
+// declared, never read, and tripped lint as dead code.
 
 export default defineConfig({
   testDir: './e2e/integration',
@@ -56,10 +58,11 @@ export default defineConfig({
     },
   },
 
+  // Changed: Firefox is the mandated default browser for all E2E runs.
   projects: [
     {
-      name: 'integration-chromium',
-      use: { ...devices['Desktop Chrome'] },
+      name: 'integration-firefox',
+      use: { ...devices['Desktop Firefox'] },
     },
   ],
 
