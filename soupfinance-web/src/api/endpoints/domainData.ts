@@ -6,7 +6,7 @@
  * - /rest/serviceDescription/index.json - Service/item descriptions for invoices/bills
  * - /rest/ledgerAccount/index.json - Chart of accounts (for expense/income categorization)
  */
-import apiClient, { toQueryString } from '../client';
+import apiClient, { toQueryString, normalizeToArray } from '../client';
 import type { ListParams, LedgerAccount, PaymentMethod } from '../../types';
 import { listLedgerAccountsByGroup } from './ledger';
 
@@ -34,17 +34,50 @@ export interface ServiceDescription {
 }
 
 /**
- * Tax Rate - predefined tax rates for selection
- * Note: These are hardcoded as the backend doesn't have a dedicated tax endpoint.
- * In future, this could be fetched from a /rest/taxRate/index.json endpoint.
+ * Tax Rate - a selectable tax option backed by a real backend `TaxEntry`.
+ *
+ * Fix (SOUPFIN-37): `id` is now the real `TaxEntry` UUID, NOT a synthetic string.
+ * The invoice line-item save sends this id as `taxEntries`, which the backend
+ * resolves to a TaxEntry FK and uses to create the TaxEntryInvoiceItem join rows
+ * that carry the computed tax. Synthetic ids (the old `tax-vat-15` style) could
+ * never resolve, so any tax the user picked was silently discarded on save.
  */
 export interface TaxRate {
+  /** Real `TaxEntry` UUID. Empty string means "No Tax" (send no taxEntries). */
   id: string;
   name: string;
   rate: number;
   description?: string;
   isDefault?: boolean;
 }
+
+/**
+ * Tax Entry - mirrors the Grails domain `soupbroker.finance.TaxEntry`
+ * as returned by GET /rest/taxEntry/index.json
+ */
+export interface TaxEntry {
+  id: string;
+  name: string;
+  abbreviation?: string;
+  /** Percentage, e.g. 15.0 for 15% */
+  taxRate: number;
+  isTaxable?: boolean | null;
+  isCompoundTax?: boolean | null;
+  isWithholdingTax?: boolean | null;
+  description?: string;
+}
+
+/**
+ * The "no tax" sentinel. Its empty id means the line item is saved without any
+ * `taxEntries`, which is exactly how the backend represents an untaxed item.
+ */
+export const NO_TAX_OPTION: TaxRate = {
+  id: '',
+  name: 'No Tax',
+  rate: 0,
+  description: 'No tax applied',
+  isDefault: true,
+};
 
 /**
  * Payment Term - predefined payment terms
@@ -138,6 +171,12 @@ export const DEFAULT_CURRENCIES: Currency[] = [
 // Common tax rates used in Ghana and other jurisdictions
 // =============================================================================
 
+/**
+ * @deprecated (SOUPFIN-37) These ids are synthetic and do NOT exist in the
+ * backend `TaxEntry` table, so a line item saved against them persists with
+ * zero tax. Use `listTaxRates()`, which reads the real records. Retained only
+ * so any remaining caller keeps compiling — do not use for anything that saves.
+ */
 export const DEFAULT_TAX_RATES: TaxRate[] = [
   { id: 'tax-none', name: 'No Tax', rate: 0, description: 'Tax exempt', isDefault: true },
   { id: 'tax-vat-15', name: 'VAT 15%', rate: 15, description: 'Standard VAT rate (Ghana)' },
@@ -229,18 +268,38 @@ export async function listPaymentMethods(params?: ListParams): Promise<PaymentMe
 }
 
 // =============================================================================
-// Tax Rate API (returns hardcoded data until backend provides endpoint)
+// Tax Rate API (real backend TaxEntry records)
 // =============================================================================
 
 /**
- * Get available tax rates
- * Note: Returns hardcoded data until backend provides /rest/taxRate/index.json
+ * Get available tax rates from the backend `TaxEntry` table.
+ *
+ * Fix (SOUPFIN-37): this previously returned DEFAULT_TAX_RATES — hardcoded
+ * entries with synthetic ids like `tax-vat-15`. Those ids do not exist in the
+ * backend, so a line item could never be linked to a TaxEntry and every invoice
+ * saved with zero tax. The controller (`/rest/taxEntry/index.json`) exposes the
+ * real records, which carry the correct Ghana structure (NHIL, GETFund, VAT,
+ * CST, WHT) along with the UUIDs the save path needs.
+ *
+ * The "No Tax" sentinel is prepended so the dropdown always has a valid
+ * zero-tax choice regardless of what the tenant has configured.
  */
 export async function listTaxRates(): Promise<TaxRate[]> {
-  // TODO: Replace with API call when backend provides endpoint
-  // const response = await apiClient.get<TaxRate[]>('/taxRate/index.json');
-  // return response.data;
-  return Promise.resolve(DEFAULT_TAX_RATES);
+  const response = await apiClient.get<TaxEntry[]>('/taxEntry/index.json?max=100');
+  const entries = normalizeToArray<TaxEntry>(response.data);
+
+  const rates = entries
+    // Withholding tax is deducted by the payer, not added to the invoice total.
+    // Including it in the same dropdown would overstate the amount receivable.
+    .filter((entry) => entry && entry.id && !entry.isWithholdingTax)
+    .map((entry) => ({
+      id: entry.id,
+      name: entry.name || entry.abbreviation || 'Tax',
+      rate: Number(entry.taxRate) || 0,
+      description: entry.description,
+    }));
+
+  return [NO_TAX_OPTION, ...rates];
 }
 
 // =============================================================================

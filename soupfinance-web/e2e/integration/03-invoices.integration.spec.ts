@@ -32,7 +32,7 @@
  *         invoice-notes-textarea, invoice-add-item-button, invoice-items-table,
  *         invoice-item-description-{n}, invoice-item-quantity-{n},
  *         invoice-item-unitPrice-{n}, invoice-item-taxRate-{n},
- *         invoice-item-discountPercent-{n}, invoice-item-remove-{n},
+ *         invoice-item-remove-{n},
  *         invoice-subtotal, invoice-tax, invoice-total,
  *         invoice-form-save-draft-button, invoice-form-save-send-button,
  *         invoice-form-cancel-button, invoice-form-error-message
@@ -919,31 +919,58 @@ test.describe('Invoice Integration Tests', () => {
   });
 
   // =========================================================================
-  // 22. Invoice Form - Discount Percent Input
+  // 22. Invoice Form - Line Item Tax
   // =========================================================================
 
-  test('line item discount percent input works correctly', async ({ page }) => {
+  /**
+   * Changed (SOUPFIN-37): this test used to drive a "Disc %" input and assert
+   * a total of 900 on a 1,000 subtotal. That assertion pinned the defect in
+   * place — the backend finance domain has no discount field anywhere, so the
+   * invoice always saved at 1,000 while the form promised 900.
+   *
+   * The discount input is gone. What the form must now guarantee is that its
+   * previewed total equals what will actually be persisted: subtotal + tax.
+   */
+  test('line item tax is applied to the previewed total', async ({ page }) => {
     await page.goto('/invoices/new');
     await expect(page.getByTestId('invoice-form-page')).toBeVisible({ timeout: 15000 });
 
-    // Fill a line item with discount
-    await page.getByTestId('invoice-item-description-0').fill('Discounted Service');
+    // The discount input must be gone.
+    await expect(page.getByTestId('invoice-item-discountPercent-0')).toHaveCount(0);
+
+    await page.getByTestId('invoice-item-description-0').fill('Taxed Service');
     await page.getByTestId('invoice-item-quantity-0').fill('10');
     await page.getByTestId('invoice-item-unitPrice-0').fill('100');
-    await page.getByTestId('invoice-item-discountPercent-0').fill('10');
 
+    // Tax options are real TaxEntry records; pick one with a non-zero rate.
+    const taxSelect = page.getByTestId('invoice-item-taxRate-0');
+    await expect
+      .poll(async () => await taxSelect.locator('option').count(), { timeout: 30000 })
+      .toBeGreaterThan(1);
+
+    const options = await taxSelect.locator('option').evaluateAll((opts) =>
+      opts.map((o) => ({ value: (o as HTMLOptionElement).value, label: o.textContent || '' }))
+    );
+    const taxable = options.find((o) => o.value && /\(([\d.]+)%\)/.test(o.label));
+    expect(taxable, 'expected a real TaxEntry option').toBeTruthy();
+    const rate = parseFloat(taxable!.label.match(/\(([\d.]+)%\)/)![1]);
+
+    await taxSelect.selectOption(taxable!.value);
     await page.waitForTimeout(300);
 
-    // Subtotal should be 1000 (10 * 100), but total should reflect discount
     const subtotalText = await page.getByTestId('invoice-subtotal').textContent();
     console.log(`[Invoice Test] Subtotal: ${subtotalText}`);
     expect(subtotalText).toMatch(/1[,.]?000/);
 
-    // With 10% discount, discount amount = 100, so total = 900
-    const totalText = await page.getByTestId('invoice-total').textContent();
-    console.log(`[Invoice Test] Total after discount: ${totalText}`);
-    expect(totalText).toMatch(/900/);
+    // Total must be subtotal + tax, never less than subtotal.
+    const expectedTotal = 1000 + (1000 * rate) / 100;
+    const totalText = (await page.getByTestId('invoice-total').textContent()) || '';
+    console.log(`[Invoice Test] Total with ${rate}% tax: ${totalText} (expected ${expectedTotal})`);
 
-    await takeScreenshot(page, 'integration-03-invoices-discount');
+    const totalValue = parseFloat(totalText.replace(/[^0-9.]/g, ''));
+    expect(totalValue).toBeCloseTo(expectedTotal, 1);
+    expect(totalValue).toBeGreaterThanOrEqual(1000);
+
+    await takeScreenshot(page, 'integration-03-invoices-tax');
   });
 });

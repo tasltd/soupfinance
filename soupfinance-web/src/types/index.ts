@@ -214,10 +214,25 @@ export interface InvoiceItem extends BaseEntity {
   quantity: number;
   unitPrice: number;
   priority?: number;
-  taxEntryInvoiceItemList?: unknown[] | null;
+  /**
+   * Join rows to `TaxEntry` (backend `TaxEntryInvoiceItem`). This is where an
+   * item's tax actually lives — there is no `taxRate` column on InvoiceItem.
+   * `taxAmount` is computed and stored by the backend as amount * rate/100.
+   */
+  taxEntryInvoiceItemList?: Array<{
+    id?: string;
+    taxAmount?: number;
+    taxEntry?: { id: string; name?: string; taxRate?: number; serialised?: string; class?: string };
+    serialised?: string;
+  }> | null;
   serialised?: string;
   // Computed/UI-only fields (not from backend)
   taxRate?: number;
+  /**
+   * @deprecated (SOUPFIN-37) UI-only and unpersistable — the backend finance
+   * domain has no discount field. Kept so older callers still compile; it is
+   * never sent and never returned. See SOUPFIN-39 for the backend field.
+   */
   discountPercent?: number;
   amount?: number;
 }

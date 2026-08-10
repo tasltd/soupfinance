@@ -24,22 +24,49 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getInvoice, createInvoice, updateInvoice, sendInvoice } from '../../api/endpoints/invoices';
+import {
+  getInvoice,
+  createInvoice,
+  updateInvoice,
+  sendInvoice,
+  createInvoiceItem,
+} from '../../api/endpoints/invoices';
+import type { InvoiceItemInput } from '../../api/endpoints/invoices';
 import { listClients, createClient } from '../../api/endpoints/clients';
 import { listTaxRates, listInvoiceServices } from '../../api/endpoints/domainData';
 import { useFormatCurrency } from '../../stores';
 import { DEFAULT_CURRENCIES } from '../../api/endpoints/domainData';
 import type { InvoiceItem, ClientType } from '../../types';
 
-// Line item type for form state (without id for new items)
+/**
+ * Line item form state (no id for new items).
+ *
+ * Changed (SOUPFIN-37):
+ *  - `taxEntryId` holds the real backend TaxEntry UUID and is what gets saved.
+ *    `taxRate` is kept alongside it purely to drive the live preview maths.
+ *  - `discountPercent` was REMOVED. The backend finance domain has no discount
+ *    field anywhere (not on Invoice, not on InvoiceItem), so a discount could
+ *    never be persisted — the form was showing a discounted total that the
+ *    saved invoice did not have. Tracked for a backend field in SOUPFIN-39.
+ */
 interface LineItem {
   id?: string;
   description: string;
   quantity: number;
   unitPrice: number;
+  /** Real TaxEntry UUID; '' means no tax. */
+  taxEntryId: string;
+  /** Percentage mirrored from the selected TaxEntry, for preview only. */
   taxRate: number;
-  discountPercent: number;
 }
+
+const EMPTY_LINE_ITEM: LineItem = {
+  description: '',
+  quantity: 1,
+  unitPrice: 0,
+  taxEntryId: '',
+  taxRate: 0,
+};
 
 export function InvoiceFormPage() {
   const { id } = useParams<{ id: string }>();
@@ -62,9 +89,7 @@ export function InvoiceFormPage() {
   // Added: Compliments field from backend Invoice domain (optional closing remarks)
   const [compliments, setCompliments] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [lineItems, setLineItems] = useState<LineItem[]>([
-    { description: '', quantity: 1, unitPrice: 0, taxRate: 0, discountPercent: 0 },
-  ]);
+  const [lineItems, setLineItems] = useState<LineItem[]>([{ ...EMPTY_LINE_ITEM }]);
   const [formError, setFormError] = useState<string | null>(null);
 
   // Added: Inline client creation state
@@ -131,8 +156,11 @@ export function InvoiceFormPage() {
             description: item.description,
             quantity: item.quantity,
             unitPrice: item.unitPrice,
+            // Changed (SOUPFIN-37): tax is carried by the TaxEntry FK, so
+            // resolve the first linked entry rather than a non-existent
+            // `taxRate` column on the item.
+            taxEntryId: item.taxEntryInvoiceItemList?.[0]?.taxEntry?.id || '',
             taxRate: item.taxRate || 0,
-            discountPercent: item.discountPercent || 0,
           }))
         );
       }
@@ -155,8 +183,15 @@ export function InvoiceFormPage() {
   }, [invoice, clients, selectedClientId]);
 
   // Create mutation (draft)
+  // Changed (SOUPFIN-37): the invoice is saved first, then its line items are
+  // POSTed individually so their tax is persisted. Creating them via the
+  // invoice's own indexed params silently discarded the tax.
   const createMutation = useMutation({
-    mutationFn: (data: Record<string, unknown>) => createInvoice(data),
+    mutationFn: async (data: Record<string, unknown>) => {
+      const newInvoice = await createInvoice(data);
+      await persistNewLineItems(newInvoice.id);
+      return newInvoice;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
       navigate('/invoices');
@@ -168,7 +203,13 @@ export function InvoiceFormPage() {
 
   // Update mutation
   const updateMutation = useMutation({
-    mutationFn: (data: Record<string, unknown>) => updateInvoice(id!, data),
+    mutationFn: async (data: Record<string, unknown>) => {
+      const updated = await updateInvoice(id!, data);
+      // Rows added during this edit are new items, so they take the same
+      // tax-carrying create path.
+      await persistNewLineItems(id!);
+      return updated;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
       queryClient.invalidateQueries({ queryKey: ['invoice', id] });
@@ -189,6 +230,8 @@ export function InvoiceFormPage() {
         const newInvoice = await createInvoice(data);
         invoiceId = newInvoice.id;
       }
+      // Must run before send so the emailed document shows the taxed total.
+      await persistNewLineItems(invoiceId!);
       return sendInvoice(invoiceId!);
     },
     onSuccess: (sentInvoice) => {
@@ -268,28 +311,42 @@ export function InvoiceFormPage() {
   };
 
   // Calculate totals
+  // Changed (SOUPFIN-37): mirrors exactly what the backend computes —
+  // amount = quantity * unitPrice, taxAmount = amount * taxRate/100,
+  // total = subTotal + totalTaxAmount. No discount term, because no discount
+  // field exists on the backend domain, so subtracting one here produced a
+  // preview total the saved invoice could never match.
   const subtotal = lineItems.reduce((sum, item) => {
     return sum + item.quantity * item.unitPrice;
   }, 0);
 
-  const discountAmount = lineItems.reduce((sum, item) => {
-    const lineTotal = item.quantity * item.unitPrice;
-    return sum + (lineTotal * item.discountPercent) / 100;
-  }, 0);
-
   const taxAmount = lineItems.reduce((sum, item) => {
     const lineTotal = item.quantity * item.unitPrice;
-    const afterDiscount = lineTotal - (lineTotal * item.discountPercent) / 100;
-    return sum + (afterDiscount * item.taxRate) / 100;
+    return sum + (lineTotal * item.taxRate) / 100;
   }, 0);
 
-  const totalAmount = subtotal - discountAmount + taxAmount;
+  const totalAmount = subtotal + taxAmount;
 
   // Handle line item changes
   const updateLineItem = (index: number, field: keyof LineItem, value: string | number) => {
     setLineItems((prev) =>
       prev.map((item, i) =>
         i === index ? { ...item, [field]: value } : item
+      )
+    );
+  };
+
+  /**
+   * Select a tax entry for a line. Stores BOTH the id (what gets saved) and the
+   * rate (what drives the preview), so the two can never drift apart.
+   */
+  const selectLineItemTax = (index: number, taxEntryId: string) => {
+    const selected = taxRates?.find((t) => t.id === taxEntryId);
+    setLineItems((prev) =>
+      prev.map((item, i) =>
+        i === index
+          ? { ...item, taxEntryId, taxRate: selected?.rate ?? 0 }
+          : item
       )
     );
   };
@@ -304,8 +361,16 @@ export function InvoiceFormPage() {
             ? {
                 ...item,
                 description: service.name,
-                // Auto-fill tax rate if service has a default
-                ...(service.defaultTaxRate != null && { taxRate: service.defaultTaxRate }),
+                // Auto-fill tax from the service default by matching a real
+                // TaxEntry on rate, so the saved id and previewed rate agree.
+                ...(service.defaultTaxRate != null
+                  ? (() => {
+                      const match = taxRates?.find((t) => t.rate === service.defaultTaxRate);
+                      return match
+                        ? { taxEntryId: match.id, taxRate: match.rate }
+                        : { taxRate: service.defaultTaxRate };
+                    })()
+                  : {}),
               }
             : item
         )
@@ -316,7 +381,7 @@ export function InvoiceFormPage() {
   const addLineItem = () => {
     setLineItems((prev) => [
       ...prev,
-      { description: '', quantity: 1, unitPrice: 0, taxRate: 0, discountPercent: 0 },
+      { ...EMPTY_LINE_ITEM },
     ]);
   };
 
@@ -366,17 +431,45 @@ export function InvoiceFormPage() {
       ...(compliments && { compliments }),
     };
 
-    // Include line items as indexed fields (Grails binding format)
-    lineItems.forEach((item, index) => {
-      formData[`invoiceItemList[${index}].description`] = item.description;
-      formData[`invoiceItemList[${index}].quantity`] = item.quantity;
-      formData[`invoiceItemList[${index}].unitPrice`] = item.unitPrice;
-      if (item.id) {
+    // Changed (SOUPFIN-37): only ALREADY-PERSISTED items go through the
+    // indexed `invoiceItemList[N].*` params. InvoiceService.applyItemFields()
+    // copies just description/quantity/unitPrice off those params and drops
+    // everything else, so a NEW item created this way can never carry tax.
+    // New items are instead POSTed to /rest/invoiceItem/save.json below, which
+    // binds `taxEntries` and computes the tax amounts.
+    lineItems
+      .filter((item) => item.id)
+      .forEach((item, index) => {
         formData[`invoiceItemList[${index}].id`] = item.id;
-      }
-    });
+        formData[`invoiceItemList[${index}].description`] = item.description;
+        formData[`invoiceItemList[${index}].quantity`] = item.quantity;
+        formData[`invoiceItemList[${index}].unitPrice`] = item.unitPrice;
+      });
 
     return formData;
+  };
+
+  /** Line items that do not exist on the backend yet, ignoring blank rows. */
+  const getNewLineItems = (): InvoiceItemInput[] =>
+    lineItems
+      .filter((item) => !item.id && item.description)
+      .map((item) => ({
+        description: item.description,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        taxEntryIds: item.taxEntryId ? [item.taxEntryId] : [],
+      }));
+
+  /**
+   * Persist every new line item against a saved invoice.
+   * Sequential rather than parallel: each POST fetches its own CSRF token, and
+   * Grails scopes those to the session, so concurrent requests race and the
+   * loser is rejected as a duplicate submission.
+   */
+  const persistNewLineItems = async (invoiceId: string) => {
+    for (const item of getNewLineItems()) {
+      await createInvoiceItem(invoiceId, item);
+    }
   };
 
   const handleSaveDraft = (e: React.FormEvent) => {
@@ -811,8 +904,10 @@ export function InvoiceFormPage() {
                   <th className="px-4 py-3 text-left">Description</th>
                   <th className="px-4 py-3 text-right w-20">Qty</th>
                   <th className="px-4 py-3 text-right w-28">Unit Price</th>
-                  <th className="px-4 py-3 text-right w-20">Disc %</th>
-                  <th className="px-4 py-3 text-right w-20">Tax %</th>
+                  {/* Removed (SOUPFIN-37): "Disc %" — no discount field exists
+                      on the backend, so the column promised a reduction the
+                      saved invoice never had. */}
+                  <th className="px-4 py-3 text-right w-32">Tax</th>
                   <th className="px-4 py-3 text-right w-28">Amount</th>
                   <th className="px-4 py-3 w-14"></th>
                 </tr>
@@ -820,8 +915,7 @@ export function InvoiceFormPage() {
               <tbody>
                 {lineItems.map((item, index) => {
                   const lineTotal = item.quantity * item.unitPrice;
-                  const afterDiscount = lineTotal - (lineTotal * item.discountPercent) / 100;
-                  const lineAmount = afterDiscount + (afterDiscount * item.taxRate) / 100;
+                  const lineAmount = lineTotal + (lineTotal * item.taxRate) / 100;
                   return (
                     <tr key={index} className="border-b border-border-light dark:border-border-dark">
                       {/* Added: Service/Product dropdown - auto-fills description when selected */}
@@ -873,29 +967,25 @@ export function InvoiceFormPage() {
                         />
                       </td>
                       <td className="px-4 py-3">
-                        <input
-                          type="number"
-                          value={item.discountPercent}
-                          onChange={(e) => updateLineItem(index, 'discountPercent', parseFloat(e.target.value) || 0)}
-                          className="w-full h-10 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-3 text-right text-text-light dark:text-text-dark focus:border-primary focus:ring-1 focus:ring-primary/50"
-                          min="0"
-                          max="100"
-                          step="0.1"
-                          data-testid={`invoice-item-discountPercent-${index}`}
-                        />
-                      </td>
-                      <td className="px-4 py-3">
+                        {/* Changed (SOUPFIN-37): the option value is now the
+                            real TaxEntry UUID, which is what gets saved. It
+                            used to be the bare rate, which the backend has no
+                            way to resolve to a tax record. */}
                         <select
-                          value={item.taxRate}
-                          onChange={(e) => updateLineItem(index, 'taxRate', parseFloat(e.target.value) || 0)}
+                          value={item.taxEntryId}
+                          onChange={(e) => selectLineItemTax(index, e.target.value)}
                           className="w-full h-10 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-2 text-right text-text-light dark:text-text-dark focus:border-primary focus:ring-1 focus:ring-primary/50"
                           data-testid={`invoice-item-taxRate-${index}`}
                         >
-                          {taxRates?.map((tax) => (
-                            <option key={tax.id} value={tax.rate}>
-                              {tax.name}
-                            </option>
-                          )) || <option value="0">No Tax</option>}
+                          {taxRates?.length ? (
+                            taxRates.map((tax) => (
+                              <option key={tax.id || 'none'} value={tax.id}>
+                                {tax.rate ? `${tax.name} (${tax.rate}%)` : tax.name}
+                              </option>
+                            ))
+                          ) : (
+                            <option value="">No Tax</option>
+                          )}
                         </select>
                       </td>
                       <td className="px-4 py-3 text-right font-medium text-text-light dark:text-text-dark">
@@ -927,12 +1017,10 @@ export function InvoiceFormPage() {
                   <span className="text-subtle-text">Subtotal</span>
                   <span data-testid="invoice-subtotal">{formatCurrency(subtotal)}</span>
                 </div>
-                {discountAmount > 0 && (
-                  <div className="flex justify-between text-text-light dark:text-text-dark">
-                    <span className="text-subtle-text">Discount</span>
-                    <span className="text-danger" data-testid="invoice-discount">-{formatCurrency(discountAmount)}</span>
-                  </div>
-                )}
+                {/* Removed (SOUPFIN-37): the Discount row. It reduced the
+                    displayed total by an amount the backend has nowhere to
+                    store, so the invoice always saved at the undiscounted
+                    figure while the form claimed otherwise. */}
                 <div className="flex justify-between text-text-light dark:text-text-dark">
                   <span className="text-subtle-text">Tax</span>
                   <span data-testid="invoice-tax">{formatCurrency(taxAmount)}</span>

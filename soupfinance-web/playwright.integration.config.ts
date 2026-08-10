@@ -16,8 +16,9 @@ import { defineConfig, devices } from '@playwright/test';
 // Integration test port (different from mock tests to allow parallel runs)
 const INTEGRATION_TEST_PORT = 5181;
 
-// LXC Backend URL
-const LXC_BACKEND_URL = 'http://10.115.213.183:9090';
+// LXC Backend URL — consumed by the dev server the webServer block starts,
+// via VITE_PROXY_TARGET, rather than referenced directly in this config.
+export const LXC_BACKEND_URL = 'http://10.115.213.183:9090';
 
 export default defineConfig({
   testDir: './e2e/integration',
