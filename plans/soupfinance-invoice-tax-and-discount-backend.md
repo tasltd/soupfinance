@@ -141,3 +141,44 @@ POST /rest/invoice/save.json             # drops tax from invoiceItemList  — (
   totals from rates embedded in the serialised string, so a compound-plus-simple combination
   can read marginally low there; the detail view uses the exact stored amounts. Change #2
   would remove the need for that approximation.
+
+---
+
+## SOUPFIN-42 (V22, 2026-08-12) — discount re-raised; still blocked on change #3
+
+The V22 sweep against `app.soupfinance.com` confirms the tax half of SOUPFIN-37 is working in
+production: the save splits into `POST /rest/invoice/save.json` followed by
+`POST /rest/invoiceItem/save.json` carrying `taxEntries`, and the response persists
+`taxEntryInvoiceItemList` with the correct per-entry amounts.
+
+It then asks for the discount input to be restored and a `discount` / `disc%` key added to the
+`invoiceItem/save.json` payload. **That cannot be done frontend-only, and doing it would be a
+regression rather than a fix.** Re-verified against the current multi-tenant backend on
+2026-08-12:
+
+- `grep -ril discount grails-app/domain/soupbroker/finance/` → **0 files**
+- `InvoiceItem` declares `invoice`, `serviceDescription`, `description`, `quantity`,
+  `unitPrice`, the transient `taxEntries`, and the `taxEntryInvoiceItemList` hasMany. No
+  discount column.
+- `Invoice.getTotal()` is `subTotal + totalTaxAmount` — no discount term.
+
+Grails discards unknown keys silently, so a `discount` field in the payload would be accepted
+with a 201 and stored nowhere. The form would preview one total and the database would hold
+another — which is the exact misstatement SOUPFIN-37 removed the input to stop, and the same
+class of defect as SOUPFIN-38 (`billItemList[n].taxRate` on a domain with no such field).
+
+**Change #3 above is the prerequisite.** Until it lands there are two options, and the choice
+is a product decision because it changes what a customer sees on an issued invoice:
+
+| Option | Behaviour | Cost |
+|---|---|---|
+| **A — wait for #3** (recommended) | No discount input. Totals stay truthful. | Discount unavailable until the backend column exists. |
+| **B — fold the discount into `unitPrice`** | UI takes a discount %, sends the reduced unit price. Form and database agree, and tax is charged on the discounted amount, which is correct. | The invoice shows the *net* unit price. The discount is not recorded as a separate figure, so it cannot be printed as "10% off" and there is no audit trail of the original price. |
+
+Option B is honest arithmetic but silently changes the document a customer receives, so it is
+not being taken unilaterally. It is a one-line change to the payload builder in
+`InvoiceFormPage.tsx` if the decision is that a usable discount now outweighs the loss of
+provenance.
+
+Legacy invoices created while the old input existed still carry the pre-fix totals; neither
+option retro-corrects them, and no backfill is proposed here.
