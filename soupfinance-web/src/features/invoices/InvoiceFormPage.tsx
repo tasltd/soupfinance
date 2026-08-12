@@ -30,6 +30,7 @@ import {
   updateInvoice,
   sendInvoice,
   createInvoiceItem,
+  resolveItemTaxEntryId,
 } from '../../api/endpoints/invoices';
 import type { InvoiceItemInput } from '../../api/endpoints/invoices';
 import { listClients, createClient, getClientPortfolio, getClientDisplayName } from '../../api/endpoints/clients';
@@ -184,13 +185,22 @@ export function InvoiceFormPage() {
             // Changed (SOUPFIN-37): tax is carried by the TaxEntry FK, so
             // resolve the first linked entry rather than a non-existent
             // `taxRate` column on the item.
-            taxEntryId: item.taxEntryInvoiceItemList?.[0]?.taxEntry?.id || '',
+            // Fix (SOUPFIN-42): read it through resolveItemTaxEntryId, which also
+            // handles the join row arriving as a bare FK reference. Reading
+            // `?.[0]?.taxEntry?.id` directly returned '' for that shape, so the
+            // dropdown reset to "No Tax" and re-saving dropped the tax.
+            taxEntryId: resolveItemTaxEntryId(item, taxRates),
             taxRate: item.taxRate || 0,
           }))
         );
       }
     }
-  }, [invoice]);
+    // `taxRates` is a dependency because resolveItemTaxEntryId needs the catalogue
+    // to match a bare FK reference. The two queries race on mount; without this the
+    // effect could run while the catalogue is still undefined and leave every line
+    // showing "No Tax". TanStack Query keeps the reference stable, so this re-runs
+    // at most once more, when the catalogue arrives.
+  }, [invoice, taxRates]);
 
   // Changed: When clients load and we're editing, find which client owns this invoice's accountServices
   useEffect(() => {

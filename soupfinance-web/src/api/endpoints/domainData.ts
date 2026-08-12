@@ -49,6 +49,12 @@ export interface TaxRate {
   rate: number;
   description?: string;
   isDefault?: boolean;
+  /**
+   * The backend's own `TaxEntry.toString()` (e.g. `CST-5.0%`). Carried through
+   * because it is the only handle on a tax when a TaxEntryInvoiceItem arrives as
+   * a bare FK reference — see `resolveItemTaxEntryId` in `endpoints/invoices`.
+   */
+  serialised?: string;
 }
 
 /**
@@ -65,6 +71,8 @@ export interface TaxEntry {
   isCompoundTax?: boolean | null;
   isWithholdingTax?: boolean | null;
   description?: string;
+  /** Grails `toString()`, e.g. `CST-5.0%`. Used to match FK references back to an entry. */
+  serialised?: string;
 }
 
 /**
@@ -297,6 +305,7 @@ export async function listTaxRates(): Promise<TaxRate[]> {
       name: entry.name || entry.abbreviation || 'Tax',
       rate: Number(entry.taxRate) || 0,
       description: entry.description,
+      serialised: entry.serialised,
     }));
 
   return [NO_TAX_OPTION, ...rates];

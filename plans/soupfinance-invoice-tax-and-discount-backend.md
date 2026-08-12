@@ -182,3 +182,58 @@ provenance.
 
 Legacy invoices created while the old input existed still carry the pre-fix totals; neither
 option retro-corrects them, and no backfill is proposed here.
+
+---
+
+## SOUPFIN-42 — reconciling the competing SOUPFIN-37 attempt
+
+An unmerged second attempt at SOUPFIN-37 carried artefacts `main` never received. They were
+taken as a **union** (its files added, none of main's removed). Its two unit-test files were
+written against a *different* API surface and failed on arrival — 21 failures. Each was
+adjudicated against the backend source rather than against whichever side looked tidier.
+
+### Adopted — the other attempt was right
+
+| Item | Why |
+|---|---|
+| `parseTaxAmountFromSerialised` | Main's regex used `[\d.]+`, which cannot match a leading `-`. Withholding rows are stored as a deduction, so a negative `taxAmount` silently read as **0**. Now exported and handling negatives; `parseJoinRowTaxAmount` delegates to it. |
+| `resolveItemTaxEntryId` | **Fixes a live bug.** The edit form read `item.taxEntryInvoiceItemList?.[0]?.taxEntry?.id`, which only resolves when the join row is expanded. Grails routinely renders it as a bare FK reference — this module already compensates for that shape in `computeInvoiceTotals`, but the edit path had no fallback. The dropdown fell back to "No Tax" and re-saving persisted the line untaxed: SOUPFIN-37's silent drop, re-entered through the edit form. |
+
+`TaxRate.serialised` is now carried through `listTaxRates()` because it is the only handle on a
+tax when the join row arrives as an FK reference. `InvoiceFormPage`'s hydrate effect gained
+`taxRates` as a dependency — the two queries race on mount, and without it the effect could run
+against an undefined catalogue and leave every line reading "No Tax".
+
+### Rejected — the other attempt was wrong, and the backend says so
+
+Its `listTaxRates` specs asserted the dropdown should **exclude compound** taxes and **include
+withholding**. `LineItemTaxBinder.applyTaxAmounts` (SOUP-2639) is the backend's single source of
+truth and does the exact opposite:
+
+- **Withholding is excluded** from the chargeable sum — deducted by the payer at settlement, not
+  added to what the counterparty owes. Offering it would overstate the receivable.
+- **Compound is included.** It is not auto-applied; it applies only when the client sends that
+  TaxEntry id, merely charged on `(line + simple taxable taxes)` instead of on the line alone.
+
+Excluding compound would have made **VAT-STANDARD 15% — the primary Ghana VAT — unselectable**.
+Main's implementation was already correct; the five specs were rewritten to assert the
+backend-validated behaviour and now serve as regression guards for it.
+
+### Deferred — blocked on SOUPFIN-40
+
+`createInvoiceWithItems` / `updateInvoiceWithItems` were **not** adopted. Verified in
+`InvoiceItemController`:
+
+- `save()` calls `invoiceItem.refresh()` (line 132) before iterating `taxEntryInvoiceItemList`,
+  so the join rows it just created are visible and `taxAmount` computes correctly.
+- `update()` has **no `refresh()`**, so it iterates a stale collection and tax added to an
+  *existing* line persists as **0**. It also omits `save()`'s `!isWithholdingTax` filter.
+
+So `updateInvoiceWithItems`'s PUT path would reintroduce the precise silent-zero failure
+SOUPFIN-37 was raised to fix. The frontend deliberately creates line items rather than updating
+them. Adopting the helper would have made the suite green and the product wrong.
+
+Two properties from those specs remain worth having once SOUPFIN-40 lands: **per-line error
+surfacing** (`line 1 ("Bad line")` instead of a bare 422) and **failing loudly when the invoice
+save returns no id**. The removed specs are archived verbatim at
+`.claude/archive/soupfin-42/invoices-orchestration-tests.deferred.ts.txt`.

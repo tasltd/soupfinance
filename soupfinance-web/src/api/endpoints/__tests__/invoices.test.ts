@@ -283,133 +283,28 @@ describe('invoices API (SOUPFIN-37)', () => {
   // createInvoiceWithItems — the save path that actually persists tax
   // ===========================================================================
 
-  describe('createInvoiceWithItems', () => {
-    /** Wires up create.json (CSRF), the invoice/item saves, and the final re-read. */
-    function wireSaveMocks() {
-      mockGet.mockImplementation((url: string) => {
-        if (url.includes('/create.json')) {
-          return Promise.resolve({ data: { SYNCHRONIZER_TOKEN: 'tok', SYNCHRONIZER_URI: '/uri' } });
-        }
-        if (url.includes('/invoice/show/')) return Promise.resolve({ data: { id: 'inv-9', number: 9 } });
-        if (url.includes('/invoiceItem/index.json')) return Promise.resolve({ data: [] });
-        return Promise.resolve({ data: [] });
-      });
-      mockPost.mockImplementation((url: string) => {
-        if (url.includes('/invoice/save.json')) return Promise.resolve({ data: { id: 'inv-9', number: 9 } });
-        return Promise.resolve({ data: { id: 'item-1' } });
-      });
-    }
-
-    it('sends taxEntries to /invoiceItem/save.json, NOT as invoiceItemList params', async () => {
-      vi.resetModules();
-      const { createInvoiceWithItems } = await import('../invoices');
-      wireSaveMocks();
-
-      await createInvoiceWithItems(
-        { accountServices: { id: 'as-1' }, invoiceDate: '2026-08-04' } as never,
-        [{ description: 'Advisory', quantity: 2, unitPrice: 1500, taxEntryId: 'taxentry-uuid-1' }]
-      );
-
-      const invoiceSave = mockPost.mock.calls.find((c) => String(c[0]).includes('/invoice/save.json'));
-      const itemSave = mockPost.mock.calls.find((c) => String(c[0]).includes('/invoiceItem/save.json'));
-
-      expect(invoiceSave).toBeDefined();
-      expect(itemSave).toBeDefined();
-
-      // Regression guard for the root cause: the invoice header must NOT carry indexed
-      // line-item params, because that path silently drops taxEntries.
-      const headerBody = JSON.stringify(invoiceSave![1]);
-      expect(headerBody).not.toContain('invoiceItemList[0]');
-      expect(headerBody).not.toContain('taxEntries');
-
-      // The item POST is what actually persists the tax.
-      expect(itemSave![1]).toMatchObject({
-        invoice: { id: 'inv-9' },
-        description: 'Advisory',
-        quantity: 2,
-        unitPrice: 1500,
-        taxEntries: 'taxentry-uuid-1',
-      });
-    });
-
-    it('omits taxEntries entirely when no tax was selected', async () => {
-      vi.resetModules();
-      const { createInvoiceWithItems } = await import('../invoices');
-      wireSaveMocks();
-
-      await createInvoiceWithItems({ accountServices: { id: 'as-1' } } as never, [
-        { description: 'No tax line', quantity: 1, unitPrice: 100 },
-      ]);
-
-      const itemSave = mockPost.mock.calls.find((c) => String(c[0]).includes('/invoiceItem/save.json'));
-      expect(itemSave![1]).not.toHaveProperty('taxEntries');
-    });
-
-    it('creates one item POST per line, in order', async () => {
-      vi.resetModules();
-      const { createInvoiceWithItems } = await import('../invoices');
-      wireSaveMocks();
-
-      await createInvoiceWithItems({ accountServices: { id: 'as-1' } } as never, [
-        { description: 'First', quantity: 1, unitPrice: 10, taxEntryId: 'tax-a' },
-        { description: 'Second', quantity: 2, unitPrice: 20 },
-      ]);
-
-      const itemSaves = mockPost.mock.calls.filter((c) => String(c[0]).includes('/invoiceItem/save.json'));
-      expect(itemSaves).toHaveLength(2);
-      expect(itemSaves[0][1]).toMatchObject({ description: 'First', taxEntries: 'tax-a' });
-      expect(itemSaves[1][1]).toMatchObject({ description: 'Second' });
-    });
-
-    it('updates existing lines via PUT and creates new ones via POST', async () => {
-      vi.resetModules();
-      const { updateInvoiceWithItems } = await import('../invoices');
-      wireSaveMocks();
-      mockPut.mockResolvedValue({ data: { id: 'inv-9' } });
-
-      await updateInvoiceWithItems('inv-9', { invoiceDate: '2026-08-04' } as never, [
-        { id: 'item-existing', description: 'Kept', quantity: 1, unitPrice: 10, taxEntryId: 'tax-a' },
-        { description: 'Brand new', quantity: 1, unitPrice: 20 },
-      ]);
-
-      const itemPut = mockPut.mock.calls.find((c) => String(c[0]).includes('/invoiceItem/update/item-existing'));
-      expect(itemPut![1]).toMatchObject({ description: 'Kept', taxEntries: 'tax-a' });
-
-      const itemPost = mockPost.mock.calls.filter((c) => String(c[0]).includes('/invoiceItem/save.json'));
-      expect(itemPost).toHaveLength(1);
-      expect(itemPost[0][1]).toMatchObject({ description: 'Brand new' });
-    });
-
-    it('surfaces which line failed instead of reporting a clean save', async () => {
-      vi.resetModules();
-      const { createInvoiceWithItems } = await import('../invoices');
-      wireSaveMocks();
-      mockPost.mockImplementation((url: string) => {
-        if (url.includes('/invoice/save.json')) return Promise.resolve({ data: { id: 'inv-9' } });
-        return Promise.reject(new Error('Request failed with status code 422'));
-      });
-
-      await expect(
-        createInvoiceWithItems({ accountServices: { id: 'as-1' } } as never, [
-          { description: 'Bad line', quantity: 1, unitPrice: 10 },
-        ])
-      ).rejects.toThrow(/line 1 \("Bad line"\)/);
-    });
-
-    it('fails loudly if the backend returns no invoice id', async () => {
-      vi.resetModules();
-      const { createInvoiceWithItems } = await import('../invoices');
-      wireSaveMocks();
-      mockPost.mockImplementation((url: string) => {
-        if (url.includes('/invoice/save.json')) return Promise.resolve({ data: {} });
-        return Promise.resolve({ data: {} });
-      });
-
-      await expect(
-        createInvoiceWithItems({ accountServices: { id: 'as-1' } } as never, [
-          { description: 'x', quantity: 1, unitPrice: 1 },
-        ])
-      ).rejects.toThrow(/returned no id/);
-    });
-  });
+  // ===========================================================================
+  // createInvoiceWithItems / updateInvoiceWithItems — NOT ADOPTED (SOUPFIN-42)
+  // ===========================================================================
+  //
+  // These six specs came from a competing SOUPFIN-37 attempt and are archived at
+  // .claude/archive/soupfin-42/invoices-orchestration-tests.deferred.ts.txt.
+  //
+  // Two of them are worth restoring the day the backend lands SOUPFIN-40; the
+  // rest cannot be made green without reintroducing a known data-loss bug:
+  //
+  //   `updateInvoiceWithItems` PUTs to /rest/invoiceItem/update/:id. Verified in
+  //   InvoiceItemController: save() calls `invoiceItem.refresh()` (line 132)
+  //   before it iterates taxEntryInvoiceItemList, so the join rows it just
+  //   created are visible and taxAmount is computed. update() has NO refresh(),
+  //   so it iterates a stale collection and any tax added to an EXISTING line
+  //   persists as 0. It also omits save()'s `!isWithholdingTax` filter.
+  //
+  // That is exactly the silent-zero failure SOUPFIN-37 was raised to fix, so the
+  // frontend deliberately creates line items rather than updating them. Adopting
+  // the helper would make the suite green and the product wrong.
+  //
+  // Still worth having once the backend is fixed: per-line error surfacing
+  // ("line 1 (\"Bad line\")") and failing loudly when the invoice save returns
+  // no id. Both are tracked in plans/soupfinance-invoice-tax-and-discount-backend.md.
 });

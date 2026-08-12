@@ -19,15 +19,24 @@ import { InvoiceFormPage } from '../InvoiceFormPage';
 import type { Invoice, InvoiceStatus, Client, ClientType } from '../../../types';
 
 // Mock the API modules - must match exact import paths in InvoiceFormPage.tsx
-vi.mock('../../../api/endpoints/invoices', () => ({
-  getInvoice: vi.fn(),
-  createInvoice: vi.fn(),
-  updateInvoice: vi.fn(),
-  sendInvoice: vi.fn(),
-  // Added (SOUPFIN-37): line items are now persisted through their own
-  // endpoint so their tax survives the save.
-  createInvoiceItem: vi.fn(),
-}));
+vi.mock('../../../api/endpoints/invoices', async () => {
+  const actual = await vi.importActual<typeof import('../../../api/endpoints/invoices')>(
+    '../../../api/endpoints/invoices'
+  );
+  return {
+    getInvoice: vi.fn(),
+    createInvoice: vi.fn(),
+    updateInvoice: vi.fn(),
+    sendInvoice: vi.fn(),
+    // Added (SOUPFIN-37): line items are now persisted through their own
+    // endpoint so their tax survives the save.
+    createInvoiceItem: vi.fn(),
+    // SOUPFIN-42: pure helper, no network — keep the real implementation so
+    // edit-mode hydration exercises the actual FK-reference resolution rather
+    // than a stub that would return undefined for every line.
+    resolveItemTaxEntryId: actual.resolveItemTaxEntryId,
+  };
+});
 
 // Changed: Component imports listClients from clients.ts for the Client dropdown
 // SOUPFIN-27: also imports getClientPortfolio (resolves the accountServices FK the

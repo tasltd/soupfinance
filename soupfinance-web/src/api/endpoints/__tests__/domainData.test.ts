@@ -90,7 +90,7 @@ describe('listTaxRates (SOUPFIN-37)', () => {
     expect(rates.map((r) => r.id)).toContain('ff8081817fe4ae93017fe5c9cf10017b');
   });
 
-  it('maps name, rate, description and the withholding flag', async () => {
+  it('maps name, rate, description and serialised', async () => {
     const listTaxRates = await load();
     mockGet.mockResolvedValue({ data: REAL_TAX_ENTRIES });
 
@@ -101,30 +101,42 @@ describe('listTaxRates (SOUPFIN-37)', () => {
       name: 'CST',
       rate: 5,
       description: 'Comsys',
-      isWithholdingTax: false,
       serialised: 'CST-5.0%',
     });
-
-    const wht = rates.find((r) => r.serialised === 'WHT-S-7.5%');
-    expect(wht?.isWithholdingTax).toBe(true);
   });
 
-  it('excludes compound taxes, which the backend computes on top of other taxes', async () => {
+  /**
+   * Verified against `LineItemTaxBinder.applyTaxAmounts` (SOUP-2639), which is
+   * the backend's single source of truth for line-item tax:
+   *
+   *   - WITHHOLDING is charged but deliberately EXCLUDED from the chargeable
+   *     sum — it is deducted by the payer at settlement, not added to what the
+   *     counterparty owes. Offering it here would overstate the receivable.
+   *   - COMPOUND is INCLUDED in the chargeable sum. It is not applied
+   *     automatically; it is applied only when the client sends that TaxEntry
+   *     id, just charged on (line + simple taxable taxes) rather than on the
+   *     line alone. Filtering it out would make VAT-STANDARD 15% — the primary
+   *     Ghana VAT — unselectable.
+   */
+  it('keeps compound taxes but drops withholding, matching the backend', async () => {
     const listTaxRates = await load();
     mockGet.mockResolvedValue({ data: REAL_TAX_ENTRIES });
 
     const rates = await listTaxRates();
 
-    expect(rates.find((r) => r.serialised === 'VAT-S-15.0%')).toBeUndefined();
-    expect(rates).toHaveLength(3);
+    expect(rates.find((r) => r.serialised === 'VAT-S-15.0%')).toBeDefined();
+    expect(rates.find((r) => r.serialised === 'WHT-S-7.5%')).toBeUndefined();
   });
 
-  it('sorts by rate ascending', async () => {
+  it('prepends the No Tax sentinel, then preserves backend order', async () => {
     const listTaxRates = await load();
     mockGet.mockResolvedValue({ data: REAL_TAX_ENTRIES });
 
     const rates = await listTaxRates();
-    expect(rates.map((r) => r.rate)).toEqual([1, 5, 7.5]);
+
+    // No Tax (0) + CST (5) + VAT-S (15) + Covid 19 (1); WHT-S (7.5) filtered out.
+    expect(rates.map((r) => r.rate)).toEqual([0, 5, 15, 1]);
+    expect(rates[0]).toMatchObject({ id: '', name: 'No Tax' });
   });
 
   it('falls back to the abbreviation when name is missing', async () => {
@@ -132,7 +144,7 @@ describe('listTaxRates (SOUPFIN-37)', () => {
     mockGet.mockResolvedValue({ data: [{ id: 'x1', abbreviation: 'NHIL', taxRate: 2.5 }] });
 
     const rates = await listTaxRates();
-    expect(rates[0].name).toBe('NHIL');
+    expect(rates.find((r) => r.id === 'x1')?.name).toBe('NHIL');
   });
 
   it('coerces a missing/invalid taxRate to 0 rather than NaN', async () => {
@@ -140,17 +152,19 @@ describe('listTaxRates (SOUPFIN-37)', () => {
     mockGet.mockResolvedValue({ data: [{ id: 'x1', name: 'Broken' }] });
 
     const rates = await listTaxRates();
-    expect(rates[0].rate).toBe(0);
+    expect(rates.find((r) => r.id === 'x1')?.rate).toBe(0);
   });
 
-  it('returns an empty array when the backend returns null or an empty list', async () => {
+  it('still offers No Tax when the backend returns null or an empty list', async () => {
     const listTaxRates = await load();
 
+    // The dropdown must always have a valid zero-tax choice, whatever the
+    // tenant has configured — otherwise an untaxed line becomes unselectable.
     mockGet.mockResolvedValue({ data: null });
-    expect(await listTaxRates()).toEqual([]);
+    expect(await listTaxRates()).toMatchObject([{ id: '', name: 'No Tax', rate: 0 }]);
 
     mockGet.mockResolvedValue({ data: [] });
-    expect(await listTaxRates()).toEqual([]);
+    expect(await listTaxRates()).toMatchObject([{ id: '', name: 'No Tax', rate: 0 }]);
   });
 
   it('propagates a backend failure instead of silently returning stale defaults', async () => {
