@@ -13,7 +13,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getBill, createBill, updateBill } from '../../api/endpoints/bills';
+import { getBill, createBill, updateBill, resolveBillItemTaxEntryId } from '../../api/endpoints/bills';
 import { listVendors } from '../../api/endpoints/vendors';
 import { listTaxRates, listBillServices, DEFAULT_CURRENCIES } from '../../api/endpoints/domainData';
 import { useFormatCurrency } from '../../stores';
@@ -28,6 +28,15 @@ interface LineItem {
   description: string;
   quantity: number;
   unitPrice: number;
+  /**
+   * Added (SOUPFIN-38): the real `TaxEntry` UUID. This is what gets SENT.
+   * Empty string means "No Tax" — send no taxEntries for the line.
+   */
+  taxEntryId: string;
+  /**
+   * Percentage, for the on-screen preview only. Derived from the selected
+   * TaxEntry; never sent, because `BillItem` has no `taxRate` column.
+   */
   taxRate: number;
 }
 
@@ -51,7 +60,7 @@ export function BillFormPage() {
   const [exchangeRate, setExchangeRate] = useState<number | ''>('');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [lineItems, setLineItems] = useState<LineItem[]>([
-    { description: '', quantity: 1, unitPrice: 0, taxRate: 0 },
+    { description: '', quantity: 1, unitPrice: 0, taxEntryId: '', taxRate: 0 },
   ]);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -107,12 +116,17 @@ export function BillFormPage() {
             description: item.description,
             quantity: item.quantity,
             unitPrice: item.unitPrice,
-            taxRate: item.taxRate,
+            // Fix (SOUPFIN-38): BillItem has no taxRate column. Resolve the
+            // TaxEntry from its join rows, which may be bare FK references.
+            taxEntryId: resolveBillItemTaxEntryId(item, taxRates),
+            taxRate: taxRates?.find(
+              (t) => t.id === resolveBillItemTaxEntryId(item, taxRates)
+            )?.rate ?? 0,
           }))
         );
       }
     }
-  }, [bill]);
+  }, [bill, taxRates]);
 
   // Added: Create mutation
   const createMutation = useMutation({
@@ -171,7 +185,13 @@ export function BillFormPage() {
             ? {
                 ...item,
                 description: service.name,
-                ...(service.defaultTaxRate != null && { taxRate: service.defaultTaxRate }),
+                // Fix (SOUPFIN-38): a default rate must resolve to a real
+                // TaxEntry id, since the id is what gets persisted.
+                ...(service.defaultTaxRate != null && {
+                  taxRate: service.defaultTaxRate,
+                  taxEntryId:
+                    taxRates?.find((t) => t.rate === service.defaultTaxRate)?.id ?? '',
+                }),
               }
             : item
         )
@@ -183,7 +203,7 @@ export function BillFormPage() {
   const addLineItem = () => {
     setLineItems((prev) => [
       ...prev,
-      { description: '', quantity: 1, unitPrice: 0, taxRate: 0 },
+      { description: '', quantity: 1, unitPrice: 0, taxEntryId: '', taxRate: 0 },
     ]);
   };
 
@@ -239,8 +259,15 @@ export function BillFormPage() {
       formData[`billItemList[${index}].description`] = item.description;
       formData[`billItemList[${index}].quantity`] = item.quantity;
       formData[`billItemList[${index}].unitPrice`] = item.unitPrice;
-      formData[`billItemList[${index}].taxRate`] = item.taxRate;
-      formData[`billItemList[${index}].amount`] = item.quantity * item.unitPrice * (1 + item.taxRate / 100);
+      // Fix (SOUPFIN-38): `taxRate` and `amount` are NOT columns on BillItem —
+      // Grails discarded them silently, which is how bill tax was being lost.
+      // `taxEntries` is the transient the backend binds to create the
+      // TaxEntryBillItem rows. Verified end to end against the backend: a
+      // 2 x 1500 line with VAT-S 15% saves totalTaxAmount 450.00, total 3450.00.
+      // Omit the key entirely for an untaxed line rather than sending ''.
+      if (item.taxEntryId) {
+        formData[`billItemList[${index}].taxEntries`] = item.taxEntryId;
+      }
       if (item.id) {
         formData[`billItemList[${index}].id`] = item.id;
       }
@@ -579,13 +606,22 @@ export function BillFormPage() {
                       <td className="px-4 py-3">
                         {/* Changed (2026-02-01): Tax rate dropdown from domain data */}
                         <select
-                          value={item.taxRate}
-                          onChange={(e) => updateLineItem(index, 'taxRate', parseFloat(e.target.value) || 0)}
+                          value={item.taxEntryId}
+                          onChange={(e) => {
+                            const picked = taxRates?.find((t) => t.id === e.target.value);
+                            setLineItems((prev) =>
+                              prev.map((li, i) =>
+                                i === index
+                                  ? { ...li, taxEntryId: e.target.value, taxRate: picked?.rate ?? 0 }
+                                  : li
+                              )
+                            );
+                          }}
                           className="w-full h-10 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-2 text-right text-text-light dark:text-text-dark focus:border-primary focus:ring-1 focus:ring-primary/50"
                           data-testid={`bill-item-taxRate-${index}`}
                         >
                           {taxRates?.map((tax) => (
-                            <option key={tax.id} value={tax.rate}>
+                            <option key={tax.id} value={tax.id}>
                               {tax.name}
                             </option>
                           )) || <option value="0">No Tax</option>}

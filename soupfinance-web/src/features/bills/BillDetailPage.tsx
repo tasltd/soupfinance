@@ -10,7 +10,8 @@
 import { useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getBill, deleteBill, listBillPayments } from '../../api/endpoints/bills';
+import { getBill, deleteBill, listBillPayments, resolveBillItemTaxEntryId } from '../../api/endpoints/bills';
+import { listTaxRates } from '../../api/endpoints/domainData';
 import { useFormatCurrency } from '../../stores';
 import { usePdf, useEmailSend } from '../../hooks';
 
@@ -18,6 +19,14 @@ export function BillDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+
+  // Fix (SOUPFIN-38): BillItem has no taxRate column and the backend does not
+  // serialise the derived getter, so the Tax Rate column rendered "undefined%".
+  // Resolve the line's TaxEntry from its join rows against the real catalogue.
+  const { data: taxRates } = useQuery({
+    queryKey: ['tax-rates'],
+    queryFn: () => listTaxRates(),
+  });
   const formatCurrency = useFormatCurrency();
   const { generateBill, isGenerating: isPdfGenerating } = usePdf();
   const { sendBill: sendBillEmail, isSending: isEmailSending, error: emailError, success: emailSuccess, reset: resetEmailState } = useEmailSend();
@@ -247,8 +256,16 @@ export function BillDetailPage() {
                     <td className="px-6 py-4 text-text-light dark:text-text-dark">{item.description}</td>
                     <td className="px-6 py-4 text-right text-text-light dark:text-text-dark">{item.quantity}</td>
                     <td className="px-6 py-4 text-right text-text-light dark:text-text-dark">{formatCurrency(item.unitPrice)}</td>
-                    <td className="px-6 py-4 text-right text-subtle-text">{item.taxRate}%</td>
-                    <td className="px-6 py-4 text-right font-medium text-text-light dark:text-text-dark">{formatCurrency(item.amount)}</td>
+                    <td className="px-6 py-4 text-right text-subtle-text">
+                      {(() => {
+                        const entryId = resolveBillItemTaxEntryId(item, taxRates);
+                        const rate = taxRates?.find((t) => t.id === entryId)?.rate;
+                        return rate != null ? `${rate}%` : '—';
+                      })()}
+                    </td>
+                    <td className="px-6 py-4 text-right font-medium text-text-light dark:text-text-dark">
+                      {formatCurrency(item.quantity * item.unitPrice)}
+                    </td>
                   </tr>
                 ))}
               </tbody>

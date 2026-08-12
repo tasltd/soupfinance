@@ -9,8 +9,26 @@
 // Changed: Removed unused getCsrfTokenForEdit import (will be used when edit is implemented)
 import apiClient, { toQueryString, getCsrfToken, csrfQueryString } from '../client';
 import type { Bill, BillItem, BillPayment, ListParams } from '../../types';
+import { resolveTaxEntryIdFromRows, type TaxEntryJoinRow } from './taxEntryJoins';
 
 const BASE_URL = '/bill';
+
+/**
+ * Resolve which TaxEntry a saved bill line carries, so the edit form can
+ * re-select it.
+ *
+ * Fix (SOUPFIN-38): `BillItem` has no `taxRate` column — tax is carried by
+ * `taxEntryBillItemList`, which Grails routinely renders as a bare FK
+ * reference. Note the bill join serialises with ONE trailing number where the
+ * invoice join has two (`TaxEntryBillItem(BillItem(...), CST-5.0%, 0.0)`),
+ * which `resolveTaxEntryIdFromRows` handles.
+ */
+export function resolveBillItemTaxEntryId(
+  item: { taxEntryBillItemList?: TaxEntryJoinRow[] | null },
+  catalogue?: Array<{ id: string; serialised?: string }>
+): string {
+  return resolveTaxEntryIdFromRows(item?.taxEntryBillItemList, catalogue);
+}
 
 // =============================================================================
 // Response Transformation

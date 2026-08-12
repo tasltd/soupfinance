@@ -237,3 +237,61 @@ Two properties from those specs remain worth having once SOUPFIN-40 lands: **per
 surfacing** (`line 1 ("Bad line")` instead of a bare 422) and **failing loudly when the invoice
 save returns no id**. The removed specs are archived verbatim at
 `.claude/archive/soupfin-42/invoices-orchestration-tests.deferred.ts.txt`.
+
+---
+
+## SOUPFIN-38 — bill line-item tax (the ticket's prescribed fix is wrong)
+
+SOUPFIN-38 says to "mirror the invoice fix — write line items through
+`/rest/billItem/save.json` with `taxEntries`". **Probed against the LXC backend, that path
+stores zero tax.** Implementing the ticket as written would have shipped a regression.
+
+### What was measured
+
+| Path | Request | Result |
+|---|---|---|
+| Ticket's prescription | `POST /rest/billItem/save.json` with `taxEntries=<CST uuid>`, 2 × 1500 | **201**, join row created, but `TaxEntryBillItem(..., CST-5.0%, 0.0)` — `taxAmount` **0**. Bill: `subTotal 3000, totalTaxAmount 0, total 3000` |
+| Header path, by rate | `POST /rest/bill/save.json` with `billItemList[0].taxRate="5"` | `subTotal 3000, totalTaxAmount 150.00, total 3150.00` |
+| Header path, by id | `POST /rest/bill/save.json` with `billItemList[0].taxEntries=<VAT-S uuid>` | `subTotal 3000, totalTaxAmount 450.00, total 3450.00` |
+
+### Why the prescribed path fails
+
+`BillItemController.save()` creates the `TaxEntryBillItem` rows with
+`new TaxEntryBillItem(...).save()`, then immediately iterates
+`billItem.taxEntryBillItemList` to compute each `taxAmount`. GORM does not add a row to the
+in-memory collection on `save()`, so that collection is stale and all four tax passes no-op.
+The row persists with its default `taxAmount` of 0.
+
+`InvoiceItemController.save()` does not have this bug **only because it calls
+`invoiceItem.refresh()` first** (line 132). `BillItemController.save()` has no `refresh()`.
+This is the same root cause as SOUPFIN-40, which reports it against
+`InvoiceItemController.update()`.
+
+**Backend ask (one line, mirrors the invoice controller):** add `billItem.refresh()` after the
+join rows are created and before the tax passes in `BillItemController.save()`. Its tax passes
+also omit the `!isWithholdingTax` guard that `InvoiceItemController.save()` applies.
+
+### What the frontend now does instead
+
+SOUP-2639 added `BillService.saveWithItems` + `LineItemTaxBinder`, wired into
+`BillController.save`, which computes the join amounts in the service — so the **header path
+works**. `LineItemTaxBinder` accepts `taxEntries` (UUIDs) and `taxRate` (a bare percentage),
+with **ids taking precedence**.
+
+`BillFormPage` now sends `billItemList[n].taxEntries = <TaxEntry uuid>` and no longer sends
+`taxRate` or `amount`, neither of which is a `BillItem` column.
+
+The id is sent rather than the rate because rate resolution is lossy:
+`TaxEntryService.findActiveByTaxRate` matches on the rate alone and, when a tenant has more
+than one entry at that rate, takes the oldest by `dateCreated` — deterministic but arbitrary.
+The catalogue on this tenant has two entries at 15.0% and two at 3.0%. The frontend already
+holds the exact UUID, so sending it removes the ambiguity entirely.
+
+### Deployment caveat
+
+`LineItemTaxBinder` lives on the multi-tenant branch and is deployed to the **LXC only**.
+Production (`tas.soupmarkets.com`) is out of scope for this repo, so bill tax stays broken in
+production until that backend is deployed — **no frontend change can fix it**, since the old
+backend drops `billItemList[n].*` tax fields and the `billItem/save.json` route stores 0. The
+frontend change is correct on both: it removes fields that were always discarded and sends the
+one the fixed backend consumes, so bill tax starts working the moment the backend lands.

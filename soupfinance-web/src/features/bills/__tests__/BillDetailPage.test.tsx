@@ -11,11 +11,26 @@ import { BillDetailPage } from '../BillDetailPage';
 import type { Bill, BillStatus, BillItem, BillPayment } from '../../../types';
 
 // Mock the bills API - must match the import path in BillDetailPage
-vi.mock('../../../api/endpoints/bills', () => ({
-  getBill: vi.fn(),
-  deleteBill: vi.fn(),
-  listBillPayments: vi.fn(),
-}));
+vi.mock('../../../api/endpoints/bills', async () => {
+  const actual = await vi.importActual<typeof import('../../../api/endpoints/bills')>(
+    '../../../api/endpoints/bills'
+  );
+  return {
+    getBill: vi.fn(),
+    deleteBill: vi.fn(),
+    listBillPayments: vi.fn(),
+    // SOUPFIN-38: pure helper, no network — keep the real implementation so the
+    // Tax Rate column exercises real FK-reference resolution.
+    resolveBillItemTaxEntryId: actual.resolveBillItemTaxEntryId,
+  };
+});
+
+// SOUPFIN-38: the Tax Rate column resolves the line's TaxEntry against the real
+// catalogue, so the page now loads it.
+vi.mock('../../../api/endpoints/domainData', async () => {
+  const actual = await vi.importActual('../../../api/endpoints/domainData');
+  return { ...actual, listTaxRates: vi.fn().mockResolvedValue([]) };
+});
 
 // Mock the account store for currency formatting
 vi.mock('../../../stores', () => ({

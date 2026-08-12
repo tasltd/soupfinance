@@ -19,6 +19,11 @@
  */
 import apiClient, { toQueryString, getCsrfToken, csrfQueryString } from '../client';
 import type { Invoice, InvoiceStatus, InvoiceItem, InvoicePayment, ListParams } from '../../types';
+import {
+  parseJoinRowTaxAmount,
+  resolveTaxEntryIdFromRows,
+  type TaxEntryJoinRow,
+} from './taxEntryJoins';
 
 const BASE_URL = '/invoice';
 
@@ -40,89 +45,24 @@ function parseItemSerialisedForTotal(serialised: string): { quantity: number; un
 }
 
 /**
- * Extract the persisted tax amount from a TaxEntryInvoiceItem serialised string.
- *
- * Grails renders the join row as an FK reference whose serialised form is:
- *   TaxEntryInvoiceItem(InvoiceItem(...), NHIL-2.5%, 75.0, 3075.0)
- * where the last two numbers are taxAmount and totalAmount respectively.
- *
- * The match is anchored to the END of the string because the nested
- * `InvoiceItem(...)` carries its own commas and parentheses — a left-to-right
- * split lands inside it and reads a quantity as the tax.
- *
- * Changed (SOUPFIN-42): the amount may be NEGATIVE. Withholding rows are stored
- * as a deduction, and the previous `[\d.]+` character class could not match a
- * leading `-`, so such a row silently read as 0.
+ * Tax-join parsing lives in `taxEntryJoins` because bills need the identical
+ * logic against a differently-shaped serialised string. Re-exported here so the
+ * invoice call sites and their tests keep a single import.
  */
-export function parseTaxAmountFromSerialised(serialised?: string): number {
-  const match = serialised?.match(/,\s*(-?[\d.]+),\s*-?[\d.]+\s*\)\s*$/);
-  if (!match) return 0;
-  const value = parseFloat(match[1]);
-  return Number.isFinite(value) ? value : 0;
-}
+export { parseTaxAmountFromSerialised } from './taxEntryJoins';
 
 /**
- * Extract the persisted tax amount from a TaxEntryInvoiceItem join row.
- *
- * The row may arrive as a full object (`taxAmount` present) or, when Grails
- * renders it as an FK reference, only as a serialised string.
- */
-function parseJoinRowTaxAmount(row: { taxAmount?: number; serialised?: string }): number {
-  if (typeof row?.taxAmount === 'number') {
-    return row.taxAmount;
-  }
-  return parseTaxAmountFromSerialised(row?.serialised);
-}
-
-/**
- * Resolve which TaxEntry a saved line item carries, so the edit form can
- * re-select it.
- *
- * Fix (SOUPFIN-42): the form previously read
- * `item.taxEntryInvoiceItemList?.[0]?.taxEntry?.id`, which only works when the
- * join row is fully expanded. Grails frequently renders it as a bare FK
- * reference — `{class, id, serialised}` with no nested `taxEntry` — and this
- * module already compensates for that shape when computing totals. On the edit
- * path there was no such fallback: the dropdown silently fell back to "No Tax",
- * and saving then persisted the line untaxed. That is the same silent-drop
- * failure SOUPFIN-37 was raised about, re-entered through the edit form.
- *
- * Resolution order:
- *   1. the nested `taxEntry.id` when the row is expanded (authoritative);
- *   2. otherwise the TaxEntry label embedded in the serialised string
- *      (e.g. `CST-5.0%`), matched against the catalogue's own serialised form.
- *
- * Returns '' when nothing matches, which is the form's "No Tax" value.
+ * Resolve which TaxEntry a saved invoice line carries, so the edit form can
+ * re-select it. See `resolveTaxEntryIdFromRows` for the mechanism and for why
+ * reading `taxEntry.id` directly is not sufficient.
  */
 export function resolveItemTaxEntryId(
   item: {
-    taxEntryInvoiceItemList?: Array<{
-      serialised?: string;
-      taxEntry?: { id?: string } | null;
-    }> | null;
+    taxEntryInvoiceItemList?: TaxEntryJoinRow[] | null;
   },
   catalogue?: Array<{ id: string; serialised?: string }>
 ): string {
-  const rows = item?.taxEntryInvoiceItemList;
-  if (!rows || rows.length === 0) return '';
-
-  for (const row of rows) {
-    const nestedId = row?.taxEntry?.id;
-    if (nestedId) return nestedId;
-  }
-
-  if (!catalogue || catalogue.length === 0) return '';
-
-  for (const row of rows) {
-    // The label sits between the nested InvoiceItem(...) and the two trailing
-    // numbers: `TaxEntryInvoiceItem(InvoiceItem(...), CST-5.0%, 150.0, 3150.0)`.
-    const label = row?.serialised?.match(/,\s*([^,()]+?),\s*-?[\d.]+,\s*-?[\d.]+\s*\)\s*$/)?.[1]?.trim();
-    if (!label) continue;
-    const hit = catalogue.find((entry) => entry.serialised?.trim() === label);
-    if (hit) return hit.id;
-  }
-
-  return '';
+  return resolveTaxEntryIdFromRows(item?.taxEntryInvoiceItemList, catalogue);
 }
 
 /**

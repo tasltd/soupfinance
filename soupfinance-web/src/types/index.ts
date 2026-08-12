@@ -276,13 +276,32 @@ export interface Bill extends BaseEntity {
   billItemList?: BillItem[]; // Changed: Backend field name (was previously aliased as items)
 }
 
+/**
+ * Mirrors `soupbroker.finance.BillItem`.
+ *
+ * Changed (SOUPFIN-38): the domain has NO `taxRate` column. Tax is carried by
+ * `taxEntryBillItemList` join rows, and `getAmount()` / `getTaxAmount()` /
+ * `getTotalAmount()` are derived getters, not columns. `taxRate` and `amount`
+ * are kept as OPTIONAL read-only conveniences because the backend serialises
+ * the derived getters on reads — but they must never be SENT: Grails discards
+ * unknown keys silently, which is exactly how bill tax was being lost.
+ */
 export interface BillItem extends BaseEntity {
   bill: { id: string };
   description: string;
   quantity: number;
   unitPrice: number;
-  taxRate: number;
-  amount: number;
+  /** Read-only, derived. Not a column — never send this. */
+  taxRate?: number;
+  /** Read-only, derived (`quantity * unitPrice`). Not a column — never send this. */
+  amount?: number;
+  /** The join rows that actually carry the tax. May be bare FK references. */
+  taxEntryBillItemList?: Array<{
+    id?: string;
+    serialised?: string;
+    taxAmount?: number;
+    taxEntry?: { id?: string; serialised?: string } | null;
+  }> | null;
 }
 
 export interface BillPayment extends BaseEntity {

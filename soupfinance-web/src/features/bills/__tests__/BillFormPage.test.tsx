@@ -11,11 +11,19 @@ import { BillFormPage } from '../BillFormPage';
 import type { Bill, BillStatus, Vendor } from '../../../types';
 
 // Mock the bills API
-vi.mock('../../../api/endpoints/bills', () => ({
-  getBill: vi.fn(),
-  createBill: vi.fn(),
-  updateBill: vi.fn(),
-}));
+vi.mock('../../../api/endpoints/bills', async () => {
+  const actual = await vi.importActual<typeof import('../../../api/endpoints/bills')>(
+    '../../../api/endpoints/bills'
+  );
+  return {
+    getBill: vi.fn(),
+    createBill: vi.fn(),
+    updateBill: vi.fn(),
+    // SOUPFIN-38: pure helper, no network — keep the real implementation so the
+    // edit-mode hydration exercises real FK-reference resolution.
+    resolveBillItemTaxEntryId: actual.resolveBillItemTaxEntryId,
+  };
+});
 
 // Mock the vendors API
 vi.mock('../../../api/endpoints/vendors', () => ({
@@ -508,12 +516,13 @@ describe('BillFormPage', () => {
       await user.type(priceInput, '100');
 
       // Tax rate is a select dropdown, not an input
-      await user.selectOptions(taxInput, '10');
+      // Changed (SOUPFIN-38): the option value is the TaxEntry id, not the rate.
+      await user.selectOptions(taxInput, 'tax-wht-10');
 
       expect((descInput as HTMLInputElement).value).toBe('Test Item');
       expect((qtyInput as HTMLInputElement).value).toBe('5');
       expect((priceInput as HTMLInputElement).value).toBe('100');
-      expect((taxInput as HTMLSelectElement).value).toBe('10');
+      expect((taxInput as HTMLSelectElement).value).toBe('tax-wht-10');
     });
   });
 
@@ -570,7 +579,7 @@ describe('BillFormPage', () => {
       await user.type(priceInput, '100');
 
       // Tax rate is a select dropdown, not an input
-      await user.selectOptions(taxInput, '10');
+      await user.selectOptions(taxInput, 'tax-wht-10');
 
       await waitFor(() => {
         const subtotal = screen.getByTestId('bill-subtotal');
@@ -870,6 +879,107 @@ describe('BillFormPage', () => {
           })
         );
       });
+    });
+  });
+
+  describe('line-item tax payload (SOUPFIN-38)', () => {
+    /**
+     * `soupbroker.finance.BillItem` has NO taxRate/amount/totalAmount columns —
+     * tax is carried by TaxEntryBillItem join rows created from the transient
+     * `taxEntries`. Grails discards unknown keys silently, so sending taxRate
+     * saved the bill with no tax at all and the total equalled the subtotal.
+     *
+     * Verified end to end against the backend: a 2 x 1500 line sent as
+     * `billItemList[0].taxEntries=<VAT-S uuid>` persists totalTaxAmount 450.00
+     * and total 3450.00, while the same line sent as taxRate stores nothing on
+     * the pre-SOUP-2639 backend.
+     */
+    /** Real backend shape: UUID ids, and '' for the No Tax sentinel. */
+    const REAL_TAX_RATES = [
+      { id: '', name: 'No Tax', rate: 0, description: 'No tax applied', isDefault: true },
+      { id: 'ff8081817fe4ae93017fe5c9cf10017b', name: 'CST', rate: 5, serialised: 'CST-5.0%' },
+      {
+        id: 'ff80818186941f2701869cb315b11dda',
+        name: 'VAT- STANDARD',
+        rate: 15,
+        serialised: 'VAT-S-15.0%',
+      },
+    ];
+
+    async function submitWithTax(user: ReturnType<typeof userEvent.setup>) {
+      vi.mocked(listTaxRates).mockResolvedValue(REAL_TAX_RATES);
+      vi.mocked(listVendors).mockResolvedValue([createMockVendor({ id: 'vendor-1', name: 'Acme' })]);
+      vi.mocked(createBill).mockResolvedValue(createMockBill({ id: 'new-bill-id' }));
+
+      renderBillFormPage();
+
+      await waitFor(() => {
+        expect(screen.getByTestId('bill-vendor-select')).toHaveTextContent('Acme');
+      });
+      await user.selectOptions(screen.getByTestId('bill-vendor-select'), 'vendor-1');
+      await user.clear(screen.getByTestId('bill-due-date-input'));
+      await user.type(screen.getByTestId('bill-due-date-input'), '2026-09-12');
+
+      await user.clear(screen.getByTestId('bill-item-description-0'));
+      await user.type(screen.getByTestId('bill-item-description-0'), 'Advisory');
+      await user.clear(screen.getByTestId('bill-item-quantity-0'));
+      await user.type(screen.getByTestId('bill-item-quantity-0'), '2');
+      await user.clear(screen.getByTestId('bill-item-unitPrice-0'));
+      await user.type(screen.getByTestId('bill-item-unitPrice-0'), '1500');
+
+      // The dropdown must carry the real TaxEntry UUID, not a percentage.
+      await waitFor(() => {
+        expect(screen.getByTestId('bill-item-taxRate-0')).toHaveTextContent('VAT- STANDARD');
+      });
+      await user.selectOptions(
+        screen.getByTestId('bill-item-taxRate-0'),
+        'ff80818186941f2701869cb315b11dda'
+      );
+
+      await user.click(screen.getByTestId('bill-form-save-button'));
+      await waitFor(() => expect(createBill).toHaveBeenCalled());
+      return vi.mocked(createBill).mock.calls[0][0] as Record<string, unknown>;
+    }
+
+    it('sends the TaxEntry id as taxEntries, never a bare rate', async () => {
+      const payload = await submitWithTax(userEvent.setup());
+
+      expect(payload['billItemList[0].taxEntries']).toBe('ff80818186941f2701869cb315b11dda');
+      // Regression guard for the root cause.
+      expect(payload).not.toHaveProperty('billItemList[0].taxRate');
+      expect(payload).not.toHaveProperty('billItemList[0].amount');
+    });
+
+    it('still sends the fields BillItem does have', async () => {
+      const payload = await submitWithTax(userEvent.setup());
+
+      expect(payload['billItemList[0].description']).toBe('Advisory');
+      expect(payload['billItemList[0].quantity']).toBe(2);
+      expect(payload['billItemList[0].unitPrice']).toBe(1500);
+    });
+
+    it('omits taxEntries entirely for an untaxed line', async () => {
+      const user = userEvent.setup();
+      vi.mocked(listTaxRates).mockResolvedValue(REAL_TAX_RATES);
+      vi.mocked(listVendors).mockResolvedValue([createMockVendor({ id: 'vendor-1', name: 'Acme' })]);
+      vi.mocked(createBill).mockResolvedValue(createMockBill({ id: 'new-bill-id' }));
+
+      renderBillFormPage();
+      await waitFor(() => {
+        expect(screen.getByTestId('bill-vendor-select')).toHaveTextContent('Acme');
+      });
+      await user.selectOptions(screen.getByTestId('bill-vendor-select'), 'vendor-1');
+      await user.clear(screen.getByTestId('bill-due-date-input'));
+      await user.type(screen.getByTestId('bill-due-date-input'), '2026-09-12');
+      await user.clear(screen.getByTestId('bill-item-description-0'));
+      await user.type(screen.getByTestId('bill-item-description-0'), 'No tax line');
+
+      await user.click(screen.getByTestId('bill-form-save-button'));
+      await waitFor(() => expect(createBill).toHaveBeenCalled());
+
+      const payload = vi.mocked(createBill).mock.calls[0][0] as Record<string, unknown>;
+      // Sending '' would bind an empty Set and trip the controller's iteration.
+      expect(payload).not.toHaveProperty('billItemList[0].taxEntries');
     });
   });
 
