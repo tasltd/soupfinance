@@ -241,9 +241,19 @@ test.describe('SOUPFIN-37 — invoice line-item tax', () => {
     expect(optionValues).toContain(VAT_ID);
     expect(optionValues.some((v) => v.startsWith('tax-'))).toBe(false);
 
-    // Compound taxes are excluded; "No Tax" is the empty sentinel.
+    // "No Tax" is the empty sentinel.
     expect(optionValues).toContain('');
-    expect(optionValues).not.toContain('ff80818186941f2701869cb315b11dda');
+
+    // Updated (SOUPFIN-42): compound taxes are KEPT. `LineItemTaxBinder.applyTaxAmounts`
+    // sums every non-withholding row into `chargeable` — compound differs only in
+    // being charged on (line + simple taxes) rather than on the line alone. This spec
+    // originally asserted the inverse, which on the TAS tenant hid VAT-STANDARD 15%,
+    // the primary Ghana VAT.
+    expect(optionValues).toContain('ff80818186941f2701869cb315b11dda');
+
+    // Withholding IS excluded: the payer deducts it at settlement, so including it
+    // would overstate the receivable.
+    expect(optionValues).not.toContain(WHT_ID);
 
     await shot(page, 'tax-dropdown-real-entries');
   });
@@ -311,15 +321,22 @@ test.describe('SOUPFIN-37 — invoice line-item tax', () => {
     await shot(page, 'after-save-with-tax');
   });
 
-  test('#5 withholding tax does not inflate the previewed total', async ({ page }) => {
+  test('#5 withholding tax cannot be selected, so it can never inflate the total', async ({ page }) => {
     await signInAndLand(page);
     await openNewInvoiceForm(page);
     await fillReportedInvoice(page);
 
-    await page.getByTestId('invoice-item-taxRate-0').selectOption(WHT_ID);
+    // Updated (SOUPFIN-42): this test used to SELECT the withholding entry and assert
+    // the preview ignored it. `listTaxRates()` now drops withholding rows from the
+    // catalogue entirely, so the option no longer exists and `selectOption(WHT_ID)`
+    // could only ever time out. The guarantee is now stronger and asserted directly:
+    // the row is unofferable, and the total stays at the untaxed subtotal.
+    const taxSelect = page.getByTestId('invoice-item-taxRate-0');
+    const optionValues = await taxSelect.locator('option').evaluateAll((opts) =>
+      opts.map((o) => (o as HTMLOptionElement).value)
+    );
+    expect(optionValues).not.toContain(WHT_ID);
 
-    // InvoiceItem.getTaxAmount() filters withholding entries out of the invoice total,
-    // so the preview must not add them either.
     await expect(page.getByTestId('invoice-tax')).toContainText('0.00');
     await expect(page.getByTestId('invoice-total')).toContainText('3,000.00');
 

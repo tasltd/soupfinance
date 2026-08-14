@@ -167,6 +167,26 @@ test.describe('SOUPFIN-27: Invoice AccountServices resolution', () => {
       });
     });
 
+    // Fix (SOUPFIN-43): SOUPFIN-37 moved line-item persistence onto a second POST
+    // to /rest/invoiceItem/save.json (that endpoint is the one that stores tax).
+    // Unmocked, it proxied to an absent backend and the 401 redirected the page to
+    // /login — so this assertion saw /login instead of /invoices and read as a
+    // navigation bug rather than a missing mock.
+    await page.route('**/rest/invoiceItem/save.json*', (route: any) =>
+      route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({ id: 'item-new' }),
+      })
+    );
+    await page.route('**/rest/invoiceItem/create.json*', (route: any) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ SYNCHRONIZER_TOKEN: 'tok', SYNCHRONIZER_URI: '/rest/invoiceItem/create' }),
+      })
+    );
+
     await page.getByTestId('invoice-form-save-draft-button').click();
 
     // Successful create navigates back to the invoice list.

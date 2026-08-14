@@ -9,7 +9,11 @@
 // Changed: Removed unused getCsrfTokenForEdit import (will be used when edit is implemented)
 import apiClient, { toQueryString, getCsrfToken, csrfQueryString } from '../client';
 import type { Bill, BillItem, BillPayment, ListParams } from '../../types';
-import { resolveTaxEntryIdFromRows, type TaxEntryJoinRow } from './taxEntryJoins';
+import {
+  parseJoinRowTaxAmount,
+  resolveTaxEntryIdFromRows,
+  type TaxEntryJoinRow,
+} from './taxEntryJoins';
 
 const BASE_URL = '/bill';
 
@@ -60,14 +64,110 @@ export function extractVendorName(vendor?: { name?: string; serialised?: string 
   return (match ? match[1] : serialised).trim();
 }
 
+/** Money rounded to 2dp, so repeated float addition cannot surface as 1724.9999999999998. */
+function round2(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+/**
+ * First argument that is a real, finite number — `undefined` when none is.
+ *
+ * `?? 0` is NOT good enough here: it cannot tell "the backend sent 0" from "the
+ * backend did not send this field", and that distinction is the whole bug.
+ */
+function firstNumber(...values: unknown[]): number | undefined {
+  for (const value of values) {
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+  }
+  return undefined;
+}
+
+/**
+ * Sum the line items, mirroring the backend getters:
+ *   Bill.getSubTotal()       = sum(billItem.amount)
+ *   Bill.getTotalTaxAmount() = sum(billItem.taxAmount)
+ *   BillItem.getTaxAmount()  = sum(taxEntryBillItemList.taxAmount)
+ *
+ * Only used as a fall-back — see `transformBill`.
+ */
+function computeBillTotalsFromItems(
+  items?: Array<{
+    quantity?: number;
+    unitPrice?: number;
+    amount?: number;
+    taxEntryBillItemList?: Array<{ taxAmount?: number; serialised?: string }> | null;
+  }> | null
+): { subtotal: number; taxAmount: number } {
+  if (!items || items.length === 0) return { subtotal: 0, taxAmount: 0 };
+
+  let subtotal = 0;
+  let taxAmount = 0;
+
+  for (const item of items) {
+    subtotal +=
+      firstNumber(item?.amount) ??
+      (firstNumber(item?.quantity) ?? 0) * (firstNumber(item?.unitPrice) ?? 0);
+
+    for (const row of item?.taxEntryBillItemList || []) {
+      taxAmount += parseJoinRowTaxAmount(row);
+    }
+  }
+
+  return { subtotal: round2(subtotal), taxAmount: round2(taxAmount) };
+}
+
 /**
  * Fix (SOUPFIN-30 #1, #2): Normalise a raw bill from the backend so the list,
  * detail, and edit views render correctly:
  *   - vendor.name is resolved from vendor.serialised (backend omits `name`)
  *   - billDate / paymentDate are stripped of their ISO time component
  *     (e.g. "2023-07-10T00:00:00Z" → "2023-07-10")
+ *
+ * Fix (SOUPFIN-43): map the header amount fields, which the backend spells
+ * DIFFERENTLY from this codebase. `grails-app/views/bill/_bill.gson` emits
+ *
+ *   subTotal · total · totalTaxAmount · paidAmount · amountDue
+ *
+ * while `Bill` here declares `subtotal · totalAmount · taxAmount · amountPaid ·
+ * amountDue`. Only `amountDue` collided, so every other amount arrived as
+ * `undefined` and `formatCurrency(undefined)` rendered it as 0.00 — the
+ * reported "Amount Summary is all zeros while Balance Due is right". The same
+ * template serves index.json, so the Bills list Total column and the bill PDF
+ * were understated identically.
+ *
+ * The header is authoritative when present. The fall-back exists because
+ * `_bill.gson` catches LazyInitializationException and degrades EVERY amount to
+ * 0 (its own comment says so); `getBill()` fetches the line items separately,
+ * so when the header reads 0 against non-zero items the items are the truth.
  */
 function transformBill(raw: Bill): Bill {
+  const header = {
+    // Backend spelling first, then this codebase's spelling — so an
+    // already-normalised bill (mock, cache, re-transform) survives the round trip.
+    subtotal: firstNumber(raw.subTotal, raw.subtotal),
+    taxAmount: firstNumber(raw.totalTaxAmount, raw.taxAmount),
+    totalAmount: firstNumber(raw.total, raw.totalAmount),
+    amountPaid: firstNumber(raw.paidAmount, raw.amountPaid),
+    amountDue: firstNumber(raw.amountDue),
+  };
+  const computed = computeBillTotalsFromItems(raw.billItemList);
+
+  // The header is degraded only when it claims ZERO against non-zero line items —
+  // the LazyInitializationException signature. A header that merely omits some
+  // fields is NOT degraded: each missing field falls back on its own, so a
+  // response carrying `total` and `amountDue` but no `subTotal` keeps both.
+  const headerDegraded = computed.subtotal > 0 && (header.subtotal ?? 0) === 0;
+
+  const subtotal = headerDegraded ? computed.subtotal : header.subtotal ?? computed.subtotal;
+  const taxAmount = headerDegraded ? computed.taxAmount : header.taxAmount ?? computed.taxAmount;
+  const totalAmount = headerDegraded
+    ? round2(subtotal + taxAmount)
+    : header.totalAmount ?? round2(subtotal + taxAmount);
+  const amountPaid = header.amountPaid ?? 0;
+  const amountDue = headerDegraded
+    ? round2(totalAmount - amountPaid)
+    : header.amountDue ?? round2(totalAmount - amountPaid);
+
   return {
     ...raw,
     vendor: raw.vendor
@@ -75,6 +175,11 @@ function transformBill(raw: Bill): Bill {
       : raw.vendor,
     billDate: formatDateField(raw.billDate) || raw.billDate,
     paymentDate: formatDateField(raw.paymentDate) || raw.paymentDate,
+    subtotal,
+    taxAmount,
+    totalAmount,
+    amountPaid,
+    amountDue,
   };
 }
 

@@ -208,26 +208,33 @@ export function BillDetailPage() {
           <div className="px-6 py-4 border-b border-border-light dark:border-border-dark">
             <h2 className="text-lg font-bold text-text-light dark:text-text-dark">Amount Summary</h2>
           </div>
+          {/*
+            Fix (SOUPFIN-43): these read the NORMALISED header amounts. The backend
+            spells them subTotal / totalTaxAmount / total / paidAmount, so before
+            `transformBill()` mapped them every row here rendered 0.00 while Balance
+            Due — the one name that happened to collide — was right. Test ids added
+            so the regression is assertable through the UI rather than by eye.
+          */}
           <div className="p-6 space-y-3">
             <div className="flex justify-between">
               <p className="text-subtle-text">Subtotal</p>
-              <p className="font-medium text-text-light dark:text-text-dark">{formatCurrency(bill.subtotal)}</p>
+              <p className="font-medium text-text-light dark:text-text-dark" data-testid="bill-detail-subtotal">{formatCurrency(bill.subtotal)}</p>
             </div>
             <div className="flex justify-between">
               <p className="text-subtle-text">Tax</p>
-              <p className="font-medium text-text-light dark:text-text-dark">{formatCurrency(bill.taxAmount)}</p>
+              <p className="font-medium text-text-light dark:text-text-dark" data-testid="bill-detail-tax">{formatCurrency(bill.taxAmount)}</p>
             </div>
             <div className="flex justify-between border-t border-border-light dark:border-border-dark pt-3">
               <p className="font-bold text-text-light dark:text-text-dark">Total</p>
-              <p className="font-bold text-text-light dark:text-text-dark">{formatCurrency(bill.totalAmount)}</p>
+              <p className="font-bold text-text-light dark:text-text-dark" data-testid="bill-detail-total">{formatCurrency(bill.totalAmount)}</p>
             </div>
             <div className="flex justify-between">
               <p className="text-subtle-text">Amount Paid</p>
-              <p className="font-medium text-success">{formatCurrency(bill.amountPaid)}</p>
+              <p className="font-medium text-success" data-testid="bill-detail-amount-paid">{formatCurrency(bill.amountPaid)}</p>
             </div>
             <div className="flex justify-between bg-primary/10 -mx-6 px-6 py-3 mt-3">
               <p className="font-bold text-primary">Balance Due</p>
-              <p className="font-bold text-primary">{formatCurrency(bill.amountDue)}</p>
+              <p className="font-bold text-primary" data-testid="bill-detail-balance-due">{formatCurrency(bill.amountDue)}</p>
             </div>
           </div>
         </div>
