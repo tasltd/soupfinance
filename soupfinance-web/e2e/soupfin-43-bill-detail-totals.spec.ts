@@ -160,6 +160,31 @@ async function signInAndLand(
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(items) })
   );
 
+  // The tax catalogue backs the Line Items "Tax Rate" column, which resolves a
+  // line's TaxEntry by matching the label inside its join row's serialised
+  // string (`VAT-S-15.0%`) against each entry's own `serialised`. Without this
+  // the catch-all returns [], nothing matches, and the column falls back to
+  // "No Tax" — rendering 0% next to a GH₵225.00 tax, which contradicts the very
+  // Amount Summary this spec exists to prove. Mock it so the captured
+  // screenshots show what production shows.
+  await page.route('**/rest/taxEntry/index.json*', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([
+        {
+          id: 'tax-vat-15',
+          'class': 'soupbroker.finance.TaxEntry',
+          name: 'VAT Standard',
+          abbreviation: 'VAT-S',
+          taxRate: 15.0,
+          isWithholdingTax: false,
+          serialised: 'VAT-S-15.0%',
+        },
+      ]),
+    })
+  );
+
   await page.goto('/dashboard');
   await page.waitForLoadState('domcontentloaded');
 }
@@ -194,6 +219,12 @@ test.describe('SOUPFIN-43 — bill detail Amount Summary', () => {
     await expect(page.getByTestId('bill-detail-amount-paid')).toHaveText('GH₵0.00');
     // Was already correct before the fix — regression guard.
     await expect(page.getByTestId('bill-detail-balance-due')).toHaveText('GH₵1,725.00');
+
+    // The Line Items "Tax Rate" column is a SEPARATE read path (join row →
+    // catalogue) from the header amounts above. Assert it agrees, so the page
+    // can never again show a rate that contradicts its own tax figure —
+    // 15% of GH₵1,500.00 is the GH₵225.00 asserted above.
+    await expect(page.getByRole('cell', { name: '15%' })).toBeVisible();
 
     await shot(page, 'bill-detail-totals-asserted');
   });
