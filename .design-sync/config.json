@@ -1,0 +1,44 @@
+{
+  "projectId": "b5d29df3-3792-4a20-a6d8-7d048a5f0795",
+  "pkg": "soupfinance-web",
+  "globalName": "SoupFinance",
+  "shape": "storybook",
+  "storybookConfigDir": "soupfinance-web/.storybook",
+  "storybookStatic": ".design-sync/sb-reference",
+  "srcDir": "src",
+  "entry": "soupfinance-web/ds-entry.ts",
+  "extraEntries": [
+    "./ds-entry.ts",
+    "react-router-dom"
+  ],
+  "storyImports": {
+    "shim": [
+      "/src/stores/"
+    ]
+  },
+  "readmeHeader": ".design-sync/conventions.md",
+  "guidelinesGlob": [
+    "../.claude/rules/soupfinance-design-system.md"
+  ],
+  "extraFonts": [
+    "../.design-sync/fonts-src.css"
+  ],
+  "overrides": {
+    "MainLayout": {
+      "cardMode": "column",
+      "primaryStory": "Default"
+    },
+    "SideNav": {
+      "cardMode": "column",
+      "primaryStory": "Expanded",
+      "skip": [
+        "layout-sidenav--dark-mode",
+        "layout-sidenav--collapsed-dark-mode"
+      ]
+    },
+    "TopNav": {
+      "cardMode": "column",
+      "primaryStory": "Default"
+    }
+  }
+}

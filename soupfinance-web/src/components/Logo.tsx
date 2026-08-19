@@ -10,6 +10,10 @@
  * Logo: Bowl with swirly SF steam rising from it
  */
 
+// Changed: import the mark instead of pointing at /logo.png in public/ — a
+// root-absolute src only resolves when this app is serving the page.
+import logoMark from '../assets/logo.png';
+
 interface LogoProps {
   /** Logo variant to display */
   variant?: 'mark' | 'full' | 'wordmark';
@@ -25,7 +29,7 @@ interface LogoProps {
 function LogoMark({ size = 48, className = '' }: { size?: number; className?: string }) {
   return (
     <img
-      src="/logo.png"
+      src={logoMark}
       alt="SoupFinance Logo"
       width={size}
       height={size}
@@ -80,7 +84,7 @@ export function LogoMarkSimple({
 }) {
   return (
     <img
-      src="/logo.png"
+      src={logoMark}
       alt="SoupFinance"
       width={size}
       height={size}
