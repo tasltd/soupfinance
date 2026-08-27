@@ -701,6 +701,47 @@ export async function mockTaxEntriesApi(
 }
 
 /**
+ * Record every `/rest/*` response that comes back 401 while a test runs.
+ *
+ * Fix (SOUPFIN-48): in mock mode an unmocked endpoint does NOT fail cleanly. The
+ * request proxies to the backend carrying the fake `mock-jwt-token`, the backend
+ * answers 401, and the 401 branch of the `client.ts` response interceptor sets
+ * `window.location.href = '/login'`. The page has usually already rendered by
+ * then, so whether a given test fails is a RACE between its assertions and that
+ * redirect — the same spec reported 2, 12 and ~31 failures across machines and
+ * worker counts with no code change between them, and the symptom is an opaque
+ * `element(s) not found ... navigated to "/login"` rather than a named missing
+ * mock.
+ *
+ * Asserting `urls` is empty converts that race into a stable failure that names
+ * the endpoint nobody mocked. Tests that deliberately exercise session expiry
+ * pass an `allow` pattern for the endpoint they expect to 401.
+ *
+ * No-op in LXC mode, where a 401 is a real backend answer rather than a hole in
+ * the mock set.
+ */
+export function trackApi401s(
+  page: Awaited<ReturnType<typeof base.page>>,
+  options: { allow?: RegExp[] } = {}
+): { urls: string[] } {
+  const urls: string[] = [];
+  if (isLxcMode()) return { urls };
+
+  const allow = options.allow ?? [];
+  page.on('response', (response) => {
+    if (response.status() !== 401) return;
+    const url = response.url();
+    if (!url.includes('/rest/')) return;
+    if (allow.some((pattern) => pattern.test(url))) return;
+    // Store path-only: the port varies with E2E_PORT, so a full URL would make
+    // the failure message differ between runs.
+    urls.push(url.replace(/^https?:\/\/[^/]+/, ''));
+  });
+
+  return { urls };
+}
+
+/**
  * Helper to mock OTP request API
  * CONDITIONAL: Skips mocking in LXC mode
  */
