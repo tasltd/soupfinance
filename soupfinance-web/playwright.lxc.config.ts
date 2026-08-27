@@ -25,6 +25,13 @@ import { defineConfig, devices } from '@playwright/test';
 // Set TEST_MODE for fixtures to detect LXC backend mode
 process.env.TEST_MODE = 'lxc';
 
+// Dedicated port for LXC E2E runs. Overridable via E2E_PORT because
+// `reuseExistingServer` will happily attach to a dev server started from ANOTHER
+// worktree on 5180 — the suite then silently tests that checkout's code instead of
+// this one, which looks like a pass. Set E2E_PORT when 5180 is taken rather than
+// stopping the other server. (Mirrors playwright.config.ts.)
+const E2E_TEST_PORT = Number(process.env.E2E_PORT) || 5180;
+
 export default defineConfig({
   // Test directory - only run integration tests by default
   // Integration tests are designed to work with real LXC backend
@@ -64,8 +71,8 @@ export default defineConfig({
   // Shared settings for all the projects below
   use: {
     // Base URL to use in actions like `await page.goto('/')`
-    // Changed: Use port 5180 to avoid conflicts with other dev servers
-    baseURL: 'http://localhost:5180',
+    // Changed: Use a dedicated port to avoid conflicts with other dev servers
+    baseURL: `http://localhost:${E2E_TEST_PORT}`,
 
     // Collect trace when retrying the failed test
     trace: 'on-first-retry',
@@ -99,8 +106,8 @@ export default defineConfig({
 
   // Changed: Run dev server in LXC mode
   webServer: {
-    command: 'npm run dev:lxc -- --port 5180',
-    url: 'http://localhost:5180',
+    command: `npm run dev:lxc -- --port ${E2E_TEST_PORT}`,
+    url: `http://localhost:${E2E_TEST_PORT}`,
     reuseExistingServer: !process.env.CI,
     // Changed: Longer timeout for backend startup
     timeout: 180 * 1000,

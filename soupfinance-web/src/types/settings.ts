@@ -266,6 +266,24 @@ export const SOUPFINANCE_ROLE_LABELS: Record<string, string> = {
 // These helpers resolve the authority safely and return null when it can't be
 // determined, so callers can skip the role instead of throwing.
 
+// Added (SOUPFIN-45): the backend serialises `Agent.userAccess` as a SHALLOW Grails
+// FK — `{ id, class }` with NO `username`. Verified against the LXC backend: 0 of 100
+// agents carry `userAccess.username`, while 100 of 100 carry the login name inside
+// `simpleID` ("First Last, Access:the.username").
+//
+// UserListPage already recovered it inline (SOUPFIN-30 #9); UserFormPage did not, so
+// its Edit form loaded a BLANK username, failed Zod's `min(3)`, and react-hook-form
+// silently refused to submit — the dead "Update User" button in SOUPFIN-45. Shared
+// here so both call sites can never drift apart again.
+
+/** Resolves an agent's login username, falling back to parsing `simpleID`. */
+export function getAgentUsername(agent: Agent): string | undefined {
+  if (agent.userAccess?.username) return agent.userAccess.username;
+  // simpleID format: "First Last, Access:the.username"
+  const match = agent.simpleID?.match(/Access:\s*([^\s,]+)/i);
+  return match?.[1];
+}
+
 /** Extracts a role's authority string, falling back to parsing `serialised`. */
 export function getRoleAuthority(role: SbRole): string | null {
   if (role.authority) return role.authority;
