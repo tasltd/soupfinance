@@ -19,9 +19,10 @@ vi.mock('../../../api/endpoints/bills', async () => {
     getBill: vi.fn(),
     deleteBill: vi.fn(),
     listBillPayments: vi.fn(),
-    // SOUPFIN-38: pure helper, no network — keep the real implementation so the
-    // Tax Rate column exercises real FK-reference resolution.
+    // SOUPFIN-38/44: pure helpers, no network — keep the real implementations so
+    // the Tax Rate column exercises real FK-reference resolution.
     resolveBillItemTaxEntryId: actual.resolveBillItemTaxEntryId,
+    resolveBillItemTaxRate: actual.resolveBillItemTaxRate,
   };
 });
 
@@ -66,6 +67,9 @@ vi.mock('react-router-dom', async () => {
 });
 
 import { getBill, deleteBill, listBillPayments } from '../../../api/endpoints/bills';
+// SOUPFIN-44: the Tax Rate column resolves against the real catalogue, and
+// NO_TAX_OPTION is what makes an unresolved entry look like 0%.
+import { listTaxRates, NO_TAX_OPTION } from '../../../api/endpoints/domainData';
 
 // ============================================================================
 // Test Helpers
@@ -310,6 +314,91 @@ describe('BillDetailPage', () => {
 
       expect(await screen.findByTestId('bill-items-empty')).toBeInTheDocument();
       expect(screen.getByText(/no line items/i)).toBeInTheDocument();
+    });
+  });
+
+  /**
+   * SOUPFIN-44 — the Tax Rate column must never claim 0% for a line whose
+   * TaxEntry could not be resolved.
+   *
+   * `resolveBillItemTaxEntryId` returns '' when a bare FK reference's serialised
+   * label misses the catalogue, and `listTaxRates` prepends NO_TAX_OPTION whose
+   * id is ALSO ''. Looking the rate up by that id therefore matched "No Tax"
+   * (rate 0) and the column rendered "0%" — a positive claim of no tax on a line
+   * that carries VAT, contradicting the Tax figure in the Amount Summary on the
+   * same screen.
+   */
+  describe('line item tax rate (SOUPFIN-44)', () => {
+    /** Verbatim TaxEntryBillItem.serialised shape — note the single trailing number. */
+    const billRow = (label: string, amount: number) =>
+      `TaxEntryBillItem(BillItem(quantity:1.0, unitPrice:1500, taxEntries:[${label}], ` +
+      `bill:Bill((805 Restaurant)[PROVIDER], 202206-03, 230)), ${label}, ${amount})`;
+
+    /** What listTaxRates really returns: NO_TAX_OPTION (id '') first, then the entries. */
+    const catalogue = [
+      NO_TAX_OPTION,
+      { id: 'tax-cst', name: 'CST', rate: 5, serialised: 'CST-5.0%' },
+    ];
+
+    /** The Tax Rate cell (4th column) of the first line-item row. */
+    async function taxRateCellText() {
+      const table = await screen.findByTestId('bill-items-table');
+      // getAllByRole('row')[0] is the header, whose cells are columnheaders.
+      const firstBodyRow = within(table).getAllByRole('row')[1];
+      return within(firstBodyRow).getAllByRole('cell')[3].textContent;
+    }
+
+    function renderWithItem(item: Partial<BillItem>) {
+      vi.mocked(getBill).mockResolvedValue(
+        createMockBill({ billItemList: [createMockLineItem(item)] })
+      );
+      vi.mocked(listBillPayments).mockResolvedValue([]);
+      renderBillDetailPage();
+    }
+
+    it('renders a dash, not 0%, when the line carries tax that cannot be resolved', async () => {
+      vi.mocked(listTaxRates).mockResolvedValue(catalogue);
+      // A bare FK reference for VAT-S, which is absent from the catalogue above.
+      renderWithItem({
+        taxEntryBillItemList: [{ serialised: billRow('VAT-S-15.0%', 225.0) }],
+      });
+
+      await waitFor(async () => {
+        expect(await taxRateCellText()).toBe('—');
+      });
+    });
+
+    it('renders 0% for a line that genuinely carries no tax', async () => {
+      vi.mocked(listTaxRates).mockResolvedValue(catalogue);
+      renderWithItem({ taxEntryBillItemList: [] });
+
+      await waitFor(async () => {
+        expect(await taxRateCellText()).toBe('0%');
+      });
+    });
+
+    it('renders the catalogue rate when the bare FK label matches', async () => {
+      vi.mocked(listTaxRates).mockResolvedValue(catalogue);
+      renderWithItem({
+        taxEntryBillItemList: [{ serialised: billRow('CST-5.0%', 75.0) }],
+      });
+
+      await waitFor(async () => {
+        expect(await taxRateCellText()).toBe('5%');
+      });
+    });
+
+    it('renders a dash while the catalogue is unavailable rather than claiming 0%', async () => {
+      // A failed /rest/taxEntry request leaves taxRates undefined. The line still
+      // has tax; the page just cannot name the rate.
+      vi.mocked(listTaxRates).mockRejectedValue(new Error('403 module disabled'));
+      renderWithItem({
+        taxEntryBillItemList: [{ serialised: billRow('CST-5.0%', 75.0) }],
+      });
+
+      await waitFor(async () => {
+        expect(await taxRateCellText()).toBe('—');
+      });
     });
   });
 
@@ -568,6 +657,82 @@ describe('BillDetailPage', () => {
       // Check that amounts are formatted with .00 suffix
       expect(within(amountCard).getByText('$450.00')).toBeInTheDocument();
       expect(within(amountCard).getByText('$50.00')).toBeInTheDocument();
+    });
+  });
+
+  /**
+   * SOUPFIN-43 — the Amount Summary rendered Subtotal / Tax / Total as 0.00
+   * while Balance Due was correct, because the backend spells the header amounts
+   * subTotal / totalTaxAmount / total / paidAmount and only `amountDue` collided
+   * with this codebase's naming.
+   *
+   * The mapping itself is pinned in the API-layer tests. These assert the other
+   * half: that each row binds the field it is labelled with. The existing tests
+   * above match by text anywhere inside the card, which cannot tell Subtotal from
+   * Tax — so they would still pass if two rows were swapped.
+   */
+  describe('amount summary rows (SOUPFIN-43)', () => {
+    it('renders each row from its own header field, none of them zero', async () => {
+      // The reported bill #6: qty 3 x GH¢500 with VAT 15%, unpaid.
+      const mockBill = createMockBill({
+        subtotal: 1500,
+        taxAmount: 225,
+        totalAmount: 1725,
+        amountPaid: 0,
+        amountDue: 1725,
+      });
+      vi.mocked(getBill).mockResolvedValue(mockBill);
+      vi.mocked(listBillPayments).mockResolvedValue([]);
+
+      renderBillDetailPage();
+
+      expect(await screen.findByTestId('bill-detail-subtotal')).toHaveTextContent('$1,500.00');
+      expect(screen.getByTestId('bill-detail-tax')).toHaveTextContent('$225.00');
+      expect(screen.getByTestId('bill-detail-total')).toHaveTextContent('$1,725.00');
+      expect(screen.getByTestId('bill-detail-amount-paid')).toHaveTextContent('$0.00');
+      expect(screen.getByTestId('bill-detail-balance-due')).toHaveTextContent('$1,725.00');
+
+      // The exact reported symptom: a taxed bill whose summary reads all zeros
+      // while the balance is right.
+      expect(screen.getByTestId('bill-detail-subtotal')).not.toHaveTextContent('$0.00');
+      expect(screen.getByTestId('bill-detail-tax')).not.toHaveTextContent('$0.00');
+      expect(screen.getByTestId('bill-detail-total')).not.toHaveTextContent('$0.00');
+    });
+
+    it('keeps Total and Balance Due distinct once a payment is recorded', async () => {
+      const mockBill = createMockBill({
+        subtotal: 1500,
+        taxAmount: 225,
+        totalAmount: 1725,
+        amountPaid: 725,
+        amountDue: 1000,
+      });
+      vi.mocked(getBill).mockResolvedValue(mockBill);
+      vi.mocked(listBillPayments).mockResolvedValue([]);
+
+      renderBillDetailPage();
+
+      expect(await screen.findByTestId('bill-detail-total')).toHaveTextContent('$1,725.00');
+      expect(screen.getByTestId('bill-detail-amount-paid')).toHaveTextContent('$725.00');
+      expect(screen.getByTestId('bill-detail-balance-due')).toHaveTextContent('$1,000.00');
+    });
+
+    it('renders a genuinely zero bill as 0.00 rather than blank or NaN', async () => {
+      const mockBill = createMockBill({
+        subtotal: 0,
+        taxAmount: 0,
+        totalAmount: 0,
+        amountPaid: 0,
+        amountDue: 0,
+      });
+      vi.mocked(getBill).mockResolvedValue(mockBill);
+      vi.mocked(listBillPayments).mockResolvedValue([]);
+
+      renderBillDetailPage();
+
+      expect(await screen.findByTestId('bill-detail-subtotal')).toHaveTextContent('$0.00');
+      expect(screen.getByTestId('bill-detail-total')).toHaveTextContent('$0.00');
+      expect(screen.getByTestId('bill-detail-balance-due')).toHaveTextContent('$0.00');
     });
   });
 });

@@ -94,3 +94,48 @@ export function resolveTaxEntryIdFromRows(
 
   return '';
 }
+
+/**
+ * Resolve the tax RATE a line item carries, for read-only display.
+ *
+ * Fix (SOUPFIN-44). `resolveTaxEntryIdFromRows` collapses two very different
+ * situations into the same `''`: "this line has no tax at all" and "this line
+ * has tax I could not identify". Looking a rate up by that id is unsafe,
+ * because `listTaxRates` prepends NO_TAX_OPTION whose id is ALSO `''` — so
+ * `catalogue.find(t => t.id === '')` matches "No Tax" and returns 0, and an
+ * unresolvable line gets labelled `0%`: a positive claim of no tax on a line
+ * that is taxed. On a bill whose Amount Summary reads Tax GHS 225.00 the two
+ * contradict each other on the same screen.
+ *
+ * This keeps the three states apart:
+ *
+ *   | join rows | resolvable | returns | caller renders |
+ *   |-----------|------------|---------|----------------|
+ *   | none      | n/a        | `0`     | `0%` — true, the line is untaxed |
+ *   | present   | yes        | rate    | `<rate>%`      |
+ *   | present   | no         | `null`  | `—` — UNKNOWN, never `0%`        |
+ *
+ * `null` covers every "I don't know": a bare FK reference whose serialised
+ * label misses the catalogue, a catalogue still loading or failed (the module
+ * gate returns 403 on some tenants), and an entry `listTaxRates` filters out,
+ * which today means withholding tax.
+ *
+ * @returns the rate as a percentage, `0` when genuinely untaxed, or `null` when
+ *          the line is taxed by an entry that could not be identified.
+ */
+export function resolveTaxRateFromRows(
+  rows?: TaxEntryJoinRow[] | null,
+  catalogue?: Array<{ id: string; rate?: number; serialised?: string }>
+): number | null {
+  // No join rows at all: the backend's derived getTaxAmount() sums an empty
+  // collection, so 0 is a fact about this line rather than a guess.
+  if (!rows || rows.length === 0) return 0;
+
+  const entryId = resolveTaxEntryIdFromRows(rows, catalogue);
+  // Guard the empty id BEFORE touching the catalogue — this is the NO_TAX_OPTION
+  // collision the whole function exists to avoid.
+  if (!entryId) return null;
+
+  const rate = catalogue?.find((entry) => entry.id === entryId)?.rate;
+  return typeof rate === 'number' ? rate : null;
+}
