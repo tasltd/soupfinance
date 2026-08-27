@@ -9,7 +9,7 @@ import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { agentApi } from '../../api/endpoints/settings';
 import type { Agent } from '../../types/settings';
-import { getRoleLabel } from '../../types/settings';
+import { getRoleLabel, getAgentUsername } from '../../types/settings';
 import { logger } from '../../utils/logger';
 // Added: normalize backend error for the list-level error banner
 import { normalizeApiError } from '../../utils/apiError';
@@ -87,12 +87,10 @@ export default function UserListPage() {
   // usually null on the agent list response, so the old lookup found nothing.
   // Recover the username from `agent.simpleID` ("First Last, Access:username")
   // when `userAccess.username` is absent.
-  const getUsername = (agent: Agent): string | undefined => {
-    if (agent.userAccess?.username) return agent.userAccess.username;
-    // simpleID format: "First Last, Access:the.username"
-    const match = agent.simpleID?.match(/Access:\s*([^\s,]+)/i);
-    return match?.[1];
-  };
+  // Changed (SOUPFIN-45): this recovery now lives in types/settings.ts as
+  // getAgentUsername() and is shared with UserFormPage, whose Edit form was missing
+  // it — that omission is what made the Update button fire no request.
+  const getUsername = (agent: Agent): string | undefined => getAgentUsername(agent);
 
   // Changed: distinguish email vs username vs missing so the user-list table is
   // never just a row of dashes (bug 10 in SOUPFIN-2)

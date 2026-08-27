@@ -8,12 +8,12 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useForm } from 'react-hook-form';
+import { useForm, type FieldError, type FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { agentApi, accountPersonApi, rolesApi } from '../../api/endpoints/settings';
 import type { AgentFormData } from '../../types/settings';
-import { SOUPFINANCE_ROLES, SOUPFINANCE_ROLE_LABELS, getRoleAuthority } from '../../types/settings';
+import { SOUPFINANCE_ROLES, SOUPFINANCE_ROLE_LABELS, getRoleAuthority, getAgentUsername } from '../../types/settings';
 import { logger } from '../../utils/logger';
 // Added: backend error extraction so the form can surface the real failure (bugs 7, 9 in SOUPFIN-2)
 import { normalizeApiError } from '../../utils/apiError';
@@ -55,6 +55,16 @@ const RELEVANT_ROLES = [
   SOUPFINANCE_ROLES.LEDGER_ACCOUNT,
   SOUPFINANCE_ROLES.VENDOR,
 ];
+
+// Added (SOUPFIN-45): human-readable names for the blocked-submit banner.
+const FIELD_LABELS: Record<string, string> = {
+  firstName: 'First name',
+  lastName: 'Last name',
+  username: 'Username',
+  password: 'Password',
+  email: 'Email',
+  roles: 'Roles',
+};
 
 export default function UserFormPage() {
   const { id } = useParams<{ id: string }>();
@@ -145,10 +155,34 @@ export default function UserFormPage() {
   const hasAdminRole = selectedRoles?.includes(SOUPFINANCE_ROLES.ADMIN);
   const hasExistingAccountPerson = Boolean(existingUser?.accountPerson?.id);
 
+  // Added (SOUPFIN-45): resolve a displayable message for any shape of roles error —
+  // array-level (`errors.roles.message`), root (`errors.roles.root.message`), or
+  // element-level (`errors.roles[0].message`).
+  const rolesFieldError = errors.roles as
+    | (FieldError & { root?: FieldError })
+    | (FieldError | undefined)[]
+    | undefined;
+  const rolesErrorMessage =
+    (Array.isArray(rolesFieldError)
+      ? rolesFieldError.find((e) => e?.message)?.message
+      : rolesFieldError?.message || rolesFieldError?.root?.message) ||
+    'At least one role is required';
+
   // Reset form when existing user data loads
   useEffect(() => {
     if (existingUser) {
-      const roles = existingUser.authorities?.map((r) => r.authority) || [];
+      // Fix (SOUPFIN-45): resolve each authority through getRoleAuthority() instead of
+      // reading `role.authority` raw. The backend serialises SbRole with only a
+      // `serialised` field ("SbRole(authority:ROLE_USER)") and no `authority` — the
+      // same shape handled everywhere else in this file and in UserListPage
+      // (SOUPFIN-24). Reading it raw seeded the form with `[undefined]`, which failed
+      // Zod's `z.array(z.string())` at path `roles.0`. react-hook-form then blocked
+      // submit, so the Update button fired no request at all — and because an
+      // element-level error carries no `errors.roles.message`, nothing was displayed.
+      const roles =
+        existingUser.authorities
+          ?.map((r) => getRoleAuthority(r))
+          .filter((authority): authority is string => Boolean(authority)) || [];
       const email = existingUser.emailContacts?.[0]?.email || '';
       const phone = existingUser.phoneContacts?.[0]?.phone || '';
 
@@ -160,7 +194,15 @@ export default function UserFormPage() {
         address: existingUser.address || '',
         email,
         phone,
-        username: existingUser.userAccess?.username || '',
+        // Fix (SOUPFIN-45) — THE BUG: this read `existingUser.userAccess?.username`
+        // directly. The backend serialises `userAccess` as a shallow FK
+        // ({ id, class }) with no username on EVERY agent (verified: 50/50 on the
+        // LXC backend), so this always resolved to ''. Zod's
+        // `username: z.string().min(3)` then failed, react-hook-form refused to call
+        // onSubmit, and the "Update User" button fired no request at all.
+        // getAgentUsername() recovers it from `simpleID` — the same recovery
+        // UserListPage has done since SOUPFIN-30 #9.
+        username: getAgentUsername(existingUser) || '',
         password: '', // Don't pre-fill password
         roles,
         archived: existingUser.archived ?? false,
@@ -261,6 +303,25 @@ export default function UserFormPage() {
     saveMutation.mutate(data);
   };
 
+  // Added (SOUPFIN-45): react-hook-form silently swallows a blocked submit — no
+  // request, no feedback — which is exactly what made this bug look like a dead
+  // button. Surface the blocking fields in the same banner the API errors use, so a
+  // refused submit is ALWAYS visible even if the offending field is off-screen.
+  const onInvalid = (formErrors: FieldErrors<UserFormValues>) => {
+    const fields = Object.keys(formErrors);
+    if (fields.length === 0) return;
+    const detail = fields
+      .map((field) => {
+        const err = formErrors[field as keyof UserFormValues];
+        const message = Array.isArray(err)
+          ? err.find((e) => e?.message)?.message
+          : (err as FieldError | undefined)?.message;
+        return `${FIELD_LABELS[field] || field}: ${message || 'invalid value'}`;
+      })
+      .join('; ');
+    setSubmitError(`Please correct the highlighted fields — ${detail}`);
+  };
+
   // Handle role checkbox changes
   const handleRoleChange = (roleAuthority: string, checked: boolean) => {
     const currentRoles = selectedRoles || [];
@@ -309,7 +370,7 @@ export default function UserFormPage() {
       </div>
 
       {/* Form */}
-      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6">
+      <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="flex flex-col gap-6">
         {/* Personal Information */}
         <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-6">
           <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-4">
@@ -539,7 +600,17 @@ export default function UserFormPage() {
               })}
             </div>
           )}
-          {errors.roles && <p className="text-danger text-xs mt-2">{errors.roles.message}</p>}
+          {errors.roles && (
+            // Fix (SOUPFIN-45): never render an empty error paragraph. When Zod fails on
+            // an ARRAY ELEMENT (path `roles.0`) rather than the array itself, react-hook-form
+            // puts the message on `errors.roles[0]`, leaving `errors.roles.message`
+            // undefined — so the old `{errors.roles.message}` printed nothing and the
+            // blocked submit looked like a dead button. Fall back so a blocked submit is
+            // always visible to the user.
+            <p className="text-danger text-xs mt-2" data-testid="user-form-roles-validation-error">
+              {rolesErrorMessage}
+            </p>
+          )}
         </div>
 
         {/* Account Person Section */}

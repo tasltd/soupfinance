@@ -273,6 +273,21 @@ export function getRoleAuthority(role: SbRole): string | null {
   return match ? match[1] : null;
 }
 
+// Added (SOUPFIN-45): the backend serialises `Agent.userAccess` as a SHALLOW FK
+// ({ id, class }) with NO `username` — verified against all 50 agents on the LXC
+// backend. The login username is only recoverable from `simpleID`, whose format is
+// "First Last, Access:the.username". UserListPage already did this recovery inline
+// (SOUPFIN-30 #9); UserFormPage did not, so its Edit form loaded a BLANK username,
+// which failed Zod's `min(3)` and blocked the Update submit entirely.
+// Shared here so both call sites stay in step.
+
+/** Resolves an agent's login username, falling back to parsing `simpleID`. */
+export function getAgentUsername(agent: Agent): string | undefined {
+  if (agent.userAccess?.username) return agent.userAccess.username;
+  const match = agent.simpleID?.match(/Access:\s*([^\s,]+)/i);
+  return match?.[1];
+}
+
 /** Human-friendly label for a role, or null when the authority is unresolvable. */
 export function getRoleLabel(role: SbRole): string | null {
   const authority = getRoleAuthority(role);
