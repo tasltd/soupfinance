@@ -10,7 +10,7 @@
 import { useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getBill, deleteBill, listBillPayments, resolveBillItemTaxEntryId } from '../../api/endpoints/bills';
+import { getBill, deleteBill, listBillPayments, resolveBillItemTaxRate } from '../../api/endpoints/bills';
 import { listTaxRates } from '../../api/endpoints/domainData';
 import { useFormatCurrency } from '../../stores';
 import { usePdf, useEmailSend } from '../../hooks';
@@ -265,8 +265,14 @@ export function BillDetailPage() {
                     <td className="px-6 py-4 text-right text-text-light dark:text-text-dark">{formatCurrency(item.unitPrice)}</td>
                     <td className="px-6 py-4 text-right text-subtle-text">
                       {(() => {
-                        const entryId = resolveBillItemTaxEntryId(item, taxRates);
-                        const rate = taxRates?.find((t) => t.id === entryId)?.rate;
+                        // Fix (SOUPFIN-44): resolve the RATE, not the id. Looking the
+                        // rate up by `resolveBillItemTaxEntryId` matched NO_TAX_OPTION
+                        // (id '', rate 0) whenever the line's TaxEntry could not be
+                        // resolved, so a taxed line was labelled "0%" — a positive claim
+                        // of no tax, contradicting the Tax figure in the Amount Summary
+                        // above it. `null` now means UNKNOWN and renders the dash; a line
+                        // with no tax rows at all still reports a truthful 0%.
+                        const rate = resolveBillItemTaxRate(item, taxRates);
                         return rate != null ? `${rate}%` : '—';
                       })()}
                     </td>

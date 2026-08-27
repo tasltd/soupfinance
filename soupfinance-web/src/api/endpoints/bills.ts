@@ -12,6 +12,7 @@ import type { Bill, BillItem, BillPayment, ListParams } from '../../types';
 import {
   parseJoinRowTaxAmount,
   resolveTaxEntryIdFromRows,
+  resolveTaxRateFromRows,
   type TaxEntryJoinRow,
 } from './taxEntryJoins';
 
@@ -32,6 +33,22 @@ export function resolveBillItemTaxEntryId(
   catalogue?: Array<{ id: string; serialised?: string }>
 ): string {
   return resolveTaxEntryIdFromRows(item?.taxEntryBillItemList, catalogue);
+}
+
+/**
+ * Resolve the tax RATE a saved bill line carries, for read-only display.
+ *
+ * Fix (SOUPFIN-44): the detail page used to look the rate up by
+ * `resolveBillItemTaxEntryId`, which returns `''` for an unresolvable line —
+ * the same id NO_TAX_OPTION carries — so the Tax Rate column claimed `0%` for a
+ * taxed line. `resolveTaxRateFromRows` returns `null` for that case instead, so
+ * the caller can render the dash it always intended.
+ */
+export function resolveBillItemTaxRate(
+  item: { taxEntryBillItemList?: TaxEntryJoinRow[] | null },
+  catalogue?: Array<{ id: string; rate?: number; serialised?: string }>
+): number | null {
+  return resolveTaxRateFromRows(item?.taxEntryBillItemList, catalogue);
 }
 
 // =============================================================================

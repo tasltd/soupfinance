@@ -452,3 +452,62 @@ describe('bills API — header amount mapping (SOUPFIN-43)', () => {
     expect(bill.amountDue).toBe(0.5);
   });
 });
+
+/**
+ * SOUPFIN-44 — the bill-side wrapper must read the RIGHT join collection and
+ * must distinguish "untaxed" from "unknown".
+ *
+ * `BillItem` carries tax in `taxEntryBillItemList` (the invoice domain uses
+ * `taxEntryInvoiceItemList`), and its join row serialises with ONE trailing
+ * number where the invoice row has two. Pinning the field name here is what
+ * stops a copy-paste from the invoice module silently returning "no tax".
+ */
+describe('resolveBillItemTaxRate (SOUPFIN-44)', () => {
+  /** Verbatim TaxEntryBillItem.serialised — one trailing number, not two. */
+  const BILL_ROW =
+    'TaxEntryBillItem(BillItem(quantity:2.0, unitPrice:1500, taxEntries:[CST-5.0%], ' +
+    'bill:Bill((805 Restaurant)[PROVIDER], 202206-03, 230)), CST-5.0%, 0.0)';
+
+  /** Mirrors listTaxRates: the empty-id "No Tax" sentinel comes first. */
+  const catalogue = [
+    { id: '', name: 'No Tax', rate: 0 },
+    { id: 'uuid-cst', name: 'CST', rate: 5, serialised: 'CST-5.0%' },
+  ];
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('reads taxEntryBillItemList and returns the catalogue rate', async () => {
+    vi.resetModules();
+    const { resolveBillItemTaxRate } = await import('../bills');
+    expect(
+      resolveBillItemTaxRate({ taxEntryBillItemList: [{ serialised: BILL_ROW }] }, catalogue)
+    ).toBe(5);
+  });
+
+  it('returns null — not 0 — when the line is taxed by an entry it cannot identify', async () => {
+    vi.resetModules();
+    const { resolveBillItemTaxRate } = await import('../bills');
+    expect(
+      resolveBillItemTaxRate(
+        { taxEntryBillItemList: [{ serialised: 'TaxEntryBillItem(X(a), VAT-S-15.0%, 225.0)' }] },
+        catalogue
+      )
+    ).toBeNull();
+  });
+
+  it('returns 0 for a line with no tax rows, and for a missing item', async () => {
+    vi.resetModules();
+    const { resolveBillItemTaxRate } = await import('../bills');
+    expect(resolveBillItemTaxRate({ taxEntryBillItemList: [] }, catalogue)).toBe(0);
+    expect(resolveBillItemTaxRate({}, catalogue)).toBe(0);
+    // The detail page maps over billItemList, so a null entry must not throw.
+    expect(
+      resolveBillItemTaxRate(
+        null as unknown as { taxEntryBillItemList?: null },
+        catalogue
+      )
+    ).toBe(0);
+  });
+});
