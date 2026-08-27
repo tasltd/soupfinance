@@ -16,7 +16,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { InvoiceFormPage } from '../InvoiceFormPage';
-import type { Invoice, InvoiceStatus, Client, ClientType } from '../../../types';
+import type { Invoice, InvoiceItem, InvoiceStatus, Client, ClientType } from '../../../types';
 
 // Mock the API modules - must match exact import paths in InvoiceFormPage.tsx
 vi.mock('../../../api/endpoints/invoices', async () => {
@@ -1273,6 +1273,195 @@ describe('InvoiceFormPage', () => {
       await screen.findByTestId('invoice-form-page');
 
       expect(getInvoice).toHaveBeenCalledWith('inv-789');
+    });
+  });
+
+  // =========================================================================
+  // SOUPFIN-46 regression guards — edit-mode tax preview.
+  //
+  // The defect: hydration read `item.taxRate`, a UI-only field (types/index.ts)
+  // that `transformInvoice()` never sets, so on edit it was ALWAYS 0 while
+  // `taxEntryId` resolved correctly. The dropdown showed e.g. "VAT- STANDARD (15%)"
+  // while the previewed Tax/Total and the per-line amount computed zero tax —
+  // the form contradicting itself, and previewing a total the saved invoice
+  // would not match. The save path was never affected (it sends taxEntryId).
+  //
+  // The fix mirrors BillFormPage: look the rate up in the catalogue by the
+  // resolved entry id, so the dropdown and the preview can never drift.
+  // =========================================================================
+  describe('edit mode tax preview (SOUPFIN-46)', () => {
+    /** Catalogue entries carry `serialised` — the only handle on a bare FK row. */
+    const CATALOGUE = [
+      { id: '', name: 'No Tax', rate: 0 },
+      { id: VAT_TAX_ENTRY_ID, name: 'VAT- STANDARD', rate: 15, serialised: 'VAT-S-15.0%' },
+      { id: NHIL_TAX_ENTRY_ID, name: 'National Health Insurance Levy', rate: 2.5, serialised: 'NHIL-2.5%' },
+    ];
+
+    /**
+     * An invoice with ONE line of 2 x 1500 = 3000, carrying whatever tax join
+     * rows the caller supplies. `taxRate` is deliberately omitted from the item:
+     * that is exactly what the backend returns, and reinstating it would hide
+     * the defect this block guards.
+     */
+    function invoiceWithJoinRows(
+      rows: InvoiceItem['taxEntryInvoiceItemList']
+    ): Invoice {
+      return createMockInvoice({
+        invoiceItemList: [
+          {
+            id: 'item-1',
+            invoice: { id: 'inv-123' },
+            description: 'Advisory',
+            quantity: 2,
+            unitPrice: 1500,
+            taxEntryInvoiceItemList: rows,
+            dateCreated: '2024-01-15T10:00:00Z',
+            lastUpdated: '2024-01-15T10:00:00Z',
+          },
+        ],
+      });
+    }
+
+    function renderEdit(invoice: Invoice) {
+      setupDefaultMocks();
+      vi.mocked(listTaxRates).mockResolvedValue(CATALOGUE);
+      vi.mocked(getInvoice).mockResolvedValue(invoice);
+      return renderInvoiceFormPage({
+        route: '/invoices/inv-123/edit',
+        path: '/invoices/:id/edit',
+      });
+    }
+
+    /** The line's Amount cell — the last cell before the remove button. */
+    function lineAmountCell(index: number) {
+      const row = screen.getByTestId(`invoice-item-taxRate-${index}`).closest('tr');
+      if (!row) throw new Error(`no row for line ${index}`);
+      const cells = within(row).getAllByRole('cell');
+      return cells[cells.length - 2];
+    }
+
+    it('previews the tax of an EXPANDED TaxEntry join row', async () => {
+      renderEdit(
+        invoiceWithJoinRows([
+          {
+            id: 'join-1',
+            taxAmount: 450,
+            taxEntry: { id: VAT_TAX_ENTRY_ID, name: 'VAT- STANDARD' },
+          },
+        ])
+      );
+
+      // The dropdown re-selects the saved entry...
+      await waitFor(() => {
+        expect(screen.getByTestId('invoice-item-taxRate-0')).toHaveValue(VAT_TAX_ENTRY_ID);
+      });
+
+      // ...and the preview must AGREE with it: 3000 + 15% = 3450.
+      expect(screen.getByTestId('invoice-subtotal')).toHaveTextContent('3,000.00');
+      expect(screen.getByTestId('invoice-tax')).toHaveTextContent('450.00');
+      expect(screen.getByTestId('invoice-total')).toHaveTextContent('3,450.00');
+      expect(lineAmountCell(0)).toHaveTextContent('3,450.00');
+    });
+
+    it('previews the tax of a BARE-FK join row resolved via the catalogue', async () => {
+      // The shape the list/show endpoints actually return most of the time:
+      // no nested taxEntry, only a serialised label to match on.
+      renderEdit(
+        invoiceWithJoinRows([
+          {
+            id: 'join-1',
+            serialised:
+              'TaxEntryInvoiceItem(InvoiceItem(Advisory, 2.0, 1500.00), VAT-S-15.0%, 450.0, 3450.0)',
+          },
+        ])
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('invoice-item-taxRate-0')).toHaveValue(VAT_TAX_ENTRY_ID);
+      });
+
+      expect(screen.getByTestId('invoice-tax')).toHaveTextContent('450.00');
+      expect(screen.getByTestId('invoice-total')).toHaveTextContent('3,450.00');
+      expect(lineAmountCell(0)).toHaveTextContent('3,450.00');
+    });
+
+    it('previews a fractional rate without rounding it to zero', async () => {
+      // Boundary: NHIL is 2.5%, the smallest real rate on the seed tenant.
+      // 3000 x 2.5% = 75.
+      renderEdit(
+        invoiceWithJoinRows([
+          { id: 'join-1', taxEntry: { id: NHIL_TAX_ENTRY_ID, name: 'NHIL' } },
+        ])
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('invoice-item-taxRate-0')).toHaveValue(NHIL_TAX_ENTRY_ID);
+      });
+
+      expect(screen.getByTestId('invoice-tax')).toHaveTextContent('75.00');
+      expect(screen.getByTestId('invoice-total')).toHaveTextContent('3,075.00');
+    });
+
+    it('keeps an untaxed line at zero rather than inventing tax', async () => {
+      renderEdit(invoiceWithJoinRows([]));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('invoice-item-taxRate-0')).toHaveValue('');
+      });
+
+      expect(screen.getByTestId('invoice-subtotal')).toHaveTextContent('3,000.00');
+      expect(screen.getByTestId('invoice-tax')).toHaveTextContent('0.00');
+      expect(screen.getByTestId('invoice-total')).toHaveTextContent('3,000.00');
+      expect(lineAmountCell(0)).toHaveTextContent('3,000.00');
+    });
+
+    it('stays self-consistent when the entry is missing from the catalogue', async () => {
+      // Absence case: the catalogue 403s or is still loading, so nothing
+      // resolves. The dropdown falls back to "No Tax" — the preview MUST agree
+      // with it rather than showing a rate the selection contradicts. (The
+      // separate hazard of re-saving an unresolved line is SOUPFIN-42's.)
+      setupDefaultMocks();
+      vi.mocked(listTaxRates).mockResolvedValue([{ id: '', name: 'No Tax', rate: 0 }]);
+      vi.mocked(getInvoice).mockResolvedValue(
+        invoiceWithJoinRows([
+          {
+            id: 'join-1',
+            serialised:
+              'TaxEntryInvoiceItem(InvoiceItem(Advisory, 2.0, 1500.00), VAT-S-15.0%, 450.0, 3450.0)',
+          },
+        ])
+      );
+
+      renderInvoiceFormPage({ route: '/invoices/inv-123/edit', path: '/invoices/:id/edit' });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('invoice-item-taxRate-0')).toHaveValue('');
+      });
+
+      expect(screen.getByTestId('invoice-tax')).toHaveTextContent('0.00');
+      expect(screen.getByTestId('invoice-total')).toHaveTextContent('3,000.00');
+    });
+
+    it('preserves a rate the user picks after hydration', async () => {
+      // Guard against the fix freezing the preview to the hydrated value:
+      // changing the dropdown must still move the totals.
+      const user = userEvent.setup();
+      renderEdit(
+        invoiceWithJoinRows([
+          { id: 'join-1', taxEntry: { id: VAT_TAX_ENTRY_ID, name: 'VAT- STANDARD' } },
+        ])
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('invoice-tax')).toHaveTextContent('450.00');
+      });
+
+      await user.selectOptions(screen.getByTestId('invoice-item-taxRate-0'), NHIL_TAX_ENTRY_ID);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('invoice-tax')).toHaveTextContent('75.00');
+      });
+      expect(screen.getByTestId('invoice-total')).toHaveTextContent('3,075.00');
     });
   });
 });

@@ -190,7 +190,18 @@ export function InvoiceFormPage() {
             // `?.[0]?.taxEntry?.id` directly returned '' for that shape, so the
             // dropdown reset to "No Tax" and re-saving dropped the tax.
             taxEntryId: resolveItemTaxEntryId(item, taxRates),
-            taxRate: item.taxRate || 0,
+            // Fix (SOUPFIN-46): read the rate from the catalogue by the id we
+            // just resolved, exactly as BillFormPage does. It used to read
+            // `item.taxRate`, which is UI-only (types/index.ts) and which
+            // transformInvoice() never sets — so on edit it was ALWAYS 0 while
+            // the dropdown showed the real tax. The form then previewed a
+            // Tax/Total the saved invoice would not match. Looking the rate up
+            // by the same id the dropdown binds to is what keeps the two from
+            // drifting: an unresolved id is '' for both, so the line reads
+            // "No Tax" and previews 0 — consistent, not contradictory.
+            taxRate: taxRates?.find(
+              (t) => t.id === resolveItemTaxEntryId(item, taxRates)
+            )?.rate ?? 0,
           }))
         );
       }
