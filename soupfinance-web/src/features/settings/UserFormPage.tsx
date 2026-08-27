@@ -8,12 +8,12 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useForm } from 'react-hook-form';
+import { useForm, type FieldError, type FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { agentApi, accountPersonApi, rolesApi } from '../../api/endpoints/settings';
 import type { AgentFormData } from '../../types/settings';
-import { SOUPFINANCE_ROLES, SOUPFINANCE_ROLE_LABELS, getRoleAuthority } from '../../types/settings';
+import { SOUPFINANCE_ROLES, SOUPFINANCE_ROLE_LABELS, getRoleAuthority, getAgentUsername } from '../../types/settings';
 import { logger } from '../../utils/logger';
 // Added: backend error extraction so the form can surface the real failure (bugs 7, 9 in SOUPFIN-2)
 import { normalizeApiError } from '../../utils/apiError';
@@ -55,6 +55,16 @@ const RELEVANT_ROLES = [
   SOUPFINANCE_ROLES.LEDGER_ACCOUNT,
   SOUPFINANCE_ROLES.VENDOR,
 ];
+
+// Added (SOUPFIN-45): human-readable field names for the blocked-submit banner.
+const FIELD_LABELS: Record<string, string> = {
+  firstName: 'First name',
+  lastName: 'Last name',
+  username: 'Username',
+  password: 'Password',
+  email: 'Email',
+  roles: 'Roles',
+};
 
 export default function UserFormPage() {
   const { id } = useParams<{ id: string }>();
@@ -148,7 +158,16 @@ export default function UserFormPage() {
   // Reset form when existing user data loads
   useEffect(() => {
     if (existingUser) {
-      const roles = existingUser.authorities?.map((r) => r.authority) || [];
+      // Changed (SOUPFIN-45): resolve each authority through getRoleAuthority() rather
+      // than reading `role.authority` raw, matching how the rest of this file and
+      // UserListPage already handle roles that arrive as `serialised` only (SOUPFIN-24).
+      // Filtering out unresolvable entries keeps the array `string[]`, so Zod can never
+      // fail on an array ELEMENT (path `roles.0`) — an error shape that carries no
+      // `errors.roles.message` and would therefore block submit with nothing on screen.
+      const roles =
+        existingUser.authorities
+          ?.map((r) => getRoleAuthority(r))
+          .filter((authority): authority is string => Boolean(authority)) || [];
       const email = existingUser.emailContacts?.[0]?.email || '';
       const phone = existingUser.phoneContacts?.[0]?.phone || '';
 
@@ -160,7 +179,14 @@ export default function UserFormPage() {
         address: existingUser.address || '',
         email,
         phone,
-        username: existingUser.userAccess?.username || '',
+        // Fix (SOUPFIN-45) — THE BUG. This read `existingUser.userAccess?.username`
+        // directly, but the backend serialises `userAccess` as a shallow FK
+        // ({ id, class }) with no username on EVERY agent (measured: 0/100 on the LXC
+        // backend), so it always resolved to ''. Zod's `username: z.string().min(3)`
+        // then failed, react-hook-form refused to call onSubmit, and the "Update User"
+        // button fired no request at all. getAgentUsername() recovers it from
+        // `simpleID`, the same recovery UserListPage has done since SOUPFIN-30 #9.
+        username: getAgentUsername(existingUser) || '',
         password: '', // Don't pre-fill password
         roles,
         archived: existingUser.archived ?? false,
@@ -261,6 +287,26 @@ export default function UserFormPage() {
     saveMutation.mutate(data);
   };
 
+  // Added (SOUPFIN-45): react-hook-form swallows a blocked submit — no request, no
+  // feedback near the button — which is precisely what made this look like a dead
+  // button. The offending field's inline error renders at the TOP of the form while
+  // the submit sits at the BOTTOM, so it is routinely off-screen. Surface the blocking
+  // fields in the same banner the API errors use, so a refused submit is ALWAYS visible.
+  const onInvalid = (formErrors: FieldErrors<UserFormValues>) => {
+    const fields = Object.keys(formErrors);
+    if (fields.length === 0) return;
+    const detail = fields
+      .map((field) => {
+        const err = formErrors[field as keyof UserFormValues];
+        const message = Array.isArray(err)
+          ? err.find((e) => e?.message)?.message
+          : (err as FieldError | undefined)?.message;
+        return `${FIELD_LABELS[field] || field}: ${message || 'invalid value'}`;
+      })
+      .join('; ');
+    setSubmitError(`Please correct the highlighted fields — ${detail}`);
+  };
+
   // Handle role checkbox changes
   const handleRoleChange = (roleAuthority: string, checked: boolean) => {
     const currentRoles = selectedRoles || [];
@@ -309,7 +355,7 @@ export default function UserFormPage() {
       </div>
 
       {/* Form */}
-      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6">
+      <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="flex flex-col gap-6">
         {/* Personal Information */}
         <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-6">
           <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-4">
