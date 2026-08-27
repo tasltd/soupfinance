@@ -6,6 +6,7 @@
  */
 import { useState, useCallback } from 'react';
 import { useAccountStore, useFormatCurrency } from '../stores';
+import { useTaxRates } from './useTaxRates';
 import type { Invoice, Bill } from '../types';
 import type { TrialBalance, ProfitLoss, BalanceSheet, AgingReport } from '../types';
 import {
@@ -60,6 +61,13 @@ export function usePdf(): UsePdfReturn {
   const accountSettings = useAccountStore((state) => state.settings);
   const formatCurrency = useFormatCurrency();
 
+  // Fix (SOUPFIN-47): a line item's tax rate can only be named by matching its
+  // TaxEntry join rows against this catalogue. Without it every bill PDF printed
+  // "0%" per line while its own total block reported the tax. If the catalogue is
+  // still loading or the module gate 403s, `taxRates` is undefined and the
+  // templates render an em dash — unknown, never a false 0%.
+  const { data: taxRates } = useTaxRates();
+
   // Get company info from account settings
   const getCompanyInfo = useCallback((): CompanyInfo => {
     return {
@@ -91,20 +99,20 @@ export function usePdf(): UsePdfReturn {
   const generateInvoice = useCallback(
     async (invoice: Invoice) => {
       await generateWithLoading(async () => {
-        await generateInvoicePdf(invoice, getCompanyInfo(), formatCurrency);
+        await generateInvoicePdf(invoice, getCompanyInfo(), formatCurrency, taxRates);
       });
     },
-    [generateWithLoading, getCompanyInfo, formatCurrency]
+    [generateWithLoading, getCompanyInfo, formatCurrency, taxRates]
   );
 
   // Bill PDF
   const generateBill = useCallback(
     async (bill: Bill) => {
       await generateWithLoading(async () => {
-        await generateBillPdf(bill, getCompanyInfo(), formatCurrency);
+        await generateBillPdf(bill, getCompanyInfo(), formatCurrency, taxRates);
       });
     },
-    [generateWithLoading, getCompanyInfo, formatCurrency]
+    [generateWithLoading, getCompanyInfo, formatCurrency, taxRates]
   );
 
   // Trial Balance PDF

@@ -6,6 +6,7 @@
  */
 import { useState, useCallback } from 'react';
 import { useAccountStore, useFormatCurrency } from '../stores';
+import { useTaxRates } from './useTaxRates';
 import { emailApi, type EmailRecipient } from '../api/endpoints/email';
 import type { Invoice, Bill } from '../types';
 import type { TrialBalance, ProfitLoss, BalanceSheet, AgingReport } from '../types';
@@ -124,6 +125,11 @@ export function useEmailSend(): UseEmailSendReturn {
     };
   }, [accountSettings]);
 
+  // Fix (SOUPFIN-47): the emailed PDF is built from the same templates as the
+  // downloaded one, so it printed the same false "0%" on every line. The
+  // catalogue is what lets the template name a line's TaxEntry.
+  const { data: taxRates } = useTaxRates();
+
   // Reset state
   const reset = useCallback(() => {
     setError(null);
@@ -166,7 +172,8 @@ export function useEmailSend(): UseEmailSendReturn {
         const pdfBlob = await generateInvoicePdfBlob(
           invoice,
           getCompanyInfo(),
-          formatCurrency
+          formatCurrency,
+          taxRates
         );
 
         // Send via email API
@@ -181,7 +188,7 @@ export function useEmailSend(): UseEmailSendReturn {
         return response.success;
       });
     },
-    [sendWithLoading, getCompanyInfo, formatCurrency]
+    [sendWithLoading, getCompanyInfo, formatCurrency, taxRates]
   );
 
   // Send Bill
@@ -196,7 +203,8 @@ export function useEmailSend(): UseEmailSendReturn {
         const pdfBlob = await generateBillPdfBlob(
           bill,
           getCompanyInfo(),
-          formatCurrency
+          formatCurrency,
+          taxRates
         );
 
         const response = await emailApi.sendBill(
@@ -210,7 +218,7 @@ export function useEmailSend(): UseEmailSendReturn {
         return response.success;
       });
     },
-    [sendWithLoading, getCompanyInfo, formatCurrency]
+    [sendWithLoading, getCompanyInfo, formatCurrency, taxRates]
   );
 
   // Send Trial Balance

@@ -7,6 +7,46 @@
 import type { Invoice, Bill } from '../../types';
 import type { TrialBalance, ProfitLoss, BalanceSheet, AgingReport } from '../../types';
 import type { CompanyInfo } from './index';
+// Imported from the pure join-row helper rather than the `bills`/`invoices`
+// endpoint wrappers: those pull in `apiClient` (axios), and this module must
+// stay loadable outside the browser so its output can be asserted directly.
+import { resolveTaxRateFromRows, type TaxEntryJoinRow } from '../../api/endpoints/taxEntryJoins';
+
+/**
+ * The tax catalogue these templates need, i.e. what `listTaxRates()` returns.
+ * Kept structural so callers can pass `TaxRate[]` without a cast.
+ */
+export interface TaxRateOption {
+  id: string;
+  rate?: number;
+  serialised?: string;
+}
+
+/**
+ * Render the Tax cell for one line of a customer-facing document.
+ *
+ * Fix (SOUPFIN-47): the bill template printed `${item.taxRate}%`. Neither
+ * `BillItem` nor `InvoiceItem` HAS a `taxRate` column — tax is carried by the
+ * `taxEntry*ItemList` join rows — and `getBill()` normalises the absent field to
+ * `Number(item.taxRate) || 0`, so every line of every downloaded or emailed bill
+ * printed `0%`. That is a positive claim of no tax, on the document the vendor
+ * receives, directly under a total block that reports the tax. The invoice
+ * template made the mirror mistake in the other direction: a hardcoded `-` that
+ * never resolved, so a taxed invoice line never showed its rate at all.
+ *
+ * `resolveTaxRateFromRows` keeps the three states apart — `0` for a genuinely
+ * untaxed line, the rate when resolvable, `null` when the line is taxed by an
+ * entry that cannot be named (bare FK label missing from the catalogue, or no
+ * catalogue at all). Only the first two may be stated as a percentage; `null`
+ * renders an em dash, never `0%`.
+ */
+function renderTaxRateCell(
+  rows: TaxEntryJoinRow[] | null | undefined,
+  taxRates?: TaxRateOption[]
+): string {
+  const rate = resolveTaxRateFromRows(rows, taxRates);
+  return rate == null ? '&mdash;' : `${rate}%`;
+}
 
 // =============================================================================
 // Shared Styles
@@ -288,7 +328,8 @@ const baseStyles = `
 export function generateInvoiceHtml(
   invoice: Invoice,
   company: CompanyInfo,
-  formatCurrency: (amount: number | null | undefined) => string
+  formatCurrency: (amount: number | null | undefined) => string,
+  taxRates?: TaxRateOption[]
 ): string {
   // Fix: invoice.status is optional (InvoiceStatus | undefined), default to DRAFT
   const statusClass = getStatusClass(invoice.status || 'DRAFT');
@@ -350,7 +391,7 @@ export function generateInvoiceHtml(
                 <td>${escapeHtml(item.description)}</td>
                 <td class="text-right">${item.quantity}</td>
                 <td class="text-right">${formatCurrency(item.unitPrice)}</td>
-                <td class="text-right">-</td>
+                <td class="text-right">${renderTaxRateCell(item.taxEntryInvoiceItemList, taxRates)}</td>
                 <td class="text-right font-medium">${formatCurrency(item.quantity * item.unitPrice)}</td>
               </tr>
             `).join('')}
@@ -412,7 +453,8 @@ export function generateInvoiceHtml(
 export function generateBillHtml(
   bill: Bill,
   company: CompanyInfo,
-  formatCurrency: (amount: number | null | undefined) => string
+  formatCurrency: (amount: number | null | undefined) => string,
+  taxRates?: TaxRateOption[]
 ): string {
   const statusClass = getStatusClass(bill.status);
 
@@ -471,7 +513,7 @@ export function generateBillHtml(
                 <td>${escapeHtml(item.description)}</td>
                 <td class="text-right">${item.quantity}</td>
                 <td class="text-right">${formatCurrency(item.unitPrice)}</td>
-                <td class="text-right">${item.taxRate}%</td>
+                <td class="text-right">${renderTaxRateCell(item.taxEntryBillItemList, taxRates)}</td>
                 <td class="text-right font-medium">${formatCurrency(item.amount)}</td>
               </tr>
             `).join('')}

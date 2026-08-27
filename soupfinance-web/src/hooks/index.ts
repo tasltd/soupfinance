@@ -15,6 +15,9 @@ export { useLedgerAccounts, getMockAccounts } from './useLedgerAccounts';
 export { useTransactions, getMockTransactions } from './useTransactions';
 export type { UnifiedTransaction } from './useTransactions';
 
+// Added (SOUPFIN-47): shared TaxEntry catalogue, needed to name a line's tax rate
+export { useTaxRates } from './useTaxRates';
+
 // Added: PDF generation hook for invoices, bills, and reports
 export { usePdf } from './usePdf';
 export type { UsePdfReturn } from './usePdf';

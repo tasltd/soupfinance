@@ -120,6 +120,7 @@ import {
   generateProfitLossHtml,
   generateBalanceSheetHtml,
   generateAgingReportHtml,
+  type TaxRateOption,
 } from './templates';
 
 /**
@@ -128,9 +129,10 @@ import {
 export async function generateInvoicePdf(
   invoice: Invoice,
   companyInfo: CompanyInfo,
-  formatCurrency: (amount: number | null | undefined) => string
+  formatCurrency: (amount: number | null | undefined) => string,
+  taxRates?: TaxRateOption[]
 ): Promise<void> {
-  const html = generateInvoiceHtml(invoice, companyInfo, formatCurrency);
+  const html = generateInvoiceHtml(invoice, companyInfo, formatCurrency, taxRates);
   const filename = `Invoice-${String(invoice.number)}.pdf`;
   await generateAndDownloadPdf(html, filename);
 }
@@ -141,9 +143,10 @@ export async function generateInvoicePdf(
 export async function generateBillPdf(
   bill: Bill,
   companyInfo: CompanyInfo,
-  formatCurrency: (amount: number | null | undefined) => string
+  formatCurrency: (amount: number | null | undefined) => string,
+  taxRates?: TaxRateOption[]
 ): Promise<void> {
-  const html = generateBillHtml(bill, companyInfo, formatCurrency);
+  const html = generateBillHtml(bill, companyInfo, formatCurrency, taxRates);
   const filename = `Bill-${bill.billNumber}.pdf`;
   await generateAndDownloadPdf(html, filename);
 }
@@ -216,9 +219,10 @@ export async function generateAgingReportPdf(
 export async function generateInvoicePdfBlob(
   invoice: Invoice,
   companyInfo: CompanyInfo,
-  formatCurrency: (amount: number | null | undefined) => string
+  formatCurrency: (amount: number | null | undefined) => string,
+  taxRates?: TaxRateOption[]
 ): Promise<Blob> {
-  const html = generateInvoiceHtml(invoice, companyInfo, formatCurrency);
+  const html = generateInvoiceHtml(invoice, companyInfo, formatCurrency, taxRates);
   return generatePdfFromHtml(html);
 }
 
@@ -228,9 +232,10 @@ export async function generateInvoicePdfBlob(
 export async function generateBillPdfBlob(
   bill: Bill,
   companyInfo: CompanyInfo,
-  formatCurrency: (amount: number | null | undefined) => string
+  formatCurrency: (amount: number | null | undefined) => string,
+  taxRates?: TaxRateOption[]
 ): Promise<Blob> {
-  const html = generateBillHtml(bill, companyInfo, formatCurrency);
+  const html = generateBillHtml(bill, companyInfo, formatCurrency, taxRates);
   return generatePdfFromHtml(html);
 }
 
