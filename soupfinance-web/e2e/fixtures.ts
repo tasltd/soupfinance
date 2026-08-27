@@ -1228,6 +1228,10 @@ export const mockPaymentMethods = [
  * - `GET /rest/client/index.json` — client pickers on invoice and receipt-voucher forms.
  * - `GET /rest/ledgerAccount/index.json` — account pickers on payment, voucher
  *   and journal-entry forms.
+ * - `GET /rest/taxEntry/index.json` — listTaxRates(). Fires from the invoice and
+ *   bill line-item tax pickers (SOUPFIN-37/38), from the bill detail Tax Rate
+ *   column (SOUPFIN-44), and — since SOUPFIN-47 — from usePdf()/useEmailSend()
+ *   on every page that can produce a document.
  *
  * Left unmocked these proxy to VITE_PROXY_TARGET; a real backend there answers
  * 401 and the client.ts interceptor redirects the page to /login mid-test.
@@ -1258,6 +1262,7 @@ export async function mockAmbientApi(page: import('@playwright/test').Page) {
   );
   await page.route('**/rest/client/index.json*', (route) => route.fulfill(json([])));
   await page.route('**/rest/ledgerAccount/index.json*', (route) => route.fulfill(json([])));
+  await page.route('**/rest/taxEntry/index.json*', (route) => route.fulfill(json([])));
 }
 
 // ===========================================================================
