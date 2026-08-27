@@ -267,11 +267,28 @@ export interface Bill extends BaseEntity {
   purchaseOrderNumber?: string; // Added: PO number reference
   salesOrderNumber?: string; // Added: SO number reference
   status: BillStatus;
+  /**
+   * Changed (SOUPFIN-43): these five are NORMALISED names produced by
+   * `transformBill()`. The backend spells four of them differently — see the
+   * raw fields below. Read these; never read the raw ones outside the API layer.
+   */
   subtotal: number;
   taxAmount: number;
   totalAmount: number;
   amountPaid: number;
   amountDue: number;
+  /**
+   * Raw header amounts exactly as `grails-app/views/bill/_bill.gson` emits them
+   * (derived getters on `soupbroker.finance.Bill`, not columns). Optional
+   * because they are absent from anything the frontend constructs, and never
+   * sent on a write.
+   */
+  subTotal?: number;
+  total?: number;
+  totalTaxAmount?: number;
+  paidAmount?: number;
+  baseTotal?: number;
+  basePaidAmount?: number;
   notes?: string;
   billItemList?: BillItem[]; // Changed: Backend field name (was previously aliased as items)
 }

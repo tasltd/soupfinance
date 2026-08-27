@@ -32,6 +32,31 @@ const mockVendors = [
   { id: 'vendor-003', name: 'Office Solutions', email: 'invoices@officesolutions.com' },
 ];
 
+/**
+ * Real TaxEntry rows (shape verbatim from /rest/taxEntry/index.json). The
+ * line-item tax dropdown's option VALUE is the TaxEntry id, not a rate — see
+ * BillFormPage. TEN_PERCENT_TAX_ID keeps the existing 10%/500/50/550 arithmetic
+ * in these tests intact.
+ */
+const mockTaxEntries = [
+  {
+    id: 'ff8081817fe4ae93017fe5c9cf10017b',
+    name: 'Service Tax 10%',
+    abbreviation: 'ST',
+    taxRate: 10.0,
+    serialised: 'ST-10.0%',
+  },
+  {
+    id: 'ff8081817f8e0105017f8ea9ba580014',
+    name: 'Value Added Tax -Flat Rate',
+    abbreviation: 'VAT-FR',
+    taxRate: 15.0,
+    serialised: 'VAT-FR-15.0%',
+  },
+];
+
+const TEN_PERCENT_TAX_ID = 'ff8081817fe4ae93017fe5c9cf10017b';
+
 const mockBillItems = [
   {
     id: 'item-001',
@@ -226,12 +251,32 @@ async function mockBillsApi(page: any, bills = mockBills) {
   });
 }
 
+/**
+ * The TaxEntry catalogue, needed by BOTH the bill form (dropdown options) and the
+ * bill detail page (SOUPFIN-38 resolves the Line Items "Tax Rate" column against
+ * it). Unmocked, the request proxies to an absent backend and the 401 redirects
+ * the page to /login — which surfaces as `bill-detail-page` "element(s) not
+ * found", not as an obviously missing mock.
+ */
+async function mockTaxEntriesApi(page: any) {
+  if (isLxcMode()) return;
+
+  await page.route('**/rest/taxEntry/index.json*', (route: any) => {
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(mockTaxEntries),
+    });
+  });
+}
+
 async function mockBillDetailApi(page: any, bill: typeof mockBills[0]) {
   // Skip mocking in LXC mode - let requests go to real backend
   if (isLxcMode()) return;
 
   // Mock token validation to keep user authenticated
   await mockTokenValidationApi(page, true);
+  await mockTaxEntriesApi(page);
 
   await page.route(`**/rest/bill/show/${bill.id}.json*`, (route: any) => {
     route.fulfill({
@@ -290,6 +335,12 @@ async function mockVendorsApi(page: any, vendors = mockVendors) {
       body: JSON.stringify(bill?.billItemList ?? []),
     });
   });
+
+  // Fix (SOUPFIN-43): the line-item tax dropdown is populated from the real
+  // TaxEntry catalogue (SOUPFIN-37/38 moved it off the hardcoded rate list), and
+  // this spec mocked no catalogue — so the select only ever held "No Tax" and
+  // every `selectOption` on it timed out with "did not find some options".
+  await mockTaxEntriesApi(page);
 }
 
 async function mockBillPaymentsApi(page: any, billId: string, payments: typeof mockBillPayments = []) {
@@ -661,8 +712,8 @@ test.describe('Bill Management', () => {
       await page.getByTestId('bill-item-description-0').fill('Test Service');
       await page.getByTestId('bill-item-quantity-0').fill('5');
       await page.getByTestId('bill-item-unitPrice-0').fill('100');
-      // Changed: taxRate is now a select dropdown, not an input field
-      await page.getByTestId('bill-item-taxRate-0').selectOption('10');
+      // Changed (SOUPFIN-43): the option VALUE is a real TaxEntry id, not a rate.
+      await page.getByTestId('bill-item-taxRate-0').selectOption(TEN_PERCENT_TAX_ID);
 
       await takeScreenshot(page, 'bills-form-with-line-item');
     });
@@ -704,8 +755,8 @@ test.describe('Bill Management', () => {
       // Fill in line item (Qty: 10 × Price: $50 = $500, Tax 10% = $50, Total = $550)
       await page.getByTestId('bill-item-quantity-0').fill('10');
       await page.getByTestId('bill-item-unitPrice-0').fill('50');
-      // Changed: taxRate is now a select dropdown, not an input field
-      await page.getByTestId('bill-item-taxRate-0').selectOption('10');
+      // Changed (SOUPFIN-43): the option VALUE is a real TaxEntry id, not a rate.
+      await page.getByTestId('bill-item-taxRate-0').selectOption(TEN_PERCENT_TAX_ID);
 
       // Trigger calculation (blur event on unit price since selectOption auto-triggers change)
       await page.getByTestId('bill-item-unitPrice-0').blur();
@@ -1200,6 +1251,9 @@ test.describe('Bill Management', () => {
 
       // Mock token validation to keep user authenticated
       await mockTokenValidationApi(page, true);
+      // The detail page loads the TaxEntry catalogue in parallel with the bill; an
+      // unmocked 401 there redirects to /login, so the error state never renders.
+      await mockTaxEntriesApi(page);
 
       // Mock 404 response for non-existent bill
       await page.route('**/rest/bill/show/non-existent.json*', (route: any) => {

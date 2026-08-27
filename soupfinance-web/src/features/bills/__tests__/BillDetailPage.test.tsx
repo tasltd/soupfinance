@@ -570,4 +570,80 @@ describe('BillDetailPage', () => {
       expect(within(amountCard).getByText('$50.00')).toBeInTheDocument();
     });
   });
+
+  /**
+   * SOUPFIN-43 — the Amount Summary rendered Subtotal / Tax / Total as 0.00
+   * while Balance Due was correct, because the backend spells the header amounts
+   * subTotal / totalTaxAmount / total / paidAmount and only `amountDue` collided
+   * with this codebase's naming.
+   *
+   * The mapping itself is pinned in the API-layer tests. These assert the other
+   * half: that each row binds the field it is labelled with. The existing tests
+   * above match by text anywhere inside the card, which cannot tell Subtotal from
+   * Tax — so they would still pass if two rows were swapped.
+   */
+  describe('amount summary rows (SOUPFIN-43)', () => {
+    it('renders each row from its own header field, none of them zero', async () => {
+      // The reported bill #6: qty 3 x GH¢500 with VAT 15%, unpaid.
+      const mockBill = createMockBill({
+        subtotal: 1500,
+        taxAmount: 225,
+        totalAmount: 1725,
+        amountPaid: 0,
+        amountDue: 1725,
+      });
+      vi.mocked(getBill).mockResolvedValue(mockBill);
+      vi.mocked(listBillPayments).mockResolvedValue([]);
+
+      renderBillDetailPage();
+
+      expect(await screen.findByTestId('bill-detail-subtotal')).toHaveTextContent('$1,500.00');
+      expect(screen.getByTestId('bill-detail-tax')).toHaveTextContent('$225.00');
+      expect(screen.getByTestId('bill-detail-total')).toHaveTextContent('$1,725.00');
+      expect(screen.getByTestId('bill-detail-amount-paid')).toHaveTextContent('$0.00');
+      expect(screen.getByTestId('bill-detail-balance-due')).toHaveTextContent('$1,725.00');
+
+      // The exact reported symptom: a taxed bill whose summary reads all zeros
+      // while the balance is right.
+      expect(screen.getByTestId('bill-detail-subtotal')).not.toHaveTextContent('$0.00');
+      expect(screen.getByTestId('bill-detail-tax')).not.toHaveTextContent('$0.00');
+      expect(screen.getByTestId('bill-detail-total')).not.toHaveTextContent('$0.00');
+    });
+
+    it('keeps Total and Balance Due distinct once a payment is recorded', async () => {
+      const mockBill = createMockBill({
+        subtotal: 1500,
+        taxAmount: 225,
+        totalAmount: 1725,
+        amountPaid: 725,
+        amountDue: 1000,
+      });
+      vi.mocked(getBill).mockResolvedValue(mockBill);
+      vi.mocked(listBillPayments).mockResolvedValue([]);
+
+      renderBillDetailPage();
+
+      expect(await screen.findByTestId('bill-detail-total')).toHaveTextContent('$1,725.00');
+      expect(screen.getByTestId('bill-detail-amount-paid')).toHaveTextContent('$725.00');
+      expect(screen.getByTestId('bill-detail-balance-due')).toHaveTextContent('$1,000.00');
+    });
+
+    it('renders a genuinely zero bill as 0.00 rather than blank or NaN', async () => {
+      const mockBill = createMockBill({
+        subtotal: 0,
+        taxAmount: 0,
+        totalAmount: 0,
+        amountPaid: 0,
+        amountDue: 0,
+      });
+      vi.mocked(getBill).mockResolvedValue(mockBill);
+      vi.mocked(listBillPayments).mockResolvedValue([]);
+
+      renderBillDetailPage();
+
+      expect(await screen.findByTestId('bill-detail-subtotal')).toHaveTextContent('$0.00');
+      expect(screen.getByTestId('bill-detail-total')).toHaveTextContent('$0.00');
+      expect(screen.getByTestId('bill-detail-balance-due')).toHaveTextContent('$0.00');
+    });
+  });
 });

@@ -640,6 +640,64 @@ export async function mockTokenValidationApi(
       });
     }
   });
+
+  // Fix (SOUPFIN-43): every invoice/bill form and detail page loads the TaxEntry
+  // catalogue (SOUPFIN-37/38 moved line-item tax off the hardcoded rate list onto
+  // real TaxEntry rows). No shared fixture mocked it, so in mock mode the request
+  // proxied to an absent backend and the 401 redirected the page to /login — which
+  // surfaced as "element(s) not found" on unrelated assertions across bills,
+  // invoices, payments and user-journeys, not as an obviously missing mock.
+  //
+  // Registered here rather than per spec because every mock-mode spec already calls
+  // this helper to stay authenticated. Playwright routes are LIFO, so a spec that
+  // needs a specific catalogue (soupfin-37) still wins by registering its own after.
+  if (success) {
+    await mockTaxEntriesApi(page);
+  }
+}
+
+/**
+ * Default TaxEntry catalogue — shape verbatim from /rest/taxEntry/index.json.
+ *
+ * `listTaxRates()` drops withholding rows and keeps compound ones (SOUPFIN-42), so
+ * a spec asserting on the dropdown should expect VAT-S present and WHT absent.
+ */
+export const mockTaxEntries = [
+  {
+    id: 'ff8081817fe4ae93017fe5c9cf10017b',
+    name: 'CST',
+    abbreviation: 'CST',
+    description: 'Comsys',
+    taxRate: 5.0,
+    isTaxable: true,
+    serialised: 'CST-5.0%',
+  },
+  {
+    id: 'ff8081817f8e0105017f8ea9ba580014',
+    name: 'Value Added Tax -Flat Rate',
+    abbreviation: 'VAT-FR',
+    taxRate: 15.0,
+    serialised: 'VAT-FR-15.0%',
+  },
+];
+
+/**
+ * Helper to mock the TaxEntry catalogue.
+ * CONDITIONAL: Skips mocking in LXC mode
+ */
+export async function mockTaxEntriesApi(
+  page: Awaited<ReturnType<typeof base.page>>,
+  entries: unknown[] = mockTaxEntries
+) {
+  if (isLxcMode()) return;
+
+  await page.route('**/rest/taxEntry/index.json*', (route) => {
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(entries),
+    });
+  });
 }
 
 /**
