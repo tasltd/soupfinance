@@ -12,6 +12,66 @@ import { logger } from '../utils/logger';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/rest';
 
+// Fix (SOUPFIN-49): every auth artefact a signed-in session writes, in one place.
+// `auth-storage` is Zustand's persisted key (see authStore's persist name) and
+// `auth_storage_type` records which storage login chose (dual-storage strategy).
+// The 401 handler used to clear only access_token and user, so the persisted key
+// survived; useAuthStore rehydrated isAuthenticated: true and PublicRoute
+// (App.tsx) bounced the user straight from /login back to /dashboard.
+const AUTH_STORAGE_KEYS = [
+  'access_token',
+  'user',
+  'auth-storage',
+  'auth_storage_type',
+] as const;
+
+/**
+ * Fix (SOUPFIN-49): Clear every auth artefact from BOTH storages.
+ *
+ * Storage-only — it deliberately does NOT touch the Zustand store, so
+ * authStore.logout() can call it without recursing back through the resetter.
+ */
+export function clearAuthSession(): void {
+  AUTH_STORAGE_KEYS.forEach((key) => {
+    localStorage.removeItem(key);
+    sessionStorage.removeItem(key);
+  });
+}
+
+// Fix (SOUPFIN-49): authStore registers its own state reset here. Registration
+// rather than a direct import because authStore already imports this module — a
+// static import back would close the cycle. Left null until authStore loads;
+// clearAuthSession() above still runs, so the storage clear never depends on it.
+let resetAuthState: (() => void) | null = null;
+
+export function setAuthStateResetter(fn: (() => void) | null): void {
+  resetAuthState = fn;
+}
+
+/**
+ * Fix (SOUPFIN-49): Shared 401 handler for apiClient and accountClient.
+ *
+ * Clearing storage alone is not enough, for two reasons:
+ *  1. Zustand persist re-writes `auth-storage` on any later set(). window.location.href
+ *     does not navigate synchronously, so a plain removeItem can be resurrected
+ *     before the browser actually leaves the page.
+ *  2. When the 401 arrives while already on /login there is no reload at all, so
+ *     nothing would re-read storage — the in-memory store keeps saying authenticated
+ *     and PublicRoute forwards to /dashboard.
+ * Resetting the store covers both; the store then re-persists isAuthenticated: false.
+ */
+export function handleUnauthorized(): void {
+  logger.auth('session_expired');
+
+  clearAuthSession();
+  resetAuthState?.();
+
+  // Redirect to login if not already there
+  if (window.location.pathname !== '/login') {
+    window.location.href = '/login';
+  }
+}
+
 // Extend axios config to include metadata for timing
 declare module 'axios' {
   export interface InternalAxiosRequestConfig {
@@ -99,19 +159,10 @@ apiClient.interceptors.response.use(
     });
 
     // Handle 401 errors by redirecting to login
+    // Changed (SOUPFIN-49): delegate to the shared handler so the persisted
+    // Zustand key and the in-memory store are cleared too, not just the tokens.
     if (status === 401) {
-      logger.auth('session_expired');
-
-      // Fix: Clear stored credentials from both storages (dual-storage pattern)
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('user');
-      sessionStorage.removeItem('access_token');
-      sessionStorage.removeItem('user');
-
-      // Redirect to login if not already there
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
-      }
+      handleUnauthorized();
     }
 
     return Promise.reject(error);
@@ -173,15 +224,10 @@ accountClient.interceptors.response.use(
       statusText: error.response?.statusText,
       data: error.response?.data,
     });
+    // Changed (SOUPFIN-49): same shared handler as apiClient — accountClient
+    // (/account/*) had its own copy of the same incomplete clearing logic.
     if (status === 401) {
-      logger.auth('session_expired');
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('user');
-      sessionStorage.removeItem('access_token');
-      sessionStorage.removeItem('user');
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
-      }
+      handleUnauthorized();
     }
     return Promise.reject(error);
   }

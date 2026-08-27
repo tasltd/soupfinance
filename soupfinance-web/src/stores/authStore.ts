@@ -8,7 +8,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { login as apiLogin, logout as apiLogout, getCurrentUser, type AuthUser } from '../api/auth';
-import apiClient from '../api/client';
+import apiClient, { clearAuthSession, setAuthStateResetter } from '../api/client';
 // Fix (SOUPFIN-29): translate raw Axios "Request failed with status code 401"
 // into a user-friendly login error message.
 import { getLoginErrorMessage } from '../api/errors';
@@ -72,12 +72,9 @@ export const useAuthStore = create<AuthState>()(
 
       logout: () => {
         // Changed (2026-01-28): Clear both storages to handle dual-storage strategy
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('user');
-        localStorage.removeItem('auth-storage');
-        localStorage.removeItem('auth_storage_type');
-        sessionStorage.removeItem('access_token');
-        sessionStorage.removeItem('user');
+        // Changed (SOUPFIN-49): use the shared helper so logout and the 401 handler
+        // can never drift apart on which keys count as "the session".
+        clearAuthSession();
         set({
           user: null,
           isAuthenticated: false,
@@ -161,12 +158,8 @@ export const useAuthStore = create<AuthState>()(
           });
         } else {
           // Changed (2026-01-28): Token invalid, clear both storages (dual-storage strategy)
-          localStorage.removeItem('access_token');
-          localStorage.removeItem('user');
-          localStorage.removeItem('auth-storage');
-          localStorage.removeItem('auth_storage_type');
-          sessionStorage.removeItem('access_token');
-          sessionStorage.removeItem('user');
+          // Changed (SOUPFIN-49): shared helper — same key list as logout and the 401 handler.
+          clearAuthSession();
           set({
             user: null,
             isAuthenticated: false,
@@ -186,6 +179,30 @@ export const useAuthStore = create<AuthState>()(
     }
   )
 );
+
+// Fix (SOUPFIN-49): let the 401 interceptor reset this store without importing it.
+// client.ts cannot import authStore (authStore already imports client.ts, which would
+// close an import cycle), so authStore pushes the resetter down instead.
+//
+// This runs on the SAME set() path as initialize()'s invalid-token branch, so it
+// re-persists auth-storage as { isAuthenticated: false } rather than leaving the key
+// absent — a later set() therefore cannot resurrect a stale `true`.
+//
+// The error message matches initialize()'s wording, but note it is only USER-VISIBLE
+// when no reload follows (a 401 arriving while already on /login). On the redirect
+// path, handleUnauthorized navigates with window.location.href — a full document load
+// — and persist's partialize keeps only { user, isAuthenticated }, so `error` is
+// dropped. Showing it after a reload would need a separate persisted flag; that is
+// beyond SOUPFIN-49, which is about landing on the form at all.
+setAuthStateResetter(() => {
+  useAuthStore.setState({
+    user: null,
+    isAuthenticated: false,
+    isLoading: false,
+    isInitialized: true,
+    error: 'Session expired. Please log in again.',
+  });
+});
 
 // Helper hook for checking roles
 export function useHasRole(role: string): boolean {

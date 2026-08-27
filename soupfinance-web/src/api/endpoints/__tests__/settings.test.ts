@@ -37,6 +37,14 @@ vi.mock('../../client', () => {
     getCsrfToken: vi.fn(),
     getCsrfTokenForEdit: vi.fn(),
     csrfQueryString: vi.fn(),
+    // Added (SOUPFIN-49): this file mocks the client module wholesale, and it
+    // transitively loads authStore (endpoints/settings.ts imports it), which now
+    // calls setAuthStateResetter() at module scope. Omitting these two makes the
+    // whole suite fail to load. Stubs are enough — 401 handling is covered by
+    // src/api/__tests__/soupfin-49-unauthorized-session.test.ts.
+    clearAuthSession: vi.fn(),
+    setAuthStateResetter: vi.fn(),
+    handleUnauthorized: vi.fn(),
   };
 });
 

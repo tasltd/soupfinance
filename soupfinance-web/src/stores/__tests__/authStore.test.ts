@@ -16,14 +16,25 @@ vi.mock('../../api/auth', () => ({
 }))
 
 // Added: Mock the apiClient for token validation
-vi.mock('../../api/client', () => ({
-  default: {
-    get: vi.fn(),
-    post: vi.fn(),
-    put: vi.fn(),
-    delete: vi.fn(),
-  },
-}))
+// Changed (SOUPFIN-49): keep the module's REAL named exports (clearAuthSession,
+// setAuthStateResetter) and stub only the default axios instance. authStore now
+// calls clearAuthSession() and registers a resetter at module scope, so a bare
+// object literal here would import them as undefined and throw on load. Keeping
+// them real also means logout() still genuinely clears storage under test.
+// axios itself is mocked globally in test/setup.ts, so importing the real
+// client module creates no live HTTP client.
+vi.mock('../../api/client', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../api/client')>()
+  return {
+    ...actual,
+    default: {
+      get: vi.fn(),
+      post: vi.fn(),
+      put: vi.fn(),
+      delete: vi.fn(),
+    },
+  }
+})
 
 // Import mocked functions for test control
 import * as authApi from '../../api/auth'
