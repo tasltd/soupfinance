@@ -9,8 +9,12 @@
  */
 import { defineConfig, devices } from '@playwright/test';
 
-// Dedicated port for E2E tests to avoid conflicts with other dev servers
-const E2E_TEST_PORT = 5180;
+// Dedicated port for E2E tests to avoid conflicts with other dev servers.
+// Overridable via E2E_PORT because `reuseExistingServer` will happily attach to a
+// dev server started from ANOTHER worktree on 5180 — the suite then silently tests
+// that checkout's code instead of this one. Set E2E_PORT when 5180 is taken rather
+// than stopping the other server.
+const E2E_TEST_PORT = Number(process.env.E2E_PORT) || 5180;
 
 export default defineConfig({
   // Test directory
