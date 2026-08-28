@@ -94,6 +94,20 @@ export const agentApi = {
 
   /**
    * Get single agent by ID
+   *
+   * WARNING (SOUPFIN-50): `/agent/show/{id}.json` can serve a STALE read.
+   * The backend caches it via `@Cacheable(value='agent', key={id})` (plain String) but
+   * evicts on save via `@CacheEvict(value='agent', key={"${agent?.id}"})` (GString), and
+   * the two key types never compare equal — so the entry is never evicted. Because
+   * `update()` below fetches its CSRF token from `/agent/edit/{id}.json`, which hits the
+   * SAME cached read, every save warms the cache with pre-update data first. The stale
+   * value then survives until the backend JVM restarts.
+   *
+   * Do NOT verify an agent write through this endpoint. `/agent/index.json` is uncached
+   * and always fresh — assert against that instead (see the SOUPFIN-45 regression spec).
+   *
+   * Fix lives in soupmarkets-web, not here (.claude/rules/backend-changes-workflow.md);
+   * see plans/soupfin-50-agent-cache-evict-key-backend.md. Remove this warning once it ships.
    */
   get: async (id: string): Promise<Agent> => {
     const response = await apiClient.get<Agent>(`/agent/show/${id}.json`);
