@@ -95,17 +95,26 @@ export const agentApi = {
   /**
    * Get single agent by ID
    *
-   * NOTE (SOUPFIN-50): `show/{id}.json` currently serves a STALE read — after a
-   * successful update it keeps returning the pre-update values until the backend JVM
-   * restarts, while `index.json` and the DB are both correct. Cause is in
-   * soupmarkets-web: `AgentService.save` evicts the `agent` cache with an interpolated
-   * GString key (`key={"${agent?.id}"}`) that can never match the plain String key used
-   * by `@Cacheable` on `get` — see plans/soupfin-50-agent-cache-evict-key-backend.md.
+   * WARNING (SOUPFIN-50): `/agent/show/{id}.json` can serve a STALE read.
+   * The backend caches it via `@Cacheable(value='agent', key={id})` (plain String) but
+   * evicted on save via `@CacheEvict(value='agent', key={"${agent?.id}"})` (GString), and
+   * the two key types never compare equal — so the entry was never evicted. Because
+   * `update()` below fetches its CSRF token from `/agent/edit/{id}.json`, which hits the
+   * SAME cached read, every save warms the cache with pre-update data first. The stale
+   * value then survives until the backend JVM restarts.
    *
-   * So: if the Edit form shows old values after a save, the write is fine — do not go
-   * looking for a bug in the update path. Verify agent writes through `index.json`.
-   * There is no correct client-side workaround (`edit/{id}.json` hits the same cached
-   * read, `index.json` ignores an `id=` filter). Remove this note once the backend ships.
+   * So if the Edit form shows old values after a save, the WRITE IS FINE — do not go
+   * looking for a bug in the update path.
+   *
+   * Do NOT verify an agent write through this endpoint. `/agent/index.json` is uncached
+   * and always fresh — assert against that instead (see the SOUPFIN-45 regression spec).
+   * There is no correct client-side workaround: `edit/{id}.json` hits the same cached
+   * read, and `index.json` ignores an `id=` filter.
+   *
+   * Fix lives in soupmarkets-web, not here (.claude/rules/backend-changes-workflow.md);
+   * see plans/soupfin-50-agent-cache-evict-key-backend.md. It has landed there (the evict
+   * key is now `key={agent?.id}`), so this staleness ends per-environment as each backend
+   * is redeployed — keep this note until every environment is on that build.
    */
   get: async (id: string): Promise<Agent> => {
     const response = await apiClient.get<Agent>(`/agent/show/${id}.json`);
