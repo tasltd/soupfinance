@@ -94,6 +94,18 @@ export const agentApi = {
 
   /**
    * Get single agent by ID
+   *
+   * NOTE (SOUPFIN-50): `show/{id}.json` currently serves a STALE read — after a
+   * successful update it keeps returning the pre-update values until the backend JVM
+   * restarts, while `index.json` and the DB are both correct. Cause is in
+   * soupmarkets-web: `AgentService.save` evicts the `agent` cache with an interpolated
+   * GString key (`key={"${agent?.id}"}`) that can never match the plain String key used
+   * by `@Cacheable` on `get` — see plans/soupfin-50-agent-cache-evict-key-backend.md.
+   *
+   * So: if the Edit form shows old values after a save, the write is fine — do not go
+   * looking for a bug in the update path. Verify agent writes through `index.json`.
+   * There is no correct client-side workaround (`edit/{id}.json` hits the same cached
+   * read, `index.json` ignores an `id=` filter). Remove this note once the backend ships.
    */
   get: async (id: string): Promise<Agent> => {
     const response = await apiClient.get<Agent>(`/agent/show/${id}.json`);
