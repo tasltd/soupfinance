@@ -1,0 +1,1025 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SoupFinance | User Guide</title>
+<meta name="description" content="How to use SoupFinance: register a company, raise invoices, record bills and payments, keep the ledger, and run financial reports.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="masthead">
+  <a class="masthead__brand" href="#introduction">
+    <span class="masthead__mark">S</span>Soup<span>Finance</span>
+  </a>
+  <span class="masthead__tag">User Guide</span>
+  <button class="masthead__toggle" id="toc-toggle" aria-expanded="false" aria-controls="toc">Contents</button>
+</header>
+
+<div class="shell">
+
+<nav class="toc" id="toc" aria-label="Contents">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#introduction">Introduction</a></li>
+    <li><a href="#getting-started">Getting started</a>
+      <ol class="toc__sub">
+        <li><a href="#register">Register your company</a></li>
+        <li><a href="#sign-in">Sign in</a></li>
+        <li><a href="#password">Reset your password</a></li>
+      </ol>
+    </li>
+    <li><a href="#navigation">Finding your way around</a></li>
+    <li><a href="#dashboard">Dashboard</a></li>
+    <li><a href="#clients">Clients</a></li>
+    <li><a href="#invoices">Invoices</a></li>
+    <li><a href="#vendors">Vendors</a></li>
+    <li><a href="#bills">Bills</a></li>
+    <li><a href="#payments">Payments</a></li>
+    <li><a href="#ledger">Ledger</a>
+      <ol class="toc__sub">
+        <li><a href="#chart-of-accounts">Chart of accounts</a></li>
+        <li><a href="#ledger-transactions">Ledger transactions</a></li>
+      </ol>
+    </li>
+    <li><a href="#accounting">Accounting</a>
+      <ol class="toc__sub">
+        <li><a href="#transaction-register">Transaction register</a></li>
+        <li><a href="#journal-entry">Journal entry</a></li>
+        <li><a href="#vouchers">Vouchers</a></li>
+      </ol>
+    </li>
+    <li><a href="#reports">Reports</a>
+      <ol class="toc__sub">
+        <li><a href="#profit-loss">Profit and loss</a></li>
+        <li><a href="#balance-sheet">Balance sheet</a></li>
+        <li><a href="#cash-flow">Cash flow</a></li>
+        <li><a href="#aging">Aging reports</a></li>
+        <li><a href="#trial-balance">Trial balance</a></li>
+        <li><a href="#scheduled-reports">Scheduled reports</a></li>
+      </ol>
+    </li>
+    <li><a href="#settings">Settings</a>
+      <ol class="toc__sub">
+        <li><a href="#users">Users</a></li>
+        <li><a href="#bank-accounts">Bank accounts</a></li>
+        <li><a href="#account-settings">Company settings</a></li>
+      </ol>
+    </li>
+    <li><a href="#support">Support</a></li>
+  </ol>
+</nav>
+
+<main class="content">
+
+<div class="lede">
+  <h1>SoupFinance User Guide</h1>
+  <p>SoupFinance is an online accounting and invoicing service for growing businesses. You bill your
+  clients, record what you owe your suppliers, and see where the money went.</p>
+  <p>This guide walks through every screen in the order you will meet it. Each section shows the
+  screen, then lists the steps. Start at <a href="#getting-started">Getting started</a> if the
+  account is new to you.</p>
+</div>
+
+<!-- ================================================================ intro -->
+<section id="introduction">
+  <h2>Introduction</h2>
+
+  <p>SoupFinance keeps one set of books for your company. Everything you enter feeds the same
+  ledger, so the reports always agree with the invoices and bills behind them.</p>
+
+  <h3>What you can do</h3>
+
+  <table>
+    <thead>
+      <tr><th>Area</th><th>What it covers</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><a href="#dashboard">Dashboard</a></td><td>A snapshot of revenue, money owed to you, expenses and profit.</td></tr>
+      <tr><td><a href="#clients">Clients</a></td><td>The people and companies you invoice.</td></tr>
+      <tr><td><a href="#invoices">Invoices</a></td><td>Bills you send out, with line items, tax and payment history.</td></tr>
+      <tr><td><a href="#vendors">Vendors</a></td><td>The suppliers you buy from.</td></tr>
+      <tr><td><a href="#bills">Bills</a></td><td>Bills you receive and still have to pay.</td></tr>
+      <tr><td><a href="#payments">Payments</a></td><td>Money in and money out, matched to an invoice or a bill.</td></tr>
+      <tr><td><a href="#ledger">Ledger</a></td><td>Your chart of accounts and every posting made against it.</td></tr>
+      <tr><td><a href="#accounting">Accounting</a></td><td>Journal entries, payment vouchers and receipt vouchers.</td></tr>
+      <tr><td><a href="#reports">Reports</a></td><td>Profit and loss, balance sheet, cash flow, aging and trial balance.</td></tr>
+      <tr><td><a href="#settings">Settings</a></td><td>Your team, your bank accounts and your company profile.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <strong>About the figures in this guide</strong>
+    Every screenshot comes from a sample company called BrightPath Consulting Ltd. The names and
+    amounts are examples. Your own screens will show your data.
+  </div>
+
+  <h3>What you need</h3>
+
+  <ul>
+    <li>A current web browser. Firefox, Chrome, Edge and Safari all work.</li>
+    <li>An internet connection.</li>
+    <li>An invitation from your administrator, or a company of your own to register.</li>
+  </ul>
+</section>
+
+<!-- ====================================================== getting started -->
+<section id="getting-started">
+  <h2>Getting started</h2>
+
+  <p>The application lives at <span class="path">app.soupfinance.com</span>. The marketing site at
+  <span class="path">www.soupfinance.com</span> has no sign-in form, so always go to the
+  <strong>app</strong> address to work.</p>
+
+  <h3 id="register">Register your company</h3>
+
+  <p>Registering creates a brand new company in SoupFinance. You become its first administrator.
+  If a colleague already registered your company, ask them to add you instead. See
+  <a href="#users">Users</a>.</p>
+
+  <figure>
+    <img src="images/register.jpg" alt="The registration form, showing fields for company name, business type, administrator name, email, country and password.">
+    <figcaption>The registration form. Reach it from the <span class="ui">Register your company</span> link on the sign-in page.</figcaption>
+  </figure>
+
+  <ol class="steps">
+    <li>Open the sign-in page and select <span class="ui">Register your company</span>.</li>
+    <li>Type your <strong>company name</strong> exactly as you want it to appear on invoices.</li>
+    <li>Choose your <strong>business type</strong>. Pick <strong>Trading</strong> if you buy and
+    sell stock. Pick <strong>Services</strong> if you sell your time or expertise.</li>
+    <li>Enter your own first name, last name and work email address.</li>
+    <li>Choose your country of operation. This sets your default currency.</li>
+    <li>Set a password, then type it again to confirm it.</li>
+    <li>Select <span class="ui">Create account</span>.</li>
+  </ol>
+
+  <p>SoupFinance then emails you a confirmation link. Open that email and follow the link to
+  activate the account. Until you do, signing in will fail.</p>
+
+  <div class="tip">
+    <strong>No confirmation email?</strong>
+    Check your spam folder first. If it is not there, go back to the sign-in page and select
+    <span class="ui">Resend confirmation</span>.
+  </div>
+
+  <h3 id="sign-in">Sign in</h3>
+
+  <figure>
+    <img src="images/login.jpg" alt="The SoupFinance sign-in page, with username and password fields, a remember me checkbox and a sign in button.">
+    <figcaption>The sign-in page.</figcaption>
+  </figure>
+
+  <ol class="steps">
+    <li>Enter your <strong>username</strong>. This is usually your work email address.</li>
+    <li>Enter your <strong>password</strong>.</li>
+    <li>Tick <span class="ui">Remember me</span> only on a device that is yours alone. On a shared
+    computer, leave it clear so the session ends when you close the browser.</li>
+    <li>Select <span class="ui">Sign In</span>.</li>
+  </ol>
+
+  <figure>
+    <img src="images/login-filled.jpg" alt="The sign-in form with a username and password filled in and the remember me box ticked.">
+    <figcaption>A completed sign-in form.</figcaption>
+  </figure>
+
+  <p>SoupFinance opens the dashboard once it accepts your details.</p>
+
+  <h3 id="password">Reset your password</h3>
+
+  <figure>
+    <img src="images/forgot-password.jpg" alt="The forgot password page, asking for the email address linked to the account.">
+    <figcaption>The password reset page.</figcaption>
+  </figure>
+
+  <ol class="steps">
+    <li>On the sign-in page, select <span class="ui">Forgot password?</span>.</li>
+    <li>Enter the email address on your account.</li>
+    <li>Submit the form. SoupFinance emails you a reset link.</li>
+    <li>Open the link and choose a new password.</li>
+  </ol>
+
+  <div class="note">
+    <strong>The link expires</strong>
+    Reset links are short-lived for security. If yours no longer works, simply request another one.
+  </div>
+</section>
+
+<!-- =========================================================== navigation -->
+<section id="navigation">
+  <h2>Finding your way around</h2>
+
+  <p>Every screen shares the same frame. The menu runs down the left. A bar across the top holds
+  search, display options and your own account.</p>
+
+  <figure>
+    <img src="images/dashboard.jpg" alt="The SoupFinance dashboard, showing the left menu, the top bar, four summary cards and a recent invoices table.">
+    <figcaption>The left menu and top bar appear on every screen.</figcaption>
+  </figure>
+
+  <h3>The left menu</h3>
+
+  <p>Select any entry to open it. Entries with sub-pages expand once you are inside them. Ledger,
+  Accounting, Reports and Settings all work this way.</p>
+
+  <p>The arrow above the menu collapses it to icons only. Select it again to bring the labels back.
+  On a phone or tablet, use the menu button in the top bar instead.</p>
+
+  <h3>The top bar</h3>
+
+  <table>
+    <thead>
+      <tr><th>Control</th><th>What it does</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Search</td><td>Looks across your records.</td></tr>
+      <tr><td>Display mode</td><td>Switches between light, dark and your device setting.</td></tr>
+      <tr><td>Language</td><td>Switches between English, German, French and Dutch.</td></tr>
+      <tr><td>Notifications</td><td>Shows recent alerts.</td></tr>
+      <tr><td>Your name</td><td>Shows who is signed in and which role you hold.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Working in dark mode</h3>
+
+  <p>Select the display button in the top bar to cycle through light, dark and your device setting.
+  SoupFinance remembers your choice.</p>
+
+  <figure>
+    <img src="images/dashboard-dark.jpg" alt="The same dashboard rendered in dark mode.">
+    <figcaption>The dashboard in dark mode.</figcaption>
+  </figure>
+
+  <h3>Signing out</h3>
+
+  <p>Select <span class="ui">Logout</span> at the foot of the left menu. Always sign out on a shared
+  computer.</p>
+</section>
+
+<!-- ============================================================ dashboard -->
+<section id="dashboard">
+  <h2>Dashboard</h2>
+
+  <p>The dashboard is your home screen. It answers one question: how is the business doing right
+  now?</p>
+
+  <figure>
+    <img src="images/dashboard.jpg" alt="The dashboard with four summary cards and a recent invoices table.">
+    <figcaption>The dashboard.</figcaption>
+  </figure>
+
+  <h3>The four cards</h3>
+
+  <table>
+    <thead>
+      <tr><th>Card</th><th>What it tells you</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Total Revenue</td><td>What you have invoiced.</td></tr>
+      <tr><td>Outstanding Invoices</td><td>What clients still owe you, and how many invoices that covers.</td></tr>
+      <tr><td>Expenses (MTD)</td><td>What you have spent so far this month. MTD means month to date.</td></tr>
+      <tr><td>Net Profit</td><td>Revenue less expenses.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Recent invoices</h3>
+
+  <p>The table lists your latest invoices with their status. Select an invoice number to open it.
+  Select <span class="ui">View all</span> to see the full list.</p>
+
+  <div class="note">
+    <strong>Amounts follow your company currency</strong>
+    The sample company above uses the Ghana cedi, so figures appear as GH₵. Yours follow the
+    currency set in <a href="#account-settings">Company settings</a>.
+  </div>
+</section>
+
+<!-- ============================================================== clients -->
+<section id="clients">
+  <h2>Clients</h2>
+
+  <p>A client is a person or company you invoice. Add a client once, then reuse it on every
+  invoice.</p>
+
+  <figure>
+    <img src="images/clients-list.jpg" alt="The clients list, showing a searchable table of client records.">
+    <figcaption>The clients list.</figcaption>
+  </figure>
+
+  <h3>Find a client</h3>
+
+  <p>Type part of a name in the search box. The list narrows as you type. You can also filter by
+  client type to show only individuals or only companies.</p>
+
+  <h3>Add a client</h3>
+
+  <figure>
+    <img src="images/client-form.jpg" alt="The new client form, with a choice between individual and corporate.">
+    <figcaption>The new client form, before you choose a type.</figcaption>
+  </figure>
+
+  <ol class="steps">
+    <li>Select <span class="ui">New Client</span>.</li>
+    <li>Choose <strong>Individual</strong> for a person, or <strong>Corporate</strong> for a
+    company. The form changes to match.</li>
+    <li>For an individual, enter the first and last name. For a company, enter the company name and
+    the contact person.</li>
+    <li>Add the email address and phone number. SoupFinance uses the email when you send an
+    invoice.</li>
+    <li>Add the billing address, and the registration and tax numbers if you have them.</li>
+    <li>Select <span class="ui">Save</span>.</li>
+  </ol>
+
+  <figure>
+    <img src="images/client-form-filled.jpg" alt="The new client form completed for a corporate client, showing company name, email and phone.">
+    <figcaption>A completed corporate client.</figcaption>
+  </figure>
+
+  <div class="tip">
+    <strong>In a hurry?</strong>
+    You can add a client without leaving the invoice form. See
+    <a href="#create-invoice">Create an invoice</a>.
+  </div>
+</section>
+
+<!-- ============================================================= invoices -->
+<section id="invoices">
+  <h2>Invoices</h2>
+
+  <p>An invoice is a request for payment you send to a client. This is where most of your revenue
+  is recorded.</p>
+
+  <figure>
+    <img src="images/invoices-list.jpg" alt="The invoices list, showing invoice numbers, clients, amounts and statuses.">
+    <figcaption>The invoices list.</figcaption>
+  </figure>
+
+  <h3>Reading the list</h3>
+
+  <p>Each row shows the invoice number, the client, the amount and the status. Select a number to
+  open the invoice. Select <span class="ui">Edit</span> to change it.</p>
+
+  <table>
+    <thead>
+      <tr><th>Status</th><th>Meaning</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><span class="badge badge--draft">DRAFT</span></td><td>Saved but not yet sent. You can still change anything.</td></tr>
+      <tr><td><span class="badge badge--sent">SENT</span></td><td>Issued to the client and waiting for payment.</td></tr>
+      <tr><td><span class="badge badge--paid">PAID</span></td><td>Settled in full. Nothing is outstanding.</td></tr>
+      <tr><td><span class="badge badge--over">OVERDUE</span></td><td>The due date has passed and money is still owed.</td></tr>
+    </tbody>
+  </table>
+
+  <h3 id="create-invoice">Create an invoice</h3>
+
+  <figure>
+    <img src="images/invoice-form.jpg" alt="The new invoice form, with client selection, dates, reference fields and a line items table.">
+    <figcaption>The new invoice form.</figcaption>
+  </figure>
+
+  <ol class="steps">
+    <li>Open <span class="ui">Invoices</span> and select <span class="ui">New Invoice</span>.</li>
+    <li>Pick the <strong>client</strong> from the list. If they are not there yet, select
+    <span class="ui">New Client</span> to add one without leaving the form.</li>
+    <li>Check the <strong>invoice date</strong> and set the <strong>due date</strong>. The due date
+    decides when the invoice counts as overdue.</li>
+    <li>Add your client's purchase order or sales order number if they need one on the invoice.</li>
+    <li>Add a <strong>line item</strong> for each thing you are charging for. Enter the description,
+    the quantity and the unit price. Choose a tax rate where tax applies.</li>
+    <li>Add more lines as needed. SoupFinance totals them as you type.</li>
+    <li>Use <strong>notes</strong> for anything the client should read, such as payment terms.</li>
+    <li>Select <span class="ui">Save Draft</span> to keep working on it later, or
+    <span class="ui">Save &amp; Send</span> to issue it now.</li>
+  </ol>
+
+  <div class="warn">
+    <strong>Check the tax rate on every line</strong>
+    Tax is set per line, not per invoice. A line left untaxed will not be corrected later, and the
+    total sent to your client will be short.
+  </div>
+
+  <h3>View an invoice</h3>
+
+  <figure>
+    <img src="images/invoice-detail.jpg" alt="An invoice detail page showing invoice information, an amount summary, line items and payment history.">
+    <figcaption>A paid invoice, showing its amount summary and line items.</figcaption>
+  </figure>
+
+  <p>The detail page collects everything about one invoice:</p>
+
+  <ul>
+    <li><strong>Invoice Information</strong> holds the number, client, dates, currency and notes.</li>
+    <li><strong>Amount Summary</strong> shows the subtotal, the tax, the total, how much has been
+    paid and the balance still due.</li>
+    <li><strong>Line Items</strong> lists what you charged for.</li>
+    <li><strong>Payment History</strong> lists each payment received against this invoice.</li>
+  </ul>
+
+  <h4>Actions on this page</h4>
+
+  <table>
+    <thead>
+      <tr><th>Button</th><th>What it does</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><span class="ui">Download PDF</span></td><td>Saves a PDF copy of the invoice to your computer.</td></tr>
+      <tr><td><span class="ui">Send</span></td><td>Emails the invoice to the client as a PDF attachment.</td></tr>
+      <tr><td><span class="ui">Edit</span></td><td>Reopens the invoice for changes.</td></tr>
+      <tr><td><span class="ui">Back</span></td><td>Returns to the invoices list.</td></tr>
+    </tbody>
+  </table>
+
+  <p>Which buttons appear depends on the invoice status. A paid invoice cannot be edited, for
+  example.</p>
+</section>
+
+<!-- ============================================================== vendors -->
+<section id="vendors">
+  <h2>Vendors</h2>
+
+  <p>A vendor is a supplier you buy from. Record a vendor once, then use it on every bill you
+  receive from them.</p>
+
+  <figure>
+    <img src="images/vendors-list.jpg" alt="The vendors list, showing supplier names and contact details with a search box.">
+    <figcaption>The vendors list.</figcaption>
+  </figure>
+
+  <ol class="steps">
+    <li>Open <span class="ui">Vendors</span> and select <span class="ui">New Vendor</span>.</li>
+    <li>Enter the vendor name, email address and phone number.</li>
+    <li>Add their address and any account or tax reference you need on file.</li>
+    <li>Select <span class="ui">Save</span>.</li>
+  </ol>
+
+  <p>Use the search box to find an existing vendor. Select a vendor's name to see their details and
+  what you have bought from them.</p>
+
+  <div class="note">
+    <strong>Not seeing Vendors in the menu?</strong>
+    Companies registered as a services business do not buy stock, so SoupFinance hides this section
+    for them. Your business type is set in <a href="#account-settings">Company settings</a>.
+  </div>
+</section>
+
+<!-- ================================================================ bills -->
+<section id="bills">
+  <h2>Bills</h2>
+
+  <p>A bill is money you owe a vendor. Recording bills keeps your expenses and your payables
+  accurate.</p>
+
+  <figure>
+    <img src="images/bills-list.jpg" alt="The bills list, showing bill numbers, vendors, amounts and statuses.">
+    <figcaption>The bills list.</figcaption>
+  </figure>
+
+  <h3>Record a bill</h3>
+
+  <figure>
+    <img src="images/bill-form.jpg" alt="The new bill form, with vendor selection, dates, currency and a line items table.">
+    <figcaption>The new bill form.</figcaption>
+  </figure>
+
+  <ol class="steps">
+    <li>Open <span class="ui">Bills</span> and select <span class="ui">New Bill</span>.</li>
+    <li>Pick the <strong>vendor</strong> who sent the bill.</li>
+    <li>Set the <strong>bill date</strong> and the <strong>due date</strong>. Copy both from the
+    document in front of you.</li>
+    <li>Leave the <strong>currency</strong> as your company currency unless the vendor billed you in
+    another one.</li>
+    <li>Add a <strong>line item</strong> for each charge, with its description, quantity, unit price
+    and tax rate.</li>
+    <li>Open the <strong>advanced</strong> section if you need an exchange rate, a purchase order
+    number or a sales order number.</li>
+    <li>Select <span class="ui">Save</span>.</li>
+  </ol>
+
+  <div class="tip">
+    <strong>Billed in a foreign currency?</strong>
+    Choose the currency first, then set the exchange rate in the advanced section. SoupFinance
+    converts the bill into your company currency for reporting.
+  </div>
+
+  <p>Select a bill in the list to see its full detail, including anything already paid against it.</p>
+</section>
+
+<!-- ============================================================= payments -->
+<section id="payments">
+  <h2>Payments</h2>
+
+  <p>A payment records money that actually moved. Every payment is matched to an invoice or to a
+  bill, so nothing floats loose.</p>
+
+  <figure>
+    <img src="images/payments-list.jpg" alt="The payments list, showing incoming payments with date, invoice, method, reference and amount.">
+    <figcaption>The payments list, on the incoming tab.</figcaption>
+  </figure>
+
+  <h3>Incoming and outgoing</h3>
+
+  <p>Two tabs split the list:</p>
+
+  <ul>
+    <li><strong>Incoming</strong> is money your clients paid you against invoices.</li>
+    <li><strong>Outgoing</strong> is money you paid vendors against bills.</li>
+  </ul>
+
+  <p>Each tab totals its payments at the foot of the table.</p>
+
+  <h3>Record a payment</h3>
+
+  <figure>
+    <img src="images/payment-form.jpg" alt="The record payment form, with a choice of invoice or bill, a document selector, amount, method and reference.">
+    <figcaption>The record payment form.</figcaption>
+  </figure>
+
+  <ol class="steps">
+    <li>Open <span class="ui">Payments</span> and select <span class="ui">Record Payment</span>.</li>
+    <li>Choose whether you are paying against an <strong>invoice</strong> or a <strong>bill</strong>.</li>
+    <li>Select the document. SoupFinance shows how much is still outstanding on it.</li>
+    <li>Enter the <strong>amount</strong>. Select <span class="ui">Pay full</span> to settle the
+    balance in one step.</li>
+    <li>Set the <strong>payment date</strong> to the day the money moved, not the day you type it
+    in.</li>
+    <li>Choose the <strong>method</strong>, such as bank transfer, cash, mobile money or cheque.</li>
+    <li>Choose the <strong>bank account</strong> the money went into or out of.</li>
+    <li>Add the <strong>reference</strong> from your bank statement. This makes reconciliation far
+    easier later.</li>
+    <li>Select <span class="ui">Save</span>.</li>
+  </ol>
+
+  <p>The invoice or bill updates straight away. Pay an invoice in full and its status becomes
+  <span class="badge badge--paid">PAID</span>.</p>
+</section>
+
+<!-- =============================================================== ledger -->
+<section id="ledger">
+  <h2>Ledger</h2>
+
+  <p>The ledger is the accounting record underneath everything else. Invoices, bills and payments
+  all post here automatically.</p>
+
+  <h3 id="chart-of-accounts">Chart of accounts</h3>
+
+  <p>The chart of accounts lists every account your books use, grouped into the five standard
+  categories.</p>
+
+  <figure>
+    <img src="images/chart-of-accounts.jpg" alt="The chart of accounts, grouped into assets, liabilities, equity, revenue and expenses, each with codes, names and balances.">
+    <figcaption>The chart of accounts.</figcaption>
+  </figure>
+
+  <table>
+    <thead>
+      <tr><th>Group</th><th>What it holds</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Assets</td><td>What the business owns, such as bank balances and equipment.</td></tr>
+      <tr><td>Liabilities</td><td>What the business owes, such as unpaid bills and tax.</td></tr>
+      <tr><td>Equity</td><td>The owners' stake in the business.</td></tr>
+      <tr><td>Revenue</td><td>What the business earns.</td></tr>
+      <tr><td>Expenses</td><td>What the business spends to operate.</td></tr>
+    </tbody>
+  </table>
+
+  <p>Select a group heading to collapse or expand it. Each row shows the account code, its name, its
+  balance and whether it is still active.</p>
+
+  <h3 id="ledger-transactions">Ledger transactions</h3>
+
+  <figure>
+    <img src="images/ledger-transactions.jpg" alt="The ledger transactions page, with date, account and status filters above a table of postings.">
+    <figcaption>Ledger transactions, with the filter bar above the table.</figcaption>
+  </figure>
+
+  <p>This page lists individual postings. Narrow it with the filters:</p>
+
+  <ul>
+    <li><strong>Account</strong> shows postings against one account only.</li>
+    <li><strong>Start date</strong> and <strong>end date</strong> limit the period.</li>
+    <li><strong>Status</strong> separates drafts from posted entries.</li>
+  </ul>
+
+  <p>Select <span class="ui">Clear filters</span> to go back to the full list. Select
+  <span class="ui">New Journal Entry</span> to record a posting by hand.</p>
+</section>
+
+<!-- =========================================================== accounting -->
+<section id="accounting">
+  <h2>Accounting</h2>
+
+  <p>The accounting section is for entries you make yourself, rather than ones that come from an
+  invoice or a bill.</p>
+
+  <h3 id="transaction-register">Transaction register</h3>
+
+  <figure>
+    <img src="images/transaction-register.jpg" alt="The transaction register, showing a search box, filters and a table of transactions with debit, credit and status columns.">
+    <figcaption>The transaction register.</figcaption>
+  </figure>
+
+  <p>The register is one list of every accounting transaction. Search by transaction reference,
+  description or amount. Filter by date, status, type or account code.</p>
+
+  <p>Tick the box on one or more rows to act on them together. You can post several drafts at once,
+  or delete them. Select <span class="ui">Export</span> to download the list.</p>
+
+  <table>
+    <thead>
+      <tr><th>Status</th><th>Meaning</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><span class="badge badge--draft">DRAFT</span></td><td>Saved but not yet in the books. You can still edit or delete it.</td></tr>
+      <tr><td><span class="badge badge--posted">POSTED</span></td><td>In the books and counted in your reports.</td></tr>
+    </tbody>
+  </table>
+
+  <h3 id="journal-entry">Journal entry</h3>
+
+  <p>A journal entry moves money between accounts directly. Use it for corrections, opening
+  balances, depreciation and anything with no invoice behind it.</p>
+
+  <figure>
+    <img src="images/journal-entry.jpg" alt="The new journal entry form, showing entry details, a line items table with debit and credit columns, and a balanced indicator.">
+    <figcaption>The new journal entry form. The indicator at the foot reports whether the entry balances.</figcaption>
+  </figure>
+
+  <ol class="steps">
+    <li>Open <span class="ui">Accounting</span>, then <span class="ui">Journal Entry</span>.</li>
+    <li>Set the <strong>entry date</strong>.</li>
+    <li>Add a <strong>reference</strong> so you can find the entry again.</li>
+    <li>Write a <strong>description</strong> explaining why you made the entry. Your auditor will
+    thank you.</li>
+    <li>On the first line, choose an account and enter an amount in either
+    <strong>debit</strong> or <strong>credit</strong>.</li>
+    <li>On the next line, choose the other account and enter the matching amount on the opposite
+    side.</li>
+    <li>Select <span class="ui">Add Line</span> if the entry needs more than two lines.</li>
+    <li>Check the indicator at the foot reads <strong>Balanced</strong>.</li>
+    <li>Select <span class="ui">Save Draft</span> to review it later, or
+    <span class="ui">Save &amp; Post</span> to put it into the books.</li>
+  </ol>
+
+  <div class="warn">
+    <strong>Debits must equal credits</strong>
+    SoupFinance will not post an entry that does not balance. If the indicator does not read
+    Balanced, check each line before you try again.
+  </div>
+
+  <h3 id="vouchers">Vouchers</h3>
+
+  <p>A voucher records money leaving or entering the business outside the invoice and bill cycle.</p>
+
+  <table>
+    <thead>
+      <tr><th>Voucher</th><th>Use it for</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Payment voucher</td><td>Money you paid out, such as petty cash or a refund.</td></tr>
+      <tr><td>Receipt voucher</td><td>Money you took in that no invoice covers.</td></tr>
+      <tr><td>Deposit voucher</td><td>Money moved into a bank account.</td></tr>
+    </tbody>
+  </table>
+
+  <figure>
+    <img src="images/voucher-payment.jpg" alt="The new payment voucher form, showing voucher type buttons, voucher details, beneficiary information, account selection, amount and a journal entry preview.">
+    <figcaption>The new payment voucher form.</figcaption>
+  </figure>
+
+  <ol class="steps">
+    <li>Open <span class="ui">Accounting</span>, then <span class="ui">Payment Voucher</span> or
+    <span class="ui">Receipt Voucher</span>.</li>
+    <li>Confirm the <strong>voucher type</strong> at the top. You can switch between the three
+    types here.</li>
+    <li>Set the <strong>transaction date</strong> and add a <strong>reference number</strong>.</li>
+    <li>Choose the <strong>payment method</strong>.</li>
+    <li>Describe the purpose in <strong>notes</strong>. This field is required.</li>
+    <li>Choose the <strong>beneficiary type</strong>, then name the client, vendor or staff member.</li>
+    <li>Select the <strong>bank or cash account</strong> the money moves through, and the
+    <strong>expense account</strong> to charge it to.</li>
+    <li>Enter the <strong>amount</strong>.</li>
+    <li>Read the <strong>transaction summary</strong> at the foot. It previews the exact journal
+    entry the voucher will create.</li>
+    <li>Select <span class="ui">Save Draft</span>, or <span class="ui">Approve &amp; Post</span> to
+    put it into the books.</li>
+  </ol>
+
+  <figure>
+    <img src="images/voucher-receipt.jpg" alt="The new receipt voucher form, laid out like the payment voucher but for money received.">
+    <figcaption>The receipt voucher form follows the same layout.</figcaption>
+  </figure>
+</section>
+
+<!-- ============================================================== reports -->
+<section id="reports">
+  <h2>Reports</h2>
+
+  <p>Reports turn your records into statements. They read the ledger, so they always match what you
+  entered.</p>
+
+  <figure>
+    <img src="images/reports-hub.jpg" alt="The reports page, showing six cards: profit and loss, balance sheet, cash flow, aging reports, trial balance and scheduled reports.">
+    <figcaption>The reports page. Select a card to open that report.</figcaption>
+  </figure>
+
+  <h3>How every report works</h3>
+
+  <p>All the statements share the same controls:</p>
+
+  <ol class="steps">
+    <li>Set the <strong>from date</strong> and <strong>to date</strong> for the period you want.</li>
+    <li>Select <span class="ui">Generate Report</span>.</li>
+    <li>Read the result on screen.</li>
+    <li>Select <span class="ui">PDF</span>, <span class="ui">Excel</span> or
+    <span class="ui">CSV</span> to download it.</li>
+  </ol>
+
+  <p>Select <span class="ui">Reset</span> to return the dates to their defaults.</p>
+
+  <h3 id="profit-loss">Profit and loss</h3>
+
+  <p>This report shows what you earned, what you spent, and what was left over the period.</p>
+
+  <figure>
+    <img src="images/report-profit-loss.jpg" alt="The profit and loss report, showing revenue and expense sections with a net profit total.">
+    <figcaption>The profit and loss report.</figcaption>
+  </figure>
+
+  <h3 id="balance-sheet">Balance sheet</h3>
+
+  <p>This report shows what the business owns and owes on a single date.</p>
+
+  <figure>
+    <img src="images/report-balance-sheet.jpg" alt="The balance sheet, showing assets, liabilities and equity.">
+    <figcaption>The balance sheet.</figcaption>
+  </figure>
+
+  <p>Assets should equal liabilities plus equity. If they do not, look for an unbalanced journal
+  entry.</p>
+
+  <h3 id="cash-flow">Cash flow</h3>
+
+  <p>This report follows the cash itself, rather than what you invoiced. Use it to see whether the
+  business can pay its bills.</p>
+
+  <figure>
+    <img src="images/report-cash-flow.jpg" alt="The cash flow report, showing cash movements over the selected period.">
+    <figcaption>The cash flow report.</figcaption>
+  </figure>
+
+  <h3 id="aging">Aging reports</h3>
+
+  <p>Aging reports sort unpaid amounts by how late they are. One page covers both sides:</p>
+
+  <ul>
+    <li><strong>Aged receivables</strong> is what clients owe you.</li>
+    <li><strong>Aged payables</strong> is what you owe vendors.</li>
+  </ul>
+
+  <figure>
+    <img src="images/report-aging.jpg" alt="The aging report, showing outstanding amounts grouped into age buckets.">
+    <figcaption>The aging report. Columns group each amount by how overdue it is.</figcaption>
+  </figure>
+
+  <p>Read the columns left to right. The further right an amount sits, the longer it has been
+  outstanding, and the sooner you should chase it.</p>
+
+  <h3 id="trial-balance">Trial balance</h3>
+
+  <p>The trial balance lists every account with its debit and credit balance. Accountants use it to
+  check the books before closing a period.</p>
+
+  <figure>
+    <img src="images/report-trial-balance.jpg" alt="The trial balance, showing accounts grouped by type with debit and credit columns, a balanced banner and matching totals.">
+    <figcaption>A balanced trial balance. The banner confirms total debits equal total credits.</figcaption>
+  </figure>
+
+  <p>The banner near the top is the part to read first. It tells you whether the books balance. If
+  it reports a difference, find it before you rely on any other report.</p>
+
+  <h3 id="scheduled-reports">Scheduled reports</h3>
+
+  <p>A schedule emails a report to the right people on its own, so nobody has to remember.</p>
+
+  <figure>
+    <img src="images/reports-scheduled.jpg" alt="The scheduled reports page, listing saved schedules with their report type, frequency and next run date.">
+    <figcaption>The scheduled reports page.</figcaption>
+  </figure>
+
+  <ol class="steps">
+    <li>Open <span class="ui">Reports</span>, then <span class="ui">Scheduled Reports</span>.</li>
+    <li>Select <span class="ui">New Schedule</span>.</li>
+    <li>Choose which <strong>report</strong> to send.</li>
+    <li>Choose how often to send it, such as weekly or monthly.</li>
+    <li>Choose the <strong>format</strong>, either PDF or Excel.</li>
+    <li>Add the <strong>recipients</strong> by email address.</li>
+    <li>Save the schedule.</li>
+  </ol>
+
+  <p>Each schedule shows when it last ran and when it runs next. Pause a schedule to stop it
+  temporarily, and resume it when you need it again.</p>
+</section>
+
+<!-- ============================================================= settings -->
+<section id="settings">
+  <h2>Settings</h2>
+
+  <p>Settings holds everything about your company rather than your transactions. Three tabs divide
+  it up.</p>
+
+  <h3 id="users">Users</h3>
+
+  <p>This page lists everyone who can sign in, and what each of them may do.</p>
+
+  <figure>
+    <img src="images/settings-users.jpg" alt="The user management page, listing users with their name, email, role and status.">
+    <figcaption>User management.</figcaption>
+  </figure>
+
+  <ol class="steps">
+    <li>Open <span class="ui">Settings</span>, then <span class="ui">Users</span>.</li>
+    <li>Select <span class="ui">Add User</span>.</li>
+    <li>Enter their first name, last name and job title.</li>
+    <li>Enter the email address they will sign in with.</li>
+    <li>Choose a <strong>role</strong>. An administrator can change settings and manage users. A
+    user works with the day-to-day records.</li>
+    <li>Mark them as a director or signatory if your company needs that on record.</li>
+    <li>Save the user. They receive an email inviting them to set a password.</li>
+  </ol>
+
+  <p>Use the pencil icon on a row to edit someone, and the bin icon to remove them.</p>
+
+  <div class="warn">
+    <strong>Give people the smallest role that lets them work</strong>
+    Administrators can change your company settings and your chart of accounts. Only grant that role
+    to people who need it.
+  </div>
+
+  <h3 id="bank-accounts">Bank accounts</h3>
+
+  <p>Record each bank account your business uses. Payments are matched to these accounts.</p>
+
+  <figure>
+    <img src="images/settings-bank-accounts.jpg" alt="The bank accounts page, listing account names, numbers, banks and currencies.">
+    <figcaption>Bank accounts.</figcaption>
+  </figure>
+
+  <ol class="steps">
+    <li>Open <span class="ui">Settings</span>, then <span class="ui">Bank Accounts</span>.</li>
+    <li>Select <span class="ui">Add Bank Account</span>.</li>
+    <li>Enter the account name and account number.</li>
+    <li>Choose the bank and type in the branch.</li>
+    <li>Add the SWIFT code if you receive money from abroad.</li>
+    <li>Choose the account currency.</li>
+    <li>Select <span class="ui">Save</span>.</li>
+  </ol>
+
+  <h3 id="account-settings">Company settings</h3>
+
+  <p>These settings shape the whole application. Your currency, your business type and your
+  branding all live here.</p>
+
+  <figure>
+    <img src="images/settings-account.jpg" alt="The account settings page, showing company information, default currency, fiscal year, logo and favicon uploads and branding fields.">
+    <figcaption>Company settings.</figcaption>
+  </figure>
+
+  <table>
+    <thead>
+      <tr><th>Setting</th><th>What it affects</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Company name</td><td>The name printed on invoices and reports.</td></tr>
+      <tr><td>Business type</td><td>Which features appear. Services companies do not see Vendors.</td></tr>
+      <tr><td>Default currency</td><td>The currency every amount is shown in.</td></tr>
+      <tr><td>Country</td><td>Your country of operation.</td></tr>
+      <tr><td>Address</td><td>The address printed on invoices.</td></tr>
+      <tr><td>Start of fiscal year</td><td>The date your financial year begins. Reports use it.</td></tr>
+      <tr><td>Company logo</td><td>The logo on your invoices and reports.</td></tr>
+      <tr><td>Favicon</td><td>The small icon on the browser tab.</td></tr>
+      <tr><td>Email subject prefix</td><td>Text added to the front of emails SoupFinance sends.</td></tr>
+    </tbody>
+  </table>
+
+  <p>Change what you need, then select <span class="ui">Save Changes</span>. Select
+  <span class="ui">Reset</span> to discard your edits. The hint beside the buttons tells you whether
+  anything is still unsaved.</p>
+
+  <div class="warn">
+    <strong>Set your fiscal year before you run reports</strong>
+    Reports use this date to work out which year a figure belongs to. Change it later and earlier
+    reports will not match the new ones.
+  </div>
+</section>
+
+<!-- ============================================================== support -->
+<section id="support">
+  <h2>Support</h2>
+
+  <h3>Common questions</h3>
+
+  <h4>A menu entry I expected is missing</h4>
+  <p>Two things hide a menu entry. Your role may not include it, or your business type may not use
+  it. Ask your administrator to check both.</p>
+
+  <h4>A page says a module is not enabled</h4>
+  <p>Some features are switched on per company. The message means the feature exists but is not part
+  of your plan. Your administrator can request it.</p>
+
+  <h4>My report shows nothing</h4>
+  <p>Check the date range first. A report covering a period with no transactions is correctly
+  empty. Widen the dates and generate it again.</p>
+
+  <h4>An invoice total looks wrong</h4>
+  <p>Open the invoice and check each line item. Tax is set per line, so one line without a rate will
+  pull the total down.</p>
+
+  <h4>My trial balance does not balance</h4>
+  <p>Look for a draft journal entry that was posted while unbalanced. The
+  <a href="#transaction-register">transaction register</a> lists every entry with its status.</p>
+
+  <h4>I have been signed out unexpectedly</h4>
+  <p>Sessions end after a period of inactivity. Sign in again. Tick
+  <span class="ui">Remember me</span> on your own device to stay signed in longer.</p>
+
+  <h3>Getting more help</h3>
+
+  <p>Select <span class="ui">Help</span> at the foot of the left menu. If you still need a hand,
+  contact your company administrator, who can reach SoupFinance support on your behalf.</p>
+</section>
+
+</main>
+</div>
+
+<footer class="guide-footer">
+  <p>SoupFinance User Guide. Screenshots are captured automatically from the application, so this
+  guide follows the product as it changes.</p>
+</footer>
+
+<script>
+// Highlight the section currently on screen in the contents list, and let the
+// contents collapse on small screens. No framework: the guide is static HTML and
+// must work when served on its own.
+(function () {
+  var links = Array.prototype.slice.call(document.querySelectorAll('.toc a'));
+  var byId = {};
+  links.forEach(function (link) {
+    byId[link.getAttribute('href').slice(1)] = link;
+  });
+
+  var targets = Object.keys(byId)
+    .map(function (id) { return document.getElementById(id); })
+    .filter(Boolean);
+
+  if ('IntersectionObserver' in window) {
+    var observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (!entry.isIntersecting) return;
+        links.forEach(function (link) { link.classList.remove('is-active'); });
+        var active = byId[entry.target.id];
+        if (active) active.classList.add('is-active');
+      });
+    }, { rootMargin: '-80px 0px -70% 0px' });
+
+    targets.forEach(function (target) { observer.observe(target); });
+  }
+
+  var toggle = document.getElementById('toc-toggle');
+  var toc = document.getElementById('toc');
+  var small = window.matchMedia('(max-width: 960px)');
+
+  function applyLayout() {
+    if (small.matches) {
+      toc.hidden = true;
+      toggle.setAttribute('aria-expanded', 'false');
+    } else {
+      toc.hidden = false;
+    }
+  }
+
+  toggle.addEventListener('click', function () {
+    toc.hidden = !toc.hidden;
+    toggle.setAttribute('aria-expanded', String(!toc.hidden));
+  });
+
+  toc.addEventListener('click', function (event) {
+    if (small.matches && event.target.tagName === 'A') {
+      toc.hidden = true;
+      toggle.setAttribute('aria-expanded', 'false');
+    }
+  });
+
+  small.addEventListener
+    ? small.addEventListener('change', applyLayout)
+    : small.addListener(applyLayout);
+  applyLayout();
+})();
+</script>
+
+</body>
+</html>
