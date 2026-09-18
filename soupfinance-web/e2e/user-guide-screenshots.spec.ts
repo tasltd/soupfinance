@@ -21,7 +21,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { installGuideMocks, seedAuthenticatedSession, guideUser } from './user-guide/guide-mocks';
+import { installGuideMocks, seedAuthenticatedSession, guideUser, CORPORATE_ID } from './user-guide/guide-mocks';
 
 const IMAGE_DIR = join(process.cwd(), 'public', 'user-guide', 'images');
 
@@ -338,5 +338,82 @@ test.describe('user guide: settings', () => {
     await navigate(page, '/settings/account', '/settings/account');
     await expect(page.getByTestId('account-settings-fieldset')).toBeVisible();
     await shoot(page, 'settings-account');
+  });
+});
+
+// ===========================================================================
+// Company verification (KYC onboarding)
+// ===========================================================================
+//
+// This wizard has no sidebar entry — it is reached from the link SoupFinance
+// sends after registration — so the capture enters it once at its real starting
+// point and then CLICKS through the chain, exactly as an applicant does. That
+// keeps the spec's "no goto to an internal route" rule where it matters: each
+// later step is proved reachable from the step before it, not conjured by URL.
+
+test.describe('user guide: company verification', () => {
+  test('captures every step of the KYC onboarding wizard', async ({ page }) => {
+    await installGuideMocks(page);
+    await seedAuthenticatedSession(page);
+
+    // Step 1 — company details.
+    await page.goto(`/onboarding/company?id=${CORPORATE_ID}`);
+    await expect(page.getByTestId('company-info-page')).toBeVisible({ timeout: 20_000 });
+    await shoot(page, 'onboarding-company');
+
+    // Step 2 — directors and signatories.
+    await page.getByRole('button', { name: /Save & Continue/i }).click();
+    await expect(page).toHaveURL(/\/onboarding\/directors/);
+    await expect(page.getByTestId('directors-page')).toBeVisible({ timeout: 20_000 });
+    await shoot(page, 'onboarding-directors');
+
+    // Step 3 — supporting documents.
+    await page.getByRole('button', { name: /Continue to Documents/i }).click();
+    await expect(page).toHaveURL(/\/onboarding\/documents/);
+    await expect(page.getByTestId('documents-page')).toBeVisible({ timeout: 20_000 });
+    await shoot(page, 'onboarding-documents');
+
+    // Step 4 — the application's status. "Submit for Review" is disabled until
+    // every required document is present, so reaching this screen by clicking it
+    // also proves the guide's "you cannot submit early" claim.
+    const submit = page.getByRole('button', { name: /Submit for Review/i });
+    await expect(submit).toBeEnabled();
+    await submit.click();
+    await expect(page).toHaveURL(/\/onboarding\/status/);
+    await expect(page.getByTestId('kyc-status-page')).toBeVisible({ timeout: 20_000 });
+    await shoot(page, 'onboarding-status');
+  });
+});
+
+// ===========================================================================
+// The guide is reachable from inside the app
+// ===========================================================================
+//
+// The guide shipped before anything linked to it, so it was published and
+// unreachable at the same time. This closes the loop end to end: click Help in
+// the real sidebar and assert the guide itself loads in the new tab. Asserting
+// the href alone would still pass if the file were never deployed, or if the
+// SPA catch-all swallowed the path and served the dashboard instead.
+
+test.describe('user guide: reachable from the app', () => {
+  test('the sidebar Help link opens the published guide', async ({ page, context }) => {
+    await startAtDashboard(page);
+
+    const help = page.getByTestId('help-link');
+    await expect(help).toBeVisible();
+
+    const opened = context.waitForEvent('page');
+    await help.click();
+    const guide = await opened;
+    await guide.waitForLoadState('domcontentloaded');
+
+    // Served the guide, not the SPA shell bounced through the `*` catch-all.
+    await expect(guide).toHaveURL(/\/user-guide\/index\.html$/);
+    await expect(guide.locator('h1')).toContainText(/SoupFinance/i);
+
+    // The contents list and the sections it points at both resolved.
+    await expect(guide.locator('#toc')).toBeVisible();
+    await expect(guide.locator('#verification')).toHaveCount(1);
+    await guide.close();
   });
 });

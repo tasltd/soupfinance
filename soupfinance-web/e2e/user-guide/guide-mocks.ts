@@ -539,6 +539,73 @@ const json = (body: unknown) => ({
  * Ordering matters: Playwright matches handlers in REVERSE registration order,
  * so the more specific patterns are registered last.
  */
+/**
+ * Corporate KYC onboarding (SOUPFIN-52).
+ *
+ * The wizard is a chain — company -> directors -> documents -> status — and each
+ * screen carries the corporate id in `?id=`. CORPORATE_ID is that id, so the
+ * capture can click straight through the flow the way a real applicant does.
+ */
+export const CORPORATE_ID = 'corp-soupfin-demo';
+
+export const corporate = {
+  id: CORPORATE_ID,
+  name: 'Adinkra Textiles Limited',
+  certificateOfIncorporationNumber: 'CS-482910',
+  registrationDate: '2019-04-12',
+  businessCategory: 'SERVICES',
+  taxIdentificationNumber: 'C0009482910',
+  email: 'accounts@adinkratextiles.com',
+  phoneNumber: '+233 30 261 4480',
+  address: '18 Ring Road East, Accra',
+  kycStatus: 'PENDING',
+};
+
+export const directors = [
+  {
+    id: 'dir-001',
+    firstName: 'Abena',
+    lastName: 'Mensah',
+    email: 'abena.mensah@adinkratextiles.com',
+    phoneNumber: '+233 24 551 0921',
+    role: 'DIRECTOR',
+    corporate: { id: CORPORATE_ID },
+  },
+  {
+    id: 'dir-002',
+    firstName: 'Kwame',
+    lastName: 'Osei',
+    email: 'kwame.osei@adinkratextiles.com',
+    phoneNumber: '+233 20 884 7310',
+    role: 'SIGNATORY',
+    corporate: { id: CORPORATE_ID },
+  },
+];
+
+export const corporateDocuments = [
+  {
+    id: 'doc-001',
+    documentType: 'CERTIFICATE_OF_INCORPORATION',
+    fileName: 'certificate-of-incorporation.pdf',
+    fileUrl: '/files/certificate-of-incorporation.pdf',
+    corporate: { id: CORPORATE_ID },
+  },
+  {
+    id: 'doc-002',
+    documentType: 'BOARD_RESOLUTION',
+    fileName: 'board-resolution-2026.pdf',
+    fileUrl: '/files/board-resolution-2026.pdf',
+    corporate: { id: CORPORATE_ID },
+  },
+  {
+    id: 'doc-003',
+    documentType: 'PROOF_OF_ADDRESS',
+    fileName: 'utility-bill-march.pdf',
+    fileUrl: '/files/utility-bill-march.pdf',
+    corporate: { id: CORPORATE_ID },
+  },
+];
+
 export async function installGuideMocks(page: Page) {
   const fulfil = (body: unknown) => (route: Route) => route.fulfill(json(body));
 
@@ -652,6 +719,18 @@ export async function installGuideMocks(page: Page) {
   await page.route('**/rest/agent/show/*.json*', fulfil(agents[0]));
   await page.route('**/rest/accountBankDetails/index.json*', fulfil(bankAccounts));
   await page.route('**/rest/accountBankDetails/show/*.json*', fulfil(bankAccounts[0]));
+
+  // --- corporate KYC onboarding --------------------------------------------
+  // `corporate/show` answers for ANY id so a capture that follows the wizard's
+  // own `?id=` links keeps resolving even if the chain rewrites it.
+  await page.route('**/rest/corporate/show/*.json*', fulfil(corporate));
+  await page.route('**/rest/corporate/current.json*', fulfil(corporate));
+  await page.route('**/rest/corporate/edit/*.json*', fulfil({ SYNCHRONIZER_TOKEN: 'tok', SYNCHRONIZER_URI: '/corporate/update' }));
+  await page.route('**/rest/corporate/update/*.json*', fulfil(corporate));
+  await page.route('**/rest/corporateAccountPerson/index.json*', fulfil(directors));
+  await page.route('**/rest/corporateAccountPerson/create.json*', fulfil({ SYNCHRONIZER_TOKEN: 'tok', SYNCHRONIZER_URI: '/corporateAccountPerson/save' }));
+  await page.route('**/rest/corporateDocuments/index.json*', fulfil(corporateDocuments));
+  await page.route('**/rest/corporate/submitKyc/*.json*', fulfil({ ...corporate, kycStatus: 'PENDING' }));
 }
 
 /** Seed an authenticated session so the SPA skips the login redirect. */

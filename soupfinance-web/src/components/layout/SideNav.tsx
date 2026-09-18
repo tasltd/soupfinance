@@ -222,12 +222,17 @@ export function SideNav() {
           {/* Bottom Links — shrink-0 keeps Help/Logout pinned and full height
               even when the nav column above overflows (SOUPFIN-30 #16). */}
           <div className="flex flex-col gap-1 shrink-0 pt-2">
-            <button
+            <a
+              href="/user-guide/index.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              data-testid="help-link"
+              title="Open the SoupFinance user guide"
               className="flex items-center gap-3 px-3 py-2 rounded-lg text-subtle-text hover:bg-primary/5 hover:text-text-light dark:hover:text-text-dark transition-colors"
             >
               <span className="material-symbols-outlined text-xl">help</span>
               {!sidebarCollapsed && <p className="text-sm font-medium">Help</p>}
-            </button>
+            </a>
             <button
               onClick={logout}
               data-testid="logout-button"

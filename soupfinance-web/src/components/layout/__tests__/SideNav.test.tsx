@@ -179,3 +179,53 @@ describe('SideNav — category-aware visibility (SOUPFIN-25)', () => {
     expect(container.querySelector('a[href="/vendors"]')).not.toBeNull();
   });
 });
+
+/**
+ * SOUPFIN-52 — the Help entry must open the user guide.
+ *
+ * It shipped as a <button> with no handler, so the guide published at
+ * /user-guide/ was unreachable from inside the app. These tests pin the three
+ * things that make it work, each of which has a distinct failure mode:
+ *
+ *  - it is an anchor with a real href, not a dead button;
+ *  - the href is a plain path, NOT a react-router <Link>. The guide is a static
+ *    file under public/, so client-side routing would miss it and fall through
+ *    to the `*` catch-all, silently landing the user on the dashboard;
+ *  - it points at index.html explicitly rather than the bare directory. The
+ *    Vite dev server does no DirectoryIndex lookup, so `/user-guide/` there
+ *    serves the SPA shell and the guide never opens. The explicit file works
+ *    under both Vite and Apache;
+ *  - target/rel are set, so the guide opens beside the user's work instead of
+ *    navigating away from a half-filled form.
+ */
+describe('SideNav — Help opens the user guide (SOUPFIN-52)', () => {
+  beforeEach(() => {
+    mockBusinessCategory = undefined;
+    useUIStore.setState({ sidebarCollapsed: false });
+  });
+
+  it('renders Help as a link to the published guide', () => {
+    renderAt('/dashboard');
+
+    const help = screen.getByTestId('help-link');
+    expect(help.tagName).toBe('A');
+    expect(help).toHaveAttribute('href', '/user-guide/index.html');
+  });
+
+  it('opens the guide in a new tab without leaking window.opener', () => {
+    renderAt('/dashboard');
+
+    const help = screen.getByTestId('help-link');
+    expect(help).toHaveAttribute('target', '_blank');
+    expect(help).toHaveAttribute('rel', expect.stringContaining('noopener'));
+  });
+
+  it('stays reachable when the sidebar is collapsed, even though the label is hidden', () => {
+    useUIStore.setState({ sidebarCollapsed: true });
+    renderAt('/dashboard');
+
+    const help = screen.getByTestId('help-link');
+    expect(help).toHaveAttribute('href', '/user-guide/index.html');
+    expect(screen.queryByText('Help')).not.toBeInTheDocument();
+  });
+});
