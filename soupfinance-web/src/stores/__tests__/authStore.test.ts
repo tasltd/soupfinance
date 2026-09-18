@@ -40,6 +40,9 @@ describe('authStore', () => {
     })
     vi.clearAllMocks()
     localStorage.clear()
+    // Added (SOUPFIN-53): the default (rememberMe=false) login path stores the
+    // token in sessionStorage, so it must be cleared between tests too.
+    sessionStorage.clear()
   })
 
   describe('initial state', () => {
@@ -247,6 +250,115 @@ describe('authStore', () => {
 
       // Assert
       expect(useAuthStore.getState().error).toBeNull()
+    })
+
+    // Fix (SOUPFIN-53): the login response carries no tenantId, so account
+    // settings (and therefore the tenant currency) never loaded until the next
+    // page reload. login() must now enrich the stored user via
+    // GET /rest/user/current.json, the same call validateToken() makes.
+    describe('tenantId enrichment after login (SOUPFIN-53)', () => {
+      it('merges tenantId from /user/current.json into the stored user', async () => {
+        // Arrange: login response has no tenantId (mirrors POST /rest/api/login)
+        vi.mocked(authApi.login).mockResolvedValue(mockUser)
+        localStorage.setItem('access_token', 'valid-token')
+        vi.mocked(apiClient.get).mockResolvedValue({
+          data: {
+            username: 'testuser',
+            email: 'test@example.com',
+            roles: ['ROLE_USER'],
+            tenantId: 'tenant-ghs-001',
+          },
+        })
+
+        // Act
+        await act(async () => {
+          await useAuthStore.getState().login('test@example.com', 'password')
+        })
+
+        // Assert: full round-trip — the enrichment call was made AND the
+        // resulting tenantId is readable from the store, which is the value
+        // App.tsx gates the account-settings fetch on.
+        expect(apiClient.get).toHaveBeenCalledWith('/user/current.json')
+        const state = useAuthStore.getState()
+        expect(state.user?.tenantId).toBe('tenant-ghs-001')
+        expect(state.isAuthenticated).toBe(true)
+        expect(state.user?.username).toBe('testuser')
+      })
+
+      it('reads the token from sessionStorage when rememberMe is false', async () => {
+        // Arrange: default login path stores the token in sessionStorage.
+        // validateToken() bails out early if it finds no token, so the
+        // enrichment would silently never happen if only localStorage is read.
+        vi.mocked(authApi.login).mockResolvedValue(mockUser)
+        sessionStorage.setItem('access_token', 'session-token')
+        vi.mocked(apiClient.get).mockResolvedValue({
+          data: { username: 'testuser', email: 'test@example.com', roles: [], tenantId: 'tenant-session' },
+        })
+
+        // Act
+        await act(async () => {
+          await useAuthStore.getState().login('test@example.com', 'password', false)
+        })
+
+        // Assert
+        expect(useAuthStore.getState().user?.tenantId).toBe('tenant-session')
+      })
+
+      it('keeps the user signed in when the enrichment request fails', async () => {
+        // Arrange: the token we just received is valid, so a failed
+        // /user/current.json call must not invalidate the session.
+        vi.mocked(authApi.login).mockResolvedValue(mockUser)
+        localStorage.setItem('access_token', 'valid-token')
+        vi.mocked(apiClient.get).mockRejectedValue(new Error('Network error'))
+
+        // Act
+        await act(async () => {
+          await useAuthStore.getState().login('test@example.com', 'password')
+        })
+
+        // Assert
+        const state = useAuthStore.getState()
+        expect(state.isAuthenticated).toBe(true)
+        expect(state.user?.username).toBe('testuser')
+        expect(state.user?.tenantId).toBeUndefined()
+        expect(state.error).toBeNull()
+      })
+
+      it('does not overwrite a tenantId that login already returned', async () => {
+        // Arrange: OTP / future login responses may already carry tenantId.
+        vi.mocked(authApi.login).mockResolvedValue({ ...mockUser, tenantId: 'tenant-from-login' })
+        localStorage.setItem('access_token', 'valid-token')
+        vi.mocked(apiClient.get).mockResolvedValue({
+          data: { username: 'testuser', email: 'test@example.com', roles: [], tenantId: 'tenant-from-server' },
+        })
+
+        // Act
+        await act(async () => {
+          await useAuthStore.getState().login('test@example.com', 'password')
+        })
+
+        // Assert
+        expect(useAuthStore.getState().user?.tenantId).toBe('tenant-from-login')
+      })
+
+      it('does not attempt enrichment when login itself failed', async () => {
+        // Arrange
+        vi.mocked(authApi.login).mockRejectedValue(new Error('Invalid username or password.'))
+        localStorage.setItem('access_token', 'stale-token')
+
+        // Act
+        await act(async () => {
+          try {
+            await useAuthStore.getState().login('test@example.com', 'wrong')
+          } catch {
+            // Expected
+          }
+        })
+
+        // Assert
+        expect(apiClient.get).not.toHaveBeenCalled()
+        expect(useAuthStore.getState().user).toBeNull()
+      })
     })
   })
 
