@@ -53,6 +53,25 @@ export const useAuthStore = create<AuthState>()(
             isInitialized: true,
             error: null,
           });
+
+          // Fix (SOUPFIN-53): the POST /rest/api/login response carries no
+          // tenantId, so the user stored above has none. App.tsx only fetches
+          // account settings when tenantId is present, so the tenant currency
+          // (e.g. GHS) never loaded and every amount rendered with the default
+          // USD symbol until the next page reload ran initialize() ->
+          // validateToken(). Enrich here through that same
+          // GET /rest/user/current.json path so the currency is correct on the
+          // first render after sign-in.
+          //
+          // Non-fatal: the token we just received is valid, so a failed
+          // enrichment must never invalidate the session. validateToken()
+          // already swallows its own request errors and returns false; the
+          // try/catch guards anything it does not.
+          try {
+            await get().validateToken();
+          } catch (enrichError) {
+            console.warn('[AuthStore] Could not enrich user with tenantId after login:', enrichError);
+          }
         } catch (err) {
           // Fix (SOUPFIN-29): never surface the raw Axios status-code message.
           // getLoginErrorMessage maps 401/403 → "Invalid username or password."
