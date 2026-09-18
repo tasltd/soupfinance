@@ -218,6 +218,103 @@ describe('Corporate API Integration', () => {
     });
   });
 
+  // Added (SOUPFIN-55): the onboarding entry point needs a corporate id, and
+  // /rest/corporate/current.json does not exist on the backend yet.
+  describe('listCorporates', () => {
+    it('lists corporates for the tenant with query params', async () => {
+      mockAxiosInstance.get.mockResolvedValue({
+        data: [{ id: 'corp-1', name: 'Acme Ltd' }],
+      });
+
+      vi.resetModules();
+      const { listCorporates } = await import('../../endpoints/corporate');
+
+      const result = await listCorporates({ max: 1 });
+
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/corporate/index.json?max=1');
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('corp-1');
+    });
+
+    it('wraps a single bare object into an array', async () => {
+      mockAxiosInstance.get.mockResolvedValue({ data: { id: 'corp-1', name: 'Acme Ltd' } });
+
+      vi.resetModules();
+      const { listCorporates } = await import('../../endpoints/corporate');
+
+      const result = await listCorporates();
+
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/corporate/index.json');
+      expect(result).toEqual([{ id: 'corp-1', name: 'Acme Ltd' }]);
+    });
+
+    it('returns an empty array when the tenant has no corporates', async () => {
+      mockAxiosInstance.get.mockResolvedValue({ data: null });
+
+      vi.resetModules();
+      const { listCorporates } = await import('../../endpoints/corporate');
+
+      expect(await listCorporates()).toEqual([]);
+    });
+  });
+
+  describe('resolveOnboardingCorporate', () => {
+    it('prefers current.json when the backend supports it', async () => {
+      mockAxiosInstance.get.mockResolvedValue({
+        data: { id: 'corp-current', name: 'From current', kycStatus: 'PENDING' },
+      });
+
+      vi.resetModules();
+      const { resolveOnboardingCorporate } = await import('../../endpoints/corporate');
+
+      const result = await resolveOnboardingCorporate();
+
+      expect(result?.id).toBe('corp-current');
+      // current.json answered, so the list fallback must not have been needed
+      expect(mockAxiosInstance.get).toHaveBeenCalledTimes(1);
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/corporate/current.json');
+    });
+
+    it('falls back to the corporate list when current.json 404s', async () => {
+      mockAxiosInstance.get
+        .mockRejectedValueOnce({ response: { status: 404 } })
+        .mockResolvedValueOnce({ data: [{ id: 'corp-listed', name: 'From list' }] });
+
+      vi.resetModules();
+      const { resolveOnboardingCorporate } = await import('../../endpoints/corporate');
+
+      const result = await resolveOnboardingCorporate();
+
+      expect(result?.id).toBe('corp-listed');
+      expect(mockAxiosInstance.get).toHaveBeenNthCalledWith(1, '/corporate/current.json');
+      expect(mockAxiosInstance.get).toHaveBeenNthCalledWith(2, '/corporate/index.json?max=1');
+    });
+
+    it('returns null when neither source yields a corporate', async () => {
+      mockAxiosInstance.get
+        .mockRejectedValueOnce({ response: { status: 404 } })
+        .mockResolvedValueOnce({ data: [] });
+
+      vi.resetModules();
+      const { resolveOnboardingCorporate } = await import('../../endpoints/corporate');
+
+      expect(await resolveOnboardingCorporate()).toBeNull();
+    });
+
+    it('propagates a list failure instead of hiding it as "no corporate"', async () => {
+      mockAxiosInstance.get
+        .mockRejectedValueOnce({ response: { status: 404 } })
+        .mockRejectedValueOnce({ response: { status: 403 } });
+
+      vi.resetModules();
+      const { resolveOnboardingCorporate } = await import('../../endpoints/corporate');
+
+      await expect(resolveOnboardingCorporate()).rejects.toMatchObject({
+        response: { status: 403 },
+      });
+    });
+  });
+
   // =============================================================================
   // Corporate Account Persons (Directors/Signatories)
   // =============================================================================

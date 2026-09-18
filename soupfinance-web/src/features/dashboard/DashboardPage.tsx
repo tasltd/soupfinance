@@ -9,6 +9,8 @@ import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { listInvoices } from '../../api';
 import { useDashboardStats } from '../../hooks/useDashboardStats';
+// Added (SOUPFIN-55): entry point into the corporate KYC onboarding wizard
+import { KycOnboardingBanner } from '../../components/feedback';
 import { useFormatCurrency } from '../../stores';
 // Added: GSAP dashboard entrance animation (SOUP-679)
 import { useDashboardEntrance } from '../../hooks/useGsapAnimations';
@@ -70,6 +72,10 @@ export function DashboardPage() {
           Welcome back! Here's your financial snapshot.
         </p>
       </div>
+
+      {/* Added (SOUPFIN-55): the only in-app way into /onboarding/company.
+          Renders itself away when verification is approved or absent. */}
+      <KycOnboardingBanner />
 
       {/* Added: surface backend / permission failures instead of silently
           showing zeros and "No invoices yet" (bug 11 in SOUPFIN-2) */}

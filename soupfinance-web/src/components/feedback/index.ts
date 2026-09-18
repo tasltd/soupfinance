@@ -9,3 +9,5 @@ export { ToastProvider, useToast, type ToastData, type ShowToastOptions } from '
 export { Tooltip, type TooltipProps, type TooltipPosition } from './Tooltip';
 export { ApiErrorState } from './ApiErrorState';
 export { ModuleDisabledBanner } from './ModuleDisabledBanner';
+// Added (SOUPFIN-55): dashboard entry point into the KYC onboarding wizard
+export { KycOnboardingBanner } from './KycOnboardingBanner';

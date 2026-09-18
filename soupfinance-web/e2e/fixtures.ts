@@ -1316,6 +1316,20 @@ export async function mockAmbientApi(page: import('@playwright/test').Page) {
   );
   await page.route('**/rest/client/index.json*', (route) => route.fulfill(json([])));
   await page.route('**/rest/ledgerAccount/index.json*', (route) => route.fulfill(json([])));
+
+  // Added (SOUPFIN-55): the dashboard now resolves whether the tenant has an
+  // unfinished corporate KYC application, to decide whether to offer the
+  // onboarding entry point. Default to "none", so existing dashboard specs see
+  // no banner and their assertions/screenshots are unaffected. Routes are LIFO,
+  // so soupfin-55's own spec still wins by registering its own after this.
+  await page.route('**/rest/corporate/current*', (route) =>
+    route.fulfill({
+      status: 404,
+      contentType: 'application/json',
+      body: JSON.stringify({ error: 'Not Found' }),
+    })
+  );
+  await page.route('**/rest/corporate/index.json*', (route) => route.fulfill(json([])));
 }
 
 // ===========================================================================

@@ -44,6 +44,11 @@ export async function updateCorporate(id: string, data: Partial<Corporate>): Pro
 /**
  * Get current user's corporate (for onboarding flow)
  * GET /rest/corporate/current.json
+ *
+ * NOTE (SOUPFIN-55): the backend CorporateController has no `current` action
+ * today, so this resolves to null in practice. It is kept (and tried first by
+ * `resolveOnboardingCorporate`) so the app upgrades automatically if the
+ * action is added later.
  */
 export async function getCurrentCorporate(): Promise<Corporate | null> {
   try {
@@ -53,6 +58,34 @@ export async function getCurrentCorporate(): Promise<Corporate | null> {
     // Returns null if no corporate found for current user
     return null;
   }
+}
+
+/**
+ * List corporates for the current tenant
+ * GET /rest/corporate/index.json
+ */
+export async function listCorporates(params?: ListParams): Promise<Corporate[]> {
+  const query = params ? `?${toQueryString(params)}` : '';
+  const response = await apiClient.get<Corporate[]>(`${CORPORATE_URL}/index.json${query}`);
+  // Added (SOUPFIN-55): Grails returns a bare object when a single row matches
+  return Array.isArray(response.data) ? response.data : response.data ? [response.data] : [];
+}
+
+/**
+ * Added (SOUPFIN-55): Resolve the corporate whose KYC onboarding the signed-in
+ * user should continue.
+ *
+ * Tries `current.json` first — that is the endpoint the flow is meant to use.
+ * It does not exist on the backend yet, so we fall back to the tenant-scoped
+ * corporate list, which does. Returns null when the tenant has no corporate at
+ * all, in which case there is no half-finished application to resume.
+ */
+export async function resolveOnboardingCorporate(): Promise<Corporate | null> {
+  const current = await getCurrentCorporate();
+  if (current?.id) return current;
+
+  const corporates = await listCorporates({ max: 1 });
+  return corporates[0] ?? null;
 }
 
 // =============================================================================

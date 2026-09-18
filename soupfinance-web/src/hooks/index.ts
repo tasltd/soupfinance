@@ -22,3 +22,7 @@ export type { UsePdfReturn } from './usePdf';
 // Added: Email sending hook with frontend PDF generation
 export { useEmailSend } from './useEmailSend';
 export type { UseEmailSendReturn, EmailSendOptions, ReportEmailOptions } from './useEmailSend';
+
+// Added (SOUPFIN-55): resolves an unfinished corporate KYC application
+export { useKycOnboarding } from './useKycOnboarding';
+export type { KycOnboardingState } from './useKycOnboarding';
