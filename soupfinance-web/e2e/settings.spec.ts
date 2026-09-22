@@ -11,7 +11,7 @@
  *   npm run test:e2e:lxc      # Run against real LXC backend
  */
 import { test, expect } from '@playwright/test';
-import { mockTokenValidationApi, takeScreenshot, isLxcMode, backendTestUsers, setupResponseValidation } from './fixtures';
+import { mockTokenValidationApi, takeScreenshot, isLxcMode, backendTestUsers, setupResponseValidation, deferredJsonRoute } from './fixtures';
 
 // ===========================================================================
 // Mock Data
@@ -388,21 +388,20 @@ test.describe('Settings - User Management', () => {
 
       await mockTokenValidationApi(page, true);
 
-      // Delay response
-      await page.route('**/rest/agent/index.json*', async (route) => {
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-        route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify(mockUsers),
-        });
-      });
+      // Fix (SOUPFIN-66): hold the response open instead of a 2s delay raced by a
+      // 2s assertion timeout — the tightest window in the suite, and the reason
+      // this test failed on the full gate but passed in isolation.
+      const agents = deferredJsonRoute(mockUsers);
+      await page.route('**/rest/agent/index.json*', agents.handler);
 
       await page.goto('/settings/users', { waitUntil: 'commit' });
-      await page.waitForSelector('[data-testid="user-list-page"]', { timeout: 5000 });
+      await page.waitForSelector('[data-testid="user-list-page"]', { timeout: 15000 });
 
       // Should show loading state
-      await expect(page.locator('text=Loading users...')).toBeVisible({ timeout: 2000 });
+      await expect(page.locator('text=Loading users...')).toBeVisible();
+
+      agents.release();
+      await expect(page.locator('text=Loading users...')).toBeHidden({ timeout: 15000 });
     });
 
     test('shows empty state when no users', async ({ page }) => {

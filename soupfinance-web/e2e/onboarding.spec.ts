@@ -19,6 +19,7 @@ import {
   mockTokenValidationApi,
   takeScreenshot,
   setupResponseValidation,
+  deferredJsonRoute,
 } from './fixtures';
 
 // Added: Test constants for corporate onboarding
@@ -189,26 +190,22 @@ test.describe('Corporate Onboarding Flow', () => {
       await page.waitForURL('**/register*');
     });
 
+    // Fix (SOUPFIN-66): hold the response open instead of racing a fixed delay —
+    // under full parallelism the navigation consumed the delay window and the
+    // spinner was already gone when the assertion first polled.
     test('shows loading state while fetching data', async ({ page }) => {
-      // Fix: 5000ms delay so loading spinner is reliably visible (page navigation consumes ~2s)
-      await page.route(`**/rest/corporate/show/${CORPORATE_ID}*`, async (route) => {
-        await new Promise((resolve) => setTimeout(resolve, 5000));
-        route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify(mockCorporate),
-        });
-      });
+      const corporate = deferredJsonRoute(mockCorporate);
+      await page.route(`**/rest/corporate/show/${CORPORATE_ID}*`, corporate.handler);
 
       await page.goto(BASE_URL_COMPANY);
 
-      // Fix: Check for either spinner or loading text with 5s timeout
-      const hasSpinner = await page.locator('.animate-spin').isVisible({ timeout: 5000 }).catch(() => false);
-      const hasLoadingText = await page.getByText(/loading/i).isVisible({ timeout: 5000 }).catch(() => false);
-      expect(hasSpinner || hasLoadingText).toBeTruthy();
+      // The spinner cannot disappear until release() below, so this is a wait,
+      // not a race.
+      await expect(page.locator('.animate-spin').first()).toBeVisible();
       await takeScreenshot(page, 'onboarding-company-loading');
 
-      // Wait for content to load after delay resolves
+      // Wait for content to load once the held response is released
+      corporate.release();
       await expect(page.getByText('Company Information')).toBeVisible({ timeout: 15000 });
     });
   });
@@ -609,21 +606,18 @@ test.describe('Corporate Onboarding Flow', () => {
     });
 
     test('shows loading state while fetching documents', async ({ page }) => {
-      // Changed: Increased delay from 1s to 3s for reliable loading state detection
-      await page.route(`**/rest/corporateDocuments/index*`, async (route) => {
-        await new Promise((resolve) => setTimeout(resolve, 3000));
-        route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify([]),
-        });
-      });
+      const documents = deferredJsonRoute([]);
+      await page.route(`**/rest/corporateDocuments/index*`, documents.handler);
 
       await page.goto(BASE_URL_DOCUMENTS);
 
-      // Changed: Added timeout to handle race condition with page load
-      await expect(page.locator('.animate-spin').first()).toBeVisible({ timeout: 3000 });
+      await expect(page.locator('.animate-spin').first()).toBeVisible();
       await takeScreenshot(page, 'onboarding-documents-loading');
+
+      // Release so the spinner is proven to be tied to the pending request,
+      // not a permanently stuck element.
+      documents.release();
+      await expect(page.locator('.animate-spin').first()).toBeHidden({ timeout: 15000 });
     });
   });
 
@@ -778,23 +772,18 @@ test.describe('Corporate Onboarding Flow', () => {
     });
 
     test('shows loading state while fetching data', async ({ page }) => {
-      // Fix: Increased delay to 5s to eliminate race condition with page navigation
-      await page.route(`**/rest/corporate/show/${CORPORATE_ID}*`, async (route) => {
-        await new Promise((resolve) => setTimeout(resolve, 5000));
-        route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({ ...mockCorporate, kycStatus: 'PENDING' }),
-        });
-      });
+      const corporate = deferredJsonRoute({ ...mockCorporate, kycStatus: 'PENDING' });
+      await page.route(`**/rest/corporate/show/${CORPORATE_ID}*`, corporate.handler);
       await mockDirectorsApi(page, CORPORATE_ID, [mockDirector]);
       await mockDocumentsApi(page, CORPORATE_ID, [mockDocument]);
 
       await page.goto(BASE_URL_STATUS);
 
-      // Fix: Increased timeout to 5s to match the delayed response
-      await expect(page.locator('.animate-spin').first()).toBeVisible({ timeout: 5000 });
+      await expect(page.locator('.animate-spin').first()).toBeVisible();
       await takeScreenshot(page, 'onboarding-status-loading');
+
+      corporate.release();
+      await expect(page.getByText('KYC Application Status')).toBeVisible({ timeout: 15000 });
     });
   });
 

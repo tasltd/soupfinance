@@ -13,7 +13,7 @@
  */
 import { test, expect } from '@playwright/test';
 // Changed: Import mockTokenValidationApi to mock /rest/user/current.json during auth initialization
-import { takeScreenshot, mockTokenValidationApi, setupResponseValidation } from './fixtures';
+import { takeScreenshot, mockTokenValidationApi, setupResponseValidation, deferredJsonRoute } from './fixtures';
 
 // =============================================================================
 // Mock Data
@@ -1316,104 +1316,83 @@ test.describe('Report Loading States', () => {
     await mockTokenValidationApi(page, true);
   });
 
+  // Fix (SOUPFIN-66): hold the response open instead of racing a fixed delay.
+  // A timed delay is only wide enough when the page happens to load fast; under
+  // full parallelism the navigation consumed the window and the spinner was gone.
   test('shows loading state for trial balance', async ({ page }) => {
-    // Fix: Increased delay from 3s to 5s to eliminate race condition with page navigation
-    await page.route('**/rest/financeReports/trialBalance*', async (route) => {
-      await new Promise((resolve) => setTimeout(resolve, 5000));
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(mockTrialBalanceResponse),
-      });
-    });
+    const trialBalance = deferredJsonRoute(mockTrialBalanceResponse);
+    await page.route('**/rest/financeReports/trialBalance*', trialBalance.handler);
 
     await page.goto('/reports/trial-balance');
 
-    await expect(page.getByTestId('trial-balance-loading')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByTestId('trial-balance-loading')).toBeVisible();
 
     await takeScreenshot(page, 'trial-balance-loading');
 
-    // Wait for data to load
+    // Release the held response, then assert the loaded state replaces the spinner.
+    trialBalance.release();
     await expect(page.getByTestId('trial-balance-table')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId('trial-balance-loading')).toBeHidden();
   });
 
   test('shows loading state for profit & loss', async ({ page }) => {
-    await page.route('**/rest/financeReports/incomeStatement*', async (route) => {
-      await new Promise((resolve) => setTimeout(resolve, 3000));
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(mockIncomeStatementResponse),
-      });
-    });
+    const incomeStatement = deferredJsonRoute(mockIncomeStatementResponse);
+    await page.route('**/rest/financeReports/incomeStatement*', incomeStatement.handler);
 
     await page.goto('/reports/pnl');
 
-    await expect(page.getByTestId('profit-loss-loading')).toBeVisible({ timeout: 3000 });
+    await expect(page.getByTestId('profit-loss-loading')).toBeVisible();
 
     await takeScreenshot(page, 'profit-loss-loading');
+
+    incomeStatement.release();
+    await expect(page.getByTestId('profit-loss-loading')).toBeHidden({ timeout: 10000 });
   });
 
   test('shows loading state for balance sheet', async ({ page }) => {
-    // Fix: Increased delay from 3s to 5s to eliminate race condition with page navigation
-    await page.route('**/rest/financeReports/balanceSheet*', async (route) => {
-      await new Promise((resolve) => setTimeout(resolve, 5000));
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(mockBalanceSheetResponse),
-      });
-    });
+    const balanceSheet = deferredJsonRoute(mockBalanceSheetResponse);
+    await page.route('**/rest/financeReports/balanceSheet*', balanceSheet.handler);
 
     await page.goto('/reports/balance-sheet');
 
-    await expect(page.getByTestId('balance-sheet-loading')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByTestId('balance-sheet-loading')).toBeVisible();
 
     await takeScreenshot(page, 'balance-sheet-loading');
+
+    balanceSheet.release();
+    await expect(page.getByTestId('balance-sheet-loading')).toBeHidden({ timeout: 10000 });
   });
 
-  // Fix: Increased mock delay and assertion timeout to eliminate race condition flakiness
   test('shows loading state for cash flow', async ({ page }) => {
-    await page.route('**/rest/financeReports/accountTransactions*', async (route) => {
-      await new Promise((resolve) => setTimeout(resolve, 5000));
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(mockAccountTransactionsResponse),
-      });
-    });
+    const cashFlow = deferredJsonRoute(mockAccountTransactionsResponse);
+    await page.route('**/rest/financeReports/accountTransactions*', cashFlow.handler);
 
     await page.goto('/reports/cash-flow');
 
-    await expect(page.getByTestId('cash-flow-loading')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByTestId('cash-flow-loading')).toBeVisible();
 
     await takeScreenshot(page, 'cash-flow-loading');
+
+    cashFlow.release();
+    await expect(page.getByTestId('cash-flow-loading')).toBeHidden({ timeout: 10000 });
   });
 
   test('shows loading states for aging reports', async ({ page }) => {
-    await page.route('**/rest/financeReports/agedReceivables*', async (route) => {
-      await new Promise((resolve) => setTimeout(resolve, 3000));
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(mockAgedReceivablesResponse),
-      });
-    });
-
-    await page.route('**/rest/financeReports/agedPayables*', async (route) => {
-      await new Promise((resolve) => setTimeout(resolve, 3000));
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(mockAgedPayablesResponse),
-      });
-    });
+    const agedReceivables = deferredJsonRoute(mockAgedReceivablesResponse);
+    const agedPayables = deferredJsonRoute(mockAgedPayablesResponse);
+    await page.route('**/rest/financeReports/agedReceivables*', agedReceivables.handler);
+    await page.route('**/rest/financeReports/agedPayables*', agedPayables.handler);
 
     await page.goto('/reports/aging');
 
-    await expect(page.getByTestId('ar-aging-loading')).toBeVisible({ timeout: 3000 });
-    await expect(page.getByTestId('ap-aging-loading')).toBeVisible({ timeout: 3000 });
+    await expect(page.getByTestId('ar-aging-loading')).toBeVisible();
+    await expect(page.getByTestId('ap-aging-loading')).toBeVisible();
 
     await takeScreenshot(page, 'aging-loading');
+
+    agedReceivables.release();
+    agedPayables.release();
+    await expect(page.getByTestId('ar-aging-loading')).toBeHidden({ timeout: 10000 });
+    await expect(page.getByTestId('ap-aging-loading')).toBeHidden({ timeout: 10000 });
   });
 });

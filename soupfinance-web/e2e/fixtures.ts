@@ -524,6 +524,60 @@ export async function mockApiResponse(
   });
 }
 
+/**
+ * Build a route handler whose response is held open until the test releases it.
+ *
+ * Why this exists (SOUPFIN-66): "shows loading state" tests used to delay a mock
+ * with `setTimeout(resolve, 3000)` and then assert the spinner within a similar
+ * timeout. That is a race, not a wait. `page.goto()` resolves on the `load`
+ * event, which under full parallelism (7 workers sharing one Vite dev server)
+ * can land AFTER the delayed request has already settled — the spinner is gone
+ * before the first assertion polls, and the test fails. Re-run alone it passes,
+ * because the page loads fast enough. Raising the delay only widens the window;
+ * it never closes it.
+ *
+ * With this helper the response cannot arrive until `release()` is called, so
+ * the loading state is guaranteed to still be on screen when the assertion runs,
+ * no matter how slow the navigation was.
+ *
+ * Usage:
+ *   const gate = deferredJsonRoute(mockTrialBalanceResponse);
+ *   await page.route(trialBalanceUrlGlob, gate.handler);
+ *   await page.goto('/reports/trial-balance');
+ *   await expect(page.getByTestId('trial-balance-loading')).toBeVisible();
+ *   gate.release();
+ *   await expect(page.getByTestId('trial-balance-table')).toBeVisible();
+ */
+export function deferredJsonRoute(
+  body: unknown,
+  options: { status?: number; contentType?: string } = {}
+) {
+  const { status = 200, contentType = 'application/json' } = options;
+
+  let releaseGate: () => void = () => {};
+  const gate = new Promise<void>((resolve) => {
+    releaseGate = resolve;
+  });
+
+  // Requests that arrived before release() are held here. Several components
+  // fire the same query more than once (React StrictMode, refetch on focus),
+  // so the handler must stay usable for every hit, not just the first.
+  const handler = async (route: { fulfill: (r: object) => Promise<void> }) => {
+    await gate;
+    await route.fulfill({
+      status,
+      contentType,
+      body: typeof body === 'string' ? body : JSON.stringify(body),
+    });
+  };
+
+  return {
+    handler,
+    /** Let every held request (and any later one) complete. */
+    release: () => releaseGate(),
+  };
+}
+
 // Helper to take screenshot with consistent naming
 export async function takeScreenshot(
   page: Awaited<ReturnType<typeof base.page>>,

@@ -6,7 +6,7 @@
  * This is required because the app validates the auth token on page load
  */
 import { test, expect } from '@playwright/test';
-import { mockInvoicesApi, mockInvoices, mockDashboardApi, takeScreenshot, mockTokenValidationApi, setupResponseValidation } from './fixtures';
+import { mockInvoicesApi, mockInvoices, mockDashboardApi, takeScreenshot, mockTokenValidationApi, setupResponseValidation, deferredJsonRoute } from './fixtures';
 
 // Helper to set up authenticated state
 async function setupAuth(page: any) {
@@ -106,25 +106,22 @@ test.describe('Invoice Management', () => {
       // Must mock token validation FIRST before setting up delayed invoice route
       await mockTokenValidationApi(page, true);
 
-      // Set up delayed API response for invoice list only - use longer delay to ensure we catch loading state
-      await page.route('**/rest/invoice/index.json*', async (route) => {
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-        route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify(mockInvoices),
-        });
-      });
+      // Fix (SOUPFIN-66): hold the response open instead of delaying it 2s — the
+      // navigation could consume the whole window under full parallelism.
+      const invoices = deferredJsonRoute(mockInvoices);
+      await page.route('**/rest/invoice/index.json*', invoices.handler);
 
       // Start navigation but don't wait for full load
       await page.goto('/invoices', { waitUntil: 'commit' });
 
-      // Should show loading state - use short timeout since it should be visible immediately
-      await expect(page.getByTestId('invoice-list-loading')).toBeVisible({ timeout: 3000 });
+      // Should show loading state - guaranteed visible until release() below
+      await expect(page.getByTestId('invoice-list-loading')).toBeVisible();
       await takeScreenshot(page, 'invoices-list-loading');
 
-      // Wait for table to appear after delay resolves
-      await expect(page.getByTestId('invoice-list-table')).toBeVisible({ timeout: 5000 });
+      // Wait for table to appear once the held response is released
+      invoices.release();
+      await expect(page.getByTestId('invoice-list-table')).toBeVisible({ timeout: 15000 });
+      await expect(page.getByTestId('invoice-list-loading')).toBeHidden();
     });
 
     test('shows empty state when no invoices exist', async ({ page }) => {

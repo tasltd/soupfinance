@@ -1,17 +1,52 @@
 /**
  * Landing Page E2E Tests
- * Tests the public landing page at www.soupfinance.com
+ * Tests the public landing page (soupfinance-landing/)
  * Validates hero section links are clickable on both desktop and mobile
+ *
+ * OPT-IN SUITE — run with `npm run test:e2e:landing`, NOT `npm run test:e2e`.
+ *
+ * Fix (SOUPFIN-66): this file used to hardcode https://www.soupfinance.com and
+ * ran inside the default mock suite, so every mock E2E run made real network
+ * calls to production. When the network was slow, offline, or Cloudflare was
+ * throttling, all seven tests failed with
+ * `page.goto: Test timeout of 30000ms exceeded` — 5 of the 22 flaky failures on
+ * the full gate. It now runs as its own project (playwright.landing.config.ts)
+ * against a LOCAL static copy by default. Override to smoke-test a deployment:
+ *
+ *   LANDING_BASE_URL=https://www.soupfinance.com npm run test:e2e:landing
  */
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 
-// Production landing page URL
-const LANDING_PAGE_URL = 'https://www.soupfinance.com';
+// Resolved by playwright.landing.config.ts: the local static server by default,
+// or LANDING_BASE_URL when smoke-testing a real deployment.
+const LANDING_PAGE_URL = '/index.html';
+
+// The page pulls stock photography from images.pexels.com and webfonts from
+// fonts.gstatic.com. Neither is under test, both are slow, and `page.goto`
+// waits for them on the `load` event — which is exactly how this spec used to
+// blow its 30s budget. Stub them so the run is deterministic offline.
+// cdn.tailwindcss.com is NOT stubbed: the layout assertions below
+// (`toBeVisible`, `boundingBox`, `elementFromPoint`) need real CSS.
+async function stubExternalAssets(page: Page) {
+  await page.route('**://images.pexels.com/**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'image/gif',
+      // 1x1 transparent GIF
+      body: Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64'),
+    })
+  );
+  await page.route('**://fonts.gstatic.com/**', (route) => route.abort());
+}
 
 test.describe('Landing Page', () => {
+  test.beforeEach(async ({ page }) => {
+    await stubExternalAssets(page);
+  });
+
   test.describe('Desktop', () => {
     test('hero section CTA buttons are clickable', async ({ page }) => {
-      await page.goto(LANDING_PAGE_URL);
+      await page.goto(LANDING_PAGE_URL, { waitUntil: 'domcontentloaded' });
 
       // Wait for page to load
       await expect(page.locator('nav')).toBeVisible();
@@ -36,7 +71,7 @@ test.describe('Landing Page', () => {
     });
 
     test('navigation Sign In link is clickable', async ({ page }) => {
-      await page.goto(LANDING_PAGE_URL);
+      await page.goto(LANDING_PAGE_URL, { waitUntil: 'domcontentloaded' });
 
       const signInLink = page.locator('nav').getByRole('link', { name: /Sign In/i });
       await expect(signInLink).toBeVisible();
@@ -46,7 +81,7 @@ test.describe('Landing Page', () => {
     });
 
     test('navigation Start Free Trial button is clickable', async ({ page }) => {
-      await page.goto(LANDING_PAGE_URL);
+      await page.goto(LANDING_PAGE_URL, { waitUntil: 'domcontentloaded' });
 
       const navTrialButton = page.locator('nav').getByRole('link', { name: /Start Free Trial/i });
       await expect(navTrialButton).toBeVisible();
@@ -60,7 +95,7 @@ test.describe('Landing Page', () => {
     test.use({ viewport: { width: 375, height: 667 } }); // iPhone SE size
 
     test('hero section CTA buttons are clickable on mobile', async ({ page }) => {
-      await page.goto(LANDING_PAGE_URL);
+      await page.goto(LANDING_PAGE_URL, { waitUntil: 'domcontentloaded' });
 
       // Wait for page to load
       await expect(page.locator('nav')).toBeVisible();
@@ -107,7 +142,7 @@ test.describe('Landing Page', () => {
     });
 
     test('See How It Works button is clickable on mobile', async ({ page }) => {
-      await page.goto(LANDING_PAGE_URL);
+      await page.goto(LANDING_PAGE_URL, { waitUntil: 'domcontentloaded' });
 
       const seeHowButton = page.locator('section').first().getByRole('link', { name: /See How It Works/i });
       await expect(seeHowButton).toBeVisible();
@@ -146,7 +181,7 @@ test.describe('Landing Page', () => {
     });
 
     test('mobile navigation Start Free Trial is visible and clickable', async ({ page }) => {
-      await page.goto(LANDING_PAGE_URL);
+      await page.goto(LANDING_PAGE_URL, { waitUntil: 'domcontentloaded' });
 
       // On mobile, the nav Start Free Trial should still be visible
       const navTrialButton = page.locator('nav').getByRole('link', { name: /Start Free Trial/i });
@@ -159,7 +194,7 @@ test.describe('Landing Page', () => {
 
   test.describe('All CTA Links', () => {
     test('all register links point to correct URL', async ({ page }) => {
-      await page.goto(LANDING_PAGE_URL);
+      await page.goto(LANDING_PAGE_URL, { waitUntil: 'domcontentloaded' });
 
       // Find all links that should go to register
       const registerLinks = page.getByRole('link', { name: /Start Free Trial|Join the Beta/i });
@@ -176,7 +211,7 @@ test.describe('Landing Page', () => {
     });
 
     test('all login links point to correct URL', async ({ page }) => {
-      await page.goto(LANDING_PAGE_URL);
+      await page.goto(LANDING_PAGE_URL, { waitUntil: 'domcontentloaded' });
 
       // Find all Sign In links
       const loginLinks = page.getByRole('link', { name: /Sign In/i });

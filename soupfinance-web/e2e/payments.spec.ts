@@ -3,7 +3,7 @@
  * Tests payment listing, recording, and tab switching flows
  */
 import { test, expect } from '@playwright/test';
-import { mockTokenValidationApi, takeScreenshot, setupResponseValidation } from './fixtures';
+import { mockTokenValidationApi, takeScreenshot, setupResponseValidation, deferredJsonRoute } from './fixtures';
 
 // ===========================================================================
 // Mock Data
@@ -346,37 +346,29 @@ test.describe('Payment Management', () => {
       await takeScreenshot(page, 'payment-list-outgoing');
     });
 
+    // Fix (SOUPFIN-66): hold both payment responses open instead of racing a
+    // fixed delay. `waitUntil: 'commit'` plus `waitForSelector` still left only
+    // a ~2s window against a 3s delay, which full parallelism could consume.
     test('shows loading state while fetching', async ({ page }) => {
       await mockTokenValidationApi(page, true);
 
-      // Delay payment responses
-      await page.route('**/rest/invoicePayment/index.json*', async (route) => {
-        await new Promise((resolve) => setTimeout(resolve, 3000));
-        route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify(mockInvoicePayments),
-        });
-      });
-
-      await page.route('**/rest/billPayment/index.json*', async (route) => {
-        await new Promise((resolve) => setTimeout(resolve, 3000));
-        route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify(mockBillPayments),
-        });
-      });
+      const invoicePayments = deferredJsonRoute(mockInvoicePayments);
+      const billPayments = deferredJsonRoute(mockBillPayments);
+      await page.route('**/rest/invoicePayment/index.json*', invoicePayments.handler);
+      await page.route('**/rest/billPayment/index.json*', billPayments.handler);
 
       await page.goto('/payments', { waitUntil: 'commit' });
-      await page.waitForSelector('[data-testid="payment-list-page"]', { timeout: 5000 });
+      await page.waitForSelector('[data-testid="payment-list-page"]', { timeout: 15000 });
 
       // Should show loading state
-      await expect(page.getByTestId('payment-list-loading')).toBeVisible({ timeout: 2000 });
+      await expect(page.getByTestId('payment-list-loading')).toBeVisible();
       await takeScreenshot(page, 'payment-list-loading');
 
       // Wait for data to load
-      await expect(page.getByTestId('payment-table')).toBeVisible({ timeout: 10000 });
+      invoicePayments.release();
+      billPayments.release();
+      await expect(page.getByTestId('payment-table')).toBeVisible({ timeout: 15000 });
+      await expect(page.getByTestId('payment-list-loading')).toBeHidden();
     });
 
     test('shows empty state when no incoming payments', async ({ page }) => {
@@ -682,15 +674,10 @@ test.describe('Payment Management', () => {
     test('shows loading state while fetching invoices', async ({ page }) => {
       await mockTokenValidationApi(page, true);
 
-      // Fix: Increased delay to 5s to eliminate race condition with page navigation
-      await page.route('**/rest/invoice/index.json*', async (route) => {
-        await new Promise((resolve) => setTimeout(resolve, 5000));
-        route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify(mockUnpaidInvoices),
-        });
-      });
+      // Fix (SOUPFIN-66): hold the invoice response open rather than delaying it
+      // for a fixed 5s — the navigation could eat the whole window.
+      const invoices = deferredJsonRoute(mockUnpaidInvoices);
+      await page.route('**/rest/invoice/index.json*', invoices.handler);
 
       // Fix: the form fires THREE queries — invoices, bills and payment methods
       // (see PaymentFormPage). Only the invoice one may hang; the other two must
@@ -707,8 +694,11 @@ test.describe('Payment Management', () => {
 
       await page.goto('/payments/new');
 
-      // Fix: Increased timeout to 5s to match the delayed response
-      await expect(page.locator('text=Loading')).toBeVisible({ timeout: 5000 });
+      await expect(page.locator('text=Loading')).toBeVisible();
+
+      // Release so the spinner is proven to track the pending request.
+      invoices.release();
+      await expect(page.locator('text=Loading')).toBeHidden({ timeout: 15000 });
     });
   });
 

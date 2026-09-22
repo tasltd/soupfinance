@@ -23,8 +23,13 @@ export default defineConfig({
   // Test file pattern
   testMatch: '**/*.spec.ts',
 
-  // Exclude integration tests from mock runs (they require real backend)
-  testIgnore: '**/integration/**',
+  // Exclude from mock runs:
+  // - integration tests (they require a real backend)
+  // - landing-page.spec.ts — it tests the static landing page, not the SPA, and
+  //   runs as its own opt-in project (playwright.landing.config.ts). Keeping it
+  //   here meant every mock run hit the live production site and timed out
+  //   whenever the network was slow (SOUPFIN-66).
+  testIgnore: ['**/integration/**', '**/landing-page.spec.ts'],
 
   // Global timeout for each test
   timeout: 30 * 1000,

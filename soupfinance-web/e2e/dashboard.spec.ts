@@ -11,6 +11,7 @@ import {
   mockBills,
   takeScreenshot,
   setupResponseValidation,
+  deferredJsonRoute,
 } from './fixtures';
 
 test.describe('Dashboard', () => {
@@ -181,40 +182,31 @@ test.describe('Dashboard', () => {
       await takeScreenshot(page, 'dashboard-invoice-data');
     });
 
+    // Fix (SOUPFIN-66): hold the responses open instead of racing a fixed delay.
     test('shows loading state while fetching invoices', async ({ page }) => {
       // Changed: Use specific endpoint pattern and add token validation mock
       await mockTokenValidationApi(page, true);
 
-      // Changed: Use longer delay (5s) to reliably test loading state
-      await page.route('**/rest/invoice/index.json*', async (route) => {
-        await new Promise((resolve) => setTimeout(resolve, 5000));
-        route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify(mockInvoices),
-        });
-      });
-      await page.route('**/rest/bill/index.json*', async (route) => {
-        await new Promise((resolve) => setTimeout(resolve, 5000));
-        route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify(mockBills),
-        });
-      });
+      const invoices = deferredJsonRoute(mockInvoices);
+      const bills = deferredJsonRoute(mockBills);
+      await page.route('**/rest/invoice/index.json*', invoices.handler);
+      await page.route('**/rest/bill/index.json*', bills.handler);
 
       // Changed: Use waitUntil: 'commit' to not wait for network idle
       await page.goto('/dashboard', { waitUntil: 'commit' });
 
       // Wait for page to start loading data
-      await page.waitForSelector('[data-testid="dashboard-page"]', { timeout: 5000 });
+      await page.waitForSelector('[data-testid="dashboard-page"]', { timeout: 15000 });
 
-      // Should show loading state while API is delayed
-      await expect(page.getByTestId('dashboard-invoices-loading')).toBeVisible({ timeout: 3000 });
+      // Should show loading state while the responses are held
+      await expect(page.getByTestId('dashboard-invoices-loading')).toBeVisible();
       await takeScreenshot(page, 'dashboard-loading-state');
 
       // Wait for loading to complete
-      await expect(page.getByTestId('dashboard-invoices-table')).toBeVisible({ timeout: 10000 });
+      invoices.release();
+      bills.release();
+      await expect(page.getByTestId('dashboard-invoices-table')).toBeVisible({ timeout: 15000 });
+      await expect(page.getByTestId('dashboard-invoices-loading')).toBeHidden();
     });
 
     test('shows empty state when no invoices exist', async ({ page }) => {
