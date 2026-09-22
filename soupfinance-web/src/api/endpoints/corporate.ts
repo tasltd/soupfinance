@@ -97,14 +97,25 @@ export async function listCorporates(params?: ListParams): Promise<Corporate[]> 
  * corporate list, which does. Returns null when the tenant has no corporate at
  * all, in which case there is no half-finished application to resume.
  *
- * SOUPFIN-69 removes the fallback, and is BLOCKED until
- * `CorporateController.current` ships to the tenant this app talks to. Verified
- * still absent 2026-09-22: the action exists on no soupmarkets-web branch, and
- * an authenticated `GET /rest/corporate/current.json` returns 404 (HTML
- * `notFound` view). Deleting the fallback before then makes this resolver
- * return null for every user, which hides the dashboard KYC banner and leaves
- * `/onboarding/*` reachable only from an emailed link again — the exact gap
- * SOUPFIN-55 closed. Unblock check and follow-up steps: §9 of
+ * SOUPFIN-69, and its verbatim duplicate SOUPFIN-70, remove the fallback. Both
+ * are BLOCKED until `CorporateController.current` ships to the tenant this app
+ * talks to. Verified still absent twice on 2026-09-22, independently: the
+ * action exists on none of the 1384 soupmarkets-web refs and no commit has ever
+ * introduced it, and an authenticated `GET /rest/corporate/current.json`
+ * against the backend returns 404 (HTML `notFound` view) while
+ * `index.json?max=1` returns a corporate row.
+ *
+ * Deleting the fallback before then makes this resolver return null for every
+ * user, which hides the dashboard KYC banner and leaves `/onboarding/*`
+ * reachable only from an emailed link again — the exact gap SOUPFIN-55 closed.
+ *
+ * Do not re-investigate: run the one-command gate, which must print 200 before
+ * any of this changes.
+ *
+ *   curl -s -o /dev/null -w '%{http_code}\n' -H 'Accept: application/json' \
+ *     -H "X-Auth-Token: $TOKEN" <backend>/rest/corporate/current.json
+ *
+ * Unblock check and follow-up steps: §9 of
  * `plans/soupfin-62-corporate-current-endpoint.md`.
  */
 export async function resolveOnboardingCorporate(): Promise<Corporate | null> {
