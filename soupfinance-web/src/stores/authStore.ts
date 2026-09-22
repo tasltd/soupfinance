@@ -9,9 +9,37 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { login as apiLogin, logout as apiLogout, getCurrentUser, type AuthUser } from '../api/auth';
 import apiClient from '../api/client';
+// Fix (SOUPFIN-58): logout must clear the previous tenant's cached account
+// settings, otherwise `account-storage` rehydrates and the next tenant briefly
+// sees the previous tenant's currency symbol against its own figures.
+import { useAccountStore } from './accountStore';
 // Fix (SOUPFIN-29): translate raw Axios "Request failed with status code 401"
 // into a user-friendly login error message.
 import { getLoginErrorMessage } from '../api/errors';
+
+/**
+ * Added (SOUPFIN-58): Clear every browser-persisted trace of the signed-in
+ * session, so the next sign-in on this browser starts from defaults.
+ *
+ * `account-storage` holds the tenant's `settings` and `currencyConfig`. It is
+ * removed AFTER `useAccountStore.reset()` because zustand's persist middleware
+ * writes the store back to localStorage on every `set()` — resetting second
+ * would recreate the key.
+ */
+function clearSessionState(): void {
+  localStorage.removeItem('access_token');
+  localStorage.removeItem('user');
+  localStorage.removeItem('auth-storage');
+  localStorage.removeItem('auth_storage_type');
+  sessionStorage.removeItem('access_token');
+  sessionStorage.removeItem('user');
+
+  // Reset in-memory account state, then drop the persisted copy.
+  // Resetting also clears `isInitialized`, which is what lets App.tsx refetch
+  // settings for the next tenant instead of reusing the previous tenant's.
+  useAccountStore.getState().reset();
+  localStorage.removeItem('account-storage');
+}
 
 interface AuthState {
   user: AuthUser | null;
@@ -72,12 +100,8 @@ export const useAuthStore = create<AuthState>()(
 
       logout: () => {
         // Changed (2026-01-28): Clear both storages to handle dual-storage strategy
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('user');
-        localStorage.removeItem('auth-storage');
-        localStorage.removeItem('auth_storage_type');
-        sessionStorage.removeItem('access_token');
-        sessionStorage.removeItem('user');
+        // Fix (SOUPFIN-58): also clears the persisted account/tenant settings
+        clearSessionState();
         set({
           user: null,
           isAuthenticated: false,
@@ -161,12 +185,9 @@ export const useAuthStore = create<AuthState>()(
           });
         } else {
           // Changed (2026-01-28): Token invalid, clear both storages (dual-storage strategy)
-          localStorage.removeItem('access_token');
-          localStorage.removeItem('user');
-          localStorage.removeItem('auth-storage');
-          localStorage.removeItem('auth_storage_type');
-          sessionStorage.removeItem('access_token');
-          sessionStorage.removeItem('user');
+          // Fix (SOUPFIN-58): an expired session ends the tenant's session just
+          // as logout does, so the cached account settings must go too.
+          clearSessionState();
           set({
             user: null,
             isAuthenticated: false,
