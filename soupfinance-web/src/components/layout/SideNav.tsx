@@ -150,9 +150,13 @@ export function SideNav() {
             {/* Collapse button (desktop only) */}
             <button
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              // Fix (SOUPFIN-63): icon-only in both states, so the ligature was
+              // the whole accessible name ("chevron_left").
+              aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              aria-expanded={!sidebarCollapsed}
               className="hidden md:flex items-center justify-center size-8 rounded-lg hover:bg-primary/10 text-subtle-text"
             >
-              <span className="material-symbols-outlined">
+              <span aria-hidden="true" className="material-symbols-outlined">
                 {sidebarCollapsed ? 'chevron_right' : 'chevron_left'}
               </span>
             </button>
@@ -163,6 +167,10 @@ export function SideNav() {
                 <div key={item.path}>
                   <NavLink
                     to={item.children ? item.children[0].path : item.path}
+                    /* Fix (SOUPFIN-63): when collapsed the label <p> below is not
+                       rendered, so with the icon hidden the link would have no
+                       accessible name at all. Name it explicitly in that case. */
+                    aria-label={sidebarCollapsed ? item.label : undefined}
                     className={`
                       flex items-center gap-3 px-3 py-2 rounded-lg transition-colors
                       ${
@@ -172,7 +180,10 @@ export function SideNav() {
                       }
                     `}
                   >
+                    {/* Fix (SOUPFIN-63): the ligature is real text, so without
+                        aria-hidden the link is named "receipt_long Invoices". */}
                     <span
+                      aria-hidden="true"
                       className={`material-symbols-outlined text-xl ${
                         isActive(item.path) ? 'fill' : ''
                       }`}
@@ -223,17 +234,19 @@ export function SideNav() {
               even when the nav column above overflows (SOUPFIN-30 #16). */}
           <div className="flex flex-col gap-1 shrink-0 pt-2">
             <button
+              aria-label={sidebarCollapsed ? 'Help' : undefined}
               className="flex items-center gap-3 px-3 py-2 rounded-lg text-subtle-text hover:bg-primary/5 hover:text-text-light dark:hover:text-text-dark transition-colors"
             >
-              <span className="material-symbols-outlined text-xl">help</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-xl">help</span>
               {!sidebarCollapsed && <p className="text-sm font-medium">Help</p>}
             </button>
             <button
               onClick={logout}
               data-testid="logout-button"
+              aria-label={sidebarCollapsed ? 'Logout' : undefined}
               className="flex items-center gap-3 px-3 py-2 rounded-lg text-subtle-text hover:bg-danger/10 hover:text-danger transition-colors"
             >
-              <span className="material-symbols-outlined text-xl">logout</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-xl">logout</span>
               {!sidebarCollapsed && <p className="text-sm font-medium">Logout</p>}
             </button>
           </div>

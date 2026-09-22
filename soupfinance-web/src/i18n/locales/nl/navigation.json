@@ -23,7 +23,9 @@
     "settings": "Instellingen",
     "darkMode": "Donkere modus",
     "lightMode": "Lichte modus",
-    "language": "Taal"
+    "language": "Taal",
+    "openMenu": "Navigatiemenu openen",
+    "systemMode": "Systeemthema"
   },
   "breadcrumb": {
     "home": "Home",

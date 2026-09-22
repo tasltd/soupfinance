@@ -13,6 +13,15 @@ export function TopNav() {
   const { themeMode, cycleThemeMode, setMobileSidebarOpen, notificationsOpen, setNotificationsOpen } =
     useUIStore();
 
+  // Fix (SOUPFIN-63): single source for the toggle's name, used by both
+  // aria-label and title. 'System' was previously hardcoded, untranslated.
+  const themeLabel =
+    themeMode === 'light'
+      ? t('header.darkMode')
+      : themeMode === 'dark'
+        ? t('header.systemMode')
+        : t('header.lightMode');
+
   // Changed: Reduced mobile padding from px-6 to px-4 to match MainLayout content padding
   return (
     <header className="flex items-center justify-between whitespace-nowrap border-b border-border-light dark:border-border-dark px-4 sm:px-6 lg:px-8 py-3 bg-surface-light dark:bg-surface-dark sticky top-0 z-10">
@@ -20,14 +29,20 @@ export function TopNav() {
       <div className="flex items-center gap-4">
         <button
           onClick={() => setMobileSidebarOpen(true)}
+          /* Fix (SOUPFIN-63): icon-only button — the ligature was the entire
+             accessible name. */
+          aria-label={t('header.openMenu')}
           className="md:hidden flex items-center justify-center size-10 rounded-full hover:bg-primary/10 text-text-light dark:text-text-dark"
         >
-          <span className="material-symbols-outlined">menu</span>
+          <span aria-hidden="true" className="material-symbols-outlined">menu</span>
         </button>
 
         {/* Search (desktop) */}
         <div className="hidden md:flex relative">
-          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-subtle-text">
+          <span
+            aria-hidden="true"
+            className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-subtle-text"
+          >
             search
           </span>
           {/* Fix (SOUPFIN-33 #6): this global search renders on EVERY authenticated page,
@@ -49,9 +64,13 @@ export function TopNav() {
         <button
           onClick={cycleThemeMode}
           className="flex items-center justify-center size-10 rounded-full hover:bg-primary/10 text-text-light dark:text-text-dark"
-          title={themeMode === 'light' ? t('header.darkMode') : themeMode === 'dark' ? 'System' : t('header.lightMode')}
+          /* Fix (SOUPFIN-63): `title` only names an element when it has no text
+             content — the ligature had priority, so this button was announced as
+             "light_mode". aria-label wins over both. */
+          aria-label={themeLabel}
+          title={themeLabel}
         >
-          <span className="material-symbols-outlined">
+          <span aria-hidden="true" className="material-symbols-outlined">
             {themeMode === 'light' ? 'light_mode' : themeMode === 'dark' ? 'dark_mode' : 'settings_brightness'}
           </span>
         </button>
@@ -63,11 +82,14 @@ export function TopNav() {
         <div className="relative">
           <button
             onClick={() => setNotificationsOpen(!notificationsOpen)}
+            // Fix (SOUPFIN-63): named by the ligature before this.
+            aria-label={t('header.notifications')}
+            aria-expanded={notificationsOpen}
             className="flex items-center justify-center size-10 rounded-full hover:bg-primary/10 text-text-light dark:text-text-dark"
           >
-            <span className="material-symbols-outlined">notifications</span>
+            <span aria-hidden="true" className="material-symbols-outlined">notifications</span>
             {/* Notification badge */}
-            <span className="absolute top-1 right-1 size-2 bg-danger rounded-full" />
+            <span aria-hidden="true" className="absolute top-1 right-1 size-2 bg-danger rounded-full" />
           </button>
 
           {/* Notifications dropdown */}

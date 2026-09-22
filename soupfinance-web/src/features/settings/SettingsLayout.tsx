@@ -66,7 +66,8 @@ export default function SettingsLayout() {
                 }
               `}
             >
-              <span className="material-symbols-outlined text-lg hidden sm:inline">{item.icon}</span>
+              {/* Fix (SOUPFIN-63): decorative — the label beside it names the link. */}
+              <span aria-hidden="true" className="material-symbols-outlined text-lg hidden sm:inline">{item.icon}</span>
               {item.label}
             </NavLink>
           );
@@ -86,7 +87,7 @@ export default function SettingsLayout() {
               className="flex items-start gap-4 p-6 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark hover:border-primary/50 hover:shadow-lg transition-all group"
             >
               <div className="flex-shrink-0 size-12 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                <span className="material-symbols-outlined text-2xl text-primary">{item.icon}</span>
+                <span aria-hidden="true" className="material-symbols-outlined text-2xl text-primary">{item.icon}</span>
               </div>
               <div className="flex-1">
                 <h3 className="text-lg font-bold text-text-light dark:text-text-dark group-hover:text-primary transition-colors">
@@ -94,7 +95,10 @@ export default function SettingsLayout() {
                 </h3>
                 <p className="text-subtle-text text-sm mt-1">{item.description}</p>
               </div>
-              <span className="material-symbols-outlined text-subtle-text group-hover:text-primary transition-colors">
+              <span
+                aria-hidden="true"
+                className="material-symbols-outlined text-subtle-text group-hover:text-primary transition-colors"
+              >
                 chevron_right
               </span>
             </NavLink>
