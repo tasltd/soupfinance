@@ -96,6 +96,16 @@ export async function listCorporates(params?: ListParams): Promise<Corporate[]> 
  * It does not exist on the backend yet, so we fall back to the tenant-scoped
  * corporate list, which does. Returns null when the tenant has no corporate at
  * all, in which case there is no half-finished application to resume.
+ *
+ * SOUPFIN-69 removes the fallback, and is BLOCKED until
+ * `CorporateController.current` ships to the tenant this app talks to. Verified
+ * still absent 2026-09-22: the action exists on no soupmarkets-web branch, and
+ * an authenticated `GET /rest/corporate/current.json` returns 404 (HTML
+ * `notFound` view). Deleting the fallback before then makes this resolver
+ * return null for every user, which hides the dashboard KYC banner and leaves
+ * `/onboarding/*` reachable only from an emailed link again — the exact gap
+ * SOUPFIN-55 closed. Unblock check and follow-up steps: §9 of
+ * `plans/soupfin-62-corporate-current-endpoint.md`.
  */
 export async function resolveOnboardingCorporate(): Promise<Corporate | null> {
   let current: Corporate | null = null;
