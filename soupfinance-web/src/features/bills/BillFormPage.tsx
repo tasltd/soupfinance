@@ -17,7 +17,7 @@ import { getBill, createBill, updateBill, resolveBillItemTaxEntryId } from '../.
 import { listVendors } from '../../api/endpoints/vendors';
 import { listTaxRates, listBillServices, DEFAULT_CURRENCIES } from '../../api/endpoints/domainData';
 import { useFormatCurrency } from '../../stores';
-import { sanitizeDateInputValue } from '../../utils/date';
+import { getTodayIsoDate, sanitizeDateInputValue } from '../../utils/date';
 // Added (SOUPFIN-30 #15): create a vendor without leaving this form
 import { AddEntityButton } from '../../components/forms/AddEntityButton';
 import type { BillItem } from '../../types';
@@ -50,7 +50,9 @@ export function BillFormPage() {
   // Added: Form state
   // Changed: Use backend field names — billDate (not issueDate), paymentDate (not dueDate)
   const [vendorId, setVendorId] = useState('');
-  const [billDate, setBillDate] = useState(new Date().toISOString().split('T')[0]);
+  // Fix (SOUPFIN-64): local calendar day, not UTC today — `new Date().toISOString()`
+  // defaults the field to yesterday for part of every day east of UTC.
+  const [billDate, setBillDate] = useState(getTodayIsoDate());
   const [paymentDate, setPaymentDate] = useState('');
   const [notes, setNotes] = useState('');
   // Added: Missing SSR fields (gap analysis §2.2)

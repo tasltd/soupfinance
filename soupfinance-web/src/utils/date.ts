@@ -52,3 +52,65 @@ export function formatDisplayDate(value?: string | number | null): string {
     day: 'numeric',
   });
 }
+
+/**
+ * Fix (SOUPFIN-64): Format a Date as YYYY-MM-DD using its *local* calendar
+ * parts.
+ *
+ * `new Date().toISOString().split('T')[0]` is the obvious-looking way to write
+ * "today", and it is wrong: `toISOString()` converts to UTC first, so at any
+ * positive UTC offset a Date built at local midnight rolls back a day. A user
+ * in Paris opening Trial Balance got a default range of 2026-07-31..2026-08-30
+ * instead of 2026-08-01..2026-08-31 — the last day of the month silently
+ * excluded from every default report view, so month-end figures read low. From
+ * Ghana (UTC+0) the bug is invisible, which is why it went unnoticed.
+ *
+ * Building the string from getFullYear/getMonth/getDate never converts, so the
+ * returned date is always the one the user sees on their own calendar. This is
+ * the write-side counterpart to `formatDisplayDate()` above, which already
+ * avoids the equivalent trap on the read side.
+ */
+export function toLocalIsoDate(date: Date = new Date()): string {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return '';
+  const year = String(date.getFullYear()).padStart(4, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Fix (SOUPFIN-64): Today's date in the user's own timezone, as YYYY-MM-DD.
+ * Use this for every default date-input value and "as of" report date — never
+ * `new Date().toISOString().split('T')[0]`, which yields UTC today and is
+ * therefore off by one for part of every day.
+ */
+export function getTodayIsoDate(): string {
+  return toLocalIsoDate(new Date());
+}
+
+/**
+ * Fix (SOUPFIN-64): First and last calendar day of the month containing
+ * `reference` (default: now), in the user's own timezone.
+ *
+ * `new Date(y, m + 1, 0)` is the standard "last day of month" trick and is
+ * correct — what broke was formatting its result through `toISOString()`.
+ */
+export function getCurrentMonthRange(reference: Date = new Date()): {
+  from: string;
+  to: string;
+} {
+  const year = reference.getFullYear();
+  const month = reference.getMonth();
+  return {
+    from: toLocalIsoDate(new Date(year, month, 1)),
+    to: toLocalIsoDate(new Date(year, month + 1, 0)),
+  };
+}
+
+/**
+ * Fix (SOUPFIN-64): First calendar day of the month containing `reference`
+ * (default: now), in the user's own timezone.
+ */
+export function getFirstDayOfCurrentMonth(reference: Date = new Date()): string {
+  return getCurrentMonthRange(reference).from;
+}

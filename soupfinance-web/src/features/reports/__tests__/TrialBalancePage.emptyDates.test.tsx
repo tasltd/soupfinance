@@ -17,7 +17,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { TrialBalance } from '../../../types';
-import { formatDisplayDate } from '../../../utils/date';
+import { formatDisplayDate, getCurrentMonthRange } from '../../../utils/date';
 
 vi.mock('../../../api/endpoints/reports', async () => {
   const actual =
@@ -43,19 +43,12 @@ import { TrialBalancePage } from '../TrialBalancePage';
 // UTC offset (-12..+14) and the frozen range never straddles a month boundary.
 const FROZEN_NOW = new Date('2026-08-15T12:00:00Z');
 
-// Mirrors getCurrentMonthRange() in TrialBalancePage.tsx exactly — including its
-// local-midnight → toISOString() conversion — so the expected strings match what
-// the component computes in whatever timezone the suite runs in.
-function currentMonthRangeAt(now: Date): { from: string; to: string } {
-  const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  return {
-    from: firstDay.toISOString().split('T')[0],
-    to: lastDay.toISOString().split('T')[0],
-  };
-}
-
-const DEFAULT_RANGE = currentMonthRangeAt(FROZEN_NOW);
+// Fix (SOUPFIN-64): this used to re-implement the page's range helper, faithfully
+// copying its local-midnight → toISOString() conversion so the expectations matched
+// whatever the (buggy) component produced. That made the test agree with the defect
+// instead of catching it. It now calls the same shared helper the page calls, so the
+// expected range is the real local calendar month in every timezone.
+const DEFAULT_RANGE = getCurrentMonthRange(FROZEN_NOW);
 
 // A trial balance whose every ledger group is empty — this is what drives the
 // empty state. `accounts` is a Record keyed by ledger group, not an array.
@@ -203,7 +196,7 @@ describe('TrialBalancePage empty state — calendar independence (SOUPFIN-61)', 
     vi.clearAllMocks();
     vi.setSystemTime(frozen);
 
-    const range = currentMonthRangeAt(frozen);
+    const range = getCurrentMonthRange(frozen);
     vi.mocked(getTrialBalance).mockResolvedValue({
       ...EMPTY_TRIAL_BALANCE,
       asOf: range.to,
