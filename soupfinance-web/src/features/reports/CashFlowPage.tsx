@@ -13,14 +13,14 @@ import { useQuery } from '@tanstack/react-query';
 import { getCashFlowStatement, type ReportFilters } from '../../api/endpoints/reports';
 import type { CashFlowStatement, CashFlowActivity } from '../../types';
 import { getFirstDayOfCurrentMonth, getTodayIsoDate } from '../../utils/date';
+import { useFormatCurrency } from '../../stores';
 
-// Added: Currency formatter for consistent display
-const currencyFormatter = new Intl.NumberFormat('en-US', {
-  style: 'currency',
-  currency: 'USD',
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
+// Fix (SOUPFIN-67): the module-level Intl.NumberFormat('en-US', { currency: 'USD' })
+// that used to live here hardcoded dollars, so a GHS tenant read its own cedi
+// figures labelled "$". Every amount on this page now goes through the account
+// store's formatCurrency, the same source the dashboard and the other reports use.
+// CashFlowSection and CashFlowActivityRow are React components, so they each call
+// useFormatCurrency() rather than threading a formatter down as a prop.
 
 // Added: Format date for display (e.g., "January 20, 2026")
 function formatDateDisplay(dateStr: string): string {
@@ -106,6 +106,8 @@ export function CashFlowPage() {
     },
     staleTime: 5 * 60 * 1000, // 5 minutes cache
   });
+
+  const formatCurrency = useFormatCurrency();
 
   // Added: Calculate summary values
   const summary = useMemo(() => {
@@ -306,7 +308,7 @@ export function CashFlowPage() {
                 className="text-text-light dark:text-text-dark tracking-tight text-2xl font-bold"
                 data-testid="cash-flow-beginning-balance"
               >
-                {currencyFormatter.format(summary.beginningBalance)}
+                {formatCurrency(summary.beginningBalance)}
               </p>
             </div>
 
@@ -322,7 +324,7 @@ export function CashFlowPage() {
                 className={`tracking-tight text-2xl font-bold ${summary.netCashFlow >= 0 ? 'text-success' : 'text-danger'}`}
                 data-testid="cash-flow-net"
               >
-                {currencyFormatter.format(summary.netCashFlow)}
+                {formatCurrency(summary.netCashFlow)}
               </p>
             </div>
 
@@ -336,7 +338,7 @@ export function CashFlowPage() {
                 className="text-primary tracking-tight text-2xl font-bold"
                 data-testid="cash-flow-ending-balance"
               >
-                {currencyFormatter.format(summary.endingBalance)}
+                {formatCurrency(summary.endingBalance)}
               </p>
             </div>
           </div>
@@ -392,42 +394,42 @@ export function CashFlowPage() {
               <div className="flex justify-between items-center px-6 py-4">
                 <span className="text-text-light dark:text-text-dark">Beginning Cash Balance</span>
                 <span className="font-medium text-text-light dark:text-text-dark">
-                  {currencyFormatter.format(cashFlow.beginningCashBalance)}
+                  {formatCurrency(cashFlow.beginningCashBalance)}
                 </span>
               </div>
               {/* Operating Cash Flow */}
               <div className="flex justify-between items-center px-6 py-3 pl-10">
                 <span className="text-subtle-text">Cash from Operating Activities</span>
                 <span className={`font-medium ${cashFlow.totalOperatingCashFlow >= 0 ? 'text-success' : 'text-danger'}`}>
-                  {cashFlow.totalOperatingCashFlow >= 0 ? '+' : ''}{currencyFormatter.format(cashFlow.totalOperatingCashFlow)}
+                  {cashFlow.totalOperatingCashFlow >= 0 ? '+' : ''}{formatCurrency(cashFlow.totalOperatingCashFlow)}
                 </span>
               </div>
               {/* Investing Cash Flow */}
               <div className="flex justify-between items-center px-6 py-3 pl-10">
                 <span className="text-subtle-text">Cash from Investing Activities</span>
                 <span className={`font-medium ${cashFlow.totalInvestingCashFlow >= 0 ? 'text-success' : 'text-danger'}`}>
-                  {cashFlow.totalInvestingCashFlow >= 0 ? '+' : ''}{currencyFormatter.format(cashFlow.totalInvestingCashFlow)}
+                  {cashFlow.totalInvestingCashFlow >= 0 ? '+' : ''}{formatCurrency(cashFlow.totalInvestingCashFlow)}
                 </span>
               </div>
               {/* Financing Cash Flow */}
               <div className="flex justify-between items-center px-6 py-3 pl-10">
                 <span className="text-subtle-text">Cash from Financing Activities</span>
                 <span className={`font-medium ${cashFlow.totalFinancingCashFlow >= 0 ? 'text-success' : 'text-danger'}`}>
-                  {cashFlow.totalFinancingCashFlow >= 0 ? '+' : ''}{currencyFormatter.format(cashFlow.totalFinancingCashFlow)}
+                  {cashFlow.totalFinancingCashFlow >= 0 ? '+' : ''}{formatCurrency(cashFlow.totalFinancingCashFlow)}
                 </span>
               </div>
               {/* Net Cash Flow */}
               <div className="flex justify-between items-center px-6 py-4 bg-background-light dark:bg-background-dark">
                 <span className="font-bold text-text-light dark:text-text-dark">Net Cash Flow</span>
                 <span className={`font-bold text-lg ${cashFlow.netCashFlow >= 0 ? 'text-success' : 'text-danger'}`}>
-                  {cashFlow.netCashFlow >= 0 ? '+' : ''}{currencyFormatter.format(cashFlow.netCashFlow)}
+                  {cashFlow.netCashFlow >= 0 ? '+' : ''}{formatCurrency(cashFlow.netCashFlow)}
                 </span>
               </div>
               {/* Ending Cash Balance */}
               <div className="flex justify-between items-center px-6 py-4 border-t-2 border-text-light dark:border-text-dark">
                 <span className="font-black text-text-light dark:text-text-dark">Ending Cash Balance</span>
                 <span className="font-black text-xl text-primary">
-                  {currencyFormatter.format(cashFlow.endingCashBalance)}
+                  {formatCurrency(cashFlow.endingCashBalance)}
                 </span>
               </div>
             </div>
@@ -469,6 +471,8 @@ interface CashFlowSectionProps {
 }
 
 function CashFlowSection({ title, icon, iconColor, activities, total, testIdPrefix }: CashFlowSectionProps) {
+  const formatCurrency = useFormatCurrency();
+
   return (
     <div
       className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden"
@@ -507,7 +511,7 @@ function CashFlowSection({ title, icon, iconColor, activities, total, testIdPref
       >
         <span className="font-bold text-text-light dark:text-text-dark">Total {title}</span>
         <span className={`font-bold text-lg ${total >= 0 ? 'text-success' : 'text-danger'}`}>
-          {total >= 0 ? '+' : ''}{currencyFormatter.format(total)}
+          {total >= 0 ? '+' : ''}{formatCurrency(total)}
         </span>
       </div>
     </div>
@@ -524,6 +528,7 @@ interface CashFlowActivityRowProps {
 }
 
 function CashFlowActivityRow({ activity, testId }: CashFlowActivityRowProps) {
+  const formatCurrency = useFormatCurrency();
   const isInflow = activity.amount >= 0;
 
   return (
@@ -537,7 +542,7 @@ function CashFlowActivityRow({ activity, testId }: CashFlowActivityRowProps) {
       <span
         className={`text-sm font-medium whitespace-nowrap ${isInflow ? 'text-success' : 'text-danger'}`}
       >
-        {isInflow ? '+' : ''}{currencyFormatter.format(activity.amount)}
+        {isInflow ? '+' : ''}{formatCurrency(activity.amount)}
       </span>
     </div>
   );

@@ -653,7 +653,47 @@ export async function mockTokenValidationApi(
   // needs a specific catalogue (soupfin-37) still wins by registering its own after.
   if (success) {
     await mockTaxEntriesApi(page);
+    await mockOnboardingCorporateApi(page);
   }
+}
+
+/**
+ * Default corporate-resolution mocks for the KYC onboarding nudge.
+ *
+ * `resolveOnboardingCorporate()` (src/api/endpoints/corporate.ts) runs on every
+ * authenticated page load: it calls `corporate/current.json` and then falls back
+ * to `corporate/index.json`. Neither was mocked by any shared fixture, so in mock
+ * mode both proxied to an absent backend, came back 401, and the apiClient's
+ * global 401 interceptor cleared the token and redirected to /login.
+ *
+ * That only bit specs that RELOAD after signing in — the reload is what re-runs
+ * the resolution before the page has settled — which is why it surfaced as
+ * "expected /dashboard, received /login" in the currency specs rather than as an
+ * obviously missing mock.
+ *
+ * The statuses mirror production as it stands today: CorporateController has no
+ * `current` action, so `current.json` 404s (the one status getCurrentCorporate
+ * treats as "nothing to resume"), and the tenant has no corporate yet, so the
+ * list is empty. Registered here, like mockTaxEntriesApi above, because every
+ * mock-mode spec already calls this helper; Playwright routes are LIFO, so a
+ * spec needing other behaviour (soupfin-62) still wins with its own.
+ */
+export async function mockOnboardingCorporateApi(
+  page: Awaited<ReturnType<typeof base.page>>
+) {
+  if (isLxcMode()) return;
+
+  await page.route('**/rest/corporate/current*', (route) =>
+    route.fulfill({
+      status: 404,
+      contentType: 'application/json',
+      body: JSON.stringify({ error: 'Not Found' }),
+    })
+  );
+
+  await page.route('**/rest/corporate/index.json*', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
+  );
 }
 
 /**
