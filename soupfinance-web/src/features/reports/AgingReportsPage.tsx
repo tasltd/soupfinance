@@ -14,7 +14,7 @@ import {
   exportFinanceReport,
   type ReportFilters,
 } from '../../api/endpoints/reports';
-import { formatDisplayDate } from '../../utils/date';
+import { formatDisplayDate, getTodayIsoDate } from '../../utils/date';
 // Fix (SOUPFIN-33 #4): tenant-currency formatter (was hardcoded USD/"$0.00").
 import { useFormatCurrency } from '../../stores';
 import type { AgingReport, AgingItem } from '../../types';
@@ -33,10 +33,10 @@ function getReportExtension(format: 'pdf' | 'xlsx' | 'csv' | null | undefined): 
   return 'pdf';
 }
 
-// Added: Get today's date in ISO format (YYYY-MM-DD)
-function getTodayDate(): string {
-  return new Date().toISOString().split('T')[0];
-}
+// Added: Get today's date in YYYY-MM-DD format
+// Fix (SOUPFIN-64): was `new Date().toISOString().split('T')[0]`, i.e. UTC
+// today rather than the user's own calendar day.
+const getTodayDate = getTodayIsoDate;
 
 /*
  * Fix (SOUPFIN-33 #4): the module-level formatCurrency() that used to live here

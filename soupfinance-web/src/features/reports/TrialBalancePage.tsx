@@ -9,7 +9,7 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getTrialBalance, exportFinanceReport, type ReportFilters } from '../../api/endpoints/reports';
-import { formatDisplayDate } from '../../utils/date';
+import { formatDisplayDate, getCurrentMonthRange } from '../../utils/date';
 import type { TrialBalanceItem } from '../../types';
 
 // Added: Trial balance uses subset of LedgerGroup (excludes 'INCOME' which is aliased to 'REVENUE')
@@ -27,15 +27,10 @@ function getReportExtension(format: 'pdf' | 'xlsx' | 'csv' | null | undefined): 
 }
 
 // Added: Get current month date range (first day to last day)
-function getCurrentMonthRange() {
-  const now = new Date();
-  const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  return {
-    from: firstDay.toISOString().split('T')[0],
-    to: lastDay.toISOString().split('T')[0],
-  };
-}
+// Fix (SOUPFIN-64): this used to build the range locally and format both ends
+// through toISOString(), which converts to UTC first — east of UTC the default
+// range started on the previous month's last day and ended a day before month
+// end. getCurrentMonthRange() in utils/date formats from local calendar parts.
 
 // Added: Format currency with proper thousands separator
 function formatCurrency(amount: number, currency = 'USD'): string {

@@ -18,6 +18,7 @@ import {
   generateAgingReportPdfBlob,
   type CompanyInfo,
 } from '../utils/pdf';
+import { getTodayIsoDate } from '../utils/date';
 
 // =============================================================================
 // Types
@@ -257,10 +258,9 @@ export function useEmailSend(): UseEmailSendReturn {
       options?: ReportEmailOptions
     ): Promise<boolean> => {
       return sendWithLoading(async () => {
-        const dateRange = options?.dateRange || {
-          from: new Date().toISOString().split('T')[0],
-          to: new Date().toISOString().split('T')[0],
-        };
+        // Fix (SOUPFIN-64): local calendar day, not UTC today.
+        const today = getTodayIsoDate();
+        const dateRange = options?.dateRange || { from: today, to: today };
 
         const pdfBlob = await generateProfitLossPdfBlob(
           data,
@@ -292,8 +292,8 @@ export function useEmailSend(): UseEmailSendReturn {
       options?: ReportEmailOptions
     ): Promise<boolean> => {
       return sendWithLoading(async () => {
-        const asOfDate =
-          options?.asOfDate || new Date().toISOString().split('T')[0];
+        // Fix (SOUPFIN-64): local calendar day, not UTC today.
+        const asOfDate = options?.asOfDate || getTodayIsoDate();
 
         const pdfBlob = await generateBalanceSheetPdfBlob(
           data,
@@ -326,8 +326,8 @@ export function useEmailSend(): UseEmailSendReturn {
       options?: ReportEmailOptions
     ): Promise<boolean> => {
       return sendWithLoading(async () => {
-        const asOfDate =
-          options?.asOfDate || new Date().toISOString().split('T')[0];
+        // Fix (SOUPFIN-64): local calendar day, not UTC today.
+        const asOfDate = options?.asOfDate || getTodayIsoDate();
 
         const pdfBlob = await generateAgingReportPdfBlob(
           data,
