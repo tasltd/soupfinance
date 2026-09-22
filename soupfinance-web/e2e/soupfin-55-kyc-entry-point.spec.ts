@@ -171,13 +171,15 @@ test.describe('SOUPFIN-55: KYC onboarding entry point', () => {
 
     // Leave the dashboard, then come back via the menu — the way a user who
     // abandoned the wizard mid-session would find their way back.
-    // NB: the Material icon ligature is part of each top-level link's accessible
-    // name ("receipt_long Invoices"), so an exact name match never matches.
-    await page.locator('nav').getByRole('link', { name: /Invoices/ }).first().click();
+    // The loose regex here used to be mandatory: the Material icon ligature was
+    // part of every top-level link's accessible name ("receipt_long Invoices"),
+    // so an exact match never matched. SOUPFIN-63 hid the icons from the
+    // accessibility tree, so these can now name the link precisely.
+    await page.locator('nav').getByRole('link', { name: 'Invoices', exact: true }).click();
     await expect(page).toHaveURL(/\/invoices/);
     await shot(page, 'navigated-away');
 
-    await page.locator('nav').getByRole('link', { name: /Dashboard/ }).first().click();
+    await page.locator('nav').getByRole('link', { name: 'Dashboard', exact: true }).click();
     await expect(page).toHaveURL(/\/dashboard/);
     await expect(page.getByTestId('kyc-onboarding-banner')).toBeVisible({ timeout: 15000 });
     await shot(page, 'returned-via-menu');

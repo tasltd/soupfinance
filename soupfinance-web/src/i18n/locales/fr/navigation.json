@@ -23,7 +23,9 @@
     "settings": "Paramètres",
     "darkMode": "Mode sombre",
     "lightMode": "Mode clair",
-    "language": "Langue"
+    "language": "Langue",
+    "openMenu": "Ouvrir le menu de navigation",
+    "systemMode": "Thème du système"
   },
   "breadcrumb": {
     "home": "Accueil",
