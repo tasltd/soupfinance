@@ -12,6 +12,7 @@ import {
   getARAgingReport,
   getAPAgingReport,
   exportFinanceReport,
+  getReportExtension,
   type ReportFilters,
 } from '../../api/endpoints/reports';
 import { formatDisplayDate } from '../../utils/date';
@@ -27,11 +28,6 @@ const AGING_MIN_DATE = '1900-01-01';
 
 // Fix (SOUPFIN-16): Whitelist export format → extension so a null/undefined format
 // never lands in the filename as ".null" (the exact bug reported on production).
-function getReportExtension(format: 'pdf' | 'xlsx' | 'csv' | null | undefined): string {
-  if (format === 'xlsx') return 'xlsx';
-  if (format === 'csv') return 'csv';
-  return 'pdf';
-}
 
 // Added: Get today's date in ISO format (YYYY-MM-DD)
 function getTodayDate(): string {

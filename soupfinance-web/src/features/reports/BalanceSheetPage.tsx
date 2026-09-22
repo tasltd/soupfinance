@@ -7,7 +7,12 @@
  */
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { getBalanceSheetDirect, exportFinanceReport, type ReportFilters } from '../../api/endpoints/reports';
+import {
+  getBalanceSheetDirect,
+  exportFinanceReport,
+  getReportExtension,
+  type ReportFilters,
+} from '../../api/endpoints/reports';
 import type { BalanceSheet, BalanceSheetItem } from '../../types';
 
 // Added: Currency formatter for consistent display
@@ -45,11 +50,6 @@ const REPORT_MIN_DATE = '1900-01-01';
 // Fix (SOUPFIN-16): Map an internal report ID to a file extension. Whitelisting
 // the format prevents a null/undefined sneaking into the filename and producing
 // "balance-sheet-2026-06-08.null" (or .undefined). Defaults to .pdf for unknown.
-function getReportExtension(format: 'pdf' | 'xlsx' | 'csv' | null | undefined): string {
-  if (format === 'xlsx') return 'xlsx';
-  if (format === 'csv') return 'csv';
-  return 'pdf';
-}
 
 export function BalanceSheetPage() {
   // Added: State for "As Of" date filter with default to today

@@ -8,7 +8,12 @@
  */
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { getTrialBalance, exportFinanceReport, type ReportFilters } from '../../api/endpoints/reports';
+import {
+  getTrialBalance,
+  exportFinanceReport,
+  getReportExtension,
+  type ReportFilters,
+} from '../../api/endpoints/reports';
 import { formatDisplayDate } from '../../utils/date';
 import type { TrialBalanceItem } from '../../types';
 
@@ -20,11 +25,6 @@ const REPORT_MIN_DATE = '1900-01-01';
 
 // Fix (SOUPFIN-16): Whitelist export format → file extension. Defaults to PDF
 // for unknown / null / undefined values so the download never has a ".null" suffix.
-function getReportExtension(format: 'pdf' | 'xlsx' | 'csv' | null | undefined): string {
-  if (format === 'xlsx') return 'xlsx';
-  if (format === 'csv') return 'csv';
-  return 'pdf';
-}
 
 // Added: Get current month date range (first day to last day)
 function getCurrentMonthRange() {
