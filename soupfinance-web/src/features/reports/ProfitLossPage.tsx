@@ -10,14 +10,16 @@ import { useQuery } from '@tanstack/react-query';
 import { getIncomeStatement, exportFinanceReport, type ReportFilters } from '../../api/endpoints/reports';
 import type { ProfitLoss, ProfitLossItem } from '../../types';
 import { getFirstDayOfCurrentMonth, getTodayIsoDate } from '../../utils/date';
+import { useFormatCurrency } from '../../stores';
 
-// Added: Currency formatter for consistent display
-const currencyFormatter = new Intl.NumberFormat('en-US', {
-  style: 'currency',
-  currency: 'USD',
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
+// Fix (SOUPFIN-73): this module previously declared its own
+//   new Intl.NumberFormat('en-US', { currency: 'USD' })
+// so a GHS tenant read its own cedi figures labelled with a dollar sign, while
+// the dashboard and the aging reports rendered the same number as GH₵.
+// Currency now comes from the account store via useFormatCurrency(), matching
+// DashboardPage and AgingReportsPage. Every sub-component below is a React
+// component, so each calls the hook directly rather than threading a formatter
+// down as a prop.
 
 // Added: Format date for display (e.g., "January 1, 2026 - January 31, 2026")
 function formatDateRange(startDate: string, endDate: string): string {
@@ -57,6 +59,8 @@ function getReportExtension(format: 'pdf' | 'xlsx' | 'csv' | null | undefined): 
 }
 
 export function ProfitLossPage() {
+  // Fix (SOUPFIN-73): tenant currency, not a hardcoded USD formatter.
+  const formatCurrency = useFormatCurrency();
   // Added: State for date range filter with defaults to current month
   const [fromDate, setFromDate] = useState<string>(getFirstDayOfMonth());
   const [toDate, setToDate] = useState<string>(getTodayISO());
@@ -326,7 +330,7 @@ export function ProfitLossPage() {
                 className="text-success tracking-tight text-2xl font-bold"
                 data-testid="profit-loss-total-income"
               >
-                {currencyFormatter.format(profitLoss.totalIncome)}
+                {formatCurrency(profitLoss.totalIncome)}
               </p>
             </div>
 
@@ -340,7 +344,7 @@ export function ProfitLossPage() {
                 className="text-danger tracking-tight text-2xl font-bold"
                 data-testid="profit-loss-total-expenses"
               >
-                {currencyFormatter.format(profitLoss.totalExpenses)}
+                {formatCurrency(profitLoss.totalExpenses)}
               </p>
             </div>
 
@@ -360,7 +364,7 @@ export function ProfitLossPage() {
                 }`}
                 data-testid="profit-loss-net-profit"
               >
-                {currencyFormatter.format(profitLoss.netProfit)}
+                {formatCurrency(profitLoss.netProfit)}
               </p>
               <p className="text-sm text-subtle-text">
                 {profitMargin >= 0 ? '+' : ''}{profitMargin.toFixed(1)}% margin
@@ -408,7 +412,7 @@ export function ProfitLossPage() {
                   Net {profitLoss.netProfit >= 0 ? 'Profit' : 'Loss'}
                 </p>
                 <p className="text-sm text-subtle-text">
-                  Total Income - Total Expenses = {currencyFormatter.format(profitLoss.totalIncome)} - {currencyFormatter.format(profitLoss.totalExpenses)}
+                  Total Income - Total Expenses = {formatCurrency(profitLoss.totalIncome)} - {formatCurrency(profitLoss.totalExpenses)}
                 </p>
               </div>
               <p
@@ -416,7 +420,7 @@ export function ProfitLossPage() {
                   profitLoss.netProfit >= 0 ? 'text-success' : 'text-danger'
                 }`}
               >
-                {currencyFormatter.format(profitLoss.netProfit)}
+                {formatCurrency(profitLoss.netProfit)}
               </p>
             </div>
           </div>
@@ -460,6 +464,8 @@ interface ProfitLossSectionProps {
 }
 
 function ProfitLossSection({ title, icon, iconColor, items, total, testIdPrefix, isIncome }: ProfitLossSectionProps) {
+  // Fix (SOUPFIN-73): tenant currency, not a hardcoded USD formatter.
+  const formatCurrency = useFormatCurrency();
   return (
     <div
       className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden"
@@ -503,7 +509,7 @@ function ProfitLossSection({ title, icon, iconColor, items, total, testIdPrefix,
         <span
           className={`font-bold text-lg ${isIncome ? 'text-success' : 'text-danger'}`}
         >
-          {currencyFormatter.format(total)}
+          {formatCurrency(total)}
         </span>
       </div>
     </div>
@@ -522,6 +528,8 @@ interface ProfitLossItemRowProps {
 }
 
 function ProfitLossItemRow({ item, testId, isIncome, depth = 0 }: ProfitLossItemRowProps) {
+  // Fix (SOUPFIN-73): tenant currency, not a hardcoded USD formatter.
+  const formatCurrency = useFormatCurrency();
   // Added: Indentation based on depth for hierarchical display
   const paddingLeft = 24 + depth * 16; // Base 24px + 16px per level
 
@@ -546,7 +554,7 @@ function ProfitLossItemRow({ item, testId, isIncome, depth = 0 }: ProfitLossItem
                 : 'text-danger'
           }`}
         >
-          {currencyFormatter.format(item.amount)}
+          {formatCurrency(item.amount)}
         </span>
       </div>
       {/* Render children recursively if present */}
