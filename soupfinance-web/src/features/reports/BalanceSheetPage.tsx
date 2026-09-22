@@ -161,7 +161,7 @@ export function BalanceSheetPage() {
             As Of Date:
           </label>
           <div className="relative">
-            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-subtle-text">
+            <span aria-hidden="true" className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-subtle-text">
               calendar_today
             </span>
             <input
@@ -179,7 +179,7 @@ export function BalanceSheetPage() {
             className="flex items-center gap-2 h-10 px-4 border border-border-light dark:border-border-dark rounded-lg bg-surface-light dark:bg-surface-dark hover:bg-background-light dark:hover:bg-background-dark text-text-light dark:text-text-dark"
             data-testid="balance-sheet-refresh"
           >
-            <span className="material-symbols-outlined text-lg">refresh</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-lg">refresh</span>
             Refresh
           </button>
         </div>
@@ -194,7 +194,7 @@ export function BalanceSheetPage() {
             className="flex items-center justify-center gap-2 h-10 px-4 border border-primary rounded-lg text-primary hover:bg-primary/10 disabled:opacity-60 disabled:cursor-not-allowed"
             data-testid="balance-sheet-export-pdf"
           >
-            <span
+            <span aria-hidden="true"
               className={`material-symbols-outlined text-lg ${
                 exportingFormat === 'pdf' ? 'animate-spin' : ''
               }`}
@@ -211,7 +211,7 @@ export function BalanceSheetPage() {
             className="flex items-center justify-center gap-2 h-10 px-4 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-60 disabled:cursor-not-allowed"
             data-testid="balance-sheet-export-excel"
           >
-            <span
+            <span aria-hidden="true"
               className={`material-symbols-outlined text-lg ${
                 exportingFormat === 'xlsx' ? 'animate-spin' : ''
               }`}
@@ -228,7 +228,7 @@ export function BalanceSheetPage() {
             className="flex items-center justify-center gap-2 h-10 px-4 border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark disabled:opacity-60 disabled:cursor-not-allowed"
             data-testid="balance-sheet-export-csv"
           >
-            <span
+            <span aria-hidden="true"
               className={`material-symbols-outlined text-lg ${
                 exportingFormat === 'csv' ? 'animate-spin' : ''
               }`}
@@ -249,7 +249,7 @@ export function BalanceSheetPage() {
           data-testid="balance-sheet-export-error"
           role="alert"
         >
-          <span className="material-symbols-outlined text-danger">error</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-danger">error</span>
           <div className="flex-1">
             <p className="text-danger text-sm font-medium">Export failed</p>
             <p className="text-subtle-text text-xs">{exportError}</p>
@@ -259,7 +259,7 @@ export function BalanceSheetPage() {
             className="text-subtle-text hover:text-danger"
             aria-label="Dismiss"
           >
-            <span className="material-symbols-outlined">close</span>
+            <span aria-hidden="true" className="material-symbols-outlined">close</span>
           </button>
         </div>
       )}
@@ -270,7 +270,7 @@ export function BalanceSheetPage() {
           className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-12 text-center"
           data-testid="balance-sheet-loading"
         >
-          <span className="material-symbols-outlined text-4xl text-primary animate-spin mb-4">sync</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-4xl text-primary animate-spin mb-4">sync</span>
           <p className="text-subtle-text">Loading balance sheet...</p>
         </div>
       )}
@@ -281,7 +281,7 @@ export function BalanceSheetPage() {
           className="bg-danger/10 rounded-xl border border-danger/30 p-6 text-center"
           data-testid="balance-sheet-error"
         >
-          <span className="material-symbols-outlined text-4xl text-danger mb-2">error</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-4xl text-danger mb-2">error</span>
           <h3 className="text-lg font-bold text-danger mb-2">Failed to load balance sheet</h3>
           <p className="text-subtle-text mb-4">
             {error instanceof Error ? error.message : 'An unexpected error occurred'}
@@ -303,7 +303,7 @@ export function BalanceSheetPage() {
             {/* Total Assets Card */}
             <div className="flex flex-col gap-2 rounded-xl p-6 border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-primary">account_balance</span>
+                <span aria-hidden="true" className="material-symbols-outlined text-primary">account_balance</span>
                 <p className="text-text-light dark:text-text-dark text-base font-medium">Total Assets</p>
               </div>
               <p
@@ -317,7 +317,7 @@ export function BalanceSheetPage() {
             {/* Total Liabilities Card */}
             <div className="flex flex-col gap-2 rounded-xl p-6 border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-danger">credit_card</span>
+                <span aria-hidden="true" className="material-symbols-outlined text-danger">credit_card</span>
                 <p className="text-text-light dark:text-text-dark text-base font-medium">Total Liabilities</p>
               </div>
               <p
@@ -331,7 +331,7 @@ export function BalanceSheetPage() {
             {/* Total Equity Card */}
             <div className="flex flex-col gap-2 rounded-xl p-6 border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-success">savings</span>
+                <span aria-hidden="true" className="material-symbols-outlined text-success">savings</span>
                 <p className="text-text-light dark:text-text-dark text-base font-medium">Total Equity</p>
               </div>
               <p
@@ -354,7 +354,7 @@ export function BalanceSheetPage() {
           >
             <div className="flex items-center justify-between flex-wrap gap-4">
               <div className="flex items-center gap-3">
-                <span
+                <span aria-hidden="true"
                   className={`material-symbols-outlined text-2xl ${
                     equationCheck.balanced ? 'text-success' : 'text-warning'
                   }`}
@@ -443,7 +443,7 @@ export function BalanceSheetPage() {
           className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-12 text-center"
           data-testid="balance-sheet-empty"
         >
-          <span className="material-symbols-outlined text-6xl text-subtle-text/50 mb-4">account_balance</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-6xl text-subtle-text/50 mb-4">account_balance</span>
           <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">No accounts found</h3>
           <p className="text-subtle-text max-w-md mx-auto">
             There are no ledger accounts with balances as of {formatDateDisplay(asOfDate)}.
@@ -478,7 +478,7 @@ function BalanceSheetSection({ title, icon, iconColor, items, total, testIdPrefi
       {/* Section Header */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark">
         <div className="flex items-center gap-2">
-          <span className={`material-symbols-outlined ${iconColor}`}>{icon}</span>
+          <span aria-hidden="true" className={`material-symbols-outlined ${iconColor}`}>{icon}</span>
           <h2 className="text-lg font-bold text-text-light dark:text-text-dark">{title}</h2>
         </div>
         <span className="text-sm text-subtle-text">{items.length} accounts</span>

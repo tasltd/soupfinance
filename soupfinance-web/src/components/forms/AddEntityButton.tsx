@@ -66,7 +66,7 @@ export function AddEntityButton({
       className="flex shrink-0 items-center justify-center size-12 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       data-testid={testId}
     >
-      <span className="material-symbols-outlined text-xl">add</span>
+      <span aria-hidden="true" className="material-symbols-outlined text-xl">add</span>
     </button>
   );
 }

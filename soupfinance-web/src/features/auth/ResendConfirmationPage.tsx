@@ -68,7 +68,7 @@ export function ResendConfirmationPage() {
       {/* Icon */}
       <div className="flex justify-center">
         <div className="size-20 rounded-full bg-primary/10 flex items-center justify-center">
-          <span className="material-symbols-outlined text-4xl text-primary">forward_to_inbox</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-4xl text-primary">forward_to_inbox</span>
         </div>
       </div>
 
@@ -91,7 +91,7 @@ export function ResendConfirmationPage() {
           className="p-4 rounded-lg bg-success/10 border border-success/30 text-success text-sm flex items-start gap-3"
           data-testid="resend-confirmation-success"
         >
-          <span className="material-symbols-outlined text-lg flex-shrink-0 mt-0.5">check_circle</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-lg flex-shrink-0 mt-0.5">check_circle</span>
           <div>
             <p className="font-medium">Confirmation email sent</p>
             <p className="mt-1 text-success/80">
@@ -126,7 +126,7 @@ export function ResendConfirmationPage() {
         >
           {resendMutation.isPending ? (
             <>
-              <span className="material-symbols-outlined animate-spin">progress_activity</span>
+              <span aria-hidden="true" className="material-symbols-outlined animate-spin">progress_activity</span>
               Sending...
             </>
           ) : cooldown > 0 ? (

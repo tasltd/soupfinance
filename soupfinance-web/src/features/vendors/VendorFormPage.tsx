@@ -188,7 +188,7 @@ export function VendorFormPage() {
           className="p-4 rounded-lg bg-danger/10 border border-danger/30 text-danger flex items-start gap-3"
           data-testid="vendor-form-error"
         >
-          <span className="material-symbols-outlined text-xl">error</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-xl">error</span>
           <div>
             <p className="font-medium">Failed to save vendor</p>
             <p className="text-sm opacity-80">

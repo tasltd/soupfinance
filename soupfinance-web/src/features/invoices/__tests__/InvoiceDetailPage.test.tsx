@@ -700,8 +700,12 @@ describe('InvoiceDetailPage', () => {
       // Dialog should be open
       expect(await screen.findByTestId('send-invoice-dialog')).toBeInTheDocument();
 
-      // Click cancel
-      const cancelButton = screen.getByRole('button', { name: 'Cancel' });
+      // Click cancel.
+      // Fix (SOUPFIN-71): targeted by testid, not by name. The page-level
+      // "Cancel invoice" button used to be named "cancel Cancel" by its icon
+      // ligature; with the icon aria-hidden both buttons are named "Cancel",
+      // so a name lookup is now ambiguous.
+      const cancelButton = screen.getByTestId('send-cancel-button');
       await user.click(cancelButton);
 
       // Dialog should close

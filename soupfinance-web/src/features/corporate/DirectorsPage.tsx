@@ -158,7 +158,7 @@ export function DirectorsPage() {
             className="h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90 disabled:opacity-50 flex items-center gap-2"
           >
             Continue to Documents
-            <span className="material-symbols-outlined text-base">arrow_forward</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-base">arrow_forward</span>
           </button>
         </div>
       </div>
@@ -166,20 +166,20 @@ export function DirectorsPage() {
       {/* Progress Indicator */}
       <div className="flex items-center gap-2 text-sm">
         <span className="flex items-center justify-center size-6 rounded-full bg-green-500 text-white text-xs font-bold">
-          <span className="material-symbols-outlined text-sm">check</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-sm">check</span>
         </span>
         <span className="text-green-600 font-medium">Registration</span>
-        <span className="material-symbols-outlined text-subtle-text">chevron_right</span>
+        <span aria-hidden="true" className="material-symbols-outlined text-subtle-text">chevron_right</span>
         <span className="flex items-center justify-center size-6 rounded-full bg-green-500 text-white text-xs font-bold">
-          <span className="material-symbols-outlined text-sm">check</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-sm">check</span>
         </span>
         <span className="text-green-600 font-medium">Company Info</span>
-        <span className="material-symbols-outlined text-subtle-text">chevron_right</span>
+        <span aria-hidden="true" className="material-symbols-outlined text-subtle-text">chevron_right</span>
         <span className="flex items-center justify-center size-6 rounded-full bg-primary text-white text-xs font-bold">
           3
         </span>
         <span className="text-primary font-medium">Directors</span>
-        <span className="material-symbols-outlined text-subtle-text">chevron_right</span>
+        <span aria-hidden="true" className="material-symbols-outlined text-subtle-text">chevron_right</span>
         <span className="flex items-center justify-center size-6 rounded-full bg-border-light text-subtle-text text-xs font-bold">
           4
         </span>
@@ -194,8 +194,9 @@ export function DirectorsPage() {
         <button
           onClick={handleOpenAddModal}
           className="h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90 flex items-center gap-2"
+          data-testid="directors-add-button"
         >
-          <span className="material-symbols-outlined text-base">add</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-base">add</span>
           Add Person
         </button>
       </div>
@@ -204,13 +205,13 @@ export function DirectorsPage() {
       <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden">
         {isLoading ? (
           <div className="flex items-center justify-center p-12">
-            <span className="material-symbols-outlined animate-spin text-4xl text-primary">
+            <span aria-hidden="true" className="material-symbols-outlined animate-spin text-4xl text-primary">
               progress_activity
             </span>
           </div>
         ) : directors.length === 0 ? (
           <div className="flex flex-col items-center justify-center p-12 text-center">
-            <span className="material-symbols-outlined text-6xl text-subtle-text mb-4">
+            <span aria-hidden="true" className="material-symbols-outlined text-6xl text-subtle-text mb-4">
               person_add
             </span>
             <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">
@@ -222,8 +223,9 @@ export function DirectorsPage() {
             <button
               onClick={handleOpenAddModal}
               className="h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90 flex items-center gap-2"
+              data-testid="directors-add-first-button"
             >
-              <span className="material-symbols-outlined text-base">add</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-base">add</span>
               Add First Person
             </button>
           </div>
@@ -270,14 +272,14 @@ export function DirectorsPage() {
                           className="p-2 rounded-full hover:bg-primary/10 text-subtle-text hover:text-primary transition-colors"
                           title="Edit"
                         >
-                          <span className="material-symbols-outlined text-xl">edit</span>
+                          <span aria-hidden="true" className="material-symbols-outlined text-xl">edit</span>
                         </button>
                         <button
                           onClick={() => setDeleteConfirmId(director.id)}
                           className="p-2 rounded-full hover:bg-danger/10 text-subtle-text hover:text-danger transition-colors"
                           title="Delete"
                         >
-                          <span className="material-symbols-outlined text-xl">delete</span>
+                          <span aria-hidden="true" className="material-symbols-outlined text-xl">delete</span>
                         </button>
                       </div>
                     </td>
@@ -299,10 +301,11 @@ export function DirectorsPage() {
                 {editingDirector ? 'Edit Person' : 'Add Person'}
               </h3>
               <button
+                aria-label="Close person dialog"
                 onClick={handleCloseModal}
                 className="flex size-8 items-center justify-center rounded-full hover:bg-black/10 dark:hover:bg-white/10"
               >
-                <span className="material-symbols-outlined text-2xl">close</span>
+                <span aria-hidden="true" className="material-symbols-outlined text-2xl">close</span>
               </button>
             </div>
 
@@ -401,10 +404,11 @@ export function DirectorsPage() {
                   type="submit"
                   disabled={isPending}
                   className="h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90 disabled:opacity-50 flex items-center gap-2"
+                  data-testid="directors-submit-button"
                 >
                   {isPending ? (
                     <>
-                      <span className="material-symbols-outlined animate-spin text-base">
+                      <span aria-hidden="true" className="material-symbols-outlined animate-spin text-base">
                         progress_activity
                       </span>
                       Saving...
@@ -427,7 +431,7 @@ export function DirectorsPage() {
           <div className="relative w-full max-w-sm rounded-xl bg-surface-light dark:bg-surface-dark shadow-2xl overflow-hidden p-6">
             <div className="flex flex-col items-center text-center">
               <div className="size-12 rounded-full bg-danger/10 flex items-center justify-center mb-4">
-                <span className="material-symbols-outlined text-danger text-2xl">delete</span>
+                <span aria-hidden="true" className="material-symbols-outlined text-danger text-2xl">delete</span>
               </div>
               <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">
                 Remove Person?
@@ -449,7 +453,7 @@ export function DirectorsPage() {
                   className="flex-1 h-10 px-4 rounded-lg bg-danger text-white font-bold text-sm hover:bg-danger/90 disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {deleteMutation.isPending ? (
-                    <span className="material-symbols-outlined animate-spin text-base">
+                    <span aria-hidden="true" className="material-symbols-outlined animate-spin text-base">
                       progress_activity
                     </span>
                   ) : (

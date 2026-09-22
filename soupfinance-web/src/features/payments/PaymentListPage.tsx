@@ -105,7 +105,7 @@ export function PaymentListPage() {
           }`}
           data-testid="record-payment-button"
         >
-          <span className="material-symbols-outlined text-lg">add</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-lg">add</span>
           Record Payment
         </Link>
       </div>
@@ -116,7 +116,7 @@ export function PaymentListPage() {
           className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-12 text-center"
           data-testid="payment-module-disabled"
         >
-          <span className="material-symbols-outlined text-6xl text-warning/70 mb-4">block</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-6xl text-warning/70 mb-4">block</span>
           <h2 className="text-xl font-bold text-text-light dark:text-text-dark mb-2">
             Finance module not available
           </h2>
@@ -131,7 +131,7 @@ export function PaymentListPage() {
               className="inline-flex items-center gap-2 h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm hover:bg-primary/5"
               data-testid="payment-module-disabled-dashboard"
             >
-              <span className="material-symbols-outlined text-lg">arrow_back</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-lg">arrow_back</span>
               Back to Dashboard
             </Link>
             <a
@@ -139,7 +139,7 @@ export function PaymentListPage() {
               className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90"
               data-testid="payment-module-disabled-contact"
             >
-              <span className="material-symbols-outlined text-lg">mail</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-lg">mail</span>
               Contact Support
             </a>
           </div>
@@ -158,7 +158,7 @@ export function PaymentListPage() {
           }`}
           data-testid="tab-incoming"
         >
-          <span className="material-symbols-outlined text-lg">arrow_downward</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-lg">arrow_downward</span>
           Incoming
           {incomingPayments && incomingPayments.length > 0 && (
             <span className={`px-2 py-0.5 text-xs rounded-full ${activeTab === 'incoming' ? 'bg-white/20' : 'bg-success/20 text-success'}`}>
@@ -175,7 +175,7 @@ export function PaymentListPage() {
           }`}
           data-testid="tab-outgoing"
         >
-          <span className="material-symbols-outlined text-lg">arrow_upward</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-lg">arrow_upward</span>
           Outgoing
           {outgoingPayments && outgoingPayments.length > 0 && (
             <span className={`px-2 py-0.5 text-xs rounded-full ${activeTab === 'outgoing' ? 'bg-white/20' : 'bg-danger/20 text-danger'}`}>
@@ -193,7 +193,7 @@ export function PaymentListPage() {
           </div>
         ) : error ? (
           <div className="p-12 text-center" data-testid="payment-list-error">
-            <span className="material-symbols-outlined text-6xl text-danger/50 mb-4">error</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-6xl text-danger/50 mb-4">error</span>
             <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">
               Failed to load payments
             </h3>
@@ -204,13 +204,13 @@ export function PaymentListPage() {
               onClick={() => window.location.reload()}
               className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm"
             >
-              <span className="material-symbols-outlined text-lg">refresh</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-lg">refresh</span>
               Retry
             </button>
           </div>
         ) : !payments || payments.length === 0 ? (
           <div className="p-12 text-center" data-testid="payment-list-empty">
-            <span className="material-symbols-outlined text-6xl text-subtle-text/50 mb-4">payments</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-6xl text-subtle-text/50 mb-4">payments</span>
             <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">
               No {activeTab} payments
             </h3>
@@ -224,7 +224,7 @@ export function PaymentListPage() {
               className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm"
               data-testid="record-first-payment-button"
             >
-              <span className="material-symbols-outlined text-lg">add</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-lg">add</span>
               Record Payment
             </Link>
           </div>

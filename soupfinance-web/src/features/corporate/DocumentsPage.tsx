@@ -193,7 +193,7 @@ export function DocumentsPage() {
           >
             {submitMutation.isPending ? (
               <>
-                <span className="material-symbols-outlined animate-spin text-base">
+                <span aria-hidden="true" className="material-symbols-outlined animate-spin text-base">
                   progress_activity
                 </span>
                 Submitting...
@@ -201,7 +201,7 @@ export function DocumentsPage() {
             ) : (
               <>
                 Submit for Review
-                <span className="material-symbols-outlined text-base">send</span>
+                <span aria-hidden="true" className="material-symbols-outlined text-base">send</span>
               </>
             )}
           </button>
@@ -211,20 +211,20 @@ export function DocumentsPage() {
       {/* Progress Indicator */}
       <div className="flex items-center gap-2 text-sm">
         <span className="flex items-center justify-center size-6 rounded-full bg-green-500 text-white text-xs font-bold">
-          <span className="material-symbols-outlined text-sm">check</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-sm">check</span>
         </span>
         <span className="text-green-600 font-medium">Registration</span>
-        <span className="material-symbols-outlined text-subtle-text">chevron_right</span>
+        <span aria-hidden="true" className="material-symbols-outlined text-subtle-text">chevron_right</span>
         <span className="flex items-center justify-center size-6 rounded-full bg-green-500 text-white text-xs font-bold">
-          <span className="material-symbols-outlined text-sm">check</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-sm">check</span>
         </span>
         <span className="text-green-600 font-medium">Company Info</span>
-        <span className="material-symbols-outlined text-subtle-text">chevron_right</span>
+        <span aria-hidden="true" className="material-symbols-outlined text-subtle-text">chevron_right</span>
         <span className="flex items-center justify-center size-6 rounded-full bg-green-500 text-white text-xs font-bold">
-          <span className="material-symbols-outlined text-sm">check</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-sm">check</span>
         </span>
         <span className="text-green-600 font-medium">Directors</span>
-        <span className="material-symbols-outlined text-subtle-text">chevron_right</span>
+        <span aria-hidden="true" className="material-symbols-outlined text-subtle-text">chevron_right</span>
         <span className="flex items-center justify-center size-6 rounded-full bg-primary text-white text-xs font-bold">
           4
         </span>
@@ -234,7 +234,7 @@ export function DocumentsPage() {
       {/* Required Documents Notice */}
       {!requiredDocsUploaded && (
         <div className="p-4 rounded-lg bg-orange-100 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-800 flex items-center gap-3">
-          <span className="material-symbols-outlined text-orange-600 dark:text-orange-400">
+          <span aria-hidden="true" className="material-symbols-outlined text-orange-600 dark:text-orange-400">
             warning
           </span>
           <p className="text-sm text-orange-800 dark:text-orange-200">
@@ -247,7 +247,7 @@ export function DocumentsPage() {
       {/* Documents Grid */}
       {isLoading ? (
         <div className="flex items-center justify-center min-h-[300px]">
-          <span className="material-symbols-outlined animate-spin text-4xl text-primary">
+          <span aria-hidden="true" className="material-symbols-outlined animate-spin text-4xl text-primary">
             progress_activity
           </span>
         </div>
@@ -275,7 +275,7 @@ export function DocumentsPage() {
                     </div>
                     {uploadedDoc && (
                       <span className="flex items-center justify-center size-6 rounded-full bg-green-500 text-white">
-                        <span className="material-symbols-outlined text-sm">check</span>
+                        <span aria-hidden="true" className="material-symbols-outlined text-sm">check</span>
                       </span>
                     )}
                   </div>
@@ -286,7 +286,7 @@ export function DocumentsPage() {
                   {uploadedDoc ? (
                     <div className="flex items-center justify-between p-4 rounded-lg bg-background-light dark:bg-background-dark">
                       <div className="flex items-center gap-3">
-                        <span className="material-symbols-outlined text-primary text-2xl">
+                        <span aria-hidden="true" className="material-symbols-outlined text-primary text-2xl">
                           description
                         </span>
                         <div>
@@ -308,7 +308,7 @@ export function DocumentsPage() {
                           className="p-2 rounded-full hover:bg-primary/10 text-primary transition-colors"
                           title="View"
                         >
-                          <span className="material-symbols-outlined text-xl">visibility</span>
+                          <span aria-hidden="true" className="material-symbols-outlined text-xl">visibility</span>
                         </a>
                         <button
                           onClick={() => deleteMutation.mutate(uploadedDoc.id)}
@@ -316,7 +316,7 @@ export function DocumentsPage() {
                           className="p-2 rounded-full hover:bg-danger/10 text-subtle-text hover:text-danger transition-colors disabled:opacity-50"
                           title="Delete"
                         >
-                          <span className="material-symbols-outlined text-xl">delete</span>
+                          <span aria-hidden="true" className="material-symbols-outlined text-xl">delete</span>
                         </button>
                       </div>
                     </div>
@@ -333,14 +333,14 @@ export function DocumentsPage() {
                     >
                       {isUploading ? (
                         <div className="flex flex-col items-center justify-center">
-                          <span className="material-symbols-outlined animate-spin text-primary text-3xl mb-2">
+                          <span aria-hidden="true" className="material-symbols-outlined animate-spin text-primary text-3xl mb-2">
                             progress_activity
                           </span>
                           <p className="text-sm text-primary font-medium">Uploading...</p>
                         </div>
                       ) : (
                         <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                          <span className="material-symbols-outlined text-subtle-text text-3xl mb-2">
+                          <span aria-hidden="true" className="material-symbols-outlined text-subtle-text text-3xl mb-2">
                             cloud_upload
                           </span>
                           <p className="mb-2 text-sm text-subtle-text">
@@ -380,7 +380,7 @@ export function DocumentsPage() {
           className="text-sm text-primary font-medium hover:underline flex items-center gap-1"
         >
           Go to Directors
-          <span className="material-symbols-outlined text-base">arrow_forward</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-base">arrow_forward</span>
         </button>
       </div>
     </div>

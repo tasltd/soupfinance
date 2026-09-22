@@ -44,7 +44,7 @@ export function ApiErrorState({ error, onRetry, testId }: ApiErrorStateProps) {
       data-testid={testId ?? 'api-error-state'}
       data-error-kind={parsed.kind}
     >
-      <span className="material-symbols-outlined text-6xl text-danger/50 mb-4 block">
+      <span aria-hidden="true" className="material-symbols-outlined text-6xl text-danger/50 mb-4 block">
         {icon}
       </span>
       <h3
@@ -74,7 +74,7 @@ export function ApiErrorState({ error, onRetry, testId }: ApiErrorStateProps) {
           className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90"
           data-testid={testId ? `${testId}-retry` : 'api-error-retry'}
         >
-          <span className="material-symbols-outlined text-lg">refresh</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-lg">refresh</span>
           Retry
         </button>
       )}

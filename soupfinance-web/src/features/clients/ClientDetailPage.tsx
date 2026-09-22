@@ -54,7 +54,7 @@ export function ClientDetailPage() {
     return (
       <div className="flex flex-col gap-6" data-testid="client-detail-page">
         <div className="p-12 text-center">
-          <span className="material-symbols-outlined text-6xl text-danger/50 mb-4 block">error</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-6xl text-danger/50 mb-4 block">error</span>
           <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">Client not found</h3>
           <p className="text-subtle-text mb-4">The client you're looking for doesn't exist or has been deleted.</p>
           <Link
@@ -85,7 +85,7 @@ export function ClientDetailPage() {
             to="/clients"
             className="inline-flex items-center gap-1 text-sm text-subtle-text hover:text-primary mb-2"
           >
-            <span className="material-symbols-outlined text-lg">arrow_back</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-lg">arrow_back</span>
             Back to Clients
           </Link>
           <div className="flex items-center gap-3">
@@ -95,12 +95,12 @@ export function ClientDetailPage() {
             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getTypeBadge()}`}>
               {client.clientType === 'INDIVIDUAL' ? (
                 <>
-                  <span className="material-symbols-outlined text-sm mr-1">person</span>
+                  <span aria-hidden="true" className="material-symbols-outlined text-sm mr-1">person</span>
                   Individual
                 </>
               ) : (
                 <>
-                  <span className="material-symbols-outlined text-sm mr-1">business</span>
+                  <span aria-hidden="true" className="material-symbols-outlined text-sm mr-1">business</span>
                   Corporate
                 </>
               )}
@@ -124,7 +124,7 @@ export function ClientDetailPage() {
             className="flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90"
             data-testid="client-detail-edit"
           >
-            <span className="material-symbols-outlined text-lg">edit</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-lg">edit</span>
             Edit
           </Link>
         </div>
@@ -239,7 +239,7 @@ export function ClientDetailPage() {
             className="inline-flex items-center gap-2 h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm hover:bg-primary/5"
             data-testid="client-create-invoice"
           >
-            <span className="material-symbols-outlined text-lg">receipt_long</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-lg">receipt_long</span>
             Create Invoice
           </Link>
         </div>
@@ -256,13 +256,14 @@ export function ClientDetailPage() {
             <div className="flex items-center justify-between border-b border-border-light dark:border-border-dark p-6">
               <p className="text-xl font-bold text-text-light dark:text-text-dark">Delete Client</p>
               <button
+                aria-label="Close delete client dialog"
                 onClick={() => {
                   deleteMutation.reset();
                   setDeleteState({ isOpen: false });
                 }}
                 className="flex size-8 items-center justify-center rounded-full hover:bg-black/10 dark:hover:bg-white/10"
               >
-                <span className="material-symbols-outlined text-2xl text-subtle-text">close</span>
+                <span aria-hidden="true" className="material-symbols-outlined text-2xl text-subtle-text">close</span>
               </button>
             </div>
 
@@ -270,7 +271,7 @@ export function ClientDetailPage() {
             <div className="p-6">
               <div className="flex items-start gap-4">
                 <div className="flex-shrink-0 size-12 rounded-full bg-danger/10 flex items-center justify-center">
-                  <span className="material-symbols-outlined text-2xl text-danger">warning</span>
+                  <span aria-hidden="true" className="material-symbols-outlined text-2xl text-danger">warning</span>
                 </div>
                 <div>
                   <p className="text-text-light dark:text-text-dark">

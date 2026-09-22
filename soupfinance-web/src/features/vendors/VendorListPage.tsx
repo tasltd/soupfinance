@@ -78,14 +78,14 @@ export function VendorListPage() {
           className="flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90"
           data-testid="vendor-new-button"
         >
-          <span className="material-symbols-outlined text-lg">add</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-lg">add</span>
           New Vendor
         </Link>
       </div>
 
       {/* Search Input */}
       <div className="relative max-w-md" data-testid="vendor-search-container">
-        <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-subtle-text text-xl">
+        <span aria-hidden="true" className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-subtle-text text-xl">
           search
         </span>
         {/* Fix (SOUPFIN-33 #6): id/name + aria-label — the search field had no label. */}
@@ -114,14 +114,14 @@ export function VendorListPage() {
         ) : error ? (
           // Added: Error state when API fails
           <div className="p-12 text-center" data-testid="vendor-list-error">
-            <span className="material-symbols-outlined text-6xl text-danger/50 mb-4 block">error</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-6xl text-danger/50 mb-4 block">error</span>
             <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">Failed to load vendors</h3>
             <p className="text-subtle-text mb-4">There was an error loading your vendors. Please try again.</p>
             <button
               onClick={() => window.location.reload()}
               className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm"
             >
-              <span className="material-symbols-outlined text-lg">refresh</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-lg">refresh</span>
               Retry
             </button>
           </div>
@@ -171,7 +171,7 @@ export function VendorListPage() {
                           title="View"
                           data-testid={`vendor-view-${vendor.id}`}
                         >
-                          <span className="material-symbols-outlined text-lg">visibility</span>
+                          <span aria-hidden="true" className="material-symbols-outlined text-lg">visibility</span>
                         </Link>
                         <Link
                           to={`/vendors/${vendor.id}/edit`}
@@ -179,7 +179,7 @@ export function VendorListPage() {
                           title="Edit"
                           data-testid={`vendor-edit-${vendor.id}`}
                         >
-                          <span className="material-symbols-outlined text-lg">edit</span>
+                          <span aria-hidden="true" className="material-symbols-outlined text-lg">edit</span>
                         </Link>
                         <button
                           onClick={() => handleDeleteClick(vendor.id, vendor.name)}
@@ -187,7 +187,7 @@ export function VendorListPage() {
                           title="Delete"
                           data-testid={`vendor-delete-${vendor.id}`}
                         >
-                          <span className="material-symbols-outlined text-lg">delete</span>
+                          <span aria-hidden="true" className="material-symbols-outlined text-lg">delete</span>
                         </button>
                       </div>
                     </td>
@@ -198,7 +198,7 @@ export function VendorListPage() {
           </div>
         ) : (
           <div className="p-12 text-center" data-testid="vendor-list-empty">
-            <span className="material-symbols-outlined text-6xl text-subtle-text/50 mb-4 block">
+            <span aria-hidden="true" className="material-symbols-outlined text-6xl text-subtle-text/50 mb-4 block">
               storefront
             </span>
             <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">No vendors yet</h3>
@@ -208,7 +208,7 @@ export function VendorListPage() {
               className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm"
               data-testid="vendor-create-first-button"
             >
-              <span className="material-symbols-outlined text-lg">add</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-lg">add</span>
               Add Vendor
             </Link>
           </div>
@@ -226,11 +226,12 @@ export function VendorListPage() {
             <div className="flex items-center justify-between border-b border-border-light dark:border-border-dark p-6">
               <p className="text-xl font-bold text-text-light dark:text-text-dark">Delete Vendor</p>
               <button
+                aria-label="Close delete vendor dialog"
                 onClick={handleCancelDelete}
                 className="flex size-8 items-center justify-center rounded-full hover:bg-black/10 dark:hover:bg-white/10"
                 data-testid="vendor-delete-modal-close"
               >
-                <span className="material-symbols-outlined text-2xl text-subtle-text">close</span>
+                <span aria-hidden="true" className="material-symbols-outlined text-2xl text-subtle-text">close</span>
               </button>
             </div>
 
@@ -238,7 +239,7 @@ export function VendorListPage() {
             <div className="p-6">
               <div className="flex items-start gap-4">
                 <div className="flex-shrink-0 size-12 rounded-full bg-danger/10 flex items-center justify-center">
-                  <span className="material-symbols-outlined text-2xl text-danger">warning</span>
+                  <span aria-hidden="true" className="material-symbols-outlined text-2xl text-danger">warning</span>
                 </div>
                 <div>
                   <p className="text-text-light dark:text-text-dark">

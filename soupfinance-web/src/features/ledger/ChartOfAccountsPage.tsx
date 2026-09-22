@@ -94,7 +94,7 @@ export function ChartOfAccountsPage() {
         />
       ) : !accounts || accounts.length === 0 ? (
         <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-12 text-center" data-testid="coa-empty">
-          <span className="material-symbols-outlined text-6xl text-subtle-text/50 mb-4">account_tree</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-6xl text-subtle-text/50 mb-4">account_tree</span>
           <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">No accounts found</h3>
           <p className="text-subtle-text">Your chart of accounts is empty.</p>
         </div>
@@ -120,7 +120,7 @@ export function ChartOfAccountsPage() {
                   data-testid={`coa-group-toggle-${group.toLowerCase()}`}
                 >
                   <div className="flex items-center gap-3">
-                    <span className={`material-symbols-outlined p-2 rounded-lg ${config.colorClass}`}>
+                    <span aria-hidden="true" className={`material-symbols-outlined p-2 rounded-lg ${config.colorClass}`}>
                       {config.icon}
                     </span>
                     <div className="text-left">
@@ -128,7 +128,7 @@ export function ChartOfAccountsPage() {
                       <p className="text-sm text-subtle-text">{groupAccounts.length} account{groupAccounts.length !== 1 ? 's' : ''}</p>
                     </div>
                   </div>
-                  <span className={`material-symbols-outlined text-subtle-text transition-transform ${isExpanded ? 'rotate-180' : ''}`}>
+                  <span aria-hidden="true" className={`material-symbols-outlined text-subtle-text transition-transform ${isExpanded ? 'rotate-180' : ''}`}>
                     expand_more
                   </span>
                 </button>

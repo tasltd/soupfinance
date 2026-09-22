@@ -85,7 +85,7 @@ export function Toast({ id, variant, message, duration = 5000, onClose }: ToastP
       `}
     >
       {/* Icon based on variant */}
-      <span className="material-symbols-outlined text-xl shrink-0">
+      <span aria-hidden="true" className="material-symbols-outlined text-xl shrink-0">
         {config.icon}
       </span>
 
@@ -103,7 +103,7 @@ export function Toast({ id, variant, message, duration = 5000, onClose }: ToastP
           transition-colors shrink-0
         `}
       >
-        <span className="material-symbols-outlined text-lg">close</span>
+        <span aria-hidden="true" className="material-symbols-outlined text-lg">close</span>
       </button>
     </div>
   );

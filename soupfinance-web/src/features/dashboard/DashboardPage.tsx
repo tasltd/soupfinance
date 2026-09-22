@@ -85,7 +85,7 @@ export function DashboardPage() {
           role="alert"
           data-testid="dashboard-backend-warning"
         >
-          <span className="material-symbols-outlined text-2xl text-yellow-700 dark:text-yellow-400 shrink-0">
+          <span aria-hidden="true" className="material-symbols-outlined text-2xl text-yellow-700 dark:text-yellow-400 shrink-0">
             warning
           </span>
           <div className="flex-1">
@@ -115,7 +115,7 @@ export function DashboardPage() {
         ) : statsError ? (
           // Added: Error state for stats
           <div className="col-span-full bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-8 text-center" data-testid="dashboard-stats-error">
-            <span className="material-symbols-outlined text-4xl text-danger/50 mb-2">error</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-4xl text-danger/50 mb-2">error</span>
             <p className="text-subtle-text">Failed to load dashboard stats</p>
           </div>
         ) : (
@@ -249,7 +249,7 @@ function StatCard({
     <div data-anim="kpi-card" className="flex flex-col gap-3 rounded-xl p-6 border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark" data-testid={testId}>
       <div className="flex items-center justify-between">
         <p className="text-subtle-text text-sm font-medium">{label}</p>
-        <span className="material-symbols-outlined text-primary">{icon}</span>
+        <span aria-hidden="true" className="material-symbols-outlined text-primary">{icon}</span>
       </div>
       <p className="text-2xl font-bold text-text-light dark:text-text-dark tracking-tight" data-testid={testId ? `${testId}-value` : undefined}>
         {value}

@@ -51,7 +51,7 @@ export function ResetPasswordPage() {
 
         <div className="flex justify-center">
           <div className="size-20 rounded-full bg-danger/10 flex items-center justify-center">
-            <span className="material-symbols-outlined text-4xl text-danger">error</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-4xl text-danger">error</span>
           </div>
         </div>
 
@@ -90,7 +90,7 @@ export function ResetPasswordPage() {
 
         <div className="flex justify-center">
           <div className="size-20 rounded-full bg-success/10 flex items-center justify-center">
-            <span className="material-symbols-outlined text-4xl text-success">check_circle</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-4xl text-success">check_circle</span>
           </div>
         </div>
 
@@ -127,7 +127,7 @@ export function ResetPasswordPage() {
       {/* Icon */}
       <div className="flex justify-center">
         <div className="size-20 rounded-full bg-primary/10 flex items-center justify-center">
-          <span className="material-symbols-outlined text-4xl text-primary">lock</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-4xl text-primary">lock</span>
         </div>
       </div>
 
@@ -150,7 +150,7 @@ export function ResetPasswordPage() {
           className="p-4 rounded-lg bg-danger/10 border border-danger/30 text-danger text-sm flex items-start gap-3"
           data-testid="reset-password-error"
         >
-          <span className="material-symbols-outlined text-lg flex-shrink-0 mt-0.5">error</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-lg flex-shrink-0 mt-0.5">error</span>
           <div>
             <p className="font-medium">Reset failed</p>
             <p className="mt-1 text-danger/80">
@@ -209,7 +209,7 @@ export function ResetPasswordPage() {
         >
           {resetMutation.isPending ? (
             <>
-              <span className="material-symbols-outlined animate-spin">progress_activity</span>
+              <span aria-hidden="true" className="material-symbols-outlined animate-spin">progress_activity</span>
               Resetting...
             </>
           ) : (

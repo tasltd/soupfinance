@@ -36,7 +36,7 @@ export function InvoiceListPage() {
           className="flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90"
           data-testid="invoice-new-button"
         >
-          <span className="material-symbols-outlined text-lg">add</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-lg">add</span>
           New Invoice
         </Link>
       </div>
@@ -48,14 +48,14 @@ export function InvoiceListPage() {
         ) : error ? (
           // Added: Error state when API fails
           <div className="p-12 text-center" data-testid="invoice-list-error">
-            <span className="material-symbols-outlined text-6xl text-danger/50 mb-4">error</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-6xl text-danger/50 mb-4">error</span>
             <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">Failed to load invoices</h3>
             <p className="text-subtle-text mb-4">There was an error loading your invoices. Please try again.</p>
             <button
               onClick={() => window.location.reload()}
               className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm"
             >
-              <span className="material-symbols-outlined text-lg">refresh</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-lg">refresh</span>
               Retry
             </button>
           </div>
@@ -107,11 +107,11 @@ export function InvoiceListPage() {
           </div>
         ) : (
           <div className="p-12 text-center" data-testid="invoice-list-empty">
-            <span className="material-symbols-outlined text-6xl text-subtle-text/50 mb-4">receipt_long</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-6xl text-subtle-text/50 mb-4">receipt_long</span>
             <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">No invoices yet</h3>
             <p className="text-subtle-text mb-4">Create your first invoice to start tracking payments.</p>
             <Link to="/invoices/new" className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm" data-testid="invoice-create-first-button">
-              <span className="material-symbols-outlined text-lg">add</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-lg">add</span>
               Create Invoice
             </Link>
           </div>

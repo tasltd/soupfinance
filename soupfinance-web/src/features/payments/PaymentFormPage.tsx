@@ -217,7 +217,7 @@ export function PaymentFormPage() {
           className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-12 text-center max-w-2xl"
           data-testid="payment-form-module-disabled"
         >
-          <span className="material-symbols-outlined text-6xl text-warning/70 mb-4">block</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-6xl text-warning/70 mb-4">block</span>
           <h2 className="text-xl font-bold text-text-light dark:text-text-dark mb-2">
             Finance module not available
           </h2>
@@ -231,7 +231,7 @@ export function PaymentFormPage() {
               className="inline-flex items-center gap-2 h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm hover:bg-primary/5"
               data-testid="payment-form-module-disabled-back"
             >
-              <span className="material-symbols-outlined text-lg">arrow_back</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-lg">arrow_back</span>
               Back to Payments
             </Link>
             <a
@@ -239,7 +239,7 @@ export function PaymentFormPage() {
               className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90"
               data-testid="payment-form-module-disabled-contact"
             >
-              <span className="material-symbols-outlined text-lg">mail</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-lg">mail</span>
               Contact Support
             </a>
           </div>
@@ -300,7 +300,7 @@ export function PaymentFormPage() {
                   }`}
                   data-testid="type-invoice"
                 >
-                  <span className="material-symbols-outlined">arrow_downward</span>
+                  <span aria-hidden="true" className="material-symbols-outlined">arrow_downward</span>
                   Incoming (Invoice)
                 </button>
                 <button
@@ -313,7 +313,7 @@ export function PaymentFormPage() {
                   }`}
                   data-testid="type-bill"
                 >
-                  <span className="material-symbols-outlined">arrow_upward</span>
+                  <span aria-hidden="true" className="material-symbols-outlined">arrow_upward</span>
                   Outgoing (Bill)
                 </button>
               </div>
@@ -490,12 +490,12 @@ export function PaymentFormPage() {
             >
               {isPending ? (
                 <>
-                  <span className="material-symbols-outlined animate-spin text-lg">progress_activity</span>
+                  <span aria-hidden="true" className="material-symbols-outlined animate-spin text-lg">progress_activity</span>
                   Recording...
                 </>
               ) : (
                 <>
-                  <span className="material-symbols-outlined text-lg">check</span>
+                  <span aria-hidden="true" className="material-symbols-outlined text-lg">check</span>
                   Record Payment
                 </>
               )}

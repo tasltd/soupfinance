@@ -126,7 +126,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background-light dark:bg-background-dark">
         <div className="flex flex-col items-center gap-4">
-          <span className="material-symbols-outlined text-4xl text-primary animate-spin">progress_activity</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-4xl text-primary animate-spin">progress_activity</span>
           <p className="text-subtle-text">Verifying authentication...</p>
         </div>
       </div>
@@ -155,7 +155,7 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background-light dark:bg-background-dark">
         <div className="flex flex-col items-center gap-4">
-          <span className="material-symbols-outlined text-4xl text-primary animate-spin">progress_activity</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-4xl text-primary animate-spin">progress_activity</span>
           <p className="text-subtle-text">Loading...</p>
         </div>
       </div>

@@ -566,7 +566,7 @@ export function InvoiceFormPage() {
     return (
       <div className="flex flex-col gap-6" data-testid="invoice-form-page">
         <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-12 text-center" data-testid="invoice-form-error">
-          <span className="material-symbols-outlined text-6xl text-danger/50 mb-4">error</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-6xl text-danger/50 mb-4">error</span>
           <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">Failed to load invoice</h3>
           <p className="text-subtle-text mb-4">The invoice could not be found or there was an error loading it.</p>
           <button onClick={() => navigate('/invoices')} className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm">
@@ -673,7 +673,7 @@ export function InvoiceFormPage() {
                   }`}
                   data-testid="invoice-new-client-button"
                 >
-                  <span className="material-symbols-outlined text-base">
+                  <span aria-hidden="true" className="material-symbols-outlined text-base">
                     {showNewClientForm ? 'close' : 'person_add'}
                   </span>
                   {showNewClientForm ? 'Cancel' : 'New Client'}
@@ -706,7 +706,7 @@ export function InvoiceFormPage() {
                       }`}
                       data-testid="new-client-type-individual"
                     >
-                      <span className="material-symbols-outlined text-sm">person</span>
+                      <span aria-hidden="true" className="material-symbols-outlined text-sm">person</span>
                       Individual
                     </button>
                     <button
@@ -719,7 +719,7 @@ export function InvoiceFormPage() {
                       }`}
                       data-testid="new-client-type-corporate"
                     >
-                      <span className="material-symbols-outlined text-sm">business</span>
+                      <span aria-hidden="true" className="material-symbols-outlined text-sm">business</span>
                       Corporate
                     </button>
                   </div>
@@ -781,12 +781,12 @@ export function InvoiceFormPage() {
                   >
                     {createClientMutation.isPending ? (
                       <>
-                        <span className="material-symbols-outlined text-sm animate-spin">progress_activity</span>
+                        <span aria-hidden="true" className="material-symbols-outlined text-sm animate-spin">progress_activity</span>
                         Creating...
                       </>
                     ) : (
                       <>
-                        <span className="material-symbols-outlined text-sm">add</span>
+                        <span aria-hidden="true" className="material-symbols-outlined text-sm">add</span>
                         Create & Select
                       </>
                     )}
@@ -892,7 +892,7 @@ export function InvoiceFormPage() {
                 className="flex items-center gap-1 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
                 data-testid="invoice-advanced-toggle"
               >
-                <span className="material-symbols-outlined text-base transition-transform" style={{ transform: showAdvanced ? 'rotate(90deg)' : 'rotate(0)' }}>
+                <span aria-hidden="true" className="material-symbols-outlined text-base transition-transform" style={{ transform: showAdvanced ? 'rotate(90deg)' : 'rotate(0)' }}>
                   chevron_right
                 </span>
                 Advanced Options
@@ -964,7 +964,7 @@ export function InvoiceFormPage() {
               className="h-9 px-3 rounded-lg bg-primary/10 text-primary font-bold text-sm flex items-center hover:bg-primary/20"
               data-testid="invoice-add-item-button"
             >
-              <span className="material-symbols-outlined text-base mr-1">add</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-base mr-1">add</span>
               Add Item
             </button>
           </div>
@@ -1066,13 +1066,14 @@ export function InvoiceFormPage() {
                       </td>
                       <td className="px-4 py-3 text-center">
                         <button
+                          aria-label={`Remove line item ${index + 1}`}
                           type="button"
                           onClick={() => removeLineItem(index)}
                           disabled={lineItems.length === 1}
                           className="text-danger hover:text-danger/70 disabled:opacity-30 disabled:cursor-not-allowed"
                           data-testid={`invoice-item-remove-${index}`}
                         >
-                          <span className="material-symbols-outlined text-xl">delete</span>
+                          <span aria-hidden="true" className="material-symbols-outlined text-xl">delete</span>
                         </button>
                       </td>
                     </tr>

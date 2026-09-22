@@ -40,7 +40,7 @@ export function Spinner({ size = 'md', color = 'text-primary', className = '' }:
         ${className}
       `}
     >
-      <span className="material-symbols-outlined animate-spin">
+      <span aria-hidden="true" className="material-symbols-outlined animate-spin">
         progress_activity
       </span>
     </span>

@@ -111,8 +111,8 @@ function ScheduleFormModal({ schedule, onSubmit, onClose, isSubmitting }: Schedu
           <h2 className="text-xl font-bold text-text-light dark:text-text-dark">
             {schedule ? 'Edit Schedule' : 'New Schedule'}
           </h2>
-          <button onClick={onClose} className="text-subtle-text hover:text-text-light dark:hover:text-text-dark">
-            <span className="material-symbols-outlined">close</span>
+          <button onClick={onClose} className="text-subtle-text hover:text-text-light dark:hover:text-text-dark" aria-label="Close schedule report dialog">
+            <span aria-hidden="true" className="material-symbols-outlined">close</span>
           </button>
         </div>
 
@@ -298,15 +298,15 @@ function HistoryPanel({ scheduleId, scheduleName, onClose }: HistoryPanelProps) 
             <h2 className="text-xl font-bold text-text-light dark:text-text-dark">Execution History</h2>
             <p className="text-sm text-subtle-text">{scheduleName}</p>
           </div>
-          <button onClick={onClose} className="text-subtle-text hover:text-text-light dark:hover:text-text-dark">
-            <span className="material-symbols-outlined">close</span>
+          <button onClick={onClose} className="text-subtle-text hover:text-text-light dark:hover:text-text-dark" aria-label="Close execution history dialog">
+            <span aria-hidden="true" className="material-symbols-outlined">close</span>
           </button>
         </div>
 
         <div className="p-6">
           {isLoading ? (
             <div className="flex justify-center py-8">
-              <span className="material-symbols-outlined text-3xl text-primary animate-spin">progress_activity</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-3xl text-primary animate-spin">progress_activity</span>
             </div>
           ) : !history || history.length === 0 ? (
             <p className="text-center text-subtle-text py-8">No execution history yet</p>
@@ -422,8 +422,8 @@ export function ScheduledReportsPage() {
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <Link to="/reports" className="text-subtle-text hover:text-primary">
-              <span className="material-symbols-outlined text-sm">arrow_back</span>
+            <Link to="/reports" className="text-subtle-text hover:text-primary" aria-label="Back to Reports">
+              <span aria-hidden="true" className="material-symbols-outlined text-sm">arrow_back</span>
             </Link>
             <h1 className="text-3xl font-black tracking-tight text-text-light dark:text-text-dark">
               Scheduled Reports
@@ -435,7 +435,7 @@ export function ScheduledReportsPage() {
           onClick={() => { setEditSchedule(undefined); setShowForm(true); }}
           className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white font-medium hover:bg-primary/90"
         >
-          <span className="material-symbols-outlined text-sm">add</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-sm">add</span>
           New Schedule
         </button>
       </div>
@@ -460,7 +460,7 @@ export function ScheduledReportsPage() {
       {/* Schedules List */}
       {isLoading ? (
         <div className="flex justify-center py-12">
-          <span className="material-symbols-outlined text-4xl text-primary animate-spin">progress_activity</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-4xl text-primary animate-spin">progress_activity</span>
         </div>
       ) : error ? (
         <div className="p-6 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400">
@@ -468,7 +468,7 @@ export function ScheduledReportsPage() {
         </div>
       ) : !schedules || schedules.length === 0 ? (
         <div className="flex flex-col items-center gap-4 py-12 text-subtle-text">
-          <span className="material-symbols-outlined text-5xl">event_repeat</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-5xl">event_repeat</span>
           <p>No scheduled reports yet</p>
           <button
             onClick={() => { setEditSchedule(undefined); setShowForm(true); }}
@@ -496,19 +496,19 @@ export function ScheduledReportsPage() {
                 </div>
                 <div className="flex items-center gap-4 text-sm text-subtle-text">
                   <span className="flex items-center gap-1">
-                    <span className="material-symbols-outlined text-sm">description</span>
+                    <span aria-hidden="true" className="material-symbols-outlined text-sm">description</span>
                     {REPORT_TYPE_LABELS[schedule.reportType]}
                   </span>
                   <span className="flex items-center gap-1">
-                    <span className="material-symbols-outlined text-sm">schedule</span>
+                    <span aria-hidden="true" className="material-symbols-outlined text-sm">schedule</span>
                     {FREQUENCY_LABELS[schedule.frequency]}
                   </span>
                   <span className="flex items-center gap-1">
-                    <span className="material-symbols-outlined text-sm">date_range</span>
+                    <span aria-hidden="true" className="material-symbols-outlined text-sm">date_range</span>
                     {DATE_RANGE_LABELS[schedule.dateRangeType]}
                   </span>
                   <span className="flex items-center gap-1">
-                    <span className="material-symbols-outlined text-sm">file_present</span>
+                    <span aria-hidden="true" className="material-symbols-outlined text-sm">file_present</span>
                     {schedule.exportFormat}
                   </span>
                 </div>
@@ -529,14 +529,14 @@ export function ScheduledReportsPage() {
                   className="p-2 rounded-lg text-subtle-text hover:text-primary hover:bg-background-light dark:hover:bg-background-dark"
                   title="View history"
                 >
-                  <span className="material-symbols-outlined text-xl">history</span>
+                  <span aria-hidden="true" className="material-symbols-outlined text-xl">history</span>
                 </button>
                 <button
                   onClick={() => toggleMutation.mutate(schedule.id)}
                   className="p-2 rounded-lg text-subtle-text hover:text-primary hover:bg-background-light dark:hover:bg-background-dark"
                   title={schedule.status === 'ACTIVE' ? 'Pause' : 'Resume'}
                 >
-                  <span className="material-symbols-outlined text-xl">
+                  <span aria-hidden="true" className="material-symbols-outlined text-xl">
                     {schedule.status === 'ACTIVE' ? 'pause_circle' : 'play_circle'}
                   </span>
                 </button>
@@ -545,14 +545,14 @@ export function ScheduledReportsPage() {
                   className="p-2 rounded-lg text-subtle-text hover:text-primary hover:bg-background-light dark:hover:bg-background-dark"
                   title="Edit"
                 >
-                  <span className="material-symbols-outlined text-xl">edit</span>
+                  <span aria-hidden="true" className="material-symbols-outlined text-xl">edit</span>
                 </button>
                 <button
                   onClick={() => handleDelete(schedule)}
                   className="p-2 rounded-lg text-subtle-text hover:text-red-500 hover:bg-background-light dark:hover:bg-background-dark"
                   title="Delete"
                 >
-                  <span className="material-symbols-outlined text-xl">delete</span>
+                  <span aria-hidden="true" className="material-symbols-outlined text-xl">delete</span>
                 </button>
               </div>
             </div>

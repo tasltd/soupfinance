@@ -83,10 +83,10 @@ function AccountGroup({ group, accounts, isExpanded, onToggle }: AccountGroupPro
       >
         <td colSpan={2} className="px-6 py-3">
           <div className="flex items-center gap-3">
-            <span className="material-symbols-outlined text-lg text-primary">
+            <span aria-hidden="true" className="material-symbols-outlined text-lg text-primary">
               {isExpanded ? 'expand_more' : 'chevron_right'}
             </span>
-            <span className="material-symbols-outlined text-lg text-subtle-text">
+            <span aria-hidden="true" className="material-symbols-outlined text-lg text-subtle-text">
               {config.icon}
             </span>
             <span className="font-bold text-text-light dark:text-text-dark">
@@ -237,7 +237,7 @@ export function TrialBalancePage() {
             className="flex items-center gap-2 h-10 px-4 rounded-lg bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-bold text-sm hover:bg-primary/10 disabled:opacity-50"
             data-testid="trial-balance-export-pdf"
           >
-            <span className="material-symbols-outlined text-base">picture_as_pdf</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-base">picture_as_pdf</span>
             {exportLoading === 'pdf' ? 'Exporting...' : 'PDF'}
           </button>
           <button
@@ -246,7 +246,7 @@ export function TrialBalancePage() {
             className="flex items-center gap-2 h-10 px-4 rounded-lg bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-bold text-sm hover:bg-primary/10 disabled:opacity-50"
             data-testid="trial-balance-export-excel"
           >
-            <span className="material-symbols-outlined text-base">table_view</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-base">table_view</span>
             {exportLoading === 'xlsx' ? 'Exporting...' : 'Excel'}
           </button>
           <button
@@ -255,7 +255,7 @@ export function TrialBalancePage() {
             className="flex items-center gap-2 h-10 px-4 rounded-lg bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-bold text-sm hover:bg-primary/10 disabled:opacity-50"
             data-testid="trial-balance-export-csv"
           >
-            <span className="material-symbols-outlined text-base">download</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-base">download</span>
             {exportLoading === 'csv' ? 'Exporting...' : 'CSV'}
           </button>
         </div>
@@ -339,7 +339,7 @@ export function TrialBalancePage() {
           }`}
           data-testid="trial-balance-status"
         >
-          <span className="material-symbols-outlined">
+          <span aria-hidden="true" className="material-symbols-outlined">
             {isBalanced ? 'check_circle' : 'warning'}
           </span>
           <span className="font-medium">
@@ -358,7 +358,7 @@ export function TrialBalancePage() {
         {isLoading ? (
           // Loading State
           <div className="p-12 text-center" data-testid="trial-balance-loading">
-            <span className="material-symbols-outlined text-6xl text-subtle-text/50 mb-4 animate-pulse">
+            <span aria-hidden="true" className="material-symbols-outlined text-6xl text-subtle-text/50 mb-4 animate-pulse">
               hourglass_empty
             </span>
             <p className="text-subtle-text">Loading trial balance...</p>
@@ -366,7 +366,7 @@ export function TrialBalancePage() {
         ) : isError ? (
           // Error State
           <div className="p-12 text-center" data-testid="trial-balance-error">
-            <span className="material-symbols-outlined text-6xl text-danger/50 mb-4">error</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-6xl text-danger/50 mb-4">error</span>
             <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">
               Failed to load report
             </h3>
@@ -377,7 +377,7 @@ export function TrialBalancePage() {
               onClick={() => refetch()}
               className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm"
             >
-              <span className="material-symbols-outlined text-lg">refresh</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-lg">refresh</span>
               Try Again
             </button>
           </div>
@@ -387,7 +387,7 @@ export function TrialBalancePage() {
           // Fix(SOUPFIN-11): Clarify why the report is empty so users don't assume
           // the module is broken when it's actually a setup or date-range issue.
           <div className="p-12 text-center" data-testid="trial-balance-empty">
-            <span className="material-symbols-outlined text-6xl text-subtle-text/50 mb-4">
+            <span aria-hidden="true" className="material-symbols-outlined text-6xl text-subtle-text/50 mb-4">
               account_balance
             </span>
             <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">
@@ -416,7 +416,7 @@ export function TrialBalancePage() {
                 className="flex items-center gap-1 text-sm font-medium text-primary hover:underline"
                 data-testid="trial-balance-toggle-all"
               >
-                <span className="material-symbols-outlined text-base">
+                <span aria-hidden="true" className="material-symbols-outlined text-base">
                   {expandedGroups.size === LEDGER_GROUP_ORDER.length
                     ? 'unfold_less'
                     : 'unfold_more'}

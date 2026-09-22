@@ -104,7 +104,7 @@ export function BillDetailPage() {
           </Link>
         </div>
         <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-12 text-center" data-testid="bill-detail-error">
-          <span className="material-symbols-outlined text-6xl text-danger/50 mb-4">error</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-6xl text-danger/50 mb-4">error</span>
           <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">Failed to load bill</h3>
           <p className="text-subtle-text mb-4">The bill could not be found or there was an error loading it.</p>
           <Link to="/bills" className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm">
@@ -139,7 +139,7 @@ export function BillDetailPage() {
             className="h-10 px-4 rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400 font-bold text-sm flex items-center hover:bg-purple-500/20 disabled:opacity-50"
             data-testid="bill-download-pdf-button"
           >
-            <span className="material-symbols-outlined text-lg mr-2">download</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-lg mr-2">download</span>
             {isPdfGenerating ? 'Generating...' : 'Download PDF'}
           </button>
           <button
@@ -147,7 +147,7 @@ export function BillDetailPage() {
             className="h-10 px-4 rounded-lg bg-info/10 text-info font-bold text-sm flex items-center hover:bg-info/20"
             data-testid="bill-send-button"
           >
-            <span className="material-symbols-outlined text-lg mr-2">send</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-lg mr-2">send</span>
             Send
           </button>
           <Link
@@ -155,7 +155,7 @@ export function BillDetailPage() {
             className="h-10 px-4 rounded-lg bg-primary/20 text-primary font-bold text-sm flex items-center hover:bg-primary/30"
             data-testid="bill-edit-button"
           >
-            <span className="material-symbols-outlined text-lg mr-2">edit</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-lg mr-2">edit</span>
             Edit
           </Link>
           <button
@@ -164,7 +164,7 @@ export function BillDetailPage() {
             className="h-10 px-4 rounded-lg bg-danger/10 text-danger font-bold text-sm flex items-center hover:bg-danger/20 disabled:opacity-50"
             data-testid="bill-delete-button"
           >
-            <span className="material-symbols-outlined text-lg mr-2">delete</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-lg mr-2">delete</span>
             {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
           </button>
         </div>
@@ -301,7 +301,7 @@ export function BillDetailPage() {
               className="h-9 px-3 rounded-lg bg-primary text-white font-bold text-sm flex items-center hover:bg-primary/90"
               data-testid="record-payment-button"
             >
-              <span className="material-symbols-outlined text-base mr-1">add</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-base mr-1">add</span>
               Record Payment
             </Link>
           )}
@@ -343,10 +343,11 @@ export function BillDetailPage() {
             <div className="px-6 py-4 border-b border-border-light dark:border-border-dark flex justify-between items-center">
               <h3 className="text-lg font-bold text-text-light dark:text-text-dark">Send Bill</h3>
               <button
+                aria-label="Close send bill dialog"
                 onClick={() => setShowSendDialog(false)}
                 className="text-subtle-text hover:text-text-light dark:hover:text-text-dark"
               >
-                <span className="material-symbols-outlined">close</span>
+                <span aria-hidden="true" className="material-symbols-outlined">close</span>
               </button>
             </div>
             <div className="p-6 space-y-4">
@@ -399,6 +400,7 @@ export function BillDetailPage() {
               <button
                 onClick={() => setShowSendDialog(false)}
                 className="h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm"
+                data-testid="send-cancel-button"
               >
                 Cancel
               </button>
@@ -410,12 +412,12 @@ export function BillDetailPage() {
               >
                 {isEmailSending ? (
                   <>
-                    <span className="material-symbols-outlined text-lg mr-2 animate-spin">progress_activity</span>
+                    <span aria-hidden="true" className="material-symbols-outlined text-lg mr-2 animate-spin">progress_activity</span>
                     Sending...
                   </>
                 ) : (
                   <>
-                    <span className="material-symbols-outlined text-lg mr-2">send</span>
+                    <span aria-hidden="true" className="material-symbols-outlined text-lg mr-2">send</span>
                     Send Bill
                   </>
                 )}

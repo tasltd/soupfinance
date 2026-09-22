@@ -203,7 +203,7 @@ export default function BankAccountFormPage() {
           to="/settings/bank-accounts"
           className="flex items-center gap-2 h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm hover:bg-primary/5"
         >
-          <span className="material-symbols-outlined text-lg">arrow_back</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-lg">arrow_back</span>
           Back to List
         </Link>
       </div>
@@ -422,7 +422,7 @@ export default function BankAccountFormPage() {
             className="h-10 px-6 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90 disabled:opacity-50 flex items-center gap-2"
           >
             {(isSubmitting || saveMutation.isPending) && (
-              <span className="material-symbols-outlined text-lg animate-spin">progress_activity</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-lg animate-spin">progress_activity</span>
             )}
             {isEdit ? 'Update Account' : 'Add Account'}
           </button>

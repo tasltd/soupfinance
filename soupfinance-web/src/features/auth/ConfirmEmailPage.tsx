@@ -130,7 +130,7 @@ export function ConfirmEmailPage() {
         {/* Success icon */}
         <div className="flex justify-center">
           <div className="size-20 rounded-full bg-success/10 flex items-center justify-center">
-            <span className="material-symbols-outlined text-4xl text-success">check_circle</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-4xl text-success">check_circle</span>
           </div>
         </div>
 
@@ -215,12 +215,13 @@ export function ConfirmEmailPage() {
               } bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark placeholder:text-subtle-text focus:ring-2 focus:outline-none`}
             />
             <button
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
               type="button"
               onClick={() => setShowPassword(!showPassword)}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-subtle-text hover:text-text-light dark:hover:text-text-dark"
               data-testid="confirm-email-toggle-password"
             >
-              <span className="material-symbols-outlined text-xl">
+              <span aria-hidden="true" className="material-symbols-outlined text-xl">
                 {showPassword ? 'visibility_off' : 'visibility'}
               </span>
             </button>
@@ -238,7 +239,7 @@ export function ConfirmEmailPage() {
                   check.passed ? 'text-success' : 'text-subtle-text'
                 }`}
               >
-                <span className="material-symbols-outlined text-sm">
+                <span aria-hidden="true" className="material-symbols-outlined text-sm">
                   {check.passed ? 'check_circle' : 'radio_button_unchecked'}
                 </span>
                 <span>{check.label}</span>
@@ -267,12 +268,13 @@ export function ConfirmEmailPage() {
               } bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark placeholder:text-subtle-text focus:ring-2 focus:outline-none`}
             />
             <button
+              aria-label={showConfirmPassword ? 'Hide password confirmation' : 'Show password confirmation'}
               type="button"
               onClick={() => setShowConfirmPassword(!showConfirmPassword)}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-subtle-text hover:text-text-light dark:hover:text-text-dark"
               data-testid="confirm-email-toggle-confirm-password"
             >
-              <span className="material-symbols-outlined text-xl">
+              <span aria-hidden="true" className="material-symbols-outlined text-xl">
                 {showConfirmPassword ? 'visibility_off' : 'visibility'}
               </span>
             </button>
@@ -284,12 +286,12 @@ export function ConfirmEmailPage() {
           {confirmPassword && password && (
             password === confirmPassword ? (
               <span className="text-xs text-success flex items-center gap-1">
-                <span className="material-symbols-outlined text-sm">check_circle</span>
+                <span aria-hidden="true" className="material-symbols-outlined text-sm">check_circle</span>
                 Passwords match
               </span>
             ) : (
               <span className="text-xs text-danger flex items-center gap-1">
-                <span className="material-symbols-outlined text-sm">cancel</span>
+                <span aria-hidden="true" className="material-symbols-outlined text-sm">cancel</span>
                 Passwords do not match
               </span>
             )
@@ -305,7 +307,7 @@ export function ConfirmEmailPage() {
         >
           {confirmMutation.isPending ? (
             <>
-              <span className="material-symbols-outlined animate-spin">progress_activity</span>
+              <span aria-hidden="true" className="material-symbols-outlined animate-spin">progress_activity</span>
               Activating Account...
             </>
           ) : (

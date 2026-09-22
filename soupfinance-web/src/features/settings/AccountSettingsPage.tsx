@@ -327,7 +327,7 @@ export default function AccountSettingsPage() {
           data-testid="account-settings-load-error"
           role="alert"
         >
-          <span className="material-symbols-outlined text-xl text-warning">warning</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-xl text-warning">warning</span>
           <div className="flex-1">
             <p className="font-medium text-text-light dark:text-text-dark">
               Couldn't load your saved settings
@@ -344,7 +344,7 @@ export default function AccountSettingsPage() {
             className="inline-flex items-center gap-2 h-9 px-3 rounded-lg bg-primary text-white font-bold text-sm shrink-0"
             data-testid="account-settings-load-error-retry"
           >
-            <span className="material-symbols-outlined text-lg">refresh</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-lg">refresh</span>
             Retry
           </button>
         </div>
@@ -532,7 +532,7 @@ export default function AccountSettingsPage() {
                   </div>
                 ) : (
                   <div className="w-full h-full flex items-center justify-center gap-2 text-subtle-text">
-                    <span className="material-symbols-outlined text-2xl">image</span>
+                    <span aria-hidden="true" className="material-symbols-outlined text-2xl">image</span>
                     <span className="text-sm">Click to upload logo</span>
                   </div>
                 )}
@@ -594,7 +594,7 @@ export default function AccountSettingsPage() {
                   </div>
                 ) : (
                   <div className="w-full h-full flex items-center justify-center gap-2 text-subtle-text">
-                    <span className="material-symbols-outlined text-2xl">bookmark</span>
+                    <span aria-hidden="true" className="material-symbols-outlined text-2xl">bookmark</span>
                     <span className="text-sm">Click to upload favicon</span>
                   </div>
                 )}
@@ -715,7 +715,7 @@ export default function AccountSettingsPage() {
               data-testid="account-settings-save"
             >
               {(isSubmitting || saveMutation.isPending) && (
-                <span className="material-symbols-outlined text-lg animate-spin">progress_activity</span>
+                <span aria-hidden="true" className="material-symbols-outlined text-lg animate-spin">progress_activity</span>
               )}
               Save Changes
             </button>
@@ -726,7 +726,7 @@ export default function AccountSettingsPage() {
         {saveMutation.isSuccess && (
           <div className="bg-success/10 border border-success/20 rounded-lg p-4">
             <p className="text-success text-sm flex items-center gap-2">
-              <span className="material-symbols-outlined text-lg">check_circle</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-lg">check_circle</span>
               Account settings saved successfully.
             </p>
           </div>

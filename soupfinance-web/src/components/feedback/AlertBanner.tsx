@@ -86,7 +86,7 @@ export function AlertBanner({
       `}
     >
       {/* Icon - custom or default based on variant */}
-      <span className="material-symbols-outlined text-xl shrink-0">
+      <span aria-hidden="true" className="material-symbols-outlined text-xl shrink-0">
         {icon ?? config.icon}
       </span>
 
@@ -120,7 +120,7 @@ export function AlertBanner({
             transition-colors shrink-0
           `}
         >
-          <span className="material-symbols-outlined text-xl">close</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-xl">close</span>
         </button>
       )}
     </div>

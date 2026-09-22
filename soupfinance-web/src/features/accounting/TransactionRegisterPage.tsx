@@ -489,7 +489,7 @@ export function TransactionRegisterPage() {
                 className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-primary text-white text-sm font-bold leading-normal tracking-[0.015em] hover:bg-primary/90"
                 data-testid="new-journal-entry-button"
               >
-                <span className="material-symbols-outlined text-lg mr-2">add</span>
+                <span aria-hidden="true" className="material-symbols-outlined text-lg mr-2">add</span>
                 <span className="truncate">New Journal Entry</span>
               </button>
               {/* Added: New Payment button */}
@@ -499,7 +499,7 @@ export function TransactionRegisterPage() {
                 className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-background-light dark:bg-surface-dark text-text-light dark:text-text-dark text-sm font-bold leading-normal tracking-[0.015em] hover:bg-gray-200 dark:hover:bg-gray-700"
                 data-testid="new-payment-button"
               >
-                <span className="material-symbols-outlined text-lg mr-2">payments</span>
+                <span aria-hidden="true" className="material-symbols-outlined text-lg mr-2">payments</span>
                 <span className="truncate">New Payment</span>
               </button>
               {/* Added: New Receipt button */}
@@ -509,7 +509,7 @@ export function TransactionRegisterPage() {
                 className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-background-light dark:bg-surface-dark text-text-light dark:text-text-dark text-sm font-bold leading-normal tracking-[0.015em] hover:bg-gray-200 dark:hover:bg-gray-700"
                 data-testid="new-receipt-button"
               >
-                <span className="material-symbols-outlined text-lg mr-2">receipt</span>
+                <span aria-hidden="true" className="material-symbols-outlined text-lg mr-2">receipt</span>
                 <span className="truncate">New Receipt</span>
               </button>
               {/* Added: Export button */}
@@ -519,7 +519,7 @@ export function TransactionRegisterPage() {
                 className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-transparent text-text-light dark:text-text-dark text-sm font-bold leading-normal tracking-[0.015em] hover:bg-gray-100 dark:hover:bg-gray-800 border border-border-light dark:border-border-dark"
                 data-testid="export-button"
               >
-                <span className="material-symbols-outlined text-lg mr-2">download</span>
+                <span aria-hidden="true" className="material-symbols-outlined text-lg mr-2">download</span>
                 <span className="truncate">Export</span>
               </button>
             </div>
@@ -530,7 +530,7 @@ export function TransactionRegisterPage() {
             <label className="flex flex-col min-w-40 h-12 w-full">
               <div className="flex w-full flex-1 items-stretch rounded-lg h-full">
                 <div className="text-subtle-text dark:text-subtle-text-dark flex border-none bg-surface-light dark:bg-surface-dark items-center justify-center pl-4 rounded-l-lg border-r-0 border border-border-light dark:border-border-dark">
-                  <span className="material-symbols-outlined">search</span>
+                  <span aria-hidden="true" className="material-symbols-outlined">search</span>
                 </div>
                 {/* Fix (SOUPFIN-33 #6): id/name + aria-label — the wrapping <label> has
                     no text, so the field had no accessible name. */}
@@ -639,7 +639,7 @@ export function TransactionRegisterPage() {
               className="flex h-9 items-center gap-2 rounded-lg px-3 text-subtle-text dark:text-subtle-text-dark hover:text-primary hover:bg-primary/10 text-sm font-medium"
               data-testid="clear-filters-button"
             >
-              <span className="material-symbols-outlined text-lg">filter_list_off</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-lg">filter_list_off</span>
               Clear
             </button>
           </div>
@@ -660,7 +660,7 @@ export function TransactionRegisterPage() {
                   className="flex items-center gap-2 h-9 px-4 rounded-lg bg-primary text-white text-sm font-bold hover:bg-primary/90"
                   data-testid="batch-post-button"
                 >
-                  <span className="material-symbols-outlined text-lg">check_circle</span>
+                  <span aria-hidden="true" className="material-symbols-outlined text-lg">check_circle</span>
                   Post Selected
                 </button>
                 <button
@@ -669,7 +669,7 @@ export function TransactionRegisterPage() {
                   className="flex items-center gap-2 h-9 px-4 rounded-lg bg-red-500 text-white text-sm font-bold hover:bg-red-600"
                   data-testid="batch-delete-button"
                 >
-                  <span className="material-symbols-outlined text-lg">delete</span>
+                  <span aria-hidden="true" className="material-symbols-outlined text-lg">delete</span>
                   Delete Selected
                 </button>
                 <button
@@ -688,7 +688,7 @@ export function TransactionRegisterPage() {
           {isLoading && (
             <div className="w-full" data-testid="transaction-loading">
               <div className="flex flex-col items-center justify-center py-16 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-background-dark">
-                <span className="material-symbols-outlined text-4xl text-primary animate-spin mb-4">
+                <span aria-hidden="true" className="material-symbols-outlined text-4xl text-primary animate-spin mb-4">
                   progress_activity
                 </span>
                 <p className="text-subtle-text dark:text-subtle-text-dark text-sm">Loading transactions...</p>
@@ -760,7 +760,7 @@ export function TransactionRegisterPage() {
                     <tr>
                       <td colSpan={10} className="px-4 py-12 text-center">
                         <div className="flex flex-col items-center">
-                          <span className="material-symbols-outlined text-5xl text-subtle-text/50 mb-3">
+                          <span aria-hidden="true" className="material-symbols-outlined text-5xl text-subtle-text/50 mb-3">
                             compare_arrows
                           </span>
                           <h3
@@ -781,7 +781,7 @@ export function TransactionRegisterPage() {
                               className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm"
                               data-testid="empty-state-cta"
                             >
-                              <span className="material-symbols-outlined text-lg">add</span>
+                              <span aria-hidden="true" className="material-symbols-outlined text-lg">add</span>
                               Create Journal Entry
                             </button>
                           )}
@@ -855,12 +855,13 @@ export function TransactionRegisterPage() {
                         {/* Added: Actions dropdown column */}
                         <td className="px-4 py-2 text-center relative">
                           <button
+                            aria-label={`Actions for ${tx.transactionId}`}
                             type="button"
                             onClick={(e) => handleToggleActionDropdown(tx.id, e)}
                             className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
                             data-testid={`transaction-actions-${tx.id}`}
                           >
-                            <span className="material-symbols-outlined text-subtle-text dark:text-subtle-text-dark">
+                            <span aria-hidden="true" className="material-symbols-outlined text-subtle-text dark:text-subtle-text-dark">
                               more_vert
                             </span>
                           </button>
@@ -882,7 +883,7 @@ export function TransactionRegisterPage() {
                                     onClick={() => handleView(tx)}
                                     className="flex items-center gap-2 w-full px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-800"
                                   >
-                                    <span className="material-symbols-outlined text-lg">visibility</span>
+                                    <span aria-hidden="true" className="material-symbols-outlined text-lg">visibility</span>
                                     View
                                   </button>
                                   {(tx.status === 'DRAFT' || tx.status === 'PENDING') && (
@@ -891,7 +892,7 @@ export function TransactionRegisterPage() {
                                       onClick={() => handleEdit(tx)}
                                       className="flex items-center gap-2 w-full px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-800"
                                     >
-                                      <span className="material-symbols-outlined text-lg">edit</span>
+                                      <span aria-hidden="true" className="material-symbols-outlined text-lg">edit</span>
                                       Edit
                                     </button>
                                   )}
@@ -901,7 +902,7 @@ export function TransactionRegisterPage() {
                                       onClick={() => handlePost(tx)}
                                       className="flex items-center gap-2 w-full px-4 py-2 text-sm text-green-600 dark:text-green-400 hover:bg-gray-100 dark:hover:bg-gray-800"
                                     >
-                                      <span className="material-symbols-outlined text-lg">check_circle</span>
+                                      <span aria-hidden="true" className="material-symbols-outlined text-lg">check_circle</span>
                                       Post
                                     </button>
                                   )}
@@ -911,7 +912,7 @@ export function TransactionRegisterPage() {
                                       onClick={() => handleReverse(tx)}
                                       className="flex items-center gap-2 w-full px-4 py-2 text-sm text-orange-600 dark:text-orange-400 hover:bg-gray-100 dark:hover:bg-gray-800"
                                     >
-                                      <span className="material-symbols-outlined text-lg">undo</span>
+                                      <span aria-hidden="true" className="material-symbols-outlined text-lg">undo</span>
                                       Reverse
                                     </button>
                                   )}
@@ -921,7 +922,7 @@ export function TransactionRegisterPage() {
                                       onClick={() => handleDelete(tx)}
                                       className="flex items-center gap-2 w-full px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-800"
                                     >
-                                      <span className="material-symbols-outlined text-lg">delete</span>
+                                      <span aria-hidden="true" className="material-symbols-outlined text-lg">delete</span>
                                       Delete
                                     </button>
                                   )}
@@ -1152,7 +1153,7 @@ export function TransactionRegisterPage() {
                 to="/reports/trial-balance"
                 className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800/50"
               >
-                <span className="material-symbols-outlined text-gray-500 dark:text-gray-400">summarize</span>
+                <span aria-hidden="true" className="material-symbols-outlined text-gray-500 dark:text-gray-400">summarize</span>
                 <span className="text-sm font-medium text-gray-800 dark:text-gray-300">
                   Generate Trial Balance
                 </span>
@@ -1161,7 +1162,7 @@ export function TransactionRegisterPage() {
                 to="/reports/journal"
                 className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800/50"
               >
-                <span className="material-symbols-outlined text-gray-500 dark:text-gray-400">
+                <span aria-hidden="true" className="material-symbols-outlined text-gray-500 dark:text-gray-400">
                   account_balance_wallet
                 </span>
                 <span className="text-sm font-medium text-gray-800 dark:text-gray-300">Journal Report</span>
@@ -1170,7 +1171,7 @@ export function TransactionRegisterPage() {
                 to="/reports/pnl"
                 className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800/50"
               >
-                <span className="material-symbols-outlined text-gray-500 dark:text-gray-400">monitoring</span>
+                <span aria-hidden="true" className="material-symbols-outlined text-gray-500 dark:text-gray-400">monitoring</span>
                 <span className="text-sm font-medium text-gray-800 dark:text-gray-300">
                   Profit &amp; Loss Statement
                 </span>

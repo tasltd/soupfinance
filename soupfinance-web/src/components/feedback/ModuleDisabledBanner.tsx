@@ -34,7 +34,7 @@ export function ModuleDisabledBanner({
       data-testid={testId ?? 'module-disabled-banner'}
       role="alert"
     >
-      <span className="material-symbols-outlined text-warning text-2xl flex-shrink-0">
+      <span aria-hidden="true" className="material-symbols-outlined text-warning text-2xl flex-shrink-0">
         lock
       </span>
       <div className="flex-1 text-sm">

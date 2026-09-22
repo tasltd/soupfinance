@@ -180,7 +180,7 @@ export function CashFlowPage() {
               From:
             </label>
             <div className="relative">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-subtle-text">
+              <span aria-hidden="true" className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-subtle-text">
                 calendar_today
               </span>
               <input
@@ -199,7 +199,7 @@ export function CashFlowPage() {
               To:
             </label>
             <div className="relative">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-subtle-text">
+              <span aria-hidden="true" className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-subtle-text">
                 calendar_today
               </span>
               <input
@@ -218,7 +218,7 @@ export function CashFlowPage() {
             className="flex items-center gap-2 h-10 px-4 border border-border-light dark:border-border-dark rounded-lg bg-surface-light dark:bg-surface-dark hover:bg-background-light dark:hover:bg-background-dark text-text-light dark:text-text-dark"
             data-testid="cash-flow-refresh"
           >
-            <span className="material-symbols-outlined text-lg">refresh</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-lg">refresh</span>
             Refresh
           </button>
         </div>
@@ -232,7 +232,7 @@ export function CashFlowPage() {
             data-testid="cash-flow-export-pdf"
             title="Export to PDF (coming soon)"
           >
-            <span className="material-symbols-outlined text-lg">picture_as_pdf</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-lg">picture_as_pdf</span>
             <span className="text-sm font-bold">PDF</span>
           </button>
           <button
@@ -242,7 +242,7 @@ export function CashFlowPage() {
             data-testid="cash-flow-export-excel"
             title="Export to Excel (coming soon)"
           >
-            <span className="material-symbols-outlined text-lg">grid_on</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-lg">grid_on</span>
             <span className="text-sm font-bold">Excel</span>
           </button>
           {/* Fix(SOUPFIN-11): CSV export is functional client-side; PDF/Excel
@@ -254,7 +254,7 @@ export function CashFlowPage() {
             data-testid="cash-flow-export-csv"
             title="Export to CSV"
           >
-            <span className="material-symbols-outlined text-lg">download</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-lg">download</span>
             <span className="text-sm font-bold">CSV</span>
           </button>
         </div>
@@ -266,7 +266,7 @@ export function CashFlowPage() {
           className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-12 text-center"
           data-testid="cash-flow-loading"
         >
-          <span className="material-symbols-outlined text-4xl text-primary animate-spin mb-4">sync</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-4xl text-primary animate-spin mb-4">sync</span>
           <p className="text-subtle-text">Loading cash flow statement...</p>
         </div>
       )}
@@ -277,7 +277,7 @@ export function CashFlowPage() {
           className="bg-danger/10 rounded-xl border border-danger/30 p-6 text-center"
           data-testid="cash-flow-error"
         >
-          <span className="material-symbols-outlined text-4xl text-danger mb-2">error</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-4xl text-danger mb-2">error</span>
           <h3 className="text-lg font-bold text-danger mb-2">Failed to load cash flow statement</h3>
           <p className="text-subtle-text mb-4">
             {error instanceof Error ? error.message : 'An unexpected error occurred'}
@@ -299,7 +299,7 @@ export function CashFlowPage() {
             {/* Beginning Cash Balance Card */}
             <div className="flex flex-col gap-2 rounded-xl p-6 border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-subtle-text">account_balance_wallet</span>
+                <span aria-hidden="true" className="material-symbols-outlined text-subtle-text">account_balance_wallet</span>
                 <p className="text-text-light dark:text-text-dark text-base font-medium">Beginning Cash Balance</p>
               </div>
               <p
@@ -313,7 +313,7 @@ export function CashFlowPage() {
             {/* Net Cash Flow Card */}
             <div className="flex flex-col gap-2 rounded-xl p-6 border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark">
               <div className="flex items-center gap-2">
-                <span className={`material-symbols-outlined ${summary.netCashFlow >= 0 ? 'text-success' : 'text-danger'}`}>
+                <span aria-hidden="true" className={`material-symbols-outlined ${summary.netCashFlow >= 0 ? 'text-success' : 'text-danger'}`}>
                   {summary.netCashFlow >= 0 ? 'trending_up' : 'trending_down'}
                 </span>
                 <p className="text-text-light dark:text-text-dark text-base font-medium">Net Cash Flow</p>
@@ -329,7 +329,7 @@ export function CashFlowPage() {
             {/* Ending Cash Balance Card */}
             <div className="flex flex-col gap-2 rounded-xl p-6 border border-primary/30 bg-primary/5 dark:bg-primary/10">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-primary">water_drop</span>
+                <span aria-hidden="true" className="material-symbols-outlined text-primary">water_drop</span>
                 <p className="text-text-light dark:text-text-dark text-base font-medium">Ending Cash Balance</p>
               </div>
               <p
@@ -383,7 +383,7 @@ export function CashFlowPage() {
           >
             <div className="px-6 py-4 border-b border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-primary">summarize</span>
+                <span aria-hidden="true" className="material-symbols-outlined text-primary">summarize</span>
                 <h2 className="text-lg font-bold text-text-light dark:text-text-dark">Cash Flow Summary</h2>
               </div>
             </div>
@@ -444,7 +444,7 @@ export function CashFlowPage() {
             className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-12 text-center"
             data-testid="cash-flow-empty"
           >
-            <span className="material-symbols-outlined text-6xl text-subtle-text/50 mb-4">water_drop</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-6xl text-subtle-text/50 mb-4">water_drop</span>
             <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">No cash flow activities</h3>
             <p className="text-subtle-text">
               There are no cash flow activities for the period {formatDateDisplay(fromDate)} to {formatDateDisplay(toDate)}.
@@ -477,7 +477,7 @@ function CashFlowSection({ title, icon, iconColor, activities, total, testIdPref
       {/* Section Header */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark">
         <div className="flex items-center gap-2">
-          <span className={`material-symbols-outlined ${iconColor}`}>{icon}</span>
+          <span aria-hidden="true" className={`material-symbols-outlined ${iconColor}`}>{icon}</span>
           <h2 className="text-lg font-bold text-text-light dark:text-text-dark">{title}</h2>
         </div>
         <span className="text-sm text-subtle-text">{activities.length} items</span>

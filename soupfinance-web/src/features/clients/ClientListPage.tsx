@@ -126,7 +126,7 @@ export function ClientListPage() {
           className="flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90"
           data-testid="client-new-button"
         >
-          <span className="material-symbols-outlined text-lg">add</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-lg">add</span>
           New Client
         </Link>
       </div>
@@ -137,7 +137,7 @@ export function ClientListPage() {
       <div className="flex flex-wrap items-center gap-4" data-testid="client-filters">
         {/* Search Input */}
         <div className="relative flex-1 min-w-[200px] max-w-md">
-          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-subtle-text text-xl">
+          <span aria-hidden="true" className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-subtle-text text-xl">
             search
           </span>
           <input
@@ -184,7 +184,7 @@ export function ClientListPage() {
             role="status"
             aria-live="polite"
           >
-            <span className="material-symbols-outlined text-lg animate-spin">progress_activity</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-lg animate-spin">progress_activity</span>
             Filtering…
           </span>
         )}
@@ -200,7 +200,7 @@ export function ClientListPage() {
             className="flex items-center gap-1 h-10 px-3 rounded-lg text-sm text-subtle-text hover:text-primary hover:bg-primary/5"
             data-testid="client-filters-clear"
           >
-            <span className="material-symbols-outlined text-lg">filter_alt_off</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-lg">filter_alt_off</span>
             Clear filters
           </button>
         )}
@@ -217,14 +217,14 @@ export function ClientListPage() {
           </div>
         ) : error ? (
           <div className="p-12 text-center" data-testid="client-list-error">
-            <span className="material-symbols-outlined text-6xl text-danger/50 mb-4 block">error</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-6xl text-danger/50 mb-4 block">error</span>
             <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">Failed to load clients</h3>
             <p className="text-subtle-text mb-4">There was an error loading your clients. Please try again.</p>
             <button
               onClick={() => window.location.reload()}
               className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm"
             >
-              <span className="material-symbols-outlined text-lg">refresh</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-lg">refresh</span>
               Retry
             </button>
           </div>
@@ -260,12 +260,12 @@ export function ClientListPage() {
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getTypeBadge(client.clientType)}`}>
                         {client.clientType === 'INDIVIDUAL' ? (
                           <>
-                            <span className="material-symbols-outlined text-sm mr-1">person</span>
+                            <span aria-hidden="true" className="material-symbols-outlined text-sm mr-1">person</span>
                             Individual
                           </>
                         ) : (
                           <>
-                            <span className="material-symbols-outlined text-sm mr-1">business</span>
+                            <span aria-hidden="true" className="material-symbols-outlined text-sm mr-1">business</span>
                             Corporate
                           </>
                         )}
@@ -285,7 +285,7 @@ export function ClientListPage() {
                           title="View"
                           data-testid={`client-view-${client.id}`}
                         >
-                          <span className="material-symbols-outlined text-lg">visibility</span>
+                          <span aria-hidden="true" className="material-symbols-outlined text-lg">visibility</span>
                         </Link>
                         <Link
                           to={`/clients/${client.id}/edit`}
@@ -293,7 +293,7 @@ export function ClientListPage() {
                           title="Edit"
                           data-testid={`client-edit-${client.id}`}
                         >
-                          <span className="material-symbols-outlined text-lg">edit</span>
+                          <span aria-hidden="true" className="material-symbols-outlined text-lg">edit</span>
                         </Link>
                         <button
                           // Fix (SOUPFIN-21): Pass the resolved display name (not the raw
@@ -304,7 +304,7 @@ export function ClientListPage() {
                           title="Delete"
                           data-testid={`client-delete-${client.id}`}
                         >
-                          <span className="material-symbols-outlined text-lg">delete</span>
+                          <span aria-hidden="true" className="material-symbols-outlined text-lg">delete</span>
                         </button>
                       </div>
                     </td>
@@ -319,7 +319,7 @@ export function ClientListPage() {
           // the user knows to broaden their filter rather than thinking the account
           // has no clients at all.
           <div className="p-12 text-center" data-testid="client-list-no-results">
-            <span className="material-symbols-outlined text-6xl text-subtle-text/50 mb-4 block">
+            <span aria-hidden="true" className="material-symbols-outlined text-6xl text-subtle-text/50 mb-4 block">
               search_off
             </span>
             <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">
@@ -341,13 +341,13 @@ export function ClientListPage() {
               className="inline-flex items-center gap-2 h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-bold text-sm hover:bg-primary/5"
               data-testid="client-list-clear-filters-button"
             >
-              <span className="material-symbols-outlined text-lg">filter_alt_off</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-lg">filter_alt_off</span>
               Clear filters
             </button>
           </div>
         ) : (
           <div className="p-12 text-center" data-testid="client-list-empty">
-            <span className="material-symbols-outlined text-6xl text-subtle-text/50 mb-4 block">
+            <span aria-hidden="true" className="material-symbols-outlined text-6xl text-subtle-text/50 mb-4 block">
               people
             </span>
             <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">No clients yet</h3>
@@ -357,7 +357,7 @@ export function ClientListPage() {
               className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm"
               data-testid="client-create-first-button"
             >
-              <span className="material-symbols-outlined text-lg">add</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-lg">add</span>
               Add Client
             </Link>
           </div>
@@ -375,11 +375,12 @@ export function ClientListPage() {
             <div className="flex items-center justify-between border-b border-border-light dark:border-border-dark p-6">
               <p className="text-xl font-bold text-text-light dark:text-text-dark">Delete Client</p>
               <button
+                aria-label="Close delete client dialog"
                 onClick={handleCancelDelete}
                 className="flex size-8 items-center justify-center rounded-full hover:bg-black/10 dark:hover:bg-white/10"
                 data-testid="client-delete-modal-close"
               >
-                <span className="material-symbols-outlined text-2xl text-subtle-text">close</span>
+                <span aria-hidden="true" className="material-symbols-outlined text-2xl text-subtle-text">close</span>
               </button>
             </div>
 
@@ -387,7 +388,7 @@ export function ClientListPage() {
             <div className="p-6">
               <div className="flex items-start gap-4">
                 <div className="flex-shrink-0 size-12 rounded-full bg-danger/10 flex items-center justify-center">
-                  <span className="material-symbols-outlined text-2xl text-danger">warning</span>
+                  <span aria-hidden="true" className="material-symbols-outlined text-2xl text-danger">warning</span>
                 </div>
                 <div>
                   <p className="text-text-light dark:text-text-dark">

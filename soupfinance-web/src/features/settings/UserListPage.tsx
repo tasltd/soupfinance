@@ -131,14 +131,14 @@ export default function UserListPage() {
           to="/settings/users/new"
           className="flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90"
         >
-          <span className="material-symbols-outlined text-lg">person_add</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-lg">person_add</span>
           Add User
         </Link>
       </div>
 
       {/* Search Input */}
       <div className="relative max-w-md">
-        <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-subtle-text text-xl">
+        <span aria-hidden="true" className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-subtle-text text-xl">
           search
         </span>
         {/* Fix (SOUPFIN-33 #6): id/name + aria-label — the search field had no label. */}
@@ -160,7 +160,7 @@ export default function UserListPage() {
           <div className="p-8 text-center text-subtle-text">Loading users...</div>
         ) : error ? (
           <div className="p-12 text-center" data-testid="user-list-error">
-            <span className="material-symbols-outlined text-6xl text-danger/50 mb-4 block">error</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-6xl text-danger/50 mb-4 block">error</span>
             <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">
               Failed to load users
             </h3>
@@ -172,7 +172,7 @@ export default function UserListPage() {
               onClick={() => queryClient.invalidateQueries({ queryKey: ['users'] })}
               className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm"
             >
-              <span className="material-symbols-outlined text-lg">refresh</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-lg">refresh</span>
               Retry
             </button>
           </div>
@@ -245,7 +245,7 @@ export default function UserListPage() {
                           <span className="text-xs">{roleLabel}</span>
                         ) : (
                           <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">
-                            <span className="material-symbols-outlined text-sm">warning</span>
+                            <span aria-hidden="true" className="material-symbols-outlined text-sm">warning</span>
                             No role
                           </span>
                         );
@@ -254,7 +254,7 @@ export default function UserListPage() {
                     <td className="px-4 sm:px-6 py-4 text-center">
                       {hasAccountPerson(agent) ? (
                         <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300">
-                          <span className="material-symbols-outlined text-sm">badge</span>
+                          <span aria-hidden="true" className="material-symbols-outlined text-sm">badge</span>
                           Account Person
                         </span>
                       ) : (
@@ -283,7 +283,7 @@ export default function UserListPage() {
                           className="p-1.5 rounded hover:bg-primary/10 text-subtle-text hover:text-primary transition-colors"
                           title="Edit"
                         >
-                          <span className="material-symbols-outlined text-lg">edit</span>
+                          <span aria-hidden="true" className="material-symbols-outlined text-lg">edit</span>
                         </Link>
                         <button
                           onClick={() =>
@@ -292,7 +292,7 @@ export default function UserListPage() {
                           className="p-1.5 rounded hover:bg-danger/10 text-subtle-text hover:text-danger transition-colors"
                           title="Delete"
                         >
-                          <span className="material-symbols-outlined text-lg">delete</span>
+                          <span aria-hidden="true" className="material-symbols-outlined text-lg">delete</span>
                         </button>
                       </div>
                     </td>
@@ -303,7 +303,7 @@ export default function UserListPage() {
           </div>
         ) : (
           <div className="p-12 text-center">
-            <span className="material-symbols-outlined text-6xl text-subtle-text/50 mb-4 block">
+            <span aria-hidden="true" className="material-symbols-outlined text-6xl text-subtle-text/50 mb-4 block">
               group
             </span>
             <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">
@@ -314,7 +314,7 @@ export default function UserListPage() {
               to="/settings/users/new"
               className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm"
             >
-              <span className="material-symbols-outlined text-lg">person_add</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-lg">person_add</span>
               Add User
             </Link>
           </div>
@@ -328,17 +328,18 @@ export default function UserListPage() {
             <div className="flex items-center justify-between border-b border-border-light dark:border-border-dark p-6">
               <p className="text-xl font-bold text-text-light dark:text-text-dark">Remove User</p>
               <button
+                aria-label="Close delete user dialog"
                 onClick={handleCancelDelete}
                 className="flex size-8 items-center justify-center rounded-full hover:bg-black/10 dark:hover:bg-white/10"
               >
-                <span className="material-symbols-outlined text-2xl text-subtle-text">close</span>
+                <span aria-hidden="true" className="material-symbols-outlined text-2xl text-subtle-text">close</span>
               </button>
             </div>
 
             <div className="p-6">
               <div className="flex items-start gap-4">
                 <div className="flex-shrink-0 size-12 rounded-full bg-danger/10 flex items-center justify-center">
-                  <span className="material-symbols-outlined text-2xl text-danger">warning</span>
+                  <span aria-hidden="true" className="material-symbols-outlined text-2xl text-danger">warning</span>
                 </div>
                 <div>
                   <p className="text-text-light dark:text-text-dark">

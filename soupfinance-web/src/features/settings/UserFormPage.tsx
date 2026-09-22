@@ -349,7 +349,7 @@ export default function UserFormPage() {
           to="/settings/users"
           className="flex items-center gap-2 h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm hover:bg-primary/5"
         >
-          <span className="material-symbols-outlined text-lg">arrow_back</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-lg">arrow_back</span>
           Back to List
         </Link>
       </div>
@@ -484,11 +484,12 @@ export default function UserFormPage() {
                   autoComplete="new-password"
                 />
                 <button
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-subtle-text hover:text-text-light dark:hover:text-text-dark"
                 >
-                  <span className="material-symbols-outlined text-lg">
+                  <span aria-hidden="true" className="material-symbols-outlined text-lg">
                     {showPassword ? 'visibility_off' : 'visibility'}
                   </span>
                 </button>
@@ -519,7 +520,7 @@ export default function UserFormPage() {
               className="flex items-center gap-2 text-subtle-text text-sm py-4"
               data-testid="user-form-roles-loading"
             >
-              <span className="material-symbols-outlined text-lg animate-spin">progress_activity</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-lg animate-spin">progress_activity</span>
               Loading available roles…
             </div>
           ) : rolesError ? (
@@ -529,7 +530,7 @@ export default function UserFormPage() {
               role="alert"
             >
               <div className="flex items-start gap-2">
-                <span className="material-symbols-outlined text-danger text-xl">error</span>
+                <span aria-hidden="true" className="material-symbols-outlined text-danger text-xl">error</span>
                 <div>
                   <p className="text-danger font-medium text-sm">Could not load roles</p>
                   <p className="text-danger/80 text-xs mt-1">
@@ -543,7 +544,7 @@ export default function UserFormPage() {
                 className="self-start inline-flex items-center gap-2 h-8 px-3 rounded border border-danger/30 text-danger text-xs font-medium hover:bg-danger/10"
                 data-testid="user-form-roles-retry"
               >
-                <span className="material-symbols-outlined text-base">refresh</span>
+                <span aria-hidden="true" className="material-symbols-outlined text-base">refresh</span>
                 Retry
               </button>
             </div>
@@ -596,7 +597,7 @@ export default function UserFormPage() {
               : 'bg-primary/5 border-primary/20'
           }`}>
             <div className="flex items-center gap-3 mb-2">
-              <span className="material-symbols-outlined text-xl text-purple-600 dark:text-purple-400">badge</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-xl text-purple-600 dark:text-purple-400">badge</span>
               <h3 className="text-lg font-bold text-text-light dark:text-text-dark">
                 {hasExistingAccountPerson ? 'Account Person (Director/Signatory)' : 'Register as Director/Signatory'}
               </h3>
@@ -743,7 +744,7 @@ export default function UserFormPage() {
             data-testid="user-form-submit-button"
           >
             {(isSubmitting || saveMutation.isPending) && (
-              <span className="material-symbols-outlined text-lg animate-spin">progress_activity</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-lg animate-spin">progress_activity</span>
             )}
             {isEdit ? 'Update User' : 'Add User'}
           </button>
@@ -758,7 +759,7 @@ export default function UserFormPage() {
             role="alert"
           >
             <div className="flex items-start gap-2">
-              <span className="material-symbols-outlined text-danger text-xl">error</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-danger text-xl">error</span>
               <div>
                 <p className="text-danger font-medium text-sm">
                   {isEdit ? 'Failed to update user' : 'Failed to add user'}

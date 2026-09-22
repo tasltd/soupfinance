@@ -271,7 +271,7 @@ export function ClientFormPage() {
           className="p-4 rounded-lg bg-danger/10 border border-danger/30 text-danger flex items-start gap-3"
           data-testid="client-form-error"
         >
-          <span className="material-symbols-outlined text-xl">error</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-xl">error</span>
           <div>
             <p className="font-medium">Failed to save client</p>
             <p className="text-sm opacity-80">
@@ -314,7 +314,7 @@ export function ClientFormPage() {
               data-testid="client-type-individual"
             >
               <div className="flex flex-col items-center gap-2">
-                <span className={`material-symbols-outlined text-2xl ${
+                <span aria-hidden="true" className={`material-symbols-outlined text-2xl ${
                   clientType === 'INDIVIDUAL' ? 'text-primary' : 'text-subtle-text'
                 }`}>
                   person
@@ -344,7 +344,7 @@ export function ClientFormPage() {
               data-testid="client-type-corporate"
             >
               <div className="flex flex-col items-center gap-2">
-                <span className={`material-symbols-outlined text-2xl ${
+                <span aria-hidden="true" className={`material-symbols-outlined text-2xl ${
                   clientType === 'CORPORATE' ? 'text-primary' : 'text-subtle-text'
                 }`}>
                   business

@@ -107,7 +107,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
           </select>
 
           {/* Dropdown arrow icon */}
-          <span className="material-symbols-outlined pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-subtle-text text-xl">
+          <span aria-hidden="true" className="material-symbols-outlined pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-subtle-text text-xl">
             expand_more
           </span>
         </div>
@@ -115,7 +115,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
         {/* Error message */}
         {error && (
           <span className="text-sm text-danger mt-1.5 flex items-center gap-1">
-            <span className="material-symbols-outlined text-base">error</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-base">error</span>
             {error}
           </span>
         )}

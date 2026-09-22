@@ -70,7 +70,7 @@ export class ErrorBoundary extends Component<Props, State> {
           <div className="max-w-md w-full bg-surface-light dark:bg-surface-dark rounded-xl shadow-lg p-8 text-center">
             {/* Error Icon */}
             <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-              <span className="material-symbols-outlined text-3xl text-red-600 dark:text-red-400">
+              <span aria-hidden="true" className="material-symbols-outlined text-3xl text-red-600 dark:text-red-400">
                 error
               </span>
             </div>
@@ -106,14 +106,14 @@ export class ErrorBoundary extends Component<Props, State> {
                 onClick={this.handleReload}
                 className="inline-flex items-center justify-center px-6 py-3 bg-primary text-white font-medium rounded-lg hover:bg-primary-dark transition-colors"
               >
-                <span className="material-symbols-outlined mr-2 text-lg">refresh</span>
+                <span aria-hidden="true" className="material-symbols-outlined mr-2 text-lg">refresh</span>
                 Refresh Page
               </button>
               <button
                 onClick={this.handleGoHome}
                 className="inline-flex items-center justify-center px-6 py-3 bg-gray-100 dark:bg-gray-800 text-text-light dark:text-text-dark font-medium rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
               >
-                <span className="material-symbols-outlined mr-2 text-lg">home</span>
+                <span aria-hidden="true" className="material-symbols-outlined mr-2 text-lg">home</span>
                 Go to Dashboard
               </button>
             </div>

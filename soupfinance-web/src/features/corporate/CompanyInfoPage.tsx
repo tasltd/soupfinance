@@ -180,7 +180,7 @@ export function CompanyInfoPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <span className="material-symbols-outlined animate-spin text-4xl text-primary">
+        <span aria-hidden="true" className="material-symbols-outlined animate-spin text-4xl text-primary">
           progress_activity
         </span>
       </div>
@@ -219,7 +219,7 @@ export function CompanyInfoPage() {
           >
             {updateMutation.isPending ? (
               <>
-                <span className="material-symbols-outlined animate-spin text-base">
+                <span aria-hidden="true" className="material-symbols-outlined animate-spin text-base">
                   progress_activity
                 </span>
                 Saving...
@@ -227,7 +227,7 @@ export function CompanyInfoPage() {
             ) : (
               <>
                 Save & Continue
-                <span className="material-symbols-outlined text-base">arrow_forward</span>
+                <span aria-hidden="true" className="material-symbols-outlined text-base">arrow_forward</span>
               </>
             )}
           </button>
@@ -240,17 +240,17 @@ export function CompanyInfoPage() {
           1
         </span>
         <span className="text-primary font-medium">Registration</span>
-        <span className="material-symbols-outlined text-subtle-text">chevron_right</span>
+        <span aria-hidden="true" className="material-symbols-outlined text-subtle-text">chevron_right</span>
         <span className="flex items-center justify-center size-6 rounded-full bg-primary text-white text-xs font-bold">
           2
         </span>
         <span className="text-primary font-medium">Company Info</span>
-        <span className="material-symbols-outlined text-subtle-text">chevron_right</span>
+        <span aria-hidden="true" className="material-symbols-outlined text-subtle-text">chevron_right</span>
         <span className="flex items-center justify-center size-6 rounded-full bg-border-light text-subtle-text text-xs font-bold">
           3
         </span>
         <span className="text-subtle-text">Directors</span>
-        <span className="material-symbols-outlined text-subtle-text">chevron_right</span>
+        <span aria-hidden="true" className="material-symbols-outlined text-subtle-text">chevron_right</span>
         <span className="flex items-center justify-center size-6 rounded-full bg-border-light text-subtle-text text-xs font-bold">
           4
         </span>
@@ -262,7 +262,7 @@ export function CompanyInfoPage() {
         <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark">
           <div className="px-6 py-4 border-b border-border-light dark:border-border-dark">
             <h2 className="text-lg font-bold text-text-light dark:text-text-dark flex items-center gap-2">
-              <span className="material-symbols-outlined text-primary">location_on</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-primary">location_on</span>
               Physical Address
             </h2>
           </div>
@@ -341,7 +341,7 @@ export function CompanyInfoPage() {
         <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark">
           <div className="px-6 py-4 border-b border-border-light dark:border-border-dark flex justify-between items-center">
             <h2 className="text-lg font-bold text-text-light dark:text-text-dark flex items-center gap-2">
-              <span className="material-symbols-outlined text-primary">mail</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-primary">mail</span>
               Postal Address
             </h2>
             <label className="flex items-center gap-2 cursor-pointer">
@@ -434,7 +434,7 @@ export function CompanyInfoPage() {
         <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark">
           <div className="px-6 py-4 border-b border-border-light dark:border-border-dark">
             <h2 className="text-lg font-bold text-text-light dark:text-text-dark flex items-center gap-2">
-              <span className="material-symbols-outlined text-primary">business</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-primary">business</span>
               Business Details
             </h2>
           </div>

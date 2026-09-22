@@ -104,8 +104,8 @@ export const OnIconButton: Story = {
     content: 'Edit invoice',
     position: 'top',
     children: (
-      <button className="flex items-center justify-center size-10 rounded-full bg-background-light hover:bg-primary/10 text-text-light transition-colors">
-        <span className="material-symbols-outlined">edit</span>
+      <button className="flex items-center justify-center size-10 rounded-full bg-background-light hover:bg-primary/10 text-text-light transition-colors" aria-label="Edit invoice">
+        <span aria-hidden="true" className="material-symbols-outlined">edit</span>
       </button>
     ),
   },
@@ -159,7 +159,7 @@ export const HelpIcon: Story = {
     <div className="flex items-center gap-2">
       <label className="text-sm font-medium text-text-light">Invoice Due Date</label>
       <Tooltip content="The date by which payment should be received" position="top">
-        <span className="material-symbols-outlined text-subtle-text text-lg cursor-help">
+        <span aria-hidden="true" className="material-symbols-outlined text-subtle-text text-lg cursor-help">
           help
         </span>
       </Tooltip>

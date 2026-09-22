@@ -370,7 +370,7 @@ export function VoucherFormPage() {
             data-testid="voucher-form-approve-post-button"
           >
             {isSubmitting && (
-              <span className="material-symbols-outlined animate-spin text-base">progress_activity</span>
+              <span aria-hidden="true" className="material-symbols-outlined animate-spin text-base">progress_activity</span>
             )}
             Approve & Post
           </button>
@@ -395,7 +395,7 @@ export function VoucherFormPage() {
           className="p-4 rounded-lg bg-danger/10 border border-danger/30 text-danger text-sm flex items-center gap-2"
           data-testid="voucher-form-error"
         >
-          <span className="material-symbols-outlined text-xl">error</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-xl">error</span>
           {submitError}
         </div>
       )}
@@ -430,7 +430,7 @@ export function VoucherFormPage() {
                     data-testid={`voucher-type-${option.value.toLowerCase()}`}
                   >
                     <span className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-lg">
+                      <span aria-hidden="true" className="material-symbols-outlined text-lg">
                         {option.value === 'PAYMENT' ? 'payments' : option.value === 'RECEIPT' ? 'receipt_long' : 'account_balance'}
                       </span>
                       {option.label}
@@ -661,7 +661,7 @@ export function VoucherFormPage() {
                 data-testid="voucher-amount-preview"
               >
                 <div className="flex items-center gap-3">
-                  <span
+                  <span aria-hidden="true"
                     className={`material-symbols-outlined text-2xl ${
                       isPaymentType ? 'text-danger' : 'text-success'
                     }`}

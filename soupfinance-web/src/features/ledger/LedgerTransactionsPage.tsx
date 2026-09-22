@@ -106,7 +106,7 @@ export function LedgerTransactionsPage() {
           className="flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90"
           data-testid="new-journal-entry-button"
         >
-          <span className="material-symbols-outlined text-lg">add</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-lg">add</span>
           New Journal Entry
         </Link>
       </div>
@@ -217,7 +217,7 @@ export function LedgerTransactionsPage() {
           </div>
         ) : !filteredTransactions || filteredTransactions.length === 0 ? (
           <div className="p-12 text-center" data-testid="ledger-empty">
-            <span className="material-symbols-outlined text-6xl text-subtle-text/50 mb-4">swap_horiz</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-6xl text-subtle-text/50 mb-4">swap_horiz</span>
             <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">
               {hasFilters ? 'No matching transactions' : 'No transactions yet'}
             </h3>
@@ -232,7 +232,7 @@ export function LedgerTransactionsPage() {
                 className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm"
                 data-testid="create-first-entry-button"
               >
-                <span className="material-symbols-outlined text-lg">add</span>
+                <span aria-hidden="true" className="material-symbols-outlined text-lg">add</span>
                 Create Journal Entry
               </Link>
             )}

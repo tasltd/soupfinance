@@ -76,7 +76,7 @@ export default function BankAccountListPage() {
           to="/settings/bank-accounts/new"
           className="flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90"
         >
-          <span className="material-symbols-outlined text-lg">add</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-lg">add</span>
           Add Bank Account
         </Link>
       </div>
@@ -86,7 +86,7 @@ export default function BankAccountListPage() {
         <div className="p-8 text-center text-subtle-text">Loading bank accounts...</div>
       ) : error ? (
         <div className="p-12 text-center bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark">
-          <span className="material-symbols-outlined text-6xl text-danger/50 mb-4 block">error</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-6xl text-danger/50 mb-4 block">error</span>
           <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">
             Failed to load bank accounts
           </h3>
@@ -95,7 +95,7 @@ export default function BankAccountListPage() {
             onClick={() => queryClient.invalidateQueries({ queryKey: ['bankAccounts'] })}
             className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm"
           >
-            <span className="material-symbols-outlined text-lg">refresh</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-lg">refresh</span>
             Retry
           </button>
         </div>
@@ -111,7 +111,7 @@ export default function BankAccountListPage() {
         </div>
       ) : (
         <div className="p-12 text-center bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark">
-          <span className="material-symbols-outlined text-6xl text-subtle-text/50 mb-4 block">
+          <span aria-hidden="true" className="material-symbols-outlined text-6xl text-subtle-text/50 mb-4 block">
             account_balance
           </span>
           <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">
@@ -124,7 +124,7 @@ export default function BankAccountListPage() {
             to="/settings/bank-accounts/new"
             className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm"
           >
-            <span className="material-symbols-outlined text-lg">add</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-lg">add</span>
             Add Bank Account
           </Link>
         </div>
@@ -137,17 +137,18 @@ export default function BankAccountListPage() {
             <div className="flex items-center justify-between border-b border-border-light dark:border-border-dark p-6">
               <p className="text-xl font-bold text-text-light dark:text-text-dark">Delete Bank Account</p>
               <button
+                aria-label="Close delete bank account dialog"
                 onClick={handleCancelDelete}
                 className="flex size-8 items-center justify-center rounded-full hover:bg-black/10 dark:hover:bg-white/10"
               >
-                <span className="material-symbols-outlined text-2xl text-subtle-text">close</span>
+                <span aria-hidden="true" className="material-symbols-outlined text-2xl text-subtle-text">close</span>
               </button>
             </div>
 
             <div className="p-6">
               <div className="flex items-start gap-4">
                 <div className="flex-shrink-0 size-12 rounded-full bg-danger/10 flex items-center justify-center">
-                  <span className="material-symbols-outlined text-2xl text-danger">warning</span>
+                  <span aria-hidden="true" className="material-symbols-outlined text-2xl text-danger">warning</span>
                 </div>
                 <div>
                   <p className="text-text-light dark:text-text-dark">
@@ -196,7 +197,7 @@ function BankAccountCard({
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-4">
           <div className="flex-shrink-0 size-12 rounded-full bg-primary/10 flex items-center justify-center">
-            <span className="material-symbols-outlined text-2xl text-primary">account_balance</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-2xl text-primary">account_balance</span>
           </div>
           <div>
             <h3 className="font-bold text-text-light dark:text-text-dark">
@@ -227,7 +228,7 @@ function BankAccountCard({
         )}
         {account.ledgerAccount && (
           <div className="flex items-center gap-2 text-sm">
-            <span className="material-symbols-outlined text-primary text-sm">link</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-primary text-sm">link</span>
             <span className="text-subtle-text">Linked to:</span>
             <span className="text-primary font-medium">
               {account.ledgerAccount.accountNumber} - {account.ledgerAccount.name}
@@ -264,14 +265,14 @@ function BankAccountCard({
           to={`/settings/bank-accounts/${account.id}`}
           className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm text-primary hover:bg-primary/10 transition-colors"
         >
-          <span className="material-symbols-outlined text-lg">edit</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-lg">edit</span>
           Edit
         </Link>
         <button
           onClick={() => onDelete(account.id, account.accountName)}
           className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm text-danger hover:bg-danger/10 transition-colors"
         >
-          <span className="material-symbols-outlined text-lg">delete</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-lg">delete</span>
           Delete
         </button>
       </div>

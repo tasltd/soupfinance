@@ -132,7 +132,7 @@ function AgingTable({
       {/* Card Header */}
       <div className="flex flex-wrap items-center justify-between gap-4 px-6 py-4 border-b border-border-light dark:border-border-dark">
         <div className="flex items-center gap-3">
-          <span className="material-symbols-outlined text-xl text-primary">{icon}</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-xl text-primary">{icon}</span>
           <h3 className="text-lg font-bold text-text-light dark:text-text-dark">{title}</h3>
         </div>
 
@@ -144,7 +144,7 @@ function AgingTable({
             className="flex items-center gap-1.5 h-9 px-3 rounded-lg bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm hover:bg-primary/10 disabled:opacity-50"
             data-testid={`${testIdPrefix}-export-pdf`}
           >
-            <span className="material-symbols-outlined text-base">picture_as_pdf</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-base">picture_as_pdf</span>
             <span className="hidden sm:inline">{exportLoading === 'pdf' ? '...' : 'PDF'}</span>
           </button>
           <button
@@ -153,7 +153,7 @@ function AgingTable({
             className="flex items-center gap-1.5 h-9 px-3 rounded-lg bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm hover:bg-primary/10 disabled:opacity-50"
             data-testid={`${testIdPrefix}-export-excel`}
           >
-            <span className="material-symbols-outlined text-base">table_view</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-base">table_view</span>
             <span className="hidden sm:inline">{exportLoading === 'xlsx' ? '...' : 'Excel'}</span>
           </button>
           <button
@@ -162,7 +162,7 @@ function AgingTable({
             className="flex items-center gap-1.5 h-9 px-3 rounded-lg bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm hover:bg-primary/10 disabled:opacity-50"
             data-testid={`${testIdPrefix}-export-csv`}
           >
-            <span className="material-symbols-outlined text-base">download</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-base">download</span>
             <span className="hidden sm:inline">{exportLoading === 'csv' ? '...' : 'CSV'}</span>
           </button>
         </div>
@@ -172,7 +172,7 @@ function AgingTable({
       {isLoading ? (
         // Loading State
         <div className="p-12 text-center" data-testid={`${testIdPrefix}-loading`}>
-          <span className="material-symbols-outlined text-5xl text-subtle-text/50 mb-3 animate-pulse">
+          <span aria-hidden="true" className="material-symbols-outlined text-5xl text-subtle-text/50 mb-3 animate-pulse">
             hourglass_empty
           </span>
           <p className="text-subtle-text">Loading aging report...</p>
@@ -180,7 +180,7 @@ function AgingTable({
       ) : isError ? (
         // Error State
         <div className="p-12 text-center" data-testid={`${testIdPrefix}-error`}>
-          <span className="material-symbols-outlined text-5xl text-danger/50 mb-3">error</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-5xl text-danger/50 mb-3">error</span>
           <h4 className="text-base font-bold text-text-light dark:text-text-dark mb-2">
             Failed to load report
           </h4>
@@ -191,7 +191,7 @@ function AgingTable({
       ) : !data || data.items.length === 0 ? (
         // Empty State
         <div className="p-12 text-center" data-testid={`${testIdPrefix}-empty`}>
-          <span className="material-symbols-outlined text-5xl text-subtle-text/50 mb-3">
+          <span aria-hidden="true" className="material-symbols-outlined text-5xl text-subtle-text/50 mb-3">
             {icon}
           </span>
           {/*
@@ -427,7 +427,7 @@ export function AgingReportsPage() {
           {/* Fix (SOUPFIN-33 #6): the label wrapped only the icon/text — it pointed at no
               control. Bind it to the picker with htmlFor/id. */}
           <label className="flex items-center gap-2" htmlFor="aging-as-of-date">
-            <span className="material-symbols-outlined text-lg text-subtle-text">schedule</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-lg text-subtle-text">schedule</span>
             <span className="text-sm font-medium text-text-light dark:text-text-dark">As of:</span>
           </label>
           <input
@@ -459,7 +459,7 @@ export function AgingReportsPage() {
             className="flex items-center gap-2 h-10 px-4 rounded-lg bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm hover:bg-primary/10"
             data-testid="aging-reports-reset-date"
           >
-            <span className="material-symbols-outlined text-base">today</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-base">today</span>
             Today
           </button>
         </div>
@@ -511,7 +511,7 @@ export function AgingReportsPage() {
             </p>
             {arAgingData && arAgingData.totals.over90 > 0 && (
               <p className="text-sm text-danger mt-1 flex items-center gap-1">
-                <span className="material-symbols-outlined text-base">warning</span>
+                <span aria-hidden="true" className="material-symbols-outlined text-base">warning</span>
                 {formatCurrency(arAgingData.totals.over90)} over 90 days
               </p>
             )}
@@ -525,7 +525,7 @@ export function AgingReportsPage() {
             </p>
             {apAgingData && apAgingData.totals.over90 > 0 && (
               <p className="text-sm text-danger mt-1 flex items-center gap-1">
-                <span className="material-symbols-outlined text-base">warning</span>
+                <span aria-hidden="true" className="material-symbols-outlined text-base">warning</span>
                 {formatCurrency(apAgingData.totals.over90)} over 90 days
               </p>
             )}

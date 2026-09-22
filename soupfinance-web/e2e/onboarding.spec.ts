@@ -298,8 +298,11 @@ test.describe('Corporate Onboarding Flow', () => {
       // Added: Set up list to return new director after save
       await mockDirectorsApi(page, CORPORATE_ID, [newDirector]);
 
-      // Added: Submit form (exact: true to avoid matching the page-level "add Add Person" button with icon)
-      await page.getByRole('button', { name: 'Add Person', exact: true }).click();
+      // Added: Submit form.
+      // Fix (SOUPFIN-71): the page-level button used to be named "add Add Person"
+      // by its icon ligature, so `exact: true` separated it from the modal submit.
+      // With the icon aria-hidden both are named "Add Person", so target by testid.
+      await page.getByTestId('directors-submit-button').click();
 
       // Added: Modal should close and director should appear in list
       await expect(page.getByRole('heading', { name: 'Add Person' })).not.toBeVisible({ timeout: 3000 });
@@ -384,7 +387,8 @@ test.describe('Corporate Onboarding Flow', () => {
       await page.getByText('Add Person').first().click();
 
       // Added: Try to submit empty form - HTML5 validation should prevent submission
-      await page.getByRole('button', { name: 'Add Person', exact: true }).click();
+      // Fix (SOUPFIN-71): target by testid, see note above.
+      await page.getByTestId('directors-submit-button').click();
 
       // Added: First name input should show validation (required attribute)
       const firstNameInput = page.locator('input[name="firstName"]');

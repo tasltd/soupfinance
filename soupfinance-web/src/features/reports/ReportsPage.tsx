@@ -34,7 +34,7 @@ export function ReportsPage() {
             to={report.path}
             className="flex flex-col gap-3 p-6 rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark hover:border-primary transition-colors"
           >
-            <span className="material-symbols-outlined text-3xl text-primary">{report.icon}</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-3xl text-primary">{report.icon}</span>
             <h3 className="text-lg font-bold text-text-light dark:text-text-dark">{report.title}</h3>
             <p className="text-sm text-subtle-text">{report.description}</p>
           </Link>

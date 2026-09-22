@@ -262,7 +262,7 @@ export function JournalEntryPage() {
   if (isEditMode && isLoadingGroup) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] gap-4" data-testid="journal-entry-page">
-        <span className="material-symbols-outlined text-4xl text-primary animate-spin">progress_activity</span>
+        <span aria-hidden="true" className="material-symbols-outlined text-4xl text-primary animate-spin">progress_activity</span>
         <p className="text-subtle-text">Loading journal entry...</p>
       </div>
     );
@@ -317,7 +317,7 @@ export function JournalEntryPage() {
                 data-testid="journal-entry-save-post-button"
               >
                 {isSubmitting && (
-                  <span className="material-symbols-outlined animate-spin text-base">progress_activity</span>
+                  <span aria-hidden="true" className="material-symbols-outlined animate-spin text-base">progress_activity</span>
                 )}
                 {isEditMode ? 'Update & Post' : 'Save & Post'}
               </button>
@@ -342,7 +342,7 @@ export function JournalEntryPage() {
           className="p-4 rounded-lg bg-warning/10 border border-warning/30 text-warning text-sm flex items-center gap-2"
           data-testid="journal-entry-readonly-banner"
         >
-          <span className="material-symbols-outlined text-xl">lock</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-xl">lock</span>
           This journal entry has been {existingGroup?.status?.toLowerCase()} and cannot be modified.
         </div>
       )}
@@ -353,7 +353,7 @@ export function JournalEntryPage() {
           className="p-4 rounded-lg bg-danger/10 border border-danger/30 text-danger text-sm flex items-center gap-2"
           data-testid="journal-entry-error"
         >
-          <span className="material-symbols-outlined text-xl">error</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-xl">error</span>
           {submitError}
         </div>
       )}
@@ -417,7 +417,7 @@ export function JournalEntryPage() {
               className="flex items-center gap-1 h-9 px-3 rounded-lg bg-primary/10 text-primary text-sm font-medium hover:bg-primary/20"
               data-testid="journal-entry-add-line-button"
             >
-              <span className="material-symbols-outlined text-lg">add</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-lg">add</span>
               Add Line
             </button>
           )}
@@ -507,7 +507,7 @@ export function JournalEntryPage() {
                         title={fields.length <= 2 ? 'Minimum 2 lines required' : 'Remove line'}
                         data-testid={`journal-entry-line-${index}-remove`}
                       >
-                        <span className="material-symbols-outlined text-xl">delete</span>
+                        <span aria-hidden="true" className="material-symbols-outlined text-xl">delete</span>
                       </button>
                     )}
                   </td>
@@ -521,7 +521,7 @@ export function JournalEntryPage() {
         {errors.lines?.root?.message && (
           <div className="px-6 py-3 bg-danger/5 border-t border-danger/20">
             <p className="text-sm text-danger flex items-center gap-1">
-              <span className="material-symbols-outlined text-base">error</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-base">error</span>
               {errors.lines.root.message}
             </p>
           </div>
@@ -567,7 +567,7 @@ export function JournalEntryPage() {
               data-testid="journal-entry-balance-indicator"
             >
               <div className="flex items-center gap-2">
-                <span
+                <span aria-hidden="true"
                   className={`material-symbols-outlined text-xl ${
                     isBalanced ? 'text-success' : 'text-danger'
                   }`}

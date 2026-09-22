@@ -79,7 +79,7 @@ export function LoginPage() {
           className="p-4 rounded-lg bg-success/10 border border-success/30 text-success text-sm flex items-start gap-3"
           data-testid="login-registration-success"
         >
-          <span className="material-symbols-outlined text-success">check_circle</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-success">check_circle</span>
           <div className="flex-1">
             <p className="font-medium">Your account is ready.</p>
             <p className="mt-1 text-text-light dark:text-text-dark">
@@ -92,7 +92,7 @@ export function LoginPage() {
             aria-label="Dismiss"
             className="text-subtle-text hover:text-text-light dark:hover:text-text-dark"
           >
-            <span className="material-symbols-outlined text-base">close</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-base">close</span>
           </button>
         </div>
       )}
@@ -177,7 +177,7 @@ export function LoginPage() {
         >
           {isLoading ? (
             <>
-              <span className="material-symbols-outlined animate-spin">progress_activity</span>
+              <span aria-hidden="true" className="material-symbols-outlined animate-spin">progress_activity</span>
               Signing in...
             </>
           ) : (

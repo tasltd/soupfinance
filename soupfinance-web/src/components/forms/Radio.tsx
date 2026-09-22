@@ -84,7 +84,7 @@ export const Radio = forwardRef<HTMLInputElement, RadioProps>(
         {/* Error message */}
         {error && (
           <span className="text-sm text-danger mt-2 flex items-center gap-1">
-            <span className="material-symbols-outlined text-base">error</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-base">error</span>
             {error}
           </span>
         )}

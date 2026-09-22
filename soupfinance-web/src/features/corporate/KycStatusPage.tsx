@@ -105,22 +105,22 @@ export function KycStatusPage() {
     if (status === 'completed') {
       if (isRejected) {
         return (
-          <span className="material-symbols-outlined text-danger">cancel</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-danger">cancel</span>
         );
       }
       return (
-        <span className="material-symbols-outlined text-green-500">task_alt</span>
+        <span aria-hidden="true" className="material-symbols-outlined text-green-500">task_alt</span>
       );
     }
     if (status === 'current') {
       return (
-        <span className="material-symbols-outlined text-primary animate-pulse">
+        <span aria-hidden="true" className="material-symbols-outlined text-primary animate-pulse">
           hourglass_top
         </span>
       );
     }
     return (
-      <span className="material-symbols-outlined text-gray-400">
+      <span aria-hidden="true" className="material-symbols-outlined text-gray-400">
         radio_button_unchecked
       </span>
     );
@@ -129,7 +129,7 @@ export function KycStatusPage() {
   if (corporateLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <span className="material-symbols-outlined animate-spin text-4xl text-primary">
+        <span aria-hidden="true" className="material-symbols-outlined animate-spin text-4xl text-primary">
           progress_activity
         </span>
       </div>
@@ -157,7 +157,7 @@ export function KycStatusPage() {
             className="h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90 flex items-center gap-2"
           >
             Go to Dashboard
-            <span className="material-symbols-outlined text-base">arrow_forward</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-base">arrow_forward</span>
           </button>
         )}
         {isRejected && (
@@ -166,7 +166,7 @@ export function KycStatusPage() {
             className="h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90 flex items-center gap-2"
           >
             Update Documents
-            <span className="material-symbols-outlined text-base">edit_document</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-base">edit_document</span>
           </button>
         )}
       </div>
@@ -174,7 +174,7 @@ export function KycStatusPage() {
       {/* Status Banner */}
       {isApproved && (
         <div className="p-4 rounded-lg bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-800 flex items-center gap-3">
-          <span className="material-symbols-outlined text-green-600 dark:text-green-400 text-2xl">
+          <span aria-hidden="true" className="material-symbols-outlined text-green-600 dark:text-green-400 text-2xl">
             verified
           </span>
           <div>
@@ -189,7 +189,7 @@ export function KycStatusPage() {
 
       {isRejected && (
         <div className="p-4 rounded-lg bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800 flex items-center gap-3">
-          <span className="material-symbols-outlined text-red-600 dark:text-red-400 text-2xl">
+          <span aria-hidden="true" className="material-symbols-outlined text-red-600 dark:text-red-400 text-2xl">
             error
           </span>
           <div>
@@ -316,7 +316,7 @@ export function KycStatusPage() {
                     className="flex items-center justify-between py-3 border-b border-border-light dark:border-border-dark last:border-0"
                   >
                     <div className="flex items-center gap-3">
-                      <span
+                      <span aria-hidden="true"
                         className={`material-symbols-outlined ${
                           isUploaded ? 'text-green-500' : 'text-gray-400'
                         }`}
@@ -341,7 +341,7 @@ export function KycStatusPage() {
                         className="text-sm text-primary hover:underline flex items-center gap-1"
                       >
                         View
-                        <span className="material-symbols-outlined text-base">open_in_new</span>
+                        <span aria-hidden="true" className="material-symbols-outlined text-base">open_in_new</span>
                       </a>
                     )}
                   </div>
@@ -395,19 +395,19 @@ export function KycStatusPage() {
             {isApproved ? (
               <ul className="space-y-2 text-sm text-subtle-text">
                 <li className="flex items-start gap-2">
-                  <span className="material-symbols-outlined text-primary text-base mt-0.5">
+                  <span aria-hidden="true" className="material-symbols-outlined text-primary text-base mt-0.5">
                     check
                   </span>
                   Your account is now fully activated
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="material-symbols-outlined text-primary text-base mt-0.5">
+                  <span aria-hidden="true" className="material-symbols-outlined text-primary text-base mt-0.5">
                     check
                   </span>
                   You can start creating invoices and managing your finances
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="material-symbols-outlined text-primary text-base mt-0.5">
+                  <span aria-hidden="true" className="material-symbols-outlined text-primary text-base mt-0.5">
                     check
                   </span>
                   All platform features are now available
@@ -416,19 +416,19 @@ export function KycStatusPage() {
             ) : isRejected ? (
               <ul className="space-y-2 text-sm text-subtle-text">
                 <li className="flex items-start gap-2">
-                  <span className="material-symbols-outlined text-danger text-base mt-0.5">
+                  <span aria-hidden="true" className="material-symbols-outlined text-danger text-base mt-0.5">
                     priority_high
                   </span>
                   Review the compliance team's feedback
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="material-symbols-outlined text-danger text-base mt-0.5">
+                  <span aria-hidden="true" className="material-symbols-outlined text-danger text-base mt-0.5">
                     priority_high
                   </span>
                   Upload any missing or corrected documents
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="material-symbols-outlined text-danger text-base mt-0.5">
+                  <span aria-hidden="true" className="material-symbols-outlined text-danger text-base mt-0.5">
                     priority_high
                   </span>
                   Resubmit for review
@@ -437,19 +437,19 @@ export function KycStatusPage() {
             ) : (
               <ul className="space-y-2 text-sm text-subtle-text">
                 <li className="flex items-start gap-2">
-                  <span className="material-symbols-outlined text-primary text-base mt-0.5">
+                  <span aria-hidden="true" className="material-symbols-outlined text-primary text-base mt-0.5">
                     schedule
                   </span>
                   Our compliance team will review your documents within 2-3 business days
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="material-symbols-outlined text-primary text-base mt-0.5">
+                  <span aria-hidden="true" className="material-symbols-outlined text-primary text-base mt-0.5">
                     mail
                   </span>
                   You'll receive an email notification once the review is complete
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="material-symbols-outlined text-primary text-base mt-0.5">
+                  <span aria-hidden="true" className="material-symbols-outlined text-primary text-base mt-0.5">
                     support_agent
                   </span>
                   Contact support if you have any questions

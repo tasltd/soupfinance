@@ -225,7 +225,7 @@ export function RegistrationPage() {
         {/* Success icon */}
         <div className="flex justify-center">
           <div className="size-20 rounded-full bg-success/10 flex items-center justify-center">
-            <span className="material-symbols-outlined text-4xl text-success">mark_email_read</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-4xl text-success">mark_email_read</span>
           </div>
         </div>
 
@@ -360,7 +360,7 @@ export function RegistrationPage() {
               }`}
             >
               <div className="flex flex-col items-center gap-2">
-                <span className={`material-symbols-outlined text-2xl ${
+                <span aria-hidden="true" className={`material-symbols-outlined text-2xl ${
                   formData.businessType === 'TRADING' ? 'text-primary' : 'text-subtle-text'
                 }`}>
                   inventory_2
@@ -386,7 +386,7 @@ export function RegistrationPage() {
               }`}
             >
               <div className="flex flex-col items-center gap-2">
-                <span className={`material-symbols-outlined text-2xl ${
+                <span aria-hidden="true" className={`material-symbols-outlined text-2xl ${
                   formData.businessType === 'SERVICES' ? 'text-primary' : 'text-subtle-text'
                 }`}>
                   handyman
@@ -546,7 +546,7 @@ export function RegistrationPage() {
               aria-label={showPassword ? 'Hide password' : 'Show password'}
               data-testid="registration-password-toggle"
             >
-              <span className="material-symbols-outlined text-xl">
+              <span aria-hidden="true" className="material-symbols-outlined text-xl">
                 {showPassword ? 'visibility_off' : 'visibility'}
               </span>
             </button>
@@ -595,7 +595,7 @@ export function RegistrationPage() {
         >
           {registerMutation.isPending ? (
             <>
-              <span className="material-symbols-outlined animate-spin">progress_activity</span>
+              <span aria-hidden="true" className="material-symbols-outlined animate-spin">progress_activity</span>
               Creating Account...
             </>
           ) : (

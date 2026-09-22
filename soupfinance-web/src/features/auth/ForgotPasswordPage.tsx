@@ -61,7 +61,7 @@ export function ForgotPasswordPage() {
       {/* Icon */}
       <div className="flex justify-center">
         <div className="size-20 rounded-full bg-primary/10 flex items-center justify-center">
-          <span className="material-symbols-outlined text-4xl text-primary">lock_reset</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-4xl text-primary">lock_reset</span>
         </div>
       </div>
 
@@ -84,7 +84,7 @@ export function ForgotPasswordPage() {
           className="p-4 rounded-lg bg-success/10 border border-success/30 text-success text-sm flex items-start gap-3"
           data-testid="forgot-password-success"
         >
-          <span className="material-symbols-outlined text-lg flex-shrink-0 mt-0.5">check_circle</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-lg flex-shrink-0 mt-0.5">check_circle</span>
           <div>
             <p className="font-medium">Reset link sent</p>
             <p className="mt-1 text-success/80">
@@ -119,7 +119,7 @@ export function ForgotPasswordPage() {
         >
           {forgotMutation.isPending ? (
             <>
-              <span className="material-symbols-outlined animate-spin">progress_activity</span>
+              <span aria-hidden="true" className="material-symbols-outlined animate-spin">progress_activity</span>
               Sending...
             </>
           ) : cooldown > 0 ? (

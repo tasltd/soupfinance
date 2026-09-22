@@ -237,7 +237,7 @@ export function VerifyPage() {
         >
           {verifyMutation.isPending ? (
             <>
-              <span className="material-symbols-outlined animate-spin">progress_activity</span>
+              <span aria-hidden="true" className="material-symbols-outlined animate-spin">progress_activity</span>
               Verifying...
             </>
           ) : (
