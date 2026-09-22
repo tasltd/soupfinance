@@ -9,7 +9,7 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getBalanceSheetDirect, exportFinanceReport, type ReportFilters } from '../../api/endpoints/reports';
 import type { BalanceSheet, BalanceSheetItem } from '../../types';
-import { getTodayIsoDate } from '../../utils/date';
+import { formatDisplayDate, getTodayIsoDate } from '../../utils/date';
 
 // Added: Currency formatter for consistent display
 const currencyFormatter = new Intl.NumberFormat('en-US', {
@@ -20,14 +20,11 @@ const currencyFormatter = new Intl.NumberFormat('en-US', {
 });
 
 // Added: Format date for display (e.g., "January 20, 2026")
-function formatDateDisplay(dateStr: string): string {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-}
+// Fix (SOUPFIN-72): was `new Date(dateStr)`, which parses a bare YYYY-MM-DD as
+// UTC midnight and then renders it in local time — so every label read one day
+// early for any user west of UTC (August 1 displayed as "July 31"). The shared
+// helper builds the Date from explicit local parts instead.
+const formatDateDisplay = formatDisplayDate;
 
 // Added: Get today's date in YYYY-MM-DD format
 // Fix (SOUPFIN-64): was `new Date().toISOString().split('T')[0]`, i.e. UTC
