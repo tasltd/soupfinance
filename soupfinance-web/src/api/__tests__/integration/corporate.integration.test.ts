@@ -216,6 +216,60 @@ describe('Corporate API Integration', () => {
       // Assert
       expect(result).toBeNull();
     });
+
+    // Added (SOUPFIN-62): the action does not exist on the backend yet, so this
+    // call 404s in production today. Only that 404 may resolve to null — the old
+    // bare `catch { return null }` made a 500 look identical to "no corporate".
+    it('treats a 404 as "nothing to resume" rather than a failure', async () => {
+      mockAxiosInstance.get.mockRejectedValue({
+        response: { status: 404, data: '<!DOCTYPE HTML><title>Page Not Found</title>' },
+      });
+
+      vi.resetModules();
+      const { getCurrentCorporate } = await import('../../endpoints/corporate');
+
+      await expect(getCurrentCorporate()).resolves.toBeNull();
+    });
+
+    it('propagates a 500 instead of reporting "no corporate"', async () => {
+      mockAxiosInstance.get.mockRejectedValue({ response: { status: 500 } });
+
+      vi.resetModules();
+      const { getCurrentCorporate } = await import('../../endpoints/corporate');
+
+      await expect(getCurrentCorporate()).rejects.toMatchObject({
+        response: { status: 500 },
+      });
+    });
+
+    it('propagates a 403 instead of reporting "no corporate"', async () => {
+      mockAxiosInstance.get.mockRejectedValue({ response: { status: 403 } });
+
+      vi.resetModules();
+      const { getCurrentCorporate } = await import('../../endpoints/corporate');
+
+      await expect(getCurrentCorporate()).rejects.toMatchObject({
+        response: { status: 403 },
+      });
+    });
+
+    it('propagates a network failure that carries no response at all', async () => {
+      mockAxiosInstance.get.mockRejectedValue(new Error('Network Error'));
+
+      vi.resetModules();
+      const { getCurrentCorporate } = await import('../../endpoints/corporate');
+
+      await expect(getCurrentCorporate()).rejects.toThrow('Network Error');
+    });
+
+    it('returns null when the backend answers 200 with an empty body', async () => {
+      mockAxiosInstance.get.mockResolvedValue({ data: null });
+
+      vi.resetModules();
+      const { getCurrentCorporate } = await import('../../endpoints/corporate');
+
+      await expect(getCurrentCorporate()).resolves.toBeNull();
+    });
   });
 
   // Added (SOUPFIN-55): the onboarding entry point needs a corporate id, and
@@ -299,6 +353,45 @@ describe('Corporate API Integration', () => {
       const { resolveOnboardingCorporate } = await import('../../endpoints/corporate');
 
       expect(await resolveOnboardingCorporate()).toBeNull();
+    });
+
+    // Added (SOUPFIN-62): current.json breaking for a reason other than 404 must
+    // be logged, but it must not take the onboarding nudge down with it — the
+    // list answers the same question.
+    it('logs and falls back to the list when current.json fails with a 500', async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      mockAxiosInstance.get
+        .mockRejectedValueOnce({ response: { status: 500 } })
+        .mockResolvedValueOnce({ data: [{ id: 'corp-listed', name: 'From list' }] });
+
+      vi.resetModules();
+      const { resolveOnboardingCorporate } = await import('../../endpoints/corporate');
+
+      const result = await resolveOnboardingCorporate();
+
+      expect(result?.id).toBe('corp-listed');
+      expect(mockAxiosInstance.get).toHaveBeenNthCalledWith(2, '/corporate/index.json?max=1');
+      // The failure is visible, not swallowed
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining('corporate/current.json failed'),
+        expect.objectContaining({ status: 500 })
+      );
+      warn.mockRestore();
+    });
+
+    it('surfaces the list error when both current.json and the list fail', async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      mockAxiosInstance.get
+        .mockRejectedValueOnce({ response: { status: 500 } })
+        .mockRejectedValueOnce({ response: { status: 500 } });
+
+      vi.resetModules();
+      const { resolveOnboardingCorporate } = await import('../../endpoints/corporate');
+
+      await expect(resolveOnboardingCorporate()).rejects.toMatchObject({
+        response: { status: 500 },
+      });
+      warn.mockRestore();
     });
 
     it('propagates a list failure instead of hiding it as "no corporate"', async () => {
