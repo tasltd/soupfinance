@@ -14,7 +14,7 @@ import {
   type ReportFilters,
 } from '../../api/endpoints/reports';
 import type { ProfitLoss, ProfitLossItem } from '../../types';
-import { getFirstDayOfCurrentMonth, getTodayIsoDate } from '../../utils/date';
+import { formatDisplayDate, getFirstDayOfCurrentMonth, getTodayIsoDate } from '../../utils/date';
 // Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
 import { HelpLink } from '../../components/help';
 import { useFormatCurrency } from '../../stores';
@@ -29,15 +29,17 @@ import { useFormatCurrency } from '../../stores';
 // down as a prop.
 
 // Added: Format date for display (e.g., "January 1, 2026 - January 31, 2026")
+// Fix (SOUPFIN-72): was `new Date(startDate)` / `new Date(endDate)`, which parse
+// a bare YYYY-MM-DD as UTC midnight and then render it in local time — so the
+// whole range read one day early for any user west of UTC (1-31 August showed
+// as "July 31, 2026 - August 30, 2026"). `formatDisplayDate` builds the Date
+// from explicit local parts, and returns '' for unusable input, so an
+// unparseable endpoint hides the range rather than printing "Invalid Date".
 function formatDateRange(startDate: string, endDate: string): string {
-  const start = new Date(startDate);
-  const end = new Date(endDate);
-  const options: Intl.DateTimeFormatOptions = {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  };
-  return `${start.toLocaleDateString('en-US', options)} - ${end.toLocaleDateString('en-US', options)}`;
+  const start = formatDisplayDate(startDate);
+  const end = formatDisplayDate(endDate);
+  if (!start || !end) return '';
+  return `${start} - ${end}`;
 }
 
 // Added: Get first day of current month in YYYY-MM-DD format
