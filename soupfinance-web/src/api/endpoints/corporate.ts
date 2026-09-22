@@ -4,6 +4,7 @@
  * Handles corporate KYC onboarding flow
  */
 import apiClient, { toQueryString } from '../client';
+import { logger } from '../../utils/logger';
 import type { Corporate, CorporateAccountPerson, CorporateDocuments, ListParams } from '../../types';
 
 const CORPORATE_URL = '/corporate';
@@ -42,21 +43,37 @@ export async function updateCorporate(id: string, data: Partial<Corporate>): Pro
 }
 
 /**
+ * Read the HTTP status off an Axios-shaped rejection, if it has one.
+ * Added (SOUPFIN-62): needed to tell "endpoint absent / no corporate" (404)
+ * apart from a genuine backend failure.
+ */
+function statusOf(error: unknown): number | undefined {
+  return (error as { response?: { status?: number } } | undefined)?.response?.status;
+}
+
+/**
  * Get current user's corporate (for onboarding flow)
  * GET /rest/corporate/current.json
  *
  * NOTE (SOUPFIN-55): the backend CorporateController has no `current` action
- * today, so this resolves to null in practice. It is kept (and tried first by
- * `resolveOnboardingCorporate`) so the app upgrades automatically if the
- * action is added later.
+ * today, so this 404s and resolves to null in practice. It is kept (and tried
+ * first by `resolveOnboardingCorporate`) so the app upgrades automatically if
+ * the action is added later — see `plans/soupfin-62-corporate-current-endpoint.md`.
+ *
+ * Changed (SOUPFIN-62): only a 404 resolves to null. A 404 means either "the
+ * action does not exist yet" or, once it does, "this user has no corporate" —
+ * both are legitimately "nothing to resume". Every other status (403, 500,
+ * network) is a real failure and now propagates, because the previous bare
+ * `catch { return null }` made a broken backend indistinguishable from an
+ * empty one. CLAUDE.md bans that pattern for exactly this reason.
  */
 export async function getCurrentCorporate(): Promise<Corporate | null> {
   try {
     const response = await apiClient.get<Corporate>(`${CORPORATE_URL}/current.json`);
-    return response.data;
-  } catch {
-    // Returns null if no corporate found for current user
-    return null;
+    return response.data ?? null;
+  } catch (error) {
+    if (statusOf(error) === 404) return null;
+    throw error;
   }
 }
 
@@ -81,7 +98,19 @@ export async function listCorporates(params?: ListParams): Promise<Corporate[]> 
  * all, in which case there is no half-finished application to resume.
  */
 export async function resolveOnboardingCorporate(): Promise<Corporate | null> {
-  const current = await getCurrentCorporate();
+  let current: Corporate | null = null;
+  try {
+    current = await getCurrentCorporate();
+  } catch (error) {
+    // Changed (SOUPFIN-62): current.json failing for a reason other than 404
+    // must not be silent, but it must not kill the nudge either — the list
+    // below answers the same question. Log it, then fall through. A systemic
+    // outage still surfaces, because the list call will fail too and that
+    // error is propagated.
+    logger.warn('corporate/current.json failed; falling back to the corporate list', {
+      status: statusOf(error),
+    });
+  }
   if (current?.id) return current;
 
   const corporates = await listCorporates({ max: 1 });
