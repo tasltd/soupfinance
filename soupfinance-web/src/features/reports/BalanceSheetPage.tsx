@@ -10,14 +10,16 @@ import { useQuery } from '@tanstack/react-query';
 import { getBalanceSheetDirect, exportFinanceReport, type ReportFilters } from '../../api/endpoints/reports';
 import type { BalanceSheet, BalanceSheetItem } from '../../types';
 import { getTodayIsoDate } from '../../utils/date';
+import { useFormatCurrency } from '../../stores';
 
-// Added: Currency formatter for consistent display
-const currencyFormatter = new Intl.NumberFormat('en-US', {
-  style: 'currency',
-  currency: 'USD',
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
+// Fix (SOUPFIN-73): this module previously declared its own
+//   new Intl.NumberFormat('en-US', { currency: 'USD' })
+// so a GHS tenant read its own cedi figures labelled with a dollar sign, while
+// the dashboard and the aging reports rendered the same number as GH₵.
+// Currency now comes from the account store via useFormatCurrency(), matching
+// DashboardPage and AgingReportsPage. Every sub-component below is a React
+// component, so each calls the hook directly rather than threading a formatter
+// down as a prop.
 
 // Added: Format date for display (e.g., "January 20, 2026")
 function formatDateDisplay(dateStr: string): string {
@@ -53,6 +55,8 @@ function getReportExtension(format: 'pdf' | 'xlsx' | 'csv' | null | undefined): 
 }
 
 export function BalanceSheetPage() {
+  // Fix (SOUPFIN-73): tenant currency, not a hardcoded USD formatter.
+  const formatCurrency = useFormatCurrency();
   // Added: State for "As Of" date filter with default to today
   const [asOfDate, setAsOfDate] = useState<string>(getTodayISO());
   // Fix (SOUPFIN-14): Track which format is currently exporting + any error so the
@@ -310,7 +314,7 @@ export function BalanceSheetPage() {
                 className="text-text-light dark:text-text-dark tracking-tight text-2xl font-bold"
                 data-testid="balance-sheet-total-assets"
               >
-                {currencyFormatter.format(balanceSheet.totalAssets)}
+                {formatCurrency(balanceSheet.totalAssets)}
               </p>
             </div>
 
@@ -324,7 +328,7 @@ export function BalanceSheetPage() {
                 className="text-text-light dark:text-text-dark tracking-tight text-2xl font-bold"
                 data-testid="balance-sheet-total-liabilities"
               >
-                {currencyFormatter.format(balanceSheet.totalLiabilities)}
+                {formatCurrency(balanceSheet.totalLiabilities)}
               </p>
             </div>
 
@@ -338,7 +342,7 @@ export function BalanceSheetPage() {
                 className="text-text-light dark:text-text-dark tracking-tight text-2xl font-bold"
                 data-testid="balance-sheet-total-equity"
               >
-                {currencyFormatter.format(balanceSheet.totalEquity)}
+                {formatCurrency(balanceSheet.totalEquity)}
               </p>
             </div>
           </div>
@@ -366,9 +370,9 @@ export function BalanceSheetPage() {
                     Accounting Equation: Assets = Liabilities + Equity
                   </p>
                   <p className="text-sm text-subtle-text">
-                    {currencyFormatter.format(balanceSheet.totalAssets)} ={' '}
-                    {currencyFormatter.format(balanceSheet.totalLiabilities)} +{' '}
-                    {currencyFormatter.format(balanceSheet.totalEquity)}
+                    {formatCurrency(balanceSheet.totalAssets)} ={' '}
+                    {formatCurrency(balanceSheet.totalLiabilities)} +{' '}
+                    {formatCurrency(balanceSheet.totalEquity)}
                   </p>
                 </div>
               </div>
@@ -376,7 +380,7 @@ export function BalanceSheetPage() {
                 <span className="text-success font-bold">Balanced</span>
               ) : (
                 <span className="text-warning font-bold">
-                  Difference: {currencyFormatter.format(equationCheck.difference)}
+                  Difference: {formatCurrency(equationCheck.difference)}
                 </span>
               )}
             </div>
@@ -428,7 +432,7 @@ export function BalanceSheetPage() {
                 <p className="text-sm text-subtle-text">Should equal Total Assets</p>
               </div>
               <p className="text-2xl font-black text-text-light dark:text-text-dark">
-                {currencyFormatter.format(balanceSheet.totalLiabilities + balanceSheet.totalEquity)}
+                {formatCurrency(balanceSheet.totalLiabilities + balanceSheet.totalEquity)}
               </p>
             </div>
           </div>
@@ -470,6 +474,8 @@ interface BalanceSheetSectionProps {
 }
 
 function BalanceSheetSection({ title, icon, iconColor, items, total, testIdPrefix }: BalanceSheetSectionProps) {
+  // Fix (SOUPFIN-73): tenant currency, not a hardcoded USD formatter.
+  const formatCurrency = useFormatCurrency();
   return (
     <div
       className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden"
@@ -508,7 +514,7 @@ function BalanceSheetSection({ title, icon, iconColor, items, total, testIdPrefi
       >
         <span className="font-bold text-text-light dark:text-text-dark">Total {title}</span>
         <span className="font-bold text-lg text-text-light dark:text-text-dark">
-          {currencyFormatter.format(total)}
+          {formatCurrency(total)}
         </span>
       </div>
     </div>
@@ -526,6 +532,8 @@ interface BalanceSheetItemRowProps {
 }
 
 function BalanceSheetItemRow({ item, testId, depth = 0 }: BalanceSheetItemRowProps) {
+  // Fix (SOUPFIN-73): tenant currency, not a hardcoded USD formatter.
+  const formatCurrency = useFormatCurrency();
   // Added: Indentation based on depth for hierarchical display
   const paddingLeft = 24 + depth * 16; // Base 24px + 16px per level
 
@@ -546,7 +554,7 @@ function BalanceSheetItemRow({ item, testId, depth = 0 }: BalanceSheetItemRowPro
             depth > 0 ? 'text-subtle-text' : 'text-text-light dark:text-text-dark'
           }`}
         >
-          {currencyFormatter.format(item.balance)}
+          {formatCurrency(item.balance)}
         </span>
       </div>
       {/* Render children recursively if present */}

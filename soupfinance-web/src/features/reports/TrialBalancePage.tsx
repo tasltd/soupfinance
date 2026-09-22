@@ -10,6 +10,7 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getTrialBalance, exportFinanceReport, type ReportFilters } from '../../api/endpoints/reports';
 import { formatDisplayDate, getCurrentMonthRange } from '../../utils/date';
+import { useFormatCurrency } from '../../stores';
 import type { TrialBalanceItem } from '../../types';
 
 // Added: Trial balance uses subset of LedgerGroup (excludes 'INCOME' which is aliased to 'REVENUE')
@@ -32,14 +33,37 @@ function getReportExtension(format: 'pdf' | 'xlsx' | 'csv' | null | undefined): 
 // range started on the previous month's last day and ended a day before month
 // end. getCurrentMonthRange() in utils/date formats from local calendar parts.
 
-// Added: Format currency with proper thousands separator
-function formatCurrency(amount: number, currency = 'USD'): string {
-  if (amount === 0) return '';
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: 2,
-  }).format(amount);
+// Fix (SOUPFIN-73): this module declared its own
+//   formatCurrency(amount, currency = 'USD')
+// which had two defects.
+//
+// 1. The 'USD' default. Every total (group subtotals, the Totals footer, the
+//    out-of-balance difference) was called WITHOUT a currency argument, so a GHS
+//    tenant read its own cedi totals labelled with a dollar sign. Amounts now
+//    come from the account store via useFormatCurrency(), the same source as
+//    DashboardPage, AgingReportsPage, ChartOfAccountsPage and JournalEntryPage.
+//
+//    The per-account rows did pass account.currency, but that argument is now
+//    dropped deliberately: ChartOfAccountsPage already formats per-ledger-account
+//    balances in the tenant currency, and this table keeps a dedicated "Currency"
+//    column that still prints account.currency as text — so the per-account code
+//    is still on screen, it is simply no longer duplicated inside the amount.
+//
+// 2. The zero short-circuit (`if (amount === 0) return ''`). Removed, following
+//    SOUPFIN-33 #4, which stripped exactly this short-circuit from the aging
+//    reports because it hid the currency bug. It also blanked the Totals footer
+//    outright on a zero-balance set of books, which reads as a broken table
+//    rather than as a balanced one. A zero balance is real data and now renders
+//    as a formatted zero.
+//
+//    To keep the extra zeros from adding noise, they are muted the same way the
+//    aging reports mute theirs (getAmountColorClass there returns
+//    'text-subtle-text' at zero) — so the figures that carry meaning still lead.
+
+// Added (SOUPFIN-73): de-emphasise a zero so a dense trial balance still reads
+// at a glance, matching the aging reports' treatment of the same case.
+function amountClass(amount: number): string {
+  return amount === 0 ? 'text-subtle-text' : 'text-text-light dark:text-text-dark';
 }
 
 // Added: Ledger group display configuration
@@ -65,6 +89,8 @@ interface AccountGroupProps {
 }
 
 function AccountGroup({ group, accounts, isExpanded, onToggle }: AccountGroupProps) {
+  // Fix (SOUPFIN-73): tenant currency, not a hardcoded USD formatter.
+  const formatCurrency = useFormatCurrency();
   const config = LEDGER_GROUP_CONFIG[group];
 
   // Calculate group totals
@@ -95,10 +121,10 @@ function AccountGroup({ group, accounts, isExpanded, onToggle }: AccountGroupPro
             <span className="text-xs text-subtle-text">({accounts.length} accounts)</span>
           </div>
         </td>
-        <td className="px-6 py-3 text-right font-semibold font-mono text-text-light dark:text-text-dark">
+        <td className={`px-6 py-3 text-right font-semibold font-mono ${amountClass(groupTotalDebit)}`}>
           {formatCurrency(groupTotalDebit)}
         </td>
-        <td className="px-6 py-3 text-right font-semibold font-mono text-text-light dark:text-text-dark">
+        <td className={`px-6 py-3 text-right font-semibold font-mono ${amountClass(groupTotalCredit)}`}>
           {formatCurrency(groupTotalCredit)}
         </td>
       </tr>
@@ -113,11 +139,11 @@ function AccountGroup({ group, accounts, isExpanded, onToggle }: AccountGroupPro
           >
             <td className="px-6 py-3 pl-14 text-subtle-text">{account.currency}</td>
             <td className="px-6 py-3 text-text-light dark:text-text-dark">{account.name}</td>
-            <td className="px-6 py-3 text-right font-mono text-text-light dark:text-text-dark">
-              {formatCurrency(account.endingDebit, account.currency)}
+            <td className={`px-6 py-3 text-right font-mono ${amountClass(account.endingDebit)}`}>
+              {formatCurrency(account.endingDebit)}
             </td>
-            <td className="px-6 py-3 text-right font-mono text-text-light dark:text-text-dark">
-              {formatCurrency(account.endingCredit, account.currency)}
+            <td className={`px-6 py-3 text-right font-mono ${amountClass(account.endingCredit)}`}>
+              {formatCurrency(account.endingCredit)}
             </td>
           </tr>
         ))}
@@ -129,6 +155,8 @@ function AccountGroup({ group, accounts, isExpanded, onToggle }: AccountGroupPro
  * Trial Balance Report Page Component
  */
 export function TrialBalancePage() {
+  // Fix (SOUPFIN-73): tenant currency, not a hardcoded USD formatter.
+  const formatCurrency = useFormatCurrency();
   // Added: Date filter state with default to current month
   const defaultRange = useMemo(() => getCurrentMonthRange(), []);
   const [filters, setFilters] = useState<ReportFilters>({
