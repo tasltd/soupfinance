@@ -7,7 +7,12 @@
  */
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { getIncomeStatement, exportFinanceReport, type ReportFilters } from '../../api/endpoints/reports';
+import {
+  getIncomeStatement,
+  exportFinanceReport,
+  getReportExtension,
+  type ReportFilters,
+} from '../../api/endpoints/reports';
 import type { ProfitLoss, ProfitLossItem } from '../../types';
 import { getFirstDayOfCurrentMonth, getTodayIsoDate } from '../../utils/date';
 // Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
@@ -52,11 +57,6 @@ const REPORT_MIN_DATE = '1900-01-01';
 
 // Fix (SOUPFIN-16): Whitelist format → extension so null/undefined never
 // becomes ".null" in the downloaded filename.
-function getReportExtension(format: 'pdf' | 'xlsx' | 'csv' | null | undefined): string {
-  if (format === 'xlsx') return 'xlsx';
-  if (format === 'csv') return 'csv';
-  return 'pdf';
-}
 
 export function ProfitLossPage() {
   // Added: State for date range filter with defaults to current month

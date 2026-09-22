@@ -46,8 +46,47 @@ export interface ReportFilters {
 
 /**
  * Export format options
+ *
+ * These are the values the UI uses. They are NOT what goes on the wire — see
+ * toBackendExportFormat() below.
  */
 export type ExportFormat = 'pdf' | 'xlsx' | 'csv';
+
+/**
+ * Fix (SOUPFIN-60): translate the UI's export format to the value the backend
+ * actually understands.
+ *
+ * FinanceReportsController hands `params.f` straight to the Grails export
+ * plugin (org.grails.plugins:export:2.0.0), which registers exactly six
+ * exporters: excel, csv, xml, pdf, ods and rtf. There is no "xlsx". Sending
+ * `f=xlsx` threw
+ *
+ *   grails.plugins.export.exporter.ExporterNotFoundException:
+ *     No exporter found for type: xlsx
+ *
+ * so every Excel download on Trial Balance, Balance Sheet, Profit & Loss and
+ * the two aging reports came back as an HTTP 500, not a spreadsheet.
+ */
+export function toBackendExportFormat(format: ExportFormat): string {
+  return format === 'xlsx' ? 'excel' : format;
+}
+
+/**
+ * Fix (SOUPFIN-60): file extension for a downloaded report.
+ *
+ * The backend's "excel" exporter is POI HSSF — the bytes start d0cf11e0 (OLE2
+ * compound file), which is a legacy .xls, not a .xlsx ZIP. Naming the download
+ * .xlsx makes Excel open it with a "format and extension don't match" warning,
+ * so the extension follows the bytes.
+ *
+ * Previously duplicated verbatim in four report pages; kept here next to
+ * ExportFormat so the mapping can never drift between them.
+ */
+export function getReportExtension(format: ExportFormat | null | undefined): string {
+  if (format === 'xlsx') return 'xls';
+  if (format === 'csv') return 'csv';
+  return 'pdf';
+}
 
 /**
  * Account balance response from /financeReports/accountBalances
@@ -191,7 +230,7 @@ export async function exportReport(
   filters: ReportFilters,
   format: ExportFormat
 ): Promise<Blob> {
-  const query = toQueryString({ ...filters, f: format });
+  const query = toQueryString({ ...filters, f: toBackendExportFormat(format) });
   const response = await apiClient.get(
     `/financeReports/${reportType}.json?${query}`,
     { responseType: 'blob' }
@@ -680,7 +719,7 @@ export async function exportFinanceReport(
   filters: ReportFilters,
   format: ExportFormat
 ): Promise<Blob> {
-  const query = toQueryString({ ...filters, f: format });
+  const query = toQueryString({ ...filters, f: toBackendExportFormat(format) });
   const response = await apiClient.get(
     `/financeReports/${reportType}.json?${query}`,
     { responseType: 'blob' }
