@@ -18,6 +18,8 @@ import { usePaymentMethods } from '../../hooks/usePaymentMethods';
 import { isModuleDisabledError } from '../../utils/apiErrors';
 import type { Invoice, Bill, InvoicePayment, BillPayment } from '../../types';
 import { getTodayIsoDate } from '../../utils/date';
+// Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
+import { HelpLink } from '../../components/help';
 
 // Added: Payment type for form toggle
 type PaymentType = 'invoice' | 'bill';
@@ -211,6 +213,7 @@ export function PaymentFormPage() {
               Record Payment
             </h1>
             <p className="text-subtle-text">Record a payment against an invoice or bill</p>
+            <HelpLink section="record-payment" className="mt-1 self-start" />
           </div>
         </div>
         <div
@@ -261,6 +264,7 @@ export function PaymentFormPage() {
               ? 'Record payment received against an invoice'
               : 'Record payment made against a bill'}
           </p>
+          <HelpLink section="record-payment" className="mt-1 self-start" />
         </div>
         <button
           onClick={() => navigate('/payments')}

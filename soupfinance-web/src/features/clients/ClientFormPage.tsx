@@ -16,6 +16,8 @@ import { getClient, createClient, updateClient } from '../../api';
 // Changed: Renamed from InvoiceClientType to ClientType (matches backend domain)
 import type { ClientType } from '../../api/endpoints/clients';
 import { Input, Textarea } from '../../components/forms';
+// Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
+import { HelpLink } from '../../components/help';
 
 // Validation schema with conditional requirements based on clientType
 const clientSchema = z.object({
@@ -245,6 +247,7 @@ export function ClientFormPage() {
           <p className="text-subtle-text">
             {isEdit ? 'Update client information' : 'Add a new client for invoicing'}
           </p>
+          <HelpLink section="add-client" className="mt-1 self-start" />
         </div>
         <div className="flex gap-3">
           <button

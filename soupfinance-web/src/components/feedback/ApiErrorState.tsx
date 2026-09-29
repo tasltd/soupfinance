@@ -10,6 +10,8 @@
  * button — retrying will not change the backend tenant configuration.
  */
 import { parseApiError, type ApiErrorKind } from '../../api/errors';
+// Added (SOUPFIN-81): link to the guide's "module is not enabled" answer
+import { HelpLink } from '../help';
 
 interface ApiErrorStateProps {
   /** The error caught from a useQuery, mutation, or thrown elsewhere. */
@@ -66,6 +68,11 @@ export function ApiErrorState({ error, onRetry, testId }: ApiErrorStateProps) {
         >
           {parsed.actionHint}
         </p>
+      )}
+      {parsed.kind === 'module_disabled' && (
+        <div className="mb-2">
+          <HelpLink section="module-not-enabled" />
+        </div>
       )}
       {showRetry && (
         <button

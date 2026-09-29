@@ -10,6 +10,8 @@ import { useQuery } from '@tanstack/react-query';
 import { getBalanceSheetDirect, exportFinanceReport, type ReportFilters } from '../../api/endpoints/reports';
 import type { BalanceSheet, BalanceSheetItem } from '../../types';
 import { getTodayIsoDate } from '../../utils/date';
+// Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
+import { HelpLink } from '../../components/help';
 
 // Added: Currency formatter for consistent display
 const currencyFormatter = new Intl.NumberFormat('en-US', {
@@ -147,6 +149,7 @@ export function BalanceSheetPage() {
           <p className="text-subtle-text">
             {balanceSheet ? `As of ${formatDateDisplay(balanceSheet.asOf)}` : 'Assets, liabilities, and equity position'}
           </p>
+          <HelpLink section="balance-sheet" className="mt-1 self-start" />
         </div>
       </div>
 

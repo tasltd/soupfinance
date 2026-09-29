@@ -11,6 +11,8 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { listBills } from '../../api/endpoints/bills';
 import { useFormatCurrency } from '../../stores';
+// Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
+import { HelpLink } from '../../components/help';
 
 export function BillListPage() {
   // Added: Fetch bills from API
@@ -31,6 +33,7 @@ export function BillListPage() {
             Bills
           </h1>
           <p className="text-subtle-text">Manage your expenses and bills</p>
+          <HelpLink section="bills" className="mt-1 self-start" />
         </div>
         <Link
           to="/bills/new"

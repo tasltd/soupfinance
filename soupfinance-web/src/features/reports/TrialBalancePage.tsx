@@ -11,6 +11,8 @@ import { useQuery } from '@tanstack/react-query';
 import { getTrialBalance, exportFinanceReport, type ReportFilters } from '../../api/endpoints/reports';
 import { formatDisplayDate, getCurrentMonthRange } from '../../utils/date';
 import type { TrialBalanceItem } from '../../types';
+// Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
+import { HelpLink } from '../../components/help';
 
 // Added: Trial balance uses subset of LedgerGroup (excludes 'INCOME' which is aliased to 'REVENUE')
 type TrialBalanceLedgerGroup = 'ASSET' | 'LIABILITY' | 'EQUITY' | 'REVENUE' | 'EXPENSE';
@@ -227,6 +229,7 @@ export function TrialBalancePage() {
             {/* Fix (SOUPFIN-30 #12): format the as-of date for display (was raw ISO). */}
             {trialBalance?.asOf && ` as of ${formatDisplayDate(trialBalance.asOf)}`}
           </p>
+          <HelpLink section="trial-balance" className="mt-1 self-start" />
         </div>
 
         {/* Export Buttons */}
@@ -347,6 +350,8 @@ export function TrialBalancePage() {
               ? 'Books are balanced - Total Debits equal Total Credits'
               : `Books are NOT balanced - Difference: ${formatCurrency(Math.abs(trialBalance.totalDebit - trialBalance.totalCredit))}`}
           </span>
+          {/* Added (SOUPFIN-81): the guide's "does not balance" answer, only when it applies */}
+          {!isBalanced && <HelpLink section="trial-balance-unbalanced" className="ml-auto" />}
         </div>
       )}
 

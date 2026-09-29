@@ -4,14 +4,17 @@
  * Split-screen design with professional imagery and testimonial
  * Reference: soupfinance-designs/login-authentication/
  */
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { Logo } from '../Logo';
 // Added: GSAP login background animation (SOUP-679)
 import { useLoginBackground } from '../../hooks/useGsapAnimations';
+// Added (SOUPFIN-81): "Need Help?" under every sign-in, register and password form
+import { HelpLink, authHelpSection } from '../help';
 
 export function AuthLayout() {
   // Added: GSAP login background animation ref (SOUP-679)
   const bgRef = useLoginBackground();
+  const { pathname } = useLocation();
 
   return (
     <div ref={bgRef} className="min-h-screen flex bg-background-light dark:bg-background-dark">
@@ -99,6 +102,10 @@ export function AuthLayout() {
       <div className="flex-1 flex items-center justify-center p-8">
         <div data-anim="login-form" className="w-full max-w-md">
           <Outlet />
+          {/* Opens the static guide in a new tab: /help needs a session, these pages do not */}
+          <div className="mt-6 flex justify-center">
+            <HelpLink section={authHelpSection(pathname)} testId="help-link-auth-page" />
+          </div>
         </div>
       </div>
     </div>

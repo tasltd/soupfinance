@@ -15,6 +15,8 @@ import type { Client, ClientType } from '../../api/endpoints/clients';
 // Fix (SOUP-1929): shared never-blank display-name resolver — used for both the
 // table NAME column AND the delete dialog so the dialog never shows a blank name.
 import { getClientDisplayName } from './getClientDisplayName';
+// Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
+import { HelpLink } from '../../components/help';
 
 // Delete confirmation state interface
 interface DeleteState {
@@ -120,6 +122,7 @@ export function ClientListPage() {
             Clients
           </h1>
           <p className="text-subtle-text">Manage your customers and billing contacts</p>
+          <HelpLink section="clients" className="mt-1 self-start" />
         </div>
         <Link
           to="/clients/new"

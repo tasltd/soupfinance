@@ -30,6 +30,8 @@ import { ApiErrorState, useToast } from '../../components/feedback';
 import { getTodayIsoDate, sanitizeDateInputValue } from '../../utils/date';
 // Fix (SOUPFIN-33 #1/#6): labelled date filter (id/name + <label htmlFor> + empty hint).
 import { DateFilterField } from '../../components/forms';
+// Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
+import { HelpLink } from '../../components/help';
 
 // =============================================================================
 // Added: Type definitions for filtering
@@ -480,6 +482,7 @@ export function TransactionRegisterPage() {
               <p className="text-subtle-text dark:text-subtle-text-dark text-base mt-1">
                 View and manage all accounting transactions
               </p>
+              <HelpLink section="transaction-register" className="mt-1 self-start" />
             </div>
             <div className="flex flex-1 gap-3 flex-wrap justify-start sm:justify-end">
               {/* Added: New Journal Entry button */}

@@ -21,6 +21,8 @@ import { getTodayIsoDate, sanitizeDateInputValue } from '../../utils/date';
 // Added (SOUPFIN-30 #15): create a vendor without leaving this form
 import { AddEntityButton } from '../../components/forms/AddEntityButton';
 import type { BillItem } from '../../types';
+// Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
+import { HelpLink } from '../../components/help';
 
 // Added: Line item type for form state (without id for new items)
 interface LineItem {
@@ -325,6 +327,7 @@ export function BillFormPage() {
           <p className="text-subtle-text">
             {isEdit ? 'Update bill details' : 'Record an expense from a vendor'}
           </p>
+          <HelpLink section="record-bill" className="mt-1 self-start" />
         </div>
         <div className="flex gap-3">
           <button

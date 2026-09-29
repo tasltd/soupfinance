@@ -229,6 +229,8 @@ All domain types mirror soupmarkets-web Grails domain classes:
 - Settings are nested children of `/settings`: `account` (NOT `/settings/company` or `/settings/profile`), `users`, `bank-accounts`
 - Unmatched paths (`*`) redirect to `/dashboard` — a typo'd route silently lands on the dashboard rather than 404ing
 - `/help` embeds the static user guide (`public/user-guide/index.html`) in an iframe; the sidebar Help link goes there. `/help#invoices` deep-links a section. Point at `index.html` explicitly — a bare `/user-guide/` gets the SPA fallback on the Vite dev server
+- **"Need Help?" links (SOUPFIN-81)**: every page header renders `<HelpLink section="..." />` (`src/components/help/`), which opens that guide section **in a new tab** so a half-filled form is never lost, and so it works on the sign-in pages where `/help` is unreachable. Valid sections are the `HELP_SECTIONS` list in `helpSections.ts`; a unit test fails if any is not an `id` in the guide. `SettingsLayout` and `AuthLayout` pick the section from the route. Adding a page: add its link under the subtitle and a row to the page table in `HelpLink.test.tsx`
+- After re-capturing the guide screenshots (`e2e/user-guide-screenshots.spec.ts`), run `node scripts/size-user-guide-images.mjs`. Every guide `<img>` needs its real `width`/`height`, or images loading above a `#section` push it out of view and a help link lands on the wrong content; a unit test enforces it
 - Onboarding routes: `/onboarding/company`, `/onboarding/directors`, `/onboarding/documents`, `/onboarding/status`
 - Public (unauthenticated) routes: `/login`, `/register`, `/verify`, `/confirm-email`, `/resend-confirmation`, `/forgot-password`, `/reset-password`
 

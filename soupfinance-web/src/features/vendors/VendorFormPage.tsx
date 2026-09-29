@@ -11,6 +11,8 @@ import { z } from 'zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getVendor, createVendor, updateVendor } from '../../api';
 import { Input, Textarea } from '../../components/forms';
+// Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
+import { HelpLink } from '../../components/help';
 
 // Added: Zod validation schema for vendor form
 // Constraints: name required, email format validation, payment terms must be positive
@@ -162,6 +164,7 @@ export function VendorFormPage() {
           <p className="text-subtle-text">
             {isEdit ? 'Update vendor information' : 'Add a new vendor to your system'}
           </p>
+          <HelpLink section="vendors" className="mt-1 self-start" />
         </div>
         <div className="flex gap-3">
           <button

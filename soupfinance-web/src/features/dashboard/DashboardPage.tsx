@@ -14,6 +14,8 @@ import { KycOnboardingBanner } from '../../components/feedback';
 import { useFormatCurrency } from '../../stores';
 // Added: GSAP dashboard entrance animation (SOUP-679)
 import { useDashboardEntrance } from '../../hooks/useGsapAnimations';
+// Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
+import { HelpLink } from '../../components/help';
 
 // Added: Format percentage change for display
 function formatChange(change: number): string {
@@ -71,6 +73,7 @@ export function DashboardPage() {
         <p data-anim="hero-subtext" className="text-base text-subtle-text">
           Welcome back! Here's your financial snapshot.
         </p>
+        <HelpLink section="dashboard" className="mt-1 self-start" />
       </div>
 
       {/* Added (SOUPFIN-55): the only in-app way into /onboarding/company.
@@ -158,10 +161,12 @@ export function DashboardPage() {
 
       {/* Recent Invoices */}
       <div data-anim="activity-section" className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark" data-testid="dashboard-recent-invoices">
-        <div className="p-6 border-b border-border-light dark:border-border-dark flex items-center justify-between">
+        <div className="p-6 border-b border-border-light dark:border-border-dark flex items-center justify-between gap-4">
           <h2 className="text-lg font-bold text-text-light dark:text-text-dark">
             Recent Invoices
           </h2>
+          {/* Added (SOUPFIN-81): section-level help beside View all */}
+          <HelpLink section="recent-invoices" className="ml-auto" />
           <a
             href="/invoices"
             className="text-sm text-primary hover:underline font-medium"

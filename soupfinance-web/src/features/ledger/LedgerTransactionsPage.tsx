@@ -17,6 +17,8 @@ import { ApiErrorState } from '../../components/feedback';
 // and an explicit "no date selected" description (see DateFilterField).
 import { DateFilterField } from '../../components/forms';
 import type { LedgerTransaction, LedgerAccount, LedgerState } from '../../types';
+// Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
+import { HelpLink } from '../../components/help';
 
 // Added: Transaction status type for filtering
 type TransactionStatus = 'DRAFT' | 'PENDING' | 'POSTED' | 'REVERSED' | '';
@@ -100,6 +102,7 @@ export function LedgerTransactionsPage() {
             Ledger Transactions
           </h1>
           <p className="text-subtle-text">View all journal entries and transactions</p>
+          <HelpLink section="ledger-transactions" className="mt-1 self-start" />
         </div>
         <Link
           to="/accounting/journal-entry/new"

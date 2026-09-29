@@ -11,6 +11,8 @@ import { getClient, deleteClient } from '../../api';
 import { useState } from 'react';
 // Fix (SOUP-1929): never-blank display name for the header + delete dialog.
 import { getClientDisplayName } from './getClientDisplayName';
+// Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
+import { HelpLink } from '../../components/help';
 
 interface DeleteState {
   isOpen: boolean;
@@ -107,6 +109,7 @@ export function ClientDetailPage() {
             </span>
           </div>
           <p className="text-subtle-text">Client Details</p>
+          <HelpLink section="clients" className="mt-1 self-start" />
         </div>
         <div className="flex gap-3">
           <button
