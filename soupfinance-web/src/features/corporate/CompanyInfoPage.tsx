@@ -169,8 +169,12 @@ export function CompanyInfoPage() {
   };
 
   // Added: Navigation handlers
+  // Fix (SOUPFIN-86): the wizard is opened from the dashboard banner, so the
+  // user here is signed in. '/register' is not behind PublicRoute and showed
+  // them the new-company sign-up form. Return to the dashboard instead; not
+  // navigate(-1), which would leave the app when step 1 came from an email link.
   const handleBack = () => {
-    navigate('/register');
+    navigate('/dashboard');
   };
 
   const handleSkip = () => {
