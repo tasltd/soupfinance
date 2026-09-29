@@ -14,7 +14,15 @@
  */
 import { test, expect, type Page } from '@playwright/test';
 import type { BusinessLicenceCategory } from '../src/types/settings';
-import { mockTokenValidationApi, mockDashboardApi, takeScreenshot, isLxcMode } from './fixtures';
+import {
+  mockTokenValidationApi,
+  mockDashboardApi,
+  takeScreenshot,
+  isLxcMode,
+  installUnmockedApiGuard,
+  mockAmbientApi,
+  type UnmockedApiGuard,
+} from './fixtures';
 
 async function setupMockAuth(page: Page) {
   await page.addInitScript(() => {
@@ -70,6 +78,22 @@ const mockVendors = [
 ];
 
 test.describe('SOUPFIN-25 #2 — Vendors nav visibility by business category', () => {
+  // Added (SOUPFIN-82): install the unmocked-API guard FIRST. Before this, the
+  // dashboard's corporate KYC lookups and frontendLog batches went unmocked,
+  // proxied to VITE_PROXY_TARGET, and a real backend there answered 401 —
+  // client.ts then cleared the token and the page landed on /login. The guard
+  // answers 503 and names anything still unmocked.
+  let apiGuard: UnmockedApiGuard;
+
+  test.beforeEach(async ({ page }) => {
+    apiGuard = await installUnmockedApiGuard(page);
+    await mockAmbientApi(page);
+  });
+
+  test.afterEach(() => {
+    apiGuard?.assertNone();
+  });
+
   test('hides the Vendors nav item for SERVICES tenants', async ({ page }) => {
     if (isLxcMode()) {
       test.skip();

@@ -15,13 +15,31 @@ import {
   getTestUsers,
   isLxcMode,
   setupResponseValidation,
+  installUnmockedApiGuard,
+  mockAmbientApi,
+  type UnmockedApiGuard,
 } from './fixtures';
 
 // Get appropriate test users based on mode (mock or LXC)
 const testUsers = getTestUsers();
 
 test.describe('Authentication', () => {
+  // Added (SOUPFIN-82): install the unmocked-API guard FIRST. Mocks registered
+  // after it take precedence, so it only sees calls nothing else claimed. Left
+  // unguarded, such a call proxies to VITE_PROXY_TARGET, a real backend there
+  // answers 401, and client.ts sends the page to /login mid-test.
+  let apiGuard: UnmockedApiGuard;
+
+  test.afterEach(() => {
+    apiGuard?.assertNone();
+  });
+
   test.beforeEach(async ({ page }) => {
+    apiGuard = await installUnmockedApiGuard(page);
+    // Added (SOUPFIN-82): frontendLog batches and the dashboard's corporate KYC
+    // lookups fire on every authenticated page. Tests register their own data
+    // mocks later, which take precedence over these defaults.
+    await mockAmbientApi(page);
     // Clear any existing auth state before each test
     await page.addInitScript(() => {
       localStorage.clear();

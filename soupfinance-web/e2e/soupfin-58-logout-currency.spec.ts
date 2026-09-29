@@ -15,7 +15,15 @@
  * exercise the same path a person does.
  */
 import { test, expect, type Page } from '@playwright/test';
-import { mockLoginApi, mockTokenValidationApi, mockDashboardApi, isLxcMode } from './fixtures';
+import {
+  mockLoginApi,
+  mockTokenValidationApi,
+  mockDashboardApi,
+  isLxcMode,
+  installUnmockedApiGuard,
+  mockAmbientApi,
+  type UnmockedApiGuard,
+} from './fixtures';
 
 /**
  * Screenshots go to a git-tracked directory rather than through the shared
@@ -86,7 +94,20 @@ const revenue = (page: Page) => page.getByTestId('stat-total-revenue-value');
 test.describe('SOUPFIN-58 — logout clears the previous tenant currency', () => {
   test.skip(isLxcMode(), 'Needs two tenants with different currencies; mock mode only.');
 
+  // Added (SOUPFIN-82): install the unmocked-API guard FIRST. Before this, the
+  // dashboard's corporate KYC lookups and frontendLog batches went unmocked,
+  // proxied to VITE_PROXY_TARGET, and a real backend there answered 401 —
+  // client.ts then cleared the token and both tests landed on /login instead
+  // of /dashboard. The guard answers 503 and names anything still unmocked.
+  let apiGuard: UnmockedApiGuard;
+
+  test.afterEach(() => {
+    apiGuard?.assertNone();
+  });
+
   test.beforeEach(async ({ page }) => {
+    apiGuard = await installUnmockedApiGuard(page);
+    await mockAmbientApi(page);
     await mockLoginApi(page, true);
     await mockTokenValidationApi(page, true);
     await mockDashboardApi(page);
