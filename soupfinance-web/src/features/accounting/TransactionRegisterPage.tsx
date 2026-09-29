@@ -466,7 +466,9 @@ export function TransactionRegisterPage() {
   return (
     <div className="flex h-full grow" data-testid="transaction-register-page">
       {/* Main Content Area */}
-      <div className="flex-1 p-6 lg:p-8">
+      {/* Fix (SOUPFIN-78): min-w-0 so this flex item can shrink to the phone
+          width; with min-width:auto it grew to the table's width (1085px at 390). */}
+      <div className="flex-1 min-w-0 p-6 lg:p-8">
         <div className="flex flex-col gap-6">
           {/* Added: Page Header with action buttons */}
           <div className="flex flex-wrap justify-between items-center gap-4">
@@ -712,7 +714,10 @@ export function TransactionRegisterPage() {
           {/* Added: Data Table - Only show when not loading and no error */}
           {!isLoading && !isError && (
           <div className="w-full" data-testid="transaction-table-container">
-            <div className="flex overflow-hidden rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-background-dark">
+            {/* Fix (SOUPFIN-78): overflow-x-auto, not overflow-hidden — on a phone the
+                table is wider than the screen and the right-hand columns must scroll
+                into view rather than be cut off. */}
+            <div className="overflow-x-auto rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-background-dark">
               <table className="w-full" data-testid="transaction-table">
                 <thead className="bg-surface-light dark:bg-surface-dark border-b border-border-light dark:border-border-dark">
                   <tr>

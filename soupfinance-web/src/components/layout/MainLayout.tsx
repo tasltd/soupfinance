@@ -15,7 +15,11 @@ export function MainLayout() {
 
       {/* Main Content Area */}
       {/* Note: No margin-left needed - sidebar is md:sticky so it's in document flow */}
-      <div className="flex-1 flex flex-col transition-all duration-300">
+      {/* Fix (SOUPFIN-78): min-w-0 lets this flex item shrink below its content.
+          With the default min-width:auto it grew to the widest table (734px on
+          /invoices at a 390px viewport), so the whole page scrolled sideways and
+          the tables' own overflow-x-auto wrappers never engaged. */}
+      <div className="flex-1 min-w-0 flex flex-col transition-all duration-300">
         {/* Top Navigation */}
         <TopNav />
 
