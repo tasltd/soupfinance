@@ -34,6 +34,14 @@
         <li><a href="#password">Reset your password</a></li>
       </ol>
     </li>
+    <li><a href="#verify-company">Verify your company</a>
+      <ol class="toc__sub">
+        <li><a href="#kyc-company-details">Company details</a></li>
+        <li><a href="#kyc-directors">Directors and signatories</a></li>
+        <li><a href="#kyc-documents">Documents</a></li>
+        <li><a href="#kyc-status">Track the review</a></li>
+      </ol>
+    </li>
     <li><a href="#navigation">Finding your way around</a></li>
     <li><a href="#dashboard">Dashboard</a></li>
     <li><a href="#clients">Clients</a></li>
@@ -207,6 +215,132 @@
     <strong>The link expires</strong>
     Reset links are short-lived for security. If yours no longer works, simply request another one.
   </div>
+</section>
+
+<!-- ======================================================= verify company -->
+<section id="verify-company">
+  <h2>Verify your company</h2>
+
+  <p>Some accounts must prove who owns and runs the company before every feature opens up. This
+  check is often called KYC, short for "know your customer". You fill it in once, in four short
+  steps, and our compliance team reviews it.</p>
+
+  <p>While a check is open, the dashboard shows a banner above the summary cards. Select
+  <span class="ui">Continue verification</span> to pick up where you left off. If you never see
+  the banner, your company needs no check and you can skip this section.</p>
+
+  <figure>
+    <img src="images/kyc-banner.jpg" alt="The dashboard banner reading Company verification in progress, with a Continue verification button." width="1120" height="78">
+    <figcaption>The banner on the dashboard. It goes away once the check is approved.</figcaption>
+  </figure>
+
+  <div class="tip">
+    <strong>Have these ready</strong>
+    Your company's addresses, the names and contact details of its directors, and a PDF or photo
+    of each required document. Each file can be up to 5 MB.
+  </div>
+
+  <h3 id="kyc-company-details">Step 1: company details</h3>
+
+  <figure>
+    <img src="images/kyc-company-details.jpg" alt="The Company Information page with sections for physical address, postal address and business details." width="1440" height="1130">
+    <figcaption>The company details step.</figcaption>
+  </figure>
+
+  <ol class="steps">
+    <li>Enter the <strong>physical address</strong> where the company operates.</li>
+    <li>Enter the <strong>postal address</strong>, or tick <span class="ui">Same as physical
+    address</span>.</li>
+    <li>Under <strong>Business details</strong>, choose your industry, annual revenue and number of
+    employees. Add your website and a short description of what the company does.</li>
+    <li>Select <span class="ui">Save &amp; Continue</span>.</li>
+  </ol>
+
+  <p><span class="ui">Skip for Now</span> moves on to the next step without saving this one. Come
+  back to it before you submit.</p>
+
+  <h3 id="kyc-directors">Step 2: directors and signatories</h3>
+
+  <p>List everyone who runs or owns the company. Mark each person as a <strong>Director</strong>,
+  an <strong>Authorized Signatory</strong> (someone who can sign for the company) or a
+  <strong>Beneficial Owner</strong> (someone who owns or controls it).</p>
+
+  <figure>
+    <img src="images/kyc-directors.jpg" alt="The Directors and Signatories page, listing two people with their email, phone and role." width="1440" height="900">
+    <figcaption>Two people added: a director and a signatory.</figcaption>
+  </figure>
+
+  <ol class="steps">
+    <li>Select <span class="ui">Add Person</span>.</li>
+    <li>Enter the first name, last name, email address and phone number.</li>
+    <li>Choose the person's <strong>role</strong>, then select <span class="ui">Add Person</span>
+    in the form.</li>
+    <li>Repeat for everyone else. Use the pencil to correct a person and the bin to remove one.</li>
+    <li>Select <span class="ui">Continue to Documents</span>.</li>
+  </ol>
+
+  <figure>
+    <img src="images/kyc-add-person.jpg" alt="The Add Person form with fields for name, email, phone and role." width="1440" height="900">
+    <figcaption>Adding a beneficial owner.</figcaption>
+  </figure>
+
+  <p><span class="ui">Continue to Documents</span> stays greyed out until you add at least one
+  person.</p>
+
+  <h3 id="kyc-documents">Step 3: documents</h3>
+
+  <p>Upload a copy of each document. Those marked with a red star are required.</p>
+
+  <table>
+    <thead>
+      <tr><th>Document</th><th>Required?</th><th>What it is</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Certificate of Incorporation</td><td>Yes</td><td>Proof the company is registered.</td></tr>
+      <tr><td>Board Resolution</td><td>Yes</td><td>The board's approval to open and run the account.</td></tr>
+      <tr><td>Proof of Address</td><td>Yes</td><td>A utility bill or bank statement less than three months old.</td></tr>
+      <tr><td>Memorandum &amp; Articles</td><td>No</td><td>The company's constitution.</td></tr>
+    </tbody>
+  </table>
+
+  <figure>
+    <img src="images/kyc-documents.jpg" alt="The KYC Documents page with the three required documents uploaded and the memorandum still to add." width="1440" height="957">
+    <figcaption>The three required documents uploaded.</figcaption>
+  </figure>
+
+  <ol class="steps">
+    <li>Drag a file onto a document's box, or select <span class="ui">Click to upload</span> and
+    choose it. PDF, PNG, JPG and GIF files up to 5 MB are accepted.</li>
+    <li>To replace a file, remove it with the bin, then upload the new one.</li>
+    <li>When every required document shows a file, select
+    <span class="ui">Submit for Review</span>.</li>
+  </ol>
+
+  <p><span class="ui">Submit for Review</span> stays greyed out, with an orange reminder, until
+  every required document is uploaded.</p>
+
+  <h3 id="kyc-status">Step 4: track the review</h3>
+
+  <p>After you submit, SoupFinance shows where your application has reached. The timeline on the
+  left moves from <strong>Documents Submitted</strong> through <strong>Compliance Review</strong>
+  and <strong>Document Verification</strong> to a decision. On the right you can check the details,
+  documents and people you sent.</p>
+
+  <figure>
+    <img src="images/kyc-status.jpg" alt="The KYC Application Status page, showing the approval timeline at Compliance Review and a summary of the application." width="1440" height="1298">
+    <figcaption>An application waiting for compliance review.</figcaption>
+  </figure>
+
+  <table>
+    <thead>
+      <tr><th>Outcome</th><th>What to do</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Still under review</td><td>Nothing. The review usually takes 2 to 3 business days, and we email you when it is done.</td></tr>
+      <tr><td>KYC Approved</td><td>Select <span class="ui">Go to Dashboard</span>. The banner is gone and every feature is open.</td></tr>
+      <tr><td>Additional Information Required</td><td>Select <span class="ui">Update Documents</span>, upload the missing or corrected documents, then select <span class="ui">Submit for Review</span> again.</td></tr>
+    </tbody>
+  </table>
 </section>
 
 <!-- =========================================================== navigation -->

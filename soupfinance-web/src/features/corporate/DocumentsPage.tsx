@@ -8,6 +8,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { listDocuments, uploadDocument, deleteDocument, submitKyc } from '../../api/endpoints/corporate';
 import type { CorporateDocuments } from '../../types';
+// Added (SOUPFIN-84): "Need Help?" link to this step's part of the user guide
+import { HelpLink } from '../../components/help';
 
 // Added: Document type configuration
 const DOCUMENT_TYPES: {
@@ -178,6 +180,7 @@ export function DocumentsPage() {
             KYC Documents
           </h1>
           <p className="text-subtle-text">Upload required documents for verification</p>
+          <HelpLink section="kyc-documents" className="mt-1" />
         </div>
         <div className="flex gap-3">
           <button

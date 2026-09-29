@@ -17,6 +17,12 @@ export const HELP_SECTIONS = [
   'register',
   'sign-in',
   'password',
+  // Added (SOUPFIN-84): company verification (KYC) onboarding wizard
+  'verify-company',
+  'kyc-company-details',
+  'kyc-directors',
+  'kyc-documents',
+  'kyc-status',
   'navigation',
   'dashboard',
   'dashboard-cards',

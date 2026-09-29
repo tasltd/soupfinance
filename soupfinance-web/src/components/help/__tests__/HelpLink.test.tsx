@@ -238,6 +238,11 @@ describe('Every page header carries a "Need Help?" link', () => {
     'reports/AgingReportsPage.tsx': ['aging'],
     'reports/TrialBalancePage.tsx': ['trial-balance', 'trial-balance-unbalanced'],
     'reports/ScheduledReportsPage.tsx': ['scheduled-reports'],
+    // Added (SOUPFIN-84): the four company verification (KYC) wizard steps
+    'corporate/CompanyInfoPage.tsx': ['kyc-company-details'],
+    'corporate/DirectorsPage.tsx': ['kyc-directors'],
+    'corporate/DocumentsPage.tsx': ['kyc-documents'],
+    'corporate/KycStatusPage.tsx': ['kyc-status'],
   };
 
   it.each(Object.entries(PAGES))('%s links to %j', (file, sections) => {
