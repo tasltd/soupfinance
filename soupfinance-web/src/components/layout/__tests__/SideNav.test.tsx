@@ -298,5 +298,8 @@ describe('SideNav — mobile drawer closes on navigation (SOUPFIN-76)', () => {
       expectClosed(container);
     }
     expect(screen.getByTestId('where')).toHaveTextContent('/dashboard');
-  });
+    // Fix (SOUPFIN-77): 50 role queries over the full nav take ~2-3s alone but
+    // exceeded the 5s default under full-suite parallel load. Keep all 50 cycles
+    // (the overflow end is the point of this test) and give it an honest budget.
+  }, 20000);
 });

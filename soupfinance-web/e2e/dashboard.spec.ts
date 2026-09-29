@@ -6,15 +6,32 @@
 import { test, expect } from '@playwright/test';
 import {
   mockDashboardApi,
+  mockAmbientApi,
   mockTokenValidationApi,
+  installUnmockedApiGuard,
   mockInvoices,
   mockBills,
   takeScreenshot,
   setupResponseValidation,
+  type UnmockedApiGuard,
 } from './fixtures';
 
 test.describe('Dashboard', () => {
+  let guard: UnmockedApiGuard;
+
   test.beforeEach(async ({ page }) => {
+    // Fix (SOUPFIN-77): the dashboard also calls /rest/corporate/current,
+    // /rest/corporate/index and /rest/frontendLog/batch (SOUPFIN-55 added the
+    // corporate lookups). This spec only mocked invoices + bills, so those calls
+    // proxied to VITE_PROXY_TARGET. With a real backend on :9090 they came back
+    // 401, client.ts redirected to /login, PublicRoute bounced back to /dashboard,
+    // and the loop kept page.goto() from ever seeing a settled load event.
+    //
+    // Guard FIRST (routes are LIFO, so it only sees what nothing else claims),
+    // then the ambient defaults; each test's own mocks register later and win.
+    guard = await installUnmockedApiGuard(page);
+    await mockAmbientApi(page);
+
     // Set up authenticated state before each test
     await page.addInitScript(() => {
       const mockUser = {
@@ -35,6 +52,10 @@ test.describe('Dashboard', () => {
     // Added: Validate API response shapes at runtime
     await setupResponseValidation(page);
   });
+
+  // Added (SOUPFIN-77): name any endpoint the dashboard starts calling without a
+  // mock, instead of letting it surface as a 30s navigation timeout.
+  test.afterEach(() => guard.assertNone('dashboard.spec.ts'));
 
   test.describe('Dashboard Page Loading', () => {
     test('dashboard loads after login', async ({ page }) => {
