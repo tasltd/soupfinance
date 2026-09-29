@@ -101,6 +101,9 @@ import {
   AccountSettingsPage,
 } from './features/settings';
 
+// Added (SOUPFIN-75): In-app user guide
+import { HelpPage } from './features/help/HelpPage';
+
 // Added: Toast notifications provider
 import { ToastProvider } from './components/feedback/ToastProvider';
 
@@ -336,6 +339,9 @@ export default function App() {
               {/* Account Settings */}
               <Route path="account" element={<AccountSettingsPage />} />
             </Route>
+
+            {/* Added (SOUPFIN-75): User guide, reached from the sidebar Help link */}
+            <Route path="/help" element={<HelpPage />} />
           </Route>
 
             {/* Catch all */}

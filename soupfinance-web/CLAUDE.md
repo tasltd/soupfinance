@@ -74,7 +74,7 @@ src/features/{feature}/
 └── index.ts                    # Barrel exports
 ```
 
-Features: `accounting` (vouchers, journal entries, transaction register), `auth`, `bills`, `clients`, `corporate` (KYC), `dashboard`, `invoices`, `ledger` (chart of accounts), `payments` (record payments against invoices/bills), `reports`, `settings`, `vendors`
+Features: `accounting` (vouchers, journal entries, transaction register), `auth`, `bills`, `clients`, `corporate` (KYC), `dashboard`, `help` (in-app user guide), `invoices`, `ledger` (chart of accounts), `payments` (record payments against invoices/bills), `reports`, `settings`, `vendors`
 
 ### API Layer (`src/api/`)
 - **client.ts**: Two Axios instances: `apiClient` (baseURL `/rest`) for REST endpoints, `accountClient` (baseURL `''`) for `/account/*` endpoints. Both have X-Auth-Token auth, auto-401 redirect, and response normalization utilities. **CRITICAL**: AccountController is NOT under `/rest/` — using `apiClient` for `/account/` produces `/rest/account/...` which returns 403 on production
@@ -228,6 +228,7 @@ All domain types mirror soupmarkets-web Grails domain classes:
 - Reports: `/reports/pnl` (NOT `/reports/profit-loss`), `/reports/balance-sheet`, `/reports/cash-flow`, `/reports/aging` (single page for AR+AP, NOT `/reports/ar-aging`), `/reports/trial-balance`, `/reports/scheduled`
 - Settings are nested children of `/settings`: `account` (NOT `/settings/company` or `/settings/profile`), `users`, `bank-accounts`
 - Unmatched paths (`*`) redirect to `/dashboard` — a typo'd route silently lands on the dashboard rather than 404ing
+- `/help` embeds the static user guide (`public/user-guide/index.html`) in an iframe; the sidebar Help link goes there. `/help#invoices` deep-links a section. Point at `index.html` explicitly — a bare `/user-guide/` gets the SPA fallback on the Vite dev server
 - Onboarding routes: `/onboarding/company`, `/onboarding/directors`, `/onboarding/documents`, `/onboarding/status`
 - Public (unauthenticated) routes: `/login`, `/register`, `/verify`, `/confirm-email`, `/resend-confirmation`, `/forgot-password`, `/reset-password`
 

@@ -233,13 +233,23 @@ export function SideNav() {
           {/* Bottom Links — shrink-0 keeps Help/Logout pinned and full height
               even when the nav column above overflows (SOUPFIN-30 #16). */}
           <div className="flex flex-col gap-1 shrink-0 pt-2">
-            <button
+            {/* Fix (SOUPFIN-75): Help was a button with no handler. It now
+                opens the user guide at /help. */}
+            <NavLink
+              to="/help"
+              data-testid="help-link"
               aria-label={sidebarCollapsed ? 'Help' : undefined}
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-subtle-text hover:bg-primary/5 hover:text-text-light dark:hover:text-text-dark transition-colors"
+              className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+                isActive('/help')
+                  ? 'bg-primary/10 text-primary'
+                  : 'text-subtle-text hover:bg-primary/5 hover:text-text-light dark:hover:text-text-dark'
+              }`}
             >
               <span aria-hidden="true" className="material-symbols-outlined text-xl">help</span>
-              {!sidebarCollapsed && <p className="text-sm font-medium">Help</p>}
-            </button>
+              {!sidebarCollapsed && (
+                <p className={`text-sm ${isActive('/help') ? 'font-bold' : 'font-medium'}`}>Help</p>
+              )}
+            </NavLink>
             <button
               onClick={logout}
               data-testid="logout-button"
