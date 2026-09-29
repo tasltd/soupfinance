@@ -21,7 +21,13 @@
 import { test, expect, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { installGuideMocks, seedAuthenticatedSession, guideUser } from './user-guide/guide-mocks';
+import {
+  installGuideMocks,
+  installKycGuideMocks,
+  seedAuthenticatedSession,
+  guideUser,
+  kycCorporate,
+} from './user-guide/guide-mocks';
 import { installUnmockedApiGuard, type UnmockedApiGuard } from './fixtures';
 
 const IMAGE_DIR = join(process.cwd(), 'public', 'user-guide', 'images');
@@ -151,6 +157,77 @@ test.describe('user guide: getting started', () => {
     }
     await expect(page.locator('html')).toHaveClass(/dark/);
     await shoot(page, 'dashboard-dark');
+  });
+});
+
+// ===========================================================================
+// Company verification (KYC) — Added (SOUPFIN-84)
+// ===========================================================================
+
+test.describe('user guide: company verification', () => {
+  test('captures the dashboard banner and every step of the wizard', async ({ page }) => {
+    await installGuideMocks(page);
+    await installKycGuideMocks(page);
+    await seedAuthenticatedSession(page);
+    await page.goto('/dashboard');
+    await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 20_000 });
+
+    // The banner is the only way into the wizard from inside the app.
+    const banner = page.getByTestId('kyc-onboarding-banner');
+    await expect(banner).toContainText('Company verification in progress');
+    await banner.screenshot({ path: join(IMAGE_DIR, 'kyc-banner.jpg'), type: 'jpeg', quality: 82 });
+
+    await page.getByTestId('kyc-onboarding-banner-cta').click();
+    await expect(page.getByTestId('company-info-page')).toBeVisible();
+    await expect(page.locator('input[name="physicalAddress"]')).toHaveValue(kycCorporate.address);
+    // Fill the rest, so the guide shows a finished step rather than the
+    // US-style placeholders of an empty form.
+    await page.locator('input[name="physicalCity"]').fill('Accra');
+    await page.locator('input[name="physicalState"]').fill('Greater Accra');
+    await page.locator('input[name="physicalPostalCode"]').fill('GA-110-2234');
+    await page.locator('input[name="physicalCountry"]').fill('Ghana');
+    await page.locator('input[name="sameAsPhysical"]').check();
+    await page.locator('select[name="industry"]').selectOption('Professional Services');
+    await page.locator('select[name="annualRevenue"]').selectOption('100K_500K');
+    await page.locator('select[name="employeeCount"]').selectOption('11_50');
+    await page.locator('input[name="website"]').fill('https://www.brightpathconsult.com');
+    await page
+      .locator('textarea[name="description"]')
+      .fill('Management and finance consulting for small and medium businesses in Ghana.');
+    // Typing in the description scrolls the page, and a full-page shot taken
+    // part-way down paints the sticky header across the middle of the image.
+    await page.locator('textarea[name="description"]').blur();
+    await page.evaluate(() => {
+      window.scrollTo(0, 0);
+      document.querySelectorAll('main, [class*="overflow-y-auto"]').forEach((el) => (el.scrollTop = 0));
+    });
+    await shoot(page, 'kyc-company-details');
+
+    await page.getByRole('button', { name: /Save & Continue/ }).click();
+    await expect(page.getByTestId('directors-page')).toBeVisible();
+    await expect(page.getByRole('cell', { name: 'Kofi Boateng' })).toBeVisible();
+    await shoot(page, 'kyc-directors');
+
+    await page.getByRole('button', { name: 'Add Person' }).click();
+    await expect(page.getByRole('heading', { name: 'Add Person' })).toBeVisible();
+    await page.locator('input[name="firstName"]').fill('Efua');
+    await page.locator('input[name="lastName"]').fill('Owusu');
+    await page.locator('input[name="email"]').fill('efua.owusu@brightpathconsult.com');
+    await page.locator('input[name="phoneNumber"]').fill('+233 24 330 9812');
+    await page.locator('select[name="role"]').selectOption('BENEFICIAL_OWNER');
+    await shoot(page, 'kyc-add-person');
+    await page.getByRole('button', { name: 'Cancel' }).click();
+
+    await page.getByRole('button', { name: /Continue to Documents/ }).click();
+    await expect(page.getByTestId('documents-page')).toBeVisible();
+    await expect(page.getByText('board-resolution-2026.pdf')).toBeVisible();
+    await shoot(page, 'kyc-documents');
+
+    await page.getByRole('button', { name: /Submit for Review/ }).click();
+    await expect(page.getByTestId('kyc-status-page')).toBeVisible();
+    await expect(page.getByText('Compliance Review')).toBeVisible();
+    await expect(page.getByText(`Application #${kycCorporate.id.slice(0, 8)}`)).toBeVisible();
+    await shoot(page, 'kyc-status');
   });
 });
 

@@ -7,6 +7,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getCorporate, listDocuments, listDirectors } from '../../api/endpoints/corporate';
 import type { CorporateDocuments } from '../../types';
+// Added (SOUPFIN-84): "Need Help?" link to this step's part of the user guide
+import { HelpLink } from '../../components/help';
 
 // Added: Document type labels for checklist
 const DOCUMENT_LABELS: Record<CorporateDocuments['documentType'], string> = {
@@ -150,6 +152,7 @@ export function KycStatusPage() {
           <p className="text-subtle-text">
             {corporate?.name || 'Your company'} - Application #{corporateId?.slice(0, 8)}
           </p>
+          <HelpLink section="kyc-status" className="mt-1" />
         </div>
         {isApproved && (
           <button

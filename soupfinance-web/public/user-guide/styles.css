@@ -65,19 +65,20 @@ body {
   color: var(--text);
 }
 
+/* Changed (SOUPFIN-81): the app's own logo mark (src/assets/logo.png, the
+   same file as public/logo.png) replaces the orange "S" placeholder. The
+   wordmark keeps the app sidebar's colours: "Soup" in text colour, "Finance"
+   in primary, as SideNav.tsx renders it beside the same mark. */
 .masthead__mark {
-  display: grid;
-  place-items: center;
-  width: 2rem;
-  height: 2rem;
-  border-radius: 999px;
-  background: var(--primary);
-  color: #fff;
-  font-size: 0.95rem;
-  font-weight: 800;
+  display: block;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex-shrink: 0;
 }
 
-.masthead__brand span { color: var(--primary); }
+.masthead__word { font-weight: 700; }
+.masthead__soup { color: var(--text); }
+.masthead__finance { color: var(--primary); }
 
 .masthead__tag {
   margin-left: auto;
@@ -180,6 +181,10 @@ body {
 .lede p:last-child { margin-bottom: 0; }
 
 section { scroll-margin-top: 5rem; margin-bottom: 3.25rem; }
+
+/* Added (SOUPFIN-81): "Need Help?" links in the app land on sub-headings too;
+   without this the heading stops under the sticky masthead, out of sight. */
+h3[id], h4[id] { scroll-margin-top: 5rem; }
 
 section h2 {
   margin: 0 0 0.35rem;

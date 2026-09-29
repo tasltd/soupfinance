@@ -13,6 +13,8 @@ import { useQuery } from '@tanstack/react-query';
 import { getCashFlowStatement, type ReportFilters } from '../../api/endpoints/reports';
 import type { CashFlowStatement, CashFlowActivity } from '../../types';
 import { getFirstDayOfCurrentMonth, getTodayIsoDate } from '../../utils/date';
+// Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
+import { HelpLink } from '../../components/help';
 
 // Added: Currency formatter for consistent display
 const currencyFormatter = new Intl.NumberFormat('en-US', {
@@ -165,6 +167,7 @@ export function CashFlowPage() {
               ? `${formatDateDisplay(cashFlow.periodStart)} to ${formatDateDisplay(cashFlow.periodEnd)}`
               : 'Cash movements and liquidity analysis'}
           </p>
+          <HelpLink section="cash-flow" className="mt-1 self-start" />
         </div>
       </div>
 

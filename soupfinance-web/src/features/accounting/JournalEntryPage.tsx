@@ -27,6 +27,8 @@ import { useFormatCurrency } from '../../stores';
 import { ModuleDisabledBanner } from '../../components/feedback';
 import { getApiErrorMessage } from '../../api/errors';
 import type { CreateJournalEntryRequest } from '../../types';
+// Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
+import { HelpLink } from '../../components/help';
 
 // Added: Zod schema for journal entry line item validation
 // Fix: Using number().default(0) instead of coerce.number() for proper TypeScript inference
@@ -286,6 +288,7 @@ export function JournalEntryPage() {
                 ? 'Modify this accounting transaction'
                 : 'Record a multi-line accounting transaction'}
           </p>
+          <HelpLink section="journal-entry" className="mt-1 self-start" />
         </div>
 
         {/* Action Buttons */}

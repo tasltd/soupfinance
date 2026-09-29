@@ -13,6 +13,8 @@ import { listLedgerAccounts } from '../../api/endpoints/ledger';
 import { useFormatCurrency } from '../../stores';
 import { ApiErrorState } from '../../components/feedback';
 import type { LedgerAccount, LedgerGroup } from '../../types';
+// Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
+import { HelpLink } from '../../components/help';
 
 // Added: Group configuration with colors and icons
 const GROUP_CONFIG: Record<LedgerGroup, { label: string; icon: string; colorClass: string }> = {
@@ -78,6 +80,7 @@ export function ChartOfAccountsPage() {
             Chart of Accounts
           </h1>
           <p className="text-subtle-text">Manage your ledger accounts</p>
+          <HelpLink section="chart-of-accounts" className="mt-1 self-start" />
         </div>
       </div>
 

@@ -21,6 +21,8 @@ import {
 } from '../../api/endpoints/invoices';
 import { useFormatCurrency } from '../../stores';
 import { usePdf, useEmailSend } from '../../hooks';
+// Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
+import { HelpLink } from '../../components/help';
 
 export function InvoiceDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -152,6 +154,7 @@ export function InvoiceDetailPage() {
               {invoice.status || 'DRAFT'}
             </span>
           </p>
+          <HelpLink section="view-invoice" className="mt-1 self-start" />
         </div>
         <div className="flex flex-wrap gap-3">
           <Link to="/invoices" className="h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm flex items-center hover:bg-primary/5">
@@ -330,8 +333,10 @@ export function InvoiceDetailPage() {
 
       {/* Payment History */}
       <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden" data-testid="invoice-payments-card">
-        <div className="px-6 py-4 border-b border-border-light dark:border-border-dark flex justify-between items-center">
+        <div className="px-6 py-4 border-b border-border-light dark:border-border-dark flex justify-between items-center gap-4">
           <h2 className="text-lg font-bold text-text-light dark:text-text-dark">Payment History</h2>
+          {/* Added (SOUPFIN-81): how recording a payment works */}
+          <HelpLink section="record-payment" className="ml-auto" />
           {canRecordPayment && (
             <Link
               to={`/payments/new?invoiceId=${id}`}

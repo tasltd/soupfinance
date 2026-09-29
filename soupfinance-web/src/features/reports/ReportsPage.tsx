@@ -4,6 +4,8 @@
 import { Link } from 'react-router-dom';
 // Added: GSAP page entrance animation (SOUP-679)
 import { usePageEntrance } from '../../hooks/useGsapAnimations';
+// Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
+import { HelpLink } from '../../components/help';
 
 const reports = [
   { title: 'Profit & Loss', description: 'Revenue, expenses, and net income', icon: 'trending_up', path: '/reports/pnl' },
@@ -26,6 +28,7 @@ export function ReportsPage() {
       <div>
         <h1 className="text-3xl font-black tracking-tight text-text-light dark:text-text-dark" data-testid="reports-heading">Reports</h1>
         <p className="text-subtle-text">Financial reports and analytics</p>
+        <HelpLink section="reports" className="mt-1 self-start" />
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {reports.map((report) => (

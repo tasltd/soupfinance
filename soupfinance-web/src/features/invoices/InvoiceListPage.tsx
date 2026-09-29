@@ -8,6 +8,8 @@ import { listInvoices } from '../../api';
 import { useFormatCurrency } from '../../stores';
 // Added: GSAP page entrance animation (SOUP-679)
 import { usePageEntrance } from '../../hooks/useGsapAnimations';
+// Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
+import { HelpLink } from '../../components/help';
 
 export function InvoiceListPage() {
   const formatCurrency = useFormatCurrency();
@@ -30,6 +32,7 @@ export function InvoiceListPage() {
             Invoices
           </h1>
           <p className="text-subtle-text">Manage and track your invoices</p>
+          <HelpLink section="invoices" className="mt-1 self-start" />
         </div>
         <Link
           to="/invoices/new"

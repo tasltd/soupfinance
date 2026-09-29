@@ -18,6 +18,8 @@ import { formatDisplayDate, getTodayIsoDate } from '../../utils/date';
 // Fix (SOUPFIN-33 #4): tenant-currency formatter (was hardcoded USD/"$0.00").
 import { useFormatCurrency } from '../../stores';
 import type { AgingReport, AgingItem } from '../../types';
+// Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
+import { HelpLink } from '../../components/help';
 
 // Fix(SOUPFIN-11/SOUPFIN-16): Earliest date users can pick for historical aging analysis.
 // The browser-native date picker's year navigation is gated by this min — users on
@@ -420,6 +422,7 @@ export function AgingReportsPage() {
             {/* Fix (SOUPFIN-30 #12): format the date for display (was raw ISO). */}
             <span className="font-medium text-text-light dark:text-text-dark">{formatDisplayDate(asOfDate)}</span>
           </p>
+          <HelpLink section="aging" className="mt-1 self-start" />
         </div>
 
         {/* As Of Date Picker */}

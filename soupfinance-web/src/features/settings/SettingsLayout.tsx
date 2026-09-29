@@ -3,6 +3,9 @@
  * PURPOSE: Provides sub-navigation for Settings pages
  */
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
+// Added (SOUPFIN-81): "Need Help?" link; the tabs share this header, so the
+// guide section follows the open tab.
+import { HelpLink, settingsHelpSection } from '../../components/help';
 
 interface SettingsNavItem {
   label: string;
@@ -46,6 +49,7 @@ export default function SettingsLayout() {
           Settings
         </h1>
         <p className="text-subtle-text">Manage your account and team settings</p>
+        <HelpLink section={settingsHelpSection(location.pathname)} className="mt-1" testId="help-link-settings-page" />
       </div>
 
       {/* Sub-navigation Tabs */}

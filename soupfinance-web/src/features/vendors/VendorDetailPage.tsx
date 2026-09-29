@@ -7,6 +7,8 @@ import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getVendor, deleteVendor } from '../../api';
 import { useState } from 'react';
+// Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
+import { HelpLink } from '../../components/help';
 
 // Added: Delete confirmation state interface
 interface DeleteState {
@@ -81,6 +83,7 @@ export function VendorDetailPage() {
             {vendor.name}
           </h1>
           <p className="text-subtle-text">Vendor Details</p>
+          <HelpLink section="vendors" className="mt-1 self-start" />
         </div>
         <div className="flex gap-3">
           <button

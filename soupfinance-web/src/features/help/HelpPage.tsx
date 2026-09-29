@@ -10,10 +10,11 @@
  * through, so other screens can deep-link to a section.
  */
 import { useLocation } from 'react-router-dom';
+// Changed (SOUPFIN-81): the guide URL moved to helpSections so the
+// "Need Help?" links share it; re-exported here for existing imports.
+import { USER_GUIDE_URL } from '../../components/help/helpSections';
 
-// Point at index.html explicitly: a bare /user-guide/ falls through to the SPA
-// fallback on the Vite dev server and would render the app inside itself.
-export const USER_GUIDE_URL = '/user-guide/index.html';
+export { USER_GUIDE_URL };
 
 export function HelpPage() {
   const { hash } = useLocation();
