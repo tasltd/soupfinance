@@ -378,7 +378,9 @@ describe('CompanyInfoPage', () => {
   })
 
   describe('navigation', () => {
-    it('navigates to /register when Back button is clicked', async () => {
+    // Fix (SOUPFIN-86): a signed-in user must go back to the dashboard, never
+    // to the public /register sign-up form.
+    it('navigates to /dashboard when Back button is clicked', async () => {
       const user = userEvent.setup()
       renderCompanyInfoPage()
 
@@ -388,7 +390,22 @@ describe('CompanyInfoPage', () => {
 
       await user.click(screen.getByText('Back'))
 
-      expect(mockNavigate).toHaveBeenCalledWith('/register')
+      expect(mockNavigate).toHaveBeenCalledTimes(1)
+      expect(mockNavigate).toHaveBeenCalledWith('/dashboard')
+      expect(mockNavigate).not.toHaveBeenCalledWith('/register')
+    })
+
+    it('navigates to /dashboard on Back even when no corporate id is in the URL', async () => {
+      const user = userEvent.setup()
+      renderCompanyInfoPage({ corporateId: '' })
+
+      await waitFor(() => {
+        expect(screen.getByText('Back')).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByText('Back'))
+
+      expect(mockNavigate).toHaveBeenCalledWith('/dashboard')
     })
 
     it('navigates to directors page when Skip button is clicked', async () => {
