@@ -209,7 +209,9 @@ export function DocumentsPage() {
       </div>
 
       {/* Progress Indicator */}
-      <div className="flex items-center gap-2 text-sm">
+      {/* Fix (SOUPFIN-78): flex-wrap — the four steps are ~500px wide and ran off
+          the right edge of a phone screen. */}
+      <div className="flex flex-wrap items-center gap-2 text-sm" data-testid="onboarding-progress-steps">
         <span className="flex items-center justify-center size-6 rounded-full bg-green-500 text-white text-xs font-bold">
           <span className="material-symbols-outlined text-sm">check</span>
         </span>

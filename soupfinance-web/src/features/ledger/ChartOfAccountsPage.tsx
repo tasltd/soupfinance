@@ -135,7 +135,9 @@ export function ChartOfAccountsPage() {
 
                 {/* Group Accounts */}
                 {isExpanded && (
-                  <div className="border-t border-border-light dark:border-border-dark">
+                  /* Fix (SOUPFIN-78): overflow-x-auto so the Balance and Status columns
+                     scroll into view on a phone instead of being cut off. */
+                  <div className="overflow-x-auto border-t border-border-light dark:border-border-dark">
                     <table className="w-full text-sm" data-testid={`coa-table-${group.toLowerCase()}`}>
                       {/* Changed: Added currency and parent account columns */}
                       <thead className="text-xs text-subtle-text uppercase bg-background-light dark:bg-background-dark">
