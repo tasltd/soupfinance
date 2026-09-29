@@ -542,23 +542,11 @@ const json = (body: unknown) => ({
 export async function installGuideMocks(page: Page) {
   const fulfil = (body: unknown) => (route: Route) => route.fulfill(json(body));
 
-  // --- catch-all for proxied API prefixes -----------------------------------
-  // Anything not claimed below answers 200 [] rather than falling through to the
-  // Vite proxy, where a real backend would 401 and bounce the page to /login
-  // mid-capture.
-  //
-  // Anchored at the FIRST path segment on purpose. A loose glob like
-  // `**/client/**` also matches Vite's own `/node_modules/vite/dist/client/env.mjs`,
-  // and stubbing that out breaks the dev client on every page — the app never
-  // mounts and every capture times out waiting for its testid.
-  const PROXIED_API_PREFIXES = [
-    /^https?:\/\/[^/]+\/rest\//,
-    /^https?:\/\/[^/]+\/account\//,
-    /^https?:\/\/[^/]+\/client\//,
-  ];
-  for (const prefix of PROXIED_API_PREFIXES) {
-    await page.route(prefix, (route) => route.fulfill(json([])));
-  }
+  // Changed (SOUPFIN-80): no catch-all here any more. It answered 200 [] for
+  // anything unlisted, which kept calls off the Vite proxy but hid them. The
+  // spec installs installUnmockedApiGuard (e2e/fixtures.ts) before calling this,
+  // so an endpoint missing below now fails the capture by name instead of
+  // silently photographing an empty page.
 
   // --- auth / identity ------------------------------------------------------
   await page.route('**/rest/api/login', (route) =>
@@ -581,6 +569,15 @@ export async function installGuideMocks(page: Page) {
     { id: 'role-2', authority: 'ROLE_USER' },
   ]));
   await page.route('**/rest/frontendLog/batch.json*', fulfil({ received: 0 }));
+
+  // Added (SOUPFIN-80): the dashboard asks whether the tenant has an unfinished
+  // corporate KYC application. The removed catch-all used to answer these; mock
+  // them as mockAmbientApi does — current.json 404s (the backend has no such
+  // action yet) and the list is empty — so the guide shows no onboarding banner.
+  await page.route('**/rest/corporate/current*', (route) =>
+    route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ error: 'Not Found' }) })
+  );
+  await page.route('**/rest/corporate/index.json*', fulfil([]));
 
   // --- receivables ----------------------------------------------------------
   await page.route('**/rest/client/index.json*', fulfil(clients));

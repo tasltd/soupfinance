@@ -22,6 +22,7 @@ import { test, expect, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { installGuideMocks, seedAuthenticatedSession, guideUser } from './user-guide/guide-mocks';
+import { installUnmockedApiGuard, type UnmockedApiGuard } from './fixtures';
 
 const IMAGE_DIR = join(process.cwd(), 'public', 'user-guide', 'images');
 
@@ -35,6 +36,23 @@ test.use({ viewport: { width: 1440, height: 900 } });
 // 30s project default is too tight for the Reports walk in particular.
 test.describe.configure({ mode: 'parallel' });
 test.setTimeout(120_000);
+
+// Added (SOUPFIN-80): the guard replaces the silent `200 []` catch-all that
+// installGuideMocks used to register. That catch-all kept unmocked calls away
+// from the Vite proxy, but it also hid them: a page could be captured showing
+// an empty table because its endpoint was never mocked. The guard still stops
+// them reaching the proxy (503, no /login redirect) and now names them. It is
+// installed here, before installGuideMocks runs in the test body, so every
+// explicit guide mock takes precedence over it.
+let apiGuard: UnmockedApiGuard;
+
+test.beforeEach(async ({ page }) => {
+  apiGuard = await installUnmockedApiGuard(page);
+});
+
+test.afterEach(() => {
+  apiGuard?.assertNone();
+});
 
 /** JPEG keeps the guide's ~30 images to a sane size for a repo and a page load. */
 async function shoot(page: Page, name: string) {

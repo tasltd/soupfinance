@@ -21,7 +21,33 @@
  * as evidence for this fix.
  */
 import { test, expect, type Page } from '@playwright/test';
-import { mockTokenValidationApi, mockVendorsApi, isLxcMode } from './fixtures';
+import {
+  mockTokenValidationApi,
+  mockVendorsApi,
+  isLxcMode,
+  installUnmockedApiGuard,
+  mockAmbientApi,
+  type UnmockedApiGuard,
+} from './fixtures';
+
+// Added (SOUPFIN-80): file-level hooks, so every describe below is covered. The
+// guard is installed before the test body registers its mocks, which then take
+// precedence; it only sees calls nothing else claimed. Left unguarded, such a
+// call proxies to VITE_PROXY_TARGET, a real backend there answers 401, client.ts
+// reloads to /login and the page lands on /dashboard mid-test.
+let apiGuard: UnmockedApiGuard;
+
+test.beforeEach(async ({ page }) => {
+  apiGuard = await installUnmockedApiGuard(page);
+  // Added (SOUPFIN-80): frontendLog batches (every page, dev mode sends all
+  // levels) and the lookup pickers. Tests register their own data mocks later,
+  // which take precedence over these defaults.
+  await mockAmbientApi(page);
+});
+
+test.afterEach(() => {
+  apiGuard?.assertNone();
+});
 
 /**
  * Screenshots go to a git-tracked directory rather than through the shared

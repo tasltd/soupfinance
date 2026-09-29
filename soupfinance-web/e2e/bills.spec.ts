@@ -20,7 +20,17 @@
  *   - GET /rest/vendor/index.json - list vendors for dropdown
  */
 import { test, expect } from '@playwright/test';
-import { takeScreenshot, mockTokenValidationApi, mockDashboardApi, isLxcMode, backendTestUsers, setupResponseValidation } from './fixtures';
+import {
+  takeScreenshot,
+  mockTokenValidationApi,
+  mockDashboardApi,
+  isLxcMode,
+  backendTestUsers,
+  setupResponseValidation,
+  installUnmockedApiGuard,
+  mockAmbientApi,
+  type UnmockedApiGuard,
+} from './fixtures';
 
 // =============================================================================
 // Mock Data
@@ -361,6 +371,20 @@ async function mockCreateBillApi(page: any, success = true, createdBill?: typeof
   // Skip mocking in LXC mode - let requests go to real backend
   if (isLxcMode()) return;
 
+  // Added (SOUPFIN-80): createBill() fetches its CSRF token from create.json
+  // before posting. Unmocked, that call failed, save.json was never sent, and the
+  // "saves" test still passed because `/bills/new` matches its loose URL check.
+  await page.route('**/rest/bill/create.json*', (route: any) => {
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        SYNCHRONIZER_TOKEN: 'mock-csrf-token-bill',
+        SYNCHRONIZER_URI: '/rest/bill/save',
+      }),
+    });
+  });
+
   await page.route('**/rest/bill/save.json*', (route: any) => {
     if (success) {
       route.fulfill({
@@ -484,7 +508,23 @@ async function _mockRecordPaymentApi(page: any, success = true) {
 // =============================================================================
 
 test.describe('Bill Management', () => {
+  // Added (SOUPFIN-80): install the unmocked-API guard FIRST. Mocks registered
+  // after it take precedence, so it only sees calls nothing else claimed. Left
+  // unguarded, such a call proxies to VITE_PROXY_TARGET, a real backend there
+  // answers 401, client.ts reloads to /login, the init script restores the token
+  // and the page lands on /dashboard, failing a later, unrelated assertion.
+  let apiGuard: UnmockedApiGuard;
+
+  test.afterEach(() => {
+    apiGuard?.assertNone();
+  });
+
   test.beforeEach(async ({ page }) => {
+    apiGuard = await installUnmockedApiGuard(page);
+    // Added (SOUPFIN-80): frontendLog batches (every page, dev mode sends all
+    // levels) and the lookup pickers. Tests register their own data mocks later,
+    // which take precedence over these defaults.
+    await mockAmbientApi(page);
     await setupAuth(page);
     // Added: Validate API response shapes at runtime
     await setupResponseValidation(page);
@@ -599,6 +639,8 @@ test.describe('Bill Management', () => {
     test('clicking row navigates to bill detail page', async ({ page }) => {
       await mockBillsApi(page, mockBills);
       await mockBillDetailApi(page, mockBills[0]);
+      // Added (SOUPFIN-80): the detail page loads the bill's payment history.
+      await mockBillPaymentsApi(page, 'bill-001', []);
 
       await page.goto('/bills');
 
@@ -804,7 +846,9 @@ test.describe('Bill Management', () => {
       await page.getByTestId('bill-form-save-button').click();
 
       // Should redirect to bills list
-      await expect(page).toHaveURL(/\/bills/);
+      // Fix (SOUPFIN-80): anchored. `/\/bills/` already matched `/bills/new`, so
+      // this passed even when the save never happened.
+      await expect(page).toHaveURL(/\/bills$/);
 
       await takeScreenshot(page, 'bills-form-saved-draft');
     });
@@ -945,6 +989,9 @@ test.describe('Bill Management', () => {
       await mockBillDetailApi(page, mockBills[0]);
       await mockVendorsApi(page);
       await mockUpdateBillApi(page, 'bill-001', true);
+      // Added (SOUPFIN-80): a successful update lands on the detail page, which
+      // loads the bill's payment history.
+      await mockBillPaymentsApi(page, 'bill-001', []);
 
       await page.goto('/bills/bill-001/edit');
 
@@ -957,8 +1004,10 @@ test.describe('Bill Management', () => {
       // Click save
       await page.getByTestId('bill-form-save-button').click();
 
-      // Should redirect or show success
-      await expect(page).toHaveURL(/\/bills/);
+      // Should redirect to the bill's detail page
+      // Fix (SOUPFIN-80): anchored. `/\/bills/` already matched the edit URL, so
+      // this passed even when the update never happened.
+      await expect(page).toHaveURL(/\/bills\/bill-001$/);
 
       await takeScreenshot(page, 'bills-edit-form-saved');
     });
@@ -1113,6 +1162,8 @@ test.describe('Bill Management', () => {
     test('record payment button navigates to payment form', async ({ page }) => {
       await mockBillDetailApi(page, mockBills[0]);
       await mockBillPaymentsApi(page, 'bill-001', []);
+      // Added (SOUPFIN-80): the payment form it lands on loads the bills dropdown.
+      await mockBillsApi(page);
 
       await page.goto('/bills/bill-001');
 
