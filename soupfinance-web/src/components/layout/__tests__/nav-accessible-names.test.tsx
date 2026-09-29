@@ -190,9 +190,9 @@ describe('SideNav collapsed — hiding the icon must not erase the name (SOUPFIN
     }
   });
 
-  it('names the Help and Logout buttons when collapsed', () => {
+  it('names the Help link and Logout button when collapsed', () => {
     renderSideNav('/dashboard');
-    expect(screen.getByRole('button', { name: 'Help' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Help' })).toHaveAttribute('href', '/help');
     expect(screen.getByRole('button', { name: 'Logout' })).toBeInTheDocument();
   });
 
@@ -212,7 +212,7 @@ describe('SideNav expanded — Help/Logout/toggle names (SOUPFIN-63)', () => {
 
   it('names Help and Logout from their visible labels, without the ligature', () => {
     renderSideNav('/dashboard');
-    expect(screen.getByRole('button', { name: 'Help' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Help' })).toHaveAttribute('href', '/help');
     const logout = screen.getByRole('button', { name: 'Logout' });
     // data-testid must survive — existing specs click through it.
     expect(logout).toHaveAttribute('data-testid', 'logout-button');
