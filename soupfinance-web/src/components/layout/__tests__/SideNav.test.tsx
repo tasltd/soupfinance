@@ -287,16 +287,31 @@ describe('SideNav — mobile drawer closes on navigation (SOUPFIN-76)', () => {
     unsubscribe();
   });
 
+  // Fix (SOUPFIN-83): this took 2.5 s alone and 6.7 s under a loaded full run,
+  // past Vitest's 5 s default. Almost all of it was 50 getByRole calls, each
+  // rebuilding the accessibility tree. None of these stops has sub-items, so
+  // the nav's link nodes are stable: resolve them once by role, then check each
+  // is still attached and that the click reached its page on every cycle. The
+  // explicit timeout is headroom for a loaded machine, not the fix itself.
   it('closes on every tap across 50 open-and-navigate cycles', () => {
     const { container } = renderWithLocation('/dashboard');
-    const stops = ['Invoices', 'Bills', 'Clients', 'Payments', 'Dashboard'];
+    const stops = [
+      { label: 'Invoices', path: '/invoices' },
+      { label: 'Bills', path: '/bills' },
+      { label: 'Clients', path: '/clients' },
+      { label: 'Payments', path: '/payments' },
+      { label: 'Dashboard', path: '/dashboard' },
+    ].map((stop) => ({ ...stop, link: screen.getByRole('link', { name: stop.label }) }));
+    const where = screen.getByTestId('where');
     for (let i = 0; i < 50; i++) {
-      const label = stops[i % stops.length];
+      const { link, path } = stops[i % stops.length];
       openDrawer();
       expect(useUIStore.getState().mobileSidebarOpen).toBe(true);
-      fireEvent.click(screen.getByRole('link', { name: label }));
+      expect(link.isConnected).toBe(true);
+      fireEvent.click(link);
+      expect(where).toHaveTextContent(path);
       expectClosed(container);
     }
-    expect(screen.getByTestId('where')).toHaveTextContent('/dashboard');
-  });
+    expect(where).toHaveTextContent('/dashboard');
+  }, 20_000);
 });
