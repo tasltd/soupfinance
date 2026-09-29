@@ -17,7 +17,14 @@
  * an aria attribute, but by being unable to find the link at all.
  */
 import { test, expect, type Page } from '@playwright/test';
-import { mockAmbientApi, mockTokenValidationApi, mockDashboardApi, isLxcMode } from './fixtures';
+import {
+  mockAmbientApi,
+  mockTokenValidationApi,
+  mockDashboardApi,
+  installUnmockedApiGuard,
+  isLxcMode,
+  type UnmockedApiGuard,
+} from './fixtures';
 
 /**
  * Screenshots go to a git-tracked directory rather than through the shared
@@ -31,16 +38,19 @@ async function shot(page: Page, name: string) {
   });
 }
 
-/** Top-level sidebar destinations, as (exact accessible name, landing URL). */
-const NAV_ITEMS: Array<[label: string, url: RegExp]> = [
-  ['Invoices', /\/invoices/],
-  ['Bills', /\/bills/],
-  ['Clients', /\/clients/],
-  ['Payments', /\/payments/],
-  ['Ledger', /\/ledger\/accounts/],
-  ['Accounting', /\/accounting\/transactions/],
-  ['Reports', /\/reports/],
-  ['Dashboard', /\/dashboard/],
+/**
+ * Top-level sidebar destinations, as (exact accessible name, landing URL, the
+ * landing page's own test id).
+ */
+const NAV_ITEMS: Array<[label: string, url: RegExp, pageTestId: string]> = [
+  ['Invoices', /\/invoices/, 'invoice-list-page'],
+  ['Bills', /\/bills/, 'bill-list-page'],
+  ['Clients', /\/clients/, 'client-list-page'],
+  ['Payments', /\/payments/, 'payment-list-page'],
+  ['Ledger', /\/ledger\/accounts/, 'chart-of-accounts-page'],
+  ['Accounting', /\/accounting\/transactions/, 'transaction-register-page'],
+  ['Reports', /\/reports/, 'reports-page'],
+  ['Dashboard', /\/dashboard/, 'dashboard-page'],
 ];
 
 /** The ligatures the sidebar renders. None may appear in an accessible name. */
@@ -59,7 +69,17 @@ const LIGATURES = [
 test.describe('SOUPFIN-63: nav links are named without the icon ligature', () => {
   test.skip(isLxcMode(), 'Mock-only spec: drives the nav chrome, not backend data');
 
+  let apiGuard: UnmockedApiGuard;
+
   test.beforeEach(async ({ page }) => {
+    // Fix (SOUPFIN-79): the guard goes FIRST so it only sees what no mock below
+    // claims. Without it, an unmocked call is proxied to whatever answers on
+    // VITE_PROXY_TARGET. When that is a real backend it answers 401, client.ts
+    // reloads to /login, the init script below restores the token, and the app
+    // bounces to /dashboard. The nav test then failed on whichever click came
+    // next, which looked like a lost click under load.
+    apiGuard = await installUnmockedApiGuard(page);
+
     await page.addInitScript(() => {
       const mockUser = {
         username: 'admin',
@@ -77,7 +97,33 @@ test.describe('SOUPFIN-63: nav links are named without the icon ligature', () =>
     await mockAmbientApi(page);
     await mockTokenValidationApi(page, true);
     await mockDashboardApi(page);
+
+    // Fix (SOUPFIN-79): the list pages the nav test opens. Payments loads both
+    // payment kinds; the Transaction Register loads journal groups and vouchers.
+    // These four were unmocked, and their 401s caused the flake.
+    const emptyList = { status: 200, contentType: 'application/json', body: '[]' };
+    for (const endpoint of [
+      'invoicePayment',
+      'billPayment',
+      'ledgerTransactionGroup',
+      'voucher',
+    ]) {
+      await page.route(`**/rest/${endpoint}/index.json*`, (route) => route.fulfill(emptyList));
+    }
+    // The sub-items test opens Trial Balance. An empty result list is a valid,
+    // balanced report: no accounts, zero totals.
+    await page.route('**/rest/financeReports/trialBalance.json*', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ resultList: {}, totalDebit: 0, totalCredit: 0 }),
+      })
+    );
   });
+
+  // Fix (SOUPFIN-79): name any endpoint a page starts calling without a mock,
+  // rather than letting it surface later as an unexplained bounce to /dashboard.
+  test.afterEach(() => apiGuard.assertNone('SOUPFIN-63 nav spec'));
 
   test('every top-level item navigates when located by its exact name', async ({ page }) => {
     await page.goto('/dashboard');
@@ -86,7 +132,7 @@ test.describe('SOUPFIN-63: nav links are named without the icon ligature', () =>
 
     const nav = page.locator('nav');
 
-    for (const [label, url] of NAV_ITEMS) {
+    for (const [label, url, pageTestId] of NAV_ITEMS) {
       // `exact: true` is the whole ticket. Before the fix this resolved to zero
       // elements for every label and the click timed out.
       const link = nav.getByRole('link', { name: label, exact: true });
@@ -95,8 +141,15 @@ test.describe('SOUPFIN-63: nav links are named without the icon ligature', () =>
       // Navigate by clicking the menu — never page.goto() for an internal route.
       await link.click();
       await expect(page).toHaveURL(url);
+      // Fix (SOUPFIN-79): wait for the page itself, not just the URL, so each
+      // click starts from a page that has finished rendering.
+      await expect(page.getByTestId(pageTestId)).toBeVisible({ timeout: 15000 });
     }
 
+    // The loop ends on the dashboard, whose GSAP entrance fades content in.
+    // Let it finish so the screenshot shows the page rather than a blank frame.
+    await expect(page.getByTestId('dashboard-recent-invoices')).toBeVisible();
+    await expect(page.getByTestId('dashboard-heading')).toHaveCSS('opacity', '1');
     await shot(page, '02-navigated-all-items-by-exact-name');
   });
 
