@@ -203,14 +203,19 @@ describe('DocumentsPage', () => {
       expect(screen.getByRole('button', { name: /submit for review/i })).toBeInTheDocument()
     })
 
-    it('renders Additional Information section', async () => {
+    // Fix: SOUPFIN-85 - the Directors page has no ID upload, so the Documents page must not
+    // send users there to upload director IDs.
+    it('does not tell users to upload director IDs on the Directors page', async () => {
       renderDocumentsPage()
 
       await waitFor(() => {
-        expect(screen.getByText('Additional Information')).toBeInTheDocument()
+        expect(screen.getByText('Certificate of Incorporation')).toBeInTheDocument()
       })
-      expect(screen.getByText(/Director ID copies should be uploaded/)).toBeInTheDocument()
-      expect(screen.getByText('Go to Directors')).toBeInTheDocument()
+      expect(screen.queryByText('Additional Information')).not.toBeInTheDocument()
+      expect(screen.queryByText(/Director ID/i)).not.toBeInTheDocument()
+      expect(screen.queryByText('Go to Directors')).not.toBeInTheDocument()
+      // Back is now the only route to the Directors step
+      expect(screen.getAllByRole('button', { name: /back/i })).toHaveLength(1)
     })
   })
 
@@ -811,20 +816,6 @@ describe('DocumentsPage', () => {
 
       const backButton = screen.getByRole('button', { name: /back/i })
       await user.click(backButton)
-
-      expect(mockNavigate).toHaveBeenCalledWith('/onboarding/directors?id=corp-001')
-    })
-
-    it('navigates to directors page when "Go to Directors" link is clicked', async () => {
-      const user = userEvent.setup()
-      renderDocumentsPage('corp-001', [])
-
-      await waitFor(() => {
-        expect(screen.getByText('Go to Directors')).toBeInTheDocument()
-      })
-
-      const goToDirectorsLink = screen.getByText('Go to Directors')
-      await user.click(goToDirectorsLink)
 
       expect(mockNavigate).toHaveBeenCalledWith('/onboarding/directors?id=corp-001')
     })

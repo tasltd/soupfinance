@@ -366,23 +366,9 @@ export function DocumentsPage() {
         </div>
       )}
 
-      {/* Additional Documents Section */}
-      <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-6">
-        <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">
-          Additional Information
-        </h3>
-        <p className="text-sm text-subtle-text mb-4">
-          Director ID copies should be uploaded via the Directors page. Each director can have their
-          ID document attached to their profile.
-        </p>
-        <button
-          onClick={() => navigate(`/onboarding/directors?id=${corporateId}`)}
-          className="text-sm text-primary font-medium hover:underline flex items-center gap-1"
-        >
-          Go to Directors
-          <span className="material-symbols-outlined text-base">arrow_forward</span>
-        </button>
-      </div>
+      {/* Fix: SOUPFIN-85 - removed the "Additional Information" card. It told users to upload
+          director ID copies on the Directors page, but that page has no upload, so following it
+          was a dead end. Restore it only once the person form can attach proofOfIdentity. */}
     </div>
   );
 }
