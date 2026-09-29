@@ -20,8 +20,8 @@
  * did. Mocking the whole stores barrel would break `useUIStore.setState()`.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { render, screen, act, fireEvent } from '@testing-library/react';
+import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom';
 import type { BusinessLicenceCategory } from '../../../types/settings';
 
 // Driven per-test; `undefined` models "account settings not loaded yet".
@@ -177,5 +177,126 @@ describe('SideNav — category-aware visibility (SOUPFIN-25)', () => {
     const { container } = renderAt('/dashboard');
 
     expect(container.querySelector('a[href="/vendors"]')).not.toBeNull();
+  });
+});
+
+/**
+ * SOUPFIN-76 — tapping a link in the mobile drawer left the drawer and its
+ * overlay covering the page it opened; only the overlay's onClick closed it.
+ * SideNav now closes the drawer on every navigation. Each test opens the drawer
+ * AFTER mount (as the menu button does), clicks a real NavLink, and checks both
+ * the store and the rendered overlay, plus the location the click reached.
+ */
+describe('SideNav — mobile drawer closes on navigation (SOUPFIN-76)', () => {
+  const OVERLAY = 'div.fixed.inset-0';
+
+  function Where() {
+    const location = useLocation();
+    return <output data-testid="where">{location.pathname}</output>;
+  }
+
+  function renderWithLocation(path: string) {
+    return render(
+      <MemoryRouter initialEntries={[path]}>
+        <SideNav />
+        <Routes>
+          <Route path="*" element={<Where />} />
+        </Routes>
+      </MemoryRouter>
+    );
+  }
+
+  function openDrawer() {
+    act(() => useUIStore.getState().setMobileSidebarOpen(true));
+  }
+
+  function expectClosed(container: HTMLElement) {
+    expect(useUIStore.getState().mobileSidebarOpen).toBe(false);
+    expect(container.querySelector(OVERLAY)).toBeNull();
+    expect(container.querySelector('aside')!.className).toContain('-translate-x-full');
+  }
+
+  beforeEach(() => {
+    useUIStore.setState({ sidebarCollapsed: false, mobileSidebarOpen: false });
+    mockBusinessCategory = 'TRADING';
+  });
+
+  it('stays open after opening when nothing navigates', () => {
+    // Guards the effect's dependencies: listing the open flag would close the
+    // drawer the instant the menu button opened it.
+    const { container } = renderWithLocation('/dashboard');
+    openDrawer();
+    expect(useUIStore.getState().mobileSidebarOpen).toBe(true);
+    expect(container.querySelector(OVERLAY)).not.toBeNull();
+    expect(container.querySelector('aside')!.className).toContain('translate-x-0');
+  });
+
+  it('closes when a top-level link is tapped, and the page changes', () => {
+    const { container } = renderWithLocation('/dashboard');
+    openDrawer();
+    fireEvent.click(screen.getByRole('link', { name: 'Invoices' }));
+    expect(screen.getByTestId('where')).toHaveTextContent('/invoices');
+    expectClosed(container);
+  });
+
+  it('closes when a sub-item link is tapped', () => {
+    const { container } = renderWithLocation('/reports');
+    openDrawer();
+    fireEvent.click(screen.getByRole('link', { name: 'Trial Balance' }));
+    expect(screen.getByTestId('where')).toHaveTextContent('/reports/trial-balance');
+    expectClosed(container);
+  });
+
+  it('closes when the Help link at the bottom is tapped', () => {
+    const { container } = renderWithLocation('/dashboard');
+    openDrawer();
+    fireEvent.click(screen.getByTestId('help-link'));
+    expect(screen.getByTestId('where')).toHaveTextContent('/help');
+    expectClosed(container);
+  });
+
+  it('closes when the link for the page already open is tapped', () => {
+    // The path does not change here, so a pathname-keyed close would miss it.
+    const { container } = renderWithLocation('/invoices');
+    openDrawer();
+    fireEvent.click(screen.getByRole('link', { name: 'Invoices' }));
+    expect(screen.getByTestId('where')).toHaveTextContent('/invoices');
+    expectClosed(container);
+  });
+
+  it('still closes from the overlay, as before', () => {
+    const { container } = renderWithLocation('/dashboard');
+    openDrawer();
+    fireEvent.click(container.querySelector(OVERLAY)!);
+    expect(screen.getByTestId('where')).toHaveTextContent('/dashboard');
+    expectClosed(container);
+  });
+
+  it('does not touch the store on navigation when the drawer is already closed', () => {
+    // Desktop case: every route change would otherwise write to the store and
+    // re-render every subscriber for nothing.
+    // subscribe() sees every write; a spy on useUIStore.setState would not,
+    // because the store's actions call zustand's internal set directly.
+    renderWithLocation('/dashboard');
+    let writes = 0;
+    const unsubscribe = useUIStore.subscribe(() => writes++);
+    fireEvent.click(screen.getByRole('link', { name: 'Invoices' }));
+    fireEvent.click(screen.getByRole('link', { name: 'Bills' }));
+    expect(screen.getByTestId('where')).toHaveTextContent('/bills');
+    expect(writes).toBe(0);
+    unsubscribe();
+  });
+
+  it('closes on every tap across 50 open-and-navigate cycles', () => {
+    const { container } = renderWithLocation('/dashboard');
+    const stops = ['Invoices', 'Bills', 'Clients', 'Payments', 'Dashboard'];
+    for (let i = 0; i < 50; i++) {
+      const label = stops[i % stops.length];
+      openDrawer();
+      expect(useUIStore.getState().mobileSidebarOpen).toBe(true);
+      fireEvent.click(screen.getByRole('link', { name: label }));
+      expectClosed(container);
+    }
+    expect(screen.getByTestId('where')).toHaveTextContent('/dashboard');
   });
 });

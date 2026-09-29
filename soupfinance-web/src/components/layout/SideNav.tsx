@@ -2,6 +2,7 @@
  * Side Navigation Component
  * Reference: soupfinance-designs/balance-sheet-report/
  */
+import { useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuthStore, useUIStore, useAccountStore } from '../../stores';
 import type { BusinessLicenceCategory } from '../../types/settings';
@@ -86,6 +87,16 @@ export function SideNav() {
   const businessCategory = useAccountStore((state) => state.settings?.businessLicenceCategory);
   const { sidebarCollapsed, setSidebarCollapsed, mobileSidebarOpen, setMobileSidebarOpen } =
     useUIStore();
+
+  // Fix (SOUPFIN-76): close the mobile drawer on every navigation. Before this
+  // only the overlay's onClick closed it, so tapping a link left the drawer and
+  // overlay covering the page it opened. Keyed on `location.key`, not pathname,
+  // so tapping the link for the page already open (a replace to the same path)
+  // closes it too. The open state is read with getState() rather than listed as
+  // a dependency: depending on it would close the drawer the moment it opened.
+  useEffect(() => {
+    if (useUIStore.getState().mobileSidebarOpen) setMobileSidebarOpen(false);
+  }, [location.key, setMobileSidebarOpen]);
 
   // Added (SOUPFIN-25): hide items flagged for the current tenant's business category.
   // When the category is unknown (settings not yet loaded), items are shown by default.

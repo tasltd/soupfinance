@@ -182,9 +182,9 @@ test.describe('SOUPFIN-75: the user guide has a route in the app', () => {
     const frame = page.getByTestId('help-guide-frame');
     await waitForGuide(page);
 
-    // The drawer does not close itself on navigation (true of every sidebar
-    // link, tracked separately), so dismiss it to see the page underneath.
-    await page.locator('div.fixed.inset-0.bg-black\\/50').click({ position: { x: 360, y: 400 } });
+    // The drawer closes itself on navigation (SOUPFIN-76), so the page is
+    // visible without dismissing anything by hand.
+    await expect(page.locator('div.fixed.inset-0.bg-black\\/50')).toHaveCount(0);
     await expect(page.locator('aside')).not.toBeInViewport();
     await expect(page.getByTestId('help-open-new-tab')).toBeVisible();
 
