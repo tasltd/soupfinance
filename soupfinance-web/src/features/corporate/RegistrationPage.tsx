@@ -36,6 +36,8 @@ import {
 } from '../../api/endpoints/domainData';
 import type { Country } from '../../api/endpoints/domainData';
 import { Logo } from '../../components/Logo';
+// Added (SOUPFIN-89): free beta notice for new sign-ups
+import { FreeBetaBanner } from '../../components/feedback';
 
 export function RegistrationPage() {
   const navigate = useNavigate();
@@ -305,6 +307,9 @@ export function RegistrationPage() {
         </h2>
         <p className="mt-2 text-subtle-text">Start managing your business finances in minutes.</p>
       </div>
+
+      {/* Added (SOUPFIN-89): free beta notice */}
+      <FreeBetaBanner />
 
       {/* Form error message */}
       {validationErrors.form && (

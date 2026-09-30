@@ -9,6 +9,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getCorporate, updateCorporate } from '../../api/endpoints/corporate';
 // Added (SOUPFIN-84): "Need Help?" link to this step's part of the user guide
 import { HelpLink } from '../../components/help';
+// Added (SOUPFIN-89): free beta notice on every onboarding step
+import { FreeBetaBanner } from '../../components/feedback';
 
 // Added: Industry classification options
 const INDUSTRY_OPTIONS = [
@@ -240,6 +242,9 @@ export function CompanyInfoPage() {
           </button>
         </div>
       </div>
+
+      {/* Added (SOUPFIN-89): free beta notice */}
+      <FreeBetaBanner />
 
       {/* Progress Indicator */}
       <div className="flex items-center gap-2 text-sm">

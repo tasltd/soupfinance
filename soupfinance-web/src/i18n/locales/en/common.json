@@ -81,5 +81,9 @@
   "currency": {
     "symbol": "$",
     "code": "USD"
+  },
+  "freeBeta": {
+    "title": "Free beta until November 2027",
+    "message": "All users get one free year of beta access until November 2027."
   }
 }

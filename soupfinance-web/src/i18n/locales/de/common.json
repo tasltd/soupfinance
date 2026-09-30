@@ -81,5 +81,9 @@
   "currency": {
     "symbol": "€",
     "code": "EUR"
+  },
+  "freeBeta": {
+    "title": "Kostenlose Beta bis November 2027",
+    "message": "Alle Nutzer erhalten bis November 2027 ein Jahr lang kostenlosen Beta-Zugang."
   }
 }

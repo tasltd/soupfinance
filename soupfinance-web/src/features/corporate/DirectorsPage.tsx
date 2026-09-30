@@ -10,6 +10,8 @@ import { listDirectors, addDirector, updateDirector, deleteDirector } from '../.
 import type { CorporateAccountPerson } from '../../types';
 // Added (SOUPFIN-84): "Need Help?" link to this step's part of the user guide
 import { HelpLink } from '../../components/help';
+// Added (SOUPFIN-89): free beta notice on every onboarding step
+import { FreeBetaBanner } from '../../components/feedback';
 
 // Added: Role options for directors
 const ROLE_OPTIONS: { value: CorporateAccountPerson['role']; label: string }[] = [
@@ -165,6 +167,9 @@ export function DirectorsPage() {
           </button>
         </div>
       </div>
+
+      {/* Added (SOUPFIN-89): free beta notice */}
+      <FreeBetaBanner />
 
       {/* Progress Indicator */}
       <div className="flex items-center gap-2 text-sm">

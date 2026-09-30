@@ -11,3 +11,6 @@ export { ApiErrorState } from './ApiErrorState';
 export { ModuleDisabledBanner } from './ModuleDisabledBanner';
 // Added (SOUPFIN-55): dashboard entry point into the KYC onboarding wizard
 export { KycOnboardingBanner } from './KycOnboardingBanner';
+// Added (SOUPFIN-89): free beta notice for the dashboard, onboarding and sign-up
+export { FreeBetaBanner } from './FreeBetaBanner';
+export { isFreeBetaActive, FREE_BETA_LAST_DAY } from './freeBeta';

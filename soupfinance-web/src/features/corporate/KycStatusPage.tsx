@@ -9,6 +9,8 @@ import { getCorporate, listDocuments, listDirectors } from '../../api/endpoints/
 import type { CorporateDocuments } from '../../types';
 // Added (SOUPFIN-84): "Need Help?" link to this step's part of the user guide
 import { HelpLink } from '../../components/help';
+// Added (SOUPFIN-89): free beta notice on every onboarding step
+import { FreeBetaBanner } from '../../components/feedback';
 
 // Added: Document type labels for checklist
 const DOCUMENT_LABELS: Record<CorporateDocuments['documentType'], string> = {
@@ -173,6 +175,9 @@ export function KycStatusPage() {
           </button>
         )}
       </div>
+
+      {/* Added (SOUPFIN-89): free beta notice */}
+      <FreeBetaBanner />
 
       {/* Status Banner */}
       {isApproved && (

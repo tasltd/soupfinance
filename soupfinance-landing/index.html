@@ -246,6 +246,17 @@
 
     <!-- Navigation -->
     <nav class="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-border">
+        <!-- Added (SOUPFIN-89): free beta announcement, above everything else.
+             Colours are literal values: the custom palette in the config script
+             above does not load, so bg-text-primary / text-primary would not apply. -->
+        <div id="free-beta-bar" class="bg-[#181311] text-white">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 text-center text-xs sm:text-sm">
+                <span class="hidden sm:inline material-symbols-outlined text-base text-[#f24a0d]" aria-hidden="true">redeem</span>
+                <span class="font-semibold">One free year of beta access for all users until November 2027</span>
+                <!-- Phones: the link is dropped to keep the bar to two lines; the hero's sign-up button is just below -->
+                <a href="https://app.soupfinance.com/register" class="hidden sm:inline font-bold text-orange-300 underline underline-offset-2 hover:text-white">Create your free account</a>
+            </div>
+        </div>
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center h-16">
                 <!-- Logo - Bowl with SF Steam -->
@@ -704,7 +715,7 @@
                         </li>
                         <li class="flex items-center gap-3 text-text-secondary">
                             <span class="material-symbols-outlined text-green-600">check_circle</span>
-                            <span>Free trial period for early adopters</span>
+                            <span>Free for all users until November 2027</span>
                         </li>
                         <li class="flex items-center gap-3 text-text-secondary">
                             <span class="material-symbols-outlined text-green-600">check_circle</span>
@@ -914,7 +925,7 @@
                 </a>
             </div>
             <p class="mt-6 text-sm text-gray-400">
-                No credit card required • Free 14-day trial • Cancel anytime
+                No credit card required • Free one-year beta until November 2027 • Cancel anytime
             </p>
         </div>
     </section>

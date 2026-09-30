@@ -10,7 +10,7 @@ import axios from 'axios';
 import { listInvoices } from '../../api';
 import { useDashboardStats } from '../../hooks/useDashboardStats';
 // Added (SOUPFIN-55): entry point into the corporate KYC onboarding wizard
-import { KycOnboardingBanner } from '../../components/feedback';
+import { KycOnboardingBanner, FreeBetaBanner } from '../../components/feedback';
 import { useFormatCurrency } from '../../stores';
 // Added: GSAP dashboard entrance animation (SOUP-679)
 import { useDashboardEntrance } from '../../hooks/useGsapAnimations';
@@ -75,6 +75,9 @@ export function DashboardPage() {
         </p>
         <HelpLink section="dashboard" className="mt-1 self-start" />
       </div>
+
+      {/* Added (SOUPFIN-89): free beta notice for every user */}
+      <FreeBetaBanner />
 
       {/* Added (SOUPFIN-55): the only in-app way into /onboarding/company.
           Renders itself away when verification is approved or absent. */}
