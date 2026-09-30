@@ -27,7 +27,10 @@ const baseStyles = `
       background: #ffffff;
     }
     .page {
-      padding: 20mm;
+      /* Fix (SOUPFIN-89): no bottom padding here. When it spilled past a page
+         boundary on its own, html2pdf added a blank last page. The space below
+         the last line now sits inside .footer instead. */
+      padding: 20mm 20mm 0;
       max-width: 210mm;
       margin: 0 auto;
     }
@@ -216,6 +219,10 @@ const baseStyles = `
     .footer {
       margin-top: 40px;
       padding-top: 20px;
+      /* Fix (SOUPFIN-89): html2canvas draws text a few pixels lower than the
+         browser lays it out, so the last line needs room below it. Kept inside
+         the footer so the page-break "avoid" rule moves it with the text. */
+      padding-bottom: 20px;
       border-top: 1px solid #e5e7eb;
       text-align: center;
       font-size: 10px;

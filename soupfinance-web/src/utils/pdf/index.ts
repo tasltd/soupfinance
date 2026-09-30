@@ -47,13 +47,19 @@ export async function generatePdfFromHtml(
 ): Promise<Blob> {
   const config = { ...DEFAULT_OPTIONS, ...options };
 
-  // Create a temporary container
+  // Fix (SOUPFIN-89): html2pdf.js renders a CLONE of the element it is given,
+  // inline styles included. Hiding that element with `left:-9999px` carried the
+  // offset into the clone, which then sat outside the frame html2canvas
+  // captures, so every PDF came out as one blank page. Hide an outer holder
+  // instead and hand html2pdf the inner element, which has no offset of its own.
+  const holder = document.createElement('div');
+  holder.style.position = 'absolute';
+  holder.style.left = '-9999px';
+  holder.style.top = '0';
   const container = document.createElement('div');
   container.innerHTML = html;
-  container.style.position = 'absolute';
-  container.style.left = '-9999px';
-  container.style.top = '0';
-  document.body.appendChild(container);
+  holder.appendChild(container);
+  document.body.appendChild(holder);
 
   try {
     const blob = await html2pdf()
@@ -79,7 +85,7 @@ export async function generatePdfFromHtml(
 
     return blob;
   } finally {
-    document.body.removeChild(container);
+    document.body.removeChild(holder);
   }
 }
 
