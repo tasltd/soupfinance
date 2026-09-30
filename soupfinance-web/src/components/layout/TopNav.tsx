@@ -109,14 +109,21 @@ export function TopNav() {
 
         {/* User Avatar */}
         <div className="flex items-center gap-3">
-          <div className="size-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold">
+          <div className="size-10 shrink-0 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold">
             {user?.email?.charAt(0).toUpperCase() || 'U'}
           </div>
-          <div className="hidden lg:flex flex-col">
-            <p className="text-sm font-medium text-text-light dark:text-text-dark">
+          {/* Fix (SOUPFIN-91): capped and truncated. The header is whitespace-nowrap,
+              so an email-length username set the header's minimum width and pushed
+              the page wider than the screen. The full name stays in the title. */}
+          <div className="hidden lg:flex flex-col min-w-0 max-w-40" data-testid="topnav-user">
+            <p
+              className="truncate text-sm font-medium text-text-light dark:text-text-dark"
+              title={user?.username || 'User'}
+              data-testid="topnav-username"
+            >
               {user?.username || 'User'}
             </p>
-            <p className="text-xs text-subtle-text">{user?.roles?.[0] || 'Member'}</p>
+            <p className="truncate text-xs text-subtle-text">{user?.roles?.[0] || 'Member'}</p>
           </div>
         </div>
       </div>
