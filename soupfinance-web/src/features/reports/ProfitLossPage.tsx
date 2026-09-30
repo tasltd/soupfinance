@@ -206,7 +206,10 @@ export function ProfitLossPage() {
 
         {/* Export Buttons */}
         {/* Fix (SOUPFIN-14): Spinner + disabled state while exporting; visible error banner. */}
-        <div className="flex items-center gap-2">
+        {/* Fix (SOUPFIN-94): flex-wrap, as on Cash Flow and Trial Balance. The
+            three buttons are 303px wide; on a 320px phone they ran through the
+            page's right margin to 1px from the screen edge. */}
+        <div className="flex flex-wrap items-center gap-2" data-testid="profit-loss-export-row">
           <button
             onClick={() => handleExport('pdf')}
             disabled={exportingFormat !== null}

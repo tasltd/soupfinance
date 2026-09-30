@@ -644,7 +644,12 @@ export function InvoiceFormPage() {
               <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
                 Client <span className="text-danger">*</span>
               </label>
-              <div className="flex gap-2">
+              {/* Fix (SOUPFIN-94): the select and New Client used to share one
+                  line, and on a 320px phone New Client was cut off by 10px. The
+                  row now wraps. The select is basis-48 so the button drops to its
+                  own line on a phone instead of squeezing the select, and min-w-0
+                  so a very long client name cannot widen the row. */}
+              <div className="flex flex-wrap gap-2" data-testid="invoice-client-row">
                 <select
                   // Fix (SOUPFIN-30 #6): id/name/aria-label so the field is
                   // properly labelled for assistive tech and DevTools.
@@ -653,7 +658,7 @@ export function InvoiceFormPage() {
                   aria-label="Client"
                   value={selectedClientId}
                   onChange={(e) => setSelectedClientId(e.target.value)}
-                  className="flex-1 h-12 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-3 text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/50"
+                  className="grow basis-48 min-w-0 h-12 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-3 text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/50"
                   data-testid="invoice-client-select"
                 >
                   <option value="">Select a client</option>

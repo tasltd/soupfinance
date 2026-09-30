@@ -159,7 +159,10 @@ export function BalanceSheetPage() {
         data-testid="balance-sheet-toolbar"
       >
         {/* Date Picker */}
-        <div className="flex items-center gap-3">
+        {/* Fix (SOUPFIN-94): flex-wrap. Label, date field and Refresh need 357px,
+            so on a 320px phone Refresh was cut off at <main>'s edge. It now wraps
+            under the date field instead. */}
+        <div className="flex flex-wrap items-center gap-3" data-testid="balance-sheet-date-row">
           <label htmlFor="asOfDate" className="text-sm font-medium text-text-light dark:text-text-dark">
             As Of Date:
           </label>
@@ -190,7 +193,10 @@ export function BalanceSheetPage() {
         {/* Export Buttons */}
         {/* Fix (SOUPFIN-14): Spinner on active button, disable others, disable while
             exporting, and surface a visible error banner below the toolbar. */}
-        <div className="flex items-center gap-2">
+        {/* Fix (SOUPFIN-94): flex-wrap, as on Cash Flow and Trial Balance. The
+            three buttons are 303px wide; on a 320px phone they ran through the
+            page's right margin to 1px from the screen edge. */}
+        <div className="flex flex-wrap items-center gap-2" data-testid="balance-sheet-export-row">
           <button
             onClick={() => handleExport('pdf')}
             disabled={exportingFormat !== null}

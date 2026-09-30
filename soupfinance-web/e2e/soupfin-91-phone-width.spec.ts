@@ -18,9 +18,12 @@
  * and truncated; the last test covers that end.
  *
  * What this spec asserts is PAGE-level: the document cannot be scrolled
- * sideways and the top bar's content fits inside it. A few page rows still
- * clip inside <main> at 320px; they have their own causes and are tracked
- * separately (see the SOUPFIN-91 comments), so they are not asserted here.
+ * sideways, the top bar's content fits inside it, and nothing is cut off at
+ * <main>'s right edge. That last check came with SOUPFIN-94: with `min-w-0` on
+ * the column, a row too wide for the phone no longer widens the page, it is
+ * clipped by <main>'s `overflow-x-hidden` instead, and the document check alone
+ * cannot see it. The rows it found are fixed and measured one by one in
+ * e2e/soupfin-94-phone-rows.spec.ts.
  */
 import { test, expect, type Page, type Locator } from '@playwright/test';
 import {
@@ -45,20 +48,28 @@ async function shot(page: Page, name: string) {
   await page.screenshot({ path: `e2e/playwright/screenshots/soupfin-91/${name}.png` });
 }
 
-/** The page cannot be scrolled sideways, and the top bar's content fits in the bar. */
+/**
+ * The page cannot be scrolled sideways, the top bar's content fits in the bar,
+ * and nothing is cut off at <main>'s right edge (SOUPFIN-94).
+ */
 async function expectFitsScreen(page: Page, where: string) {
   const w = await page.evaluate(() => {
     const header = document.querySelector('header')!;
+    const main = document.querySelector('main')!;
     return {
       page: document.documentElement.scrollWidth,
       screen: document.documentElement.clientWidth,
       header: header.scrollWidth,
       bar: header.clientWidth,
+      content: main.scrollWidth,
+      main: main.clientWidth,
     };
   });
   expect(w.page, `${where}: page is ${w.page}px wide on a ${w.screen}px screen`).toBe(w.screen);
   expect(w.header, `${where}: top bar content is ${w.header}px in a ${w.bar}px bar`)
     .toBeLessThanOrEqual(w.bar);
+  expect(w.content, `${where}: ${w.content - w.main}px of the page is cut off at the right edge`)
+    .toBeLessThanOrEqual(w.main);
 }
 
 /** Both the left and the right edge of the element are on screen. */

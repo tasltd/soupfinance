@@ -79,13 +79,21 @@ export function TopNav() {
         <LanguageSwitcherCompact />
 
         {/* Notifications */}
-        <div className="relative">
+        {/* Fix (SOUPFIN-94): positioned only from sm up. The panel is 320px wide
+            and was anchored to this button, which sits about 70px in from the
+            right edge on a phone, so the panel ran 28px off the LEFT edge at
+            360px (68px at 320px). Below sm the panel is positioned against the
+            header instead (sticky, so it is a containing block) and spans it
+            with a 1rem margin each side. */}
+        <div className="sm:relative">
           <button
             onClick={() => setNotificationsOpen(!notificationsOpen)}
             // Fix (SOUPFIN-63): named by the ligature before this.
             aria-label={t('header.notifications')}
             aria-expanded={notificationsOpen}
-            className="flex items-center justify-center size-10 rounded-full hover:bg-primary/10 text-text-light dark:text-text-dark"
+            // Fix (SOUPFIN-94): relative, so the badge stays on the bell now
+            // that the wrapper is not positioned below sm.
+            className="relative flex items-center justify-center size-10 rounded-full hover:bg-primary/10 text-text-light dark:text-text-dark"
           >
             <span aria-hidden="true" className="material-symbols-outlined">notifications</span>
             {/* Notification badge */}
@@ -94,7 +102,12 @@ export function TopNav() {
 
           {/* Notifications dropdown */}
           {notificationsOpen && (
-            <div className="absolute right-0 mt-2 w-80 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-lg z-50">
+            // whitespace-normal: the header is whitespace-nowrap, and a longer
+            // translation must wrap inside the narrower phone panel.
+            <div
+              className="absolute left-4 right-4 sm:left-auto sm:right-0 mt-2 sm:w-80 whitespace-normal bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-lg z-50"
+              data-testid="topnav-notifications-panel"
+            >
               <div className="p-4 border-b border-border-light dark:border-border-dark">
                 <h3 className="text-sm font-bold text-text-light dark:text-text-dark">
                   {t('header.notifications')}

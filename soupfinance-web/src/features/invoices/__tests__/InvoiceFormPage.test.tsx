@@ -433,6 +433,40 @@ describe('InvoiceFormPage', () => {
 
       expect(select).toHaveValue('selected-client');
     });
+
+    // Added (SOUPFIN-94): jsdom has no layout, so this pins the class-level
+    // guards. The widths are measured in Firefox by
+    // e2e/soupfin-94-phone-rows.spec.ts.
+    it('lets New Client wrap under the select on a phone (SOUPFIN-94)', async () => {
+      setupDefaultMocks([createMockClient({ id: 'c-1', name: 'Client One' })]);
+      renderInvoiceFormPage();
+      await screen.findByText('Client One');
+
+      const row = screen.getByTestId('invoice-client-row');
+      const select = screen.getByTestId('invoice-client-select');
+      const button = screen.getByTestId('invoice-new-client-button');
+      expect(row).toContainElement(select);
+      expect(row).toContainElement(button);
+      expect(row).toHaveClass('flex', 'flex-wrap');
+      // basis-48 is what pushes the button to its own line on a phone. flex-1
+      // (basis 0) would keep both on one line and squeeze the select instead.
+      expect(select).toHaveClass('grow', 'basis-48');
+      expect(select).not.toHaveClass('flex-1');
+    });
+
+    it('keeps a very long client name from widening the row (SOUPFIN-94)', async () => {
+      const longName =
+        'The International Federation of Chartered Accountants and Allied Financial Professionals of West Africa (Ghana Chapter) Limited';
+      setupDefaultMocks([createMockClient({ id: 'c-long', name: longName })]);
+      renderInvoiceFormPage();
+
+      // The full name is offered, not shortened.
+      const option = await screen.findByRole('option', { name: longName });
+      expect(option).toHaveValue('c-long');
+      // Chromium sizes a select flex item to its widest option unless it may
+      // shrink: without min-w-0 this name clipped 709px on a 320px screen.
+      expect(screen.getByTestId('invoice-client-select')).toHaveClass('min-w-0');
+    });
   });
 
   // ==========================================================================

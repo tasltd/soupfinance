@@ -426,7 +426,9 @@ export function AgingReportsPage() {
         </div>
 
         {/* As Of Date Picker */}
-        <div className="flex items-center gap-3">
+        {/* Fix (SOUPFIN-94): flex-wrap, so the Today button drops under the date
+            field on a 320px phone instead of being cut off at the right edge. */}
+        <div className="flex flex-wrap items-center gap-3" data-testid="aging-reports-date-row">
           {/* Fix (SOUPFIN-33 #6): the label wrapped only the icon/text — it pointed at no
               control. Bind it to the picker with htmlFor/id. */}
           <label className="flex items-center gap-2" htmlFor="aging-as-of-date">

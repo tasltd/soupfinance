@@ -227,7 +227,9 @@ export function CashFlowPage() {
         </div>
 
         {/* Export Buttons (placeholder - backend not yet available) */}
-        <div className="flex items-center gap-2">
+        {/* Fix (SOUPFIN-94): flex-wrap. The three buttons are 305px wide, 1px
+            more than a 320px phone leaves them, so CSV was clipped. */}
+        <div className="flex flex-wrap items-center gap-2" data-testid="cash-flow-export-row">
           <button
             onClick={() => handleExport('pdf')}
             disabled

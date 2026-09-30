@@ -468,7 +468,11 @@ export function TransactionRegisterPage() {
   return (
     <div className="flex h-full grow" data-testid="transaction-register-page">
       {/* Main Content Area */}
-      <div className="flex-1 p-6 lg:p-8">
+      {/* Fix (SOUPFIN-94): min-w-0. This column is a flex item beside the filters
+          panel, so it kept min-width:auto and grew to its table's width: 858px on
+          a 320px phone, with 554px of heading, buttons, search and table cut off
+          at <main>'s edge (the SOUPFIN-91 mechanism, one level down). */}
+      <div className="flex-1 min-w-0 p-6 lg:p-8" data-testid="transaction-register-content">
         <div className="flex flex-col gap-6">
           {/* Added: Page Header with action buttons */}
           <div className="flex flex-wrap justify-between items-center gap-4">
@@ -715,7 +719,13 @@ export function TransactionRegisterPage() {
           {/* Added: Data Table - Only show when not loading and no error */}
           {!isLoading && !isError && (
           <div className="w-full" data-testid="transaction-table-container">
-            <div className="flex overflow-hidden rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-background-dark">
+            {/* Fix (SOUPFIN-94): overflow-x-auto, was overflow-hidden. Now that the
+                column can be narrower than the table, the table scrolls inside
+                its card instead of losing its right-hand columns. */}
+            <div
+              className="flex overflow-x-auto rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-background-dark"
+              data-testid="transaction-table-scroller"
+            >
               <table className="w-full" data-testid="transaction-table">
                 <thead className="bg-surface-light dark:bg-surface-dark border-b border-border-light dark:border-border-dark">
                   <tr>

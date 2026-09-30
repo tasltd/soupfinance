@@ -421,7 +421,9 @@ export function ScheduledReportsPage() {
   return (
     <div className="flex flex-col gap-6" data-testid="scheduled-reports-page">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      {/* Fix (SOUPFIN-94): flex-wrap + gap-4, so New Schedule drops under the
+          title on a 320px phone instead of being cut off at the right edge. */}
+      <div className="flex flex-wrap items-center justify-between gap-4" data-testid="scheduled-reports-header">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Link to="/reports" className="text-subtle-text hover:text-primary">
@@ -437,6 +439,7 @@ export function ScheduledReportsPage() {
         <button
           onClick={() => { setEditSchedule(undefined); setShowForm(true); }}
           className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white font-medium hover:bg-primary/90"
+          data-testid="scheduled-reports-new-button"
         >
           <span className="material-symbols-outlined text-sm">add</span>
           New Schedule
@@ -444,7 +447,9 @@ export function ScheduledReportsPage() {
       </div>
 
       {/* Status Filter */}
-      <div className="flex gap-2">
+      {/* Fix (SOUPFIN-94): flex-wrap. The four chips need 305px; CANCELLED was
+          cut off on a 320px phone. */}
+      <div className="flex flex-wrap gap-2" data-testid="scheduled-reports-status-filter">
         {(['', 'ACTIVE', 'PAUSED', 'CANCELLED'] as const).map((status) => (
           <button
             key={status}
@@ -483,12 +488,17 @@ export function ScheduledReportsPage() {
       ) : (
         <div className="grid gap-4">
           {schedules.map((schedule: ReportSchedule) => (
+            // Fix (SOUPFIN-94): every row in this card was one unwrapped line. On a
+            // 360px phone a schedule was 214px wider than the screen, and the
+            // action buttons were out of reach. Each line now wraps, and the
+            // actions drop under the details when they do not fit beside them.
             <div
               key={schedule.id}
-              className="flex items-center justify-between p-5 rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark"
+              className="flex flex-wrap items-center justify-between gap-4 p-5 rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark"
+              data-testid={`scheduled-report-row-${schedule.id}`}
             >
-              <div className="flex flex-col gap-1.5">
-                <div className="flex items-center gap-3">
+              <div className="flex flex-col gap-1.5 min-w-0">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                   <h3 className="text-lg font-bold text-text-light dark:text-text-dark">{schedule.name}</h3>
                   {statusBadge(schedule.status)}
                   {schedule.lastExecutionStatus && (
@@ -497,7 +507,7 @@ export function ScheduledReportsPage() {
                     </span>
                   )}
                 </div>
-                <div className="flex items-center gap-4 text-sm text-subtle-text">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-subtle-text">
                   <span className="flex items-center gap-1">
                     <span className="material-symbols-outlined text-sm">description</span>
                     {REPORT_TYPE_LABELS[schedule.reportType]}
@@ -515,7 +525,7 @@ export function ScheduledReportsPage() {
                     {schedule.exportFormat}
                   </span>
                 </div>
-                <div className="flex items-center gap-4 text-xs text-subtle-text">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-subtle-text">
                   {schedule.nextExecutionAt && (
                     <span>Next run: {formatDate(schedule.nextExecutionAt)}</span>
                   )}
@@ -526,7 +536,7 @@ export function ScheduledReportsPage() {
               </div>
 
               {/* Actions */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2" data-testid={`scheduled-report-actions-${schedule.id}`}>
                 <button
                   onClick={() => setHistorySchedule({ id: schedule.id, name: schedule.name })}
                   className="p-2 rounded-lg text-subtle-text hover:text-primary hover:bg-background-light dark:hover:bg-background-dark"
