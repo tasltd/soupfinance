@@ -9,8 +9,10 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getTrialBalance, exportFinanceReport, type ReportFilters } from '../../api/endpoints/reports';
-import { formatDisplayDate } from '../../utils/date';
+import { formatDisplayDate, getCurrentMonthRange } from '../../utils/date';
 import type { TrialBalanceItem } from '../../types';
+// Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
+import { HelpLink } from '../../components/help';
 
 // Added: Trial balance uses subset of LedgerGroup (excludes 'INCOME' which is aliased to 'REVENUE')
 type TrialBalanceLedgerGroup = 'ASSET' | 'LIABILITY' | 'EQUITY' | 'REVENUE' | 'EXPENSE';
@@ -27,15 +29,10 @@ function getReportExtension(format: 'pdf' | 'xlsx' | 'csv' | null | undefined): 
 }
 
 // Added: Get current month date range (first day to last day)
-function getCurrentMonthRange() {
-  const now = new Date();
-  const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  return {
-    from: firstDay.toISOString().split('T')[0],
-    to: lastDay.toISOString().split('T')[0],
-  };
-}
+// Fix (SOUPFIN-64): this used to build the range locally and format both ends
+// through toISOString(), which converts to UTC first — east of UTC the default
+// range started on the previous month's last day and ended a day before month
+// end. getCurrentMonthRange() in utils/date formats from local calendar parts.
 
 // Added: Format currency with proper thousands separator
 function formatCurrency(amount: number, currency = 'USD'): string {
@@ -232,6 +229,7 @@ export function TrialBalancePage() {
             {/* Fix (SOUPFIN-30 #12): format the as-of date for display (was raw ISO). */}
             {trialBalance?.asOf && ` as of ${formatDisplayDate(trialBalance.asOf)}`}
           </p>
+          <HelpLink section="trial-balance" className="mt-1 self-start" />
         </div>
 
         {/* Export Buttons */}
@@ -352,6 +350,8 @@ export function TrialBalancePage() {
               ? 'Books are balanced - Total Debits equal Total Credits'
               : `Books are NOT balanced - Difference: ${formatCurrency(Math.abs(trialBalance.totalDebit - trialBalance.totalCredit))}`}
           </span>
+          {/* Added (SOUPFIN-81): the guide's "does not balance" answer, only when it applies */}
+          {!isBalanced && <HelpLink section="trial-balance-unbalanced" className="ml-auto" />}
         </div>
       )}
 

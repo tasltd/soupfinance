@@ -15,6 +15,8 @@ import { listAllBillPayments } from '../../api/endpoints/bills';
 import { useFormatCurrency } from '../../stores';
 import { isModuleDisabledError } from '../../utils/apiErrors';
 import type { InvoicePayment, BillPayment } from '../../types';
+// Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
+import { HelpLink } from '../../components/help';
 
 // Added: Tab type for filtering
 type PaymentTab = 'incoming' | 'outgoing';
@@ -92,6 +94,7 @@ export function PaymentListPage() {
             Payments
           </h1>
           <p className="text-subtle-text">Track all incoming and outgoing payments</p>
+          <HelpLink section="payments" className="mt-1 self-start" />
         </div>
         <Link
           to="/payments/new"

@@ -7,6 +7,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { act } from '@testing-library/react'
 import { useAuthStore } from '../authStore'
+// Fix (SOUPFIN-58): the account store is intentionally NOT mocked — these tests
+// assert the real currency state a new tenant would see after a logout.
+import { useAccountStore, CURRENCIES } from '../accountStore'
 
 // Mock the auth API module
 vi.mock('../../api/auth', () => ({
@@ -247,6 +250,129 @@ describe('authStore', () => {
 
       // Assert
       expect(useAuthStore.getState().error).toBeNull()
+    })
+  })
+
+  // Fix (SOUPFIN-58): logout left `account-storage` in localStorage, so the next
+  // tenant signing in on the same browser rendered its own figures against the
+  // previous tenant's currency symbol until the settings fetch resolved.
+  describe('logout clears the previous tenant account state (SOUPFIN-58)', () => {
+    /** Put the store into the state a signed-in GHS tenant would leave behind. */
+    function signInGhsTenant() {
+      useAccountStore.setState({
+        settings: { currency: 'GHS', companyName: 'Accra Ltd' } as never,
+        currencyConfig: CURRENCIES.GHS,
+        isInitialized: true,
+      })
+      localStorage.setItem(
+        'account-storage',
+        JSON.stringify({
+          state: { settings: { currency: 'GHS' }, currencyConfig: CURRENCIES.GHS },
+          version: 0,
+        })
+      )
+    }
+
+    it('formats amounts in the previous tenant currency BEFORE logout (baseline)', () => {
+      // Arrange: prove the leak is reachable — without this the test below
+      // would pass even if the store had never held GHS.
+      signInGhsTenant()
+
+      // Assert: the GHS tenant sees GHS
+      expect(useAccountStore.getState().formatCurrency(1234.5)).toBe('GH₵1,234.50')
+    })
+
+    it('resets currency to the default so the next tenant never sees GHS', () => {
+      // Arrange
+      signInGhsTenant()
+      useAuthStore.setState({ user: { username: 'ghs', email: 'a@b.c', roles: [] }, isAuthenticated: true })
+
+      // Act
+      act(() => {
+        useAuthStore.getState().logout()
+      })
+
+      // Assert: full round-trip — the formatted output a new tenant would see
+      const account = useAccountStore.getState()
+      expect(account.currencyConfig.code).toBe(CURRENCIES.DEFAULT.code)
+      expect(account.formatCurrency(1234.5)).toBe('$1,234.50')
+      expect(account.settings).toBeNull()
+    })
+
+    it('removes the persisted account-storage key so a reload cannot rehydrate it', () => {
+      // Arrange
+      signInGhsTenant()
+      expect(localStorage.getItem('account-storage')).not.toBeNull()
+
+      // Act
+      act(() => {
+        useAuthStore.getState().logout()
+      })
+
+      // Assert: reset() runs before the removal, so persist cannot rewrite the key
+      expect(localStorage.getItem('account-storage')).toBeNull()
+    })
+
+    it('clears isInitialized so App refetches settings for the next tenant', () => {
+      // Arrange: App.tsx gates the fetch on `!accountInitialized`
+      signInGhsTenant()
+      expect(useAccountStore.getState().isInitialized).toBe(true)
+
+      // Act
+      act(() => {
+        useAuthStore.getState().logout()
+      })
+
+      // Assert
+      expect(useAccountStore.getState().isInitialized).toBe(false)
+    })
+
+    it('still clears the auth keys it cleared before the fix', () => {
+      // Arrange: guard against the refactor dropping an existing removal
+      localStorage.setItem('access_token', 'tok')
+      localStorage.setItem('user', '{}')
+      localStorage.setItem('auth-storage', '{}')
+      localStorage.setItem('auth_storage_type', 'local')
+      sessionStorage.setItem('access_token', 'tok')
+      sessionStorage.setItem('user', '{}')
+
+      // Act
+      act(() => {
+        useAuthStore.getState().logout()
+      })
+
+      // Assert
+      expect(localStorage.getItem('access_token')).toBeNull()
+      expect(localStorage.getItem('user')).toBeNull()
+      expect(localStorage.getItem('auth_storage_type')).toBeNull()
+      // `auth-storage` is removed and then immediately rewritten by authStore's
+      // own persist middleware on the following set() — pre-existing behaviour,
+      // harmless because it persists the CLEARED state. Assert the contents.
+      expect(JSON.parse(localStorage.getItem('auth-storage')!).state).toEqual({
+        user: null,
+        isAuthenticated: false,
+      })
+      expect(sessionStorage.getItem('access_token')).toBeNull()
+      expect(sessionStorage.getItem('user')).toBeNull()
+    })
+
+    it('clears the account state when an expired session is detected on startup', async () => {
+      // Arrange: same cross-tenant leak shape — the session ends, a different
+      // tenant may sign in next. initialize() takes the invalid-token branch.
+      signInGhsTenant()
+      localStorage.setItem('access_token', 'expired-token')
+      vi.mocked(authApi.getCurrentUser).mockReturnValue({ username: 'ghs', email: 'a@b.c', roles: [] })
+      vi.mocked(apiClient.get).mockRejectedValue(new Error('401'))
+
+      // Act
+      await act(async () => {
+        await useAuthStore.getState().initialize()
+      })
+
+      // Assert
+      expect(useAuthStore.getState().isAuthenticated).toBe(false)
+      expect(useAccountStore.getState().formatCurrency(1234.5)).toBe('$1,234.50')
+      expect(localStorage.getItem('account-storage')).toBeNull()
     })
   })
 

@@ -33,6 +33,8 @@ import { DEFAULT_CURRENCIES } from '../../api/endpoints/domainData';
 import { ModuleDisabledBanner } from '../../components/feedback';
 import { getApiErrorMessage } from '../../api/errors';
 import type { CreateVoucherRequest, VoucherType, VoucherTo } from '../../types';
+// Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
+import { HelpLink } from '../../components/help';
 
 // Added: Zod schema for voucher form validation
 // Changed: Renamed voucherDate→transactionDate, description→notes to match backend domain
@@ -341,6 +343,7 @@ export function VoucherFormPage() {
           <p className="text-subtle-text">
             {pageSubtitle}
           </p>
+          <HelpLink section="vouchers" className="mt-1 self-start" />
         </div>
 
         {/* Action Buttons */}

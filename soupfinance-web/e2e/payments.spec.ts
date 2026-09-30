@@ -3,7 +3,14 @@
  * Tests payment listing, recording, and tab switching flows
  */
 import { test, expect } from '@playwright/test';
-import { mockTokenValidationApi, takeScreenshot, setupResponseValidation } from './fixtures';
+import {
+  mockTokenValidationApi,
+  takeScreenshot,
+  setupResponseValidation,
+  installUnmockedApiGuard,
+  mockAmbientApi,
+  type UnmockedApiGuard,
+} from './fixtures';
 
 // ===========================================================================
 // Mock Data
@@ -125,7 +132,23 @@ const mockUnpaidBills = [
 // ===========================================================================
 
 test.describe('Payment Management', () => {
+  // Added (SOUPFIN-80): install the unmocked-API guard FIRST. Mocks registered
+  // after it take precedence, so it only sees calls nothing else claimed. Left
+  // unguarded, such a call proxies to VITE_PROXY_TARGET, a real backend there
+  // answers 401, client.ts reloads to /login, the init script restores the token
+  // and the page lands on /dashboard, failing a later, unrelated assertion.
+  let apiGuard: UnmockedApiGuard;
+
+  test.afterEach(() => {
+    apiGuard?.assertNone();
+  });
+
   test.beforeEach(async ({ page }) => {
+    apiGuard = await installUnmockedApiGuard(page);
+    // Added (SOUPFIN-80): frontendLog batches (every page, dev mode sends all
+    // levels) and the lookup pickers. Tests register their own data mocks later,
+    // which take precedence over these defaults.
+    await mockAmbientApi(page);
     // Set up authenticated state
     await page.addInitScript(() => {
       const mockUser = {

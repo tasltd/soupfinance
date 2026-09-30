@@ -38,6 +38,9 @@ import { listTaxRates, listInvoiceServices } from '../../api/endpoints/domainDat
 import { useFormatCurrency } from '../../stores';
 import { DEFAULT_CURRENCIES } from '../../api/endpoints/domainData';
 import type { InvoiceItem, ClientType } from '../../types';
+import { getTodayIsoDate } from '../../utils/date';
+// Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
+import { HelpLink } from '../../components/help';
 
 /**
  * Line item form state (no id for new items).
@@ -83,7 +86,9 @@ export function InvoiceFormPage() {
   // Form state — uses backend field names
   // Changed: selectedClientId drives the dropdown; accountServicesId is resolved from client
   const [selectedClientId, setSelectedClientId] = useState('');
-  const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
+  // Fix (SOUPFIN-64): local calendar day, not UTC today — `new Date().toISOString()`
+  // defaults the field to yesterday for part of every day east of UTC.
+  const [invoiceDate, setInvoiceDate] = useState(getTodayIsoDate());
   const [paymentDate, setPaymentDate] = useState('');
   const [notes, setNotes] = useState('');
   const [purchaseOrderNumber, setPurchaseOrderNumber] = useState('');
@@ -585,6 +590,7 @@ export function InvoiceFormPage() {
           <p className="text-subtle-text">
             {isEdit ? 'Update invoice details' : 'Create a new invoice'}
           </p>
+          <HelpLink section="create-invoice" className="mt-1 self-start" />
         </div>
         <div className="flex gap-3">
           <button

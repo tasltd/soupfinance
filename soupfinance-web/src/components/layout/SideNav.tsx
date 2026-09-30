@@ -2,6 +2,7 @@
  * Side Navigation Component
  * Reference: soupfinance-designs/balance-sheet-report/
  */
+import { useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuthStore, useUIStore, useAccountStore } from '../../stores';
 import type { BusinessLicenceCategory } from '../../types/settings';
@@ -87,6 +88,16 @@ export function SideNav() {
   const { sidebarCollapsed, setSidebarCollapsed, mobileSidebarOpen, setMobileSidebarOpen } =
     useUIStore();
 
+  // Fix (SOUPFIN-76): close the mobile drawer on every navigation. Before this
+  // only the overlay's onClick closed it, so tapping a link left the drawer and
+  // overlay covering the page it opened. Keyed on `location.key`, not pathname,
+  // so tapping the link for the page already open (a replace to the same path)
+  // closes it too. The open state is read with getState() rather than listed as
+  // a dependency: depending on it would close the drawer the moment it opened.
+  useEffect(() => {
+    if (useUIStore.getState().mobileSidebarOpen) setMobileSidebarOpen(false);
+  }, [location.key, setMobileSidebarOpen]);
+
   // Added (SOUPFIN-25): hide items flagged for the current tenant's business category.
   // When the category is unknown (settings not yet loaded), items are shown by default.
   const visibleNavItems = navItems.filter(
@@ -150,9 +161,13 @@ export function SideNav() {
             {/* Collapse button (desktop only) */}
             <button
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              // Fix (SOUPFIN-63): icon-only in both states, so the ligature was
+              // the whole accessible name ("chevron_left").
+              aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              aria-expanded={!sidebarCollapsed}
               className="hidden md:flex items-center justify-center size-8 rounded-lg hover:bg-primary/10 text-subtle-text"
             >
-              <span className="material-symbols-outlined">
+              <span aria-hidden="true" className="material-symbols-outlined">
                 {sidebarCollapsed ? 'chevron_right' : 'chevron_left'}
               </span>
             </button>
@@ -163,6 +178,10 @@ export function SideNav() {
                 <div key={item.path}>
                   <NavLink
                     to={item.children ? item.children[0].path : item.path}
+                    /* Fix (SOUPFIN-63): when collapsed the label <p> below is not
+                       rendered, so with the icon hidden the link would have no
+                       accessible name at all. Name it explicitly in that case. */
+                    aria-label={sidebarCollapsed ? item.label : undefined}
                     className={`
                       flex items-center gap-3 px-3 py-2 rounded-lg transition-colors
                       ${
@@ -172,7 +191,10 @@ export function SideNav() {
                       }
                     `}
                   >
+                    {/* Fix (SOUPFIN-63): the ligature is real text, so without
+                        aria-hidden the link is named "receipt_long Invoices". */}
                     <span
+                      aria-hidden="true"
                       className={`material-symbols-outlined text-xl ${
                         isActive(item.path) ? 'fill' : ''
                       }`}
@@ -222,18 +244,30 @@ export function SideNav() {
           {/* Bottom Links — shrink-0 keeps Help/Logout pinned and full height
               even when the nav column above overflows (SOUPFIN-30 #16). */}
           <div className="flex flex-col gap-1 shrink-0 pt-2">
-            <button
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-subtle-text hover:bg-primary/5 hover:text-text-light dark:hover:text-text-dark transition-colors"
+            {/* Fix (SOUPFIN-75): Help was a button with no handler. It now
+                opens the user guide at /help. */}
+            <NavLink
+              to="/help"
+              data-testid="help-link"
+              aria-label={sidebarCollapsed ? 'Help' : undefined}
+              className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+                isActive('/help')
+                  ? 'bg-primary/10 text-primary'
+                  : 'text-subtle-text hover:bg-primary/5 hover:text-text-light dark:hover:text-text-dark'
+              }`}
             >
-              <span className="material-symbols-outlined text-xl">help</span>
-              {!sidebarCollapsed && <p className="text-sm font-medium">Help</p>}
-            </button>
+              <span aria-hidden="true" className="material-symbols-outlined text-xl">help</span>
+              {!sidebarCollapsed && (
+                <p className={`text-sm ${isActive('/help') ? 'font-bold' : 'font-medium'}`}>Help</p>
+              )}
+            </NavLink>
             <button
               onClick={logout}
               data-testid="logout-button"
+              aria-label={sidebarCollapsed ? 'Logout' : undefined}
               className="flex items-center gap-3 px-3 py-2 rounded-lg text-subtle-text hover:bg-danger/10 hover:text-danger transition-colors"
             >
-              <span className="material-symbols-outlined text-xl">logout</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-xl">logout</span>
               {!sidebarCollapsed && <p className="text-sm font-medium">Logout</p>}
             </button>
           </div>

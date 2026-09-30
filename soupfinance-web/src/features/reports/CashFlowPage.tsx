@@ -12,6 +12,9 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getCashFlowStatement, type ReportFilters } from '../../api/endpoints/reports';
 import type { CashFlowStatement, CashFlowActivity } from '../../types';
+import { getFirstDayOfCurrentMonth, getTodayIsoDate } from '../../utils/date';
+// Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
+import { HelpLink } from '../../components/help';
 
 // Added: Currency formatter for consistent display
 const currencyFormatter = new Intl.NumberFormat('en-US', {
@@ -32,15 +35,15 @@ function formatDateDisplay(dateStr: string): string {
 }
 
 // Added: Get first day of current month in YYYY-MM-DD format
-function getFirstDayOfMonth(): string {
-  const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-}
+// Fix (SOUPFIN-64): was `new Date(y, m, 1).toISOString().split('T')[0]`, which
+// converts local midnight to UTC and so returned the previous month's last day
+// for any user east of UTC.
+const getFirstDayOfMonth = getFirstDayOfCurrentMonth;
 
 // Added: Get today's date in YYYY-MM-DD format
-function getTodayISO(): string {
-  return new Date().toISOString().split('T')[0];
-}
+// Fix (SOUPFIN-64): was `new Date().toISOString().split('T')[0]`, i.e. UTC
+// today rather than the user's own calendar day.
+const getTodayISO = getTodayIsoDate;
 
 // Fix (SOUPFIN-16): Allow navigating to historic years in the date picker.
 const REPORT_MIN_DATE = '1900-01-01';
@@ -164,6 +167,7 @@ export function CashFlowPage() {
               ? `${formatDateDisplay(cashFlow.periodStart)} to ${formatDateDisplay(cashFlow.periodEnd)}`
               : 'Cash movements and liquidity analysis'}
           </p>
+          <HelpLink section="cash-flow" className="mt-1 self-start" />
         </div>
       </div>
 

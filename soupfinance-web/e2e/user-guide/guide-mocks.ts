@@ -542,23 +542,11 @@ const json = (body: unknown) => ({
 export async function installGuideMocks(page: Page) {
   const fulfil = (body: unknown) => (route: Route) => route.fulfill(json(body));
 
-  // --- catch-all for proxied API prefixes -----------------------------------
-  // Anything not claimed below answers 200 [] rather than falling through to the
-  // Vite proxy, where a real backend would 401 and bounce the page to /login
-  // mid-capture.
-  //
-  // Anchored at the FIRST path segment on purpose. A loose glob like
-  // `**/client/**` also matches Vite's own `/node_modules/vite/dist/client/env.mjs`,
-  // and stubbing that out breaks the dev client on every page — the app never
-  // mounts and every capture times out waiting for its testid.
-  const PROXIED_API_PREFIXES = [
-    /^https?:\/\/[^/]+\/rest\//,
-    /^https?:\/\/[^/]+\/account\//,
-    /^https?:\/\/[^/]+\/client\//,
-  ];
-  for (const prefix of PROXIED_API_PREFIXES) {
-    await page.route(prefix, (route) => route.fulfill(json([])));
-  }
+  // Changed (SOUPFIN-80): no catch-all here any more. It answered 200 [] for
+  // anything unlisted, which kept calls off the Vite proxy but hid them. The
+  // spec installs installUnmockedApiGuard (e2e/fixtures.ts) before calling this,
+  // so an endpoint missing below now fails the capture by name instead of
+  // silently photographing an empty page.
 
   // --- auth / identity ------------------------------------------------------
   await page.route('**/rest/api/login', (route) =>
@@ -581,6 +569,15 @@ export async function installGuideMocks(page: Page) {
     { id: 'role-2', authority: 'ROLE_USER' },
   ]));
   await page.route('**/rest/frontendLog/batch.json*', fulfil({ received: 0 }));
+
+  // Added (SOUPFIN-80): the dashboard asks whether the tenant has an unfinished
+  // corporate KYC application. The removed catch-all used to answer these; mock
+  // them as mockAmbientApi does — current.json 404s (the backend has no such
+  // action yet) and the list is empty — so the guide shows no onboarding banner.
+  await page.route('**/rest/corporate/current*', (route) =>
+    route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ error: 'Not Found' }) })
+  );
+  await page.route('**/rest/corporate/index.json*', fulfil([]));
 
   // --- receivables ----------------------------------------------------------
   await page.route('**/rest/client/index.json*', fulfil(clients));
@@ -664,4 +661,79 @@ export async function seedAuthenticatedSession(page: Page) {
       JSON.stringify({ state: { user, isAuthenticated: true, isInitialized: true }, version: 0 })
     );
   }, guideUser);
+}
+
+// ---------------------------------------------------------------------------
+// Company verification (KYC) — Added (SOUPFIN-84)
+// ---------------------------------------------------------------------------
+
+/**
+ * A company part-way through verification: details saved, two people named,
+ * the three required documents uploaded and the optional memorandum not yet.
+ * Mirrors the Corporate / CorporateAccountPerson / CorporateDocuments types.
+ */
+export const kycCorporate = {
+  // A UUID, as the backend issues: the status page shows its first 8 characters.
+  id: 'b7e41c09-5d2a-4c8e-9f1a-3c6d2e8f4a10',
+  name: accountSettings.name,
+  certificateOfIncorporationNumber: 'CS-084512-2019',
+  registrationDate: '2019-03-11',
+  businessCategory: 'LIMITED_LIABILITY' as const,
+  taxIdentificationNumber: 'C0012345678',
+  email: accountSettings.email,
+  phoneNumber: accountSettings.phone,
+  address: accountSettings.address,
+  kycStatus: 'PENDING' as const,
+  dateCreated: '2026-01-06T09:15:00Z',
+};
+
+export const kycDirectors = [
+  {
+    id: 'kyc-person-001',
+    firstName: 'Ama',
+    lastName: 'Mensah',
+    email: guideUser.email,
+    phoneNumber: '+233 24 410 2231',
+    role: 'DIRECTOR' as const,
+    corporate: { id: kycCorporate.id },
+  },
+  {
+    id: 'kyc-person-002',
+    firstName: 'Kofi',
+    lastName: 'Boateng',
+    email: 'kofi.boateng@brightpathconsult.com',
+    phoneNumber: '+233 20 887 1450',
+    role: 'SIGNATORY' as const,
+    corporate: { id: kycCorporate.id },
+  },
+];
+
+export const kycDocuments = [
+  ['CERTIFICATE_OF_INCORPORATION', 'certificate-of-incorporation.pdf'],
+  ['BOARD_RESOLUTION', 'board-resolution-2026.pdf'],
+  ['PROOF_OF_ADDRESS', 'ecg-bill-august-2026.pdf'],
+].map(([documentType, fileName], i) => ({
+  id: `kyc-doc-00${i + 1}`,
+  documentType: documentType as 'CERTIFICATE_OF_INCORPORATION' | 'BOARD_RESOLUTION' | 'PROOF_OF_ADDRESS',
+  fileName,
+  fileUrl: `/uploads/kyc/${fileName}`,
+  corporate: { id: kycCorporate.id },
+  dateCreated: '2026-01-06T10:00:00Z',
+}));
+
+/**
+ * Give the guide tenant an unfinished verification, so the dashboard shows the
+ * banner that opens the wizard. Call after installGuideMocks: Playwright tries
+ * the most recently registered route first, so these replace its empty list.
+ */
+export async function installKycGuideMocks(page: Page) {
+  const reply = (body: unknown) => (route: Route) => route.fulfill(json(body));
+
+  // current.json still 404s, as on the backend; the list fallback finds the company.
+  await page.route('**/rest/corporate/index.json*', reply([kycCorporate]));
+  await page.route('**/rest/corporate/show/*.json*', reply(kycCorporate));
+  await page.route('**/rest/corporate/update/*.json*', reply(kycCorporate));
+  await page.route('**/rest/corporate/submitKyc/*.json*', reply(kycCorporate));
+  await page.route('**/rest/corporateAccountPerson/index.json*', reply(kycDirectors));
+  await page.route('**/rest/corporateDocuments/index.json*', reply(kycDocuments));
 }

@@ -17,6 +17,9 @@ import { useLedgerAccounts } from '../../hooks/useLedgerAccounts';
 import { usePaymentMethods } from '../../hooks/usePaymentMethods';
 import { isModuleDisabledError } from '../../utils/apiErrors';
 import type { Invoice, Bill, InvoicePayment, BillPayment } from '../../types';
+import { getTodayIsoDate } from '../../utils/date';
+// Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
+import { HelpLink } from '../../components/help';
 
 // Added: Payment type for form toggle
 type PaymentType = 'invoice' | 'bill';
@@ -38,7 +41,9 @@ export function PaymentFormPage() {
   );
   const [selectedId, setSelectedId] = useState(preselectedInvoiceId || preselectedBillId || '');
   const [amount, setAmount] = useState('');
-  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
+  // Fix (SOUPFIN-64): local calendar day, not UTC today — `new Date().toISOString()`
+  // defaults the field to yesterday for part of every day east of UTC.
+  const [paymentDate, setPaymentDate] = useState(getTodayIsoDate());
   // Changed: Payment method is now a domain class FK ID (not a string enum)
   const [paymentMethodId, setPaymentMethodId] = useState('');
   const [reference, setReference] = useState('');
@@ -208,6 +213,7 @@ export function PaymentFormPage() {
               Record Payment
             </h1>
             <p className="text-subtle-text">Record a payment against an invoice or bill</p>
+            <HelpLink section="record-payment" className="mt-1 self-start" />
           </div>
         </div>
         <div
@@ -258,6 +264,7 @@ export function PaymentFormPage() {
               ? 'Record payment received against an invoice'
               : 'Record payment made against a bill'}
           </p>
+          <HelpLink section="record-payment" className="mt-1 self-start" />
         </div>
         <button
           onClick={() => navigate('/payments')}

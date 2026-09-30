@@ -23,7 +23,9 @@
     "settings": "Settings",
     "darkMode": "Dark mode",
     "lightMode": "Light mode",
-    "language": "Language"
+    "language": "Language",
+    "openMenu": "Open navigation menu",
+    "systemMode": "System theme"
   },
   "breadcrumb": {
     "home": "Home",

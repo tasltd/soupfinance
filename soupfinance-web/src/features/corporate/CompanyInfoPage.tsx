@@ -7,6 +7,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getCorporate, updateCorporate } from '../../api/endpoints/corporate';
+// Added (SOUPFIN-84): "Need Help?" link to this step's part of the user guide
+import { HelpLink } from '../../components/help';
 
 // Added: Industry classification options
 const INDUSTRY_OPTIONS = [
@@ -169,8 +171,12 @@ export function CompanyInfoPage() {
   };
 
   // Added: Navigation handlers
+  // Fix (SOUPFIN-86): the wizard is opened from the dashboard banner, so the
+  // user here is signed in. '/register' is not behind PublicRoute and showed
+  // them the new-company sign-up form. Return to the dashboard instead; not
+  // navigate(-1), which would leave the app when step 1 came from an email link.
   const handleBack = () => {
-    navigate('/register');
+    navigate('/dashboard');
   };
 
   const handleSkip = () => {
@@ -198,6 +204,7 @@ export function CompanyInfoPage() {
           <p className="text-subtle-text">
             Provide detailed information about your company
           </p>
+          <HelpLink section="kyc-company-details" className="mt-1" />
         </div>
         <div className="flex gap-3">
           <button

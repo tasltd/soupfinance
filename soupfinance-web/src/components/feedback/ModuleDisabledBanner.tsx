@@ -8,6 +8,8 @@
  * that will fail with 403.
  */
 import { parseApiError } from '../../api/errors';
+// Added (SOUPFIN-81): link to the guide's "module is not enabled" answer
+import { HelpLink } from '../help';
 
 interface ModuleDisabledBannerProps {
   /** Error from useLedgerAccounts() or similar dependency query. */
@@ -46,6 +48,7 @@ export function ModuleDisabledBanner({
         {parsed.actionHint && (
           <p className="text-xs text-subtle-text/80 mt-2">{parsed.actionHint}</p>
         )}
+        <HelpLink section="module-not-enabled" className="mt-2" />
       </div>
     </div>
   );

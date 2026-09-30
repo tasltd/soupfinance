@@ -17,7 +17,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { TrialBalance } from '../../../types';
-import { formatDisplayDate } from '../../../utils/date';
+import { formatDisplayDate, getCurrentMonthRange } from '../../../utils/date';
 
 vi.mock('../../../api/endpoints/reports', async () => {
   const actual =
@@ -43,19 +43,12 @@ import { TrialBalancePage } from '../TrialBalancePage';
 // UTC offset (-12..+14) and the frozen range never straddles a month boundary.
 const FROZEN_NOW = new Date('2026-08-15T12:00:00Z');
 
-// Mirrors getCurrentMonthRange() in TrialBalancePage.tsx exactly — including its
-// local-midnight → toISOString() conversion — so the expected strings match what
-// the component computes in whatever timezone the suite runs in.
-function currentMonthRangeAt(now: Date): { from: string; to: string } {
-  const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  return {
-    from: firstDay.toISOString().split('T')[0],
-    to: lastDay.toISOString().split('T')[0],
-  };
-}
-
-const DEFAULT_RANGE = currentMonthRangeAt(FROZEN_NOW);
+// Fix (SOUPFIN-64): this used to re-implement the page's range helper, faithfully
+// copying its local-midnight → toISOString() conversion so the expectations matched
+// whatever the (buggy) component produced. That made the test agree with the defect
+// instead of catching it. It now calls the same shared helper the page calls, so the
+// expected range is the real local calendar month in every timezone.
+const DEFAULT_RANGE = getCurrentMonthRange(FROZEN_NOW);
 
 // A trial balance whose every ledger group is empty — this is what drives the
 // empty state. `accounts` is a Record keyed by ledger group, not an array.
@@ -171,5 +164,58 @@ describe('TrialBalancePage date filters — a11y attributes (SOUPFIN-33 #6)', ()
     expect(input.id).toBe(expectedId);
     expect(input.name).toBe(expectedId);
     expect(screen.getByLabelText(accessibleName)).toBe(input);
+  });
+});
+
+/**
+ * SOUPFIN-61: the original version of the suite above asserted a literal
+ * "August 31, 2026", so it passed only during August 2026 and failed from
+ * 2026-09-01 onward. SOUPFIN-56 fixed that by freezing the clock at one instant.
+ *
+ * Freezing at ONE instant proves the assertion no longer drifts with the wall
+ * clock, but it does not prove the page's own month arithmetic holds at the
+ * calendar edges — a 28-day February, a 30-day month, the December/January
+ * rollover, or the first day of a month. This sweep pins that: for each frozen
+ * instant the empty-state copy must name that month's own first and last day,
+ * derived from the frozen clock, never a hardcoded month name.
+ */
+describe('TrialBalancePage empty state — calendar independence (SOUPFIN-61)', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it.each([
+    ['first day of a 31-day month', '2026-01-01T12:00:00Z'],
+    ['inside a 28-day February', '2026-02-14T12:00:00Z'],
+    ['leap-year February', '2028-02-14T12:00:00Z'],
+    ['inside a 30-day month', '2026-04-10T12:00:00Z'],
+    ['last day of the year', '2026-12-31T12:00:00Z'],
+    ['the month the ticket was filed', '2026-09-22T12:00:00Z'],
+  ])('renders the current month range when frozen at %s', async (_label, iso) => {
+    const frozen = new Date(iso);
+    vi.clearAllMocks();
+    vi.setSystemTime(frozen);
+
+    const range = getCurrentMonthRange(frozen);
+    vi.mocked(getTrialBalance).mockResolvedValue({
+      ...EMPTY_TRIAL_BALANCE,
+      asOf: range.to,
+    });
+
+    renderPage();
+
+    const empty = await screen.findByTestId('trial-balance-empty');
+    const text = empty.textContent ?? '';
+
+    // The full sentence, both endpoints formatted, for THIS frozen month.
+    expect(text).toContain(
+      `between ${formatDisplayDate(range.from)} and ${formatDisplayDate(range.to)}.`
+    );
+    // No raw ISO leak, and no month-end from any other month.
+    expect(text).not.toMatch(/\d{4}-\d{2}-\d{2}/);
+    // The page requested exactly the frozen month's range from the backend.
+    expect(vi.mocked(getTrialBalance)).toHaveBeenCalledWith(
+      expect.objectContaining({ from: range.from, to: range.to })
+    );
   });
 });

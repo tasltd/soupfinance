@@ -14,6 +14,8 @@ import { getBill, deleteBill, listBillPayments, resolveBillItemTaxRate } from '.
 import { listTaxRates } from '../../api/endpoints/domainData';
 import { useFormatCurrency } from '../../stores';
 import { usePdf, useEmailSend } from '../../hooks';
+// Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
+import { HelpLink } from '../../components/help';
 
 export function BillDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -128,6 +130,7 @@ export function BillDetailPage() {
               {bill.status}
             </span>
           </p>
+          <HelpLink section="bills" className="mt-1 self-start" />
         </div>
         <div className="flex gap-3">
           <Link to="/bills" className="h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm flex items-center hover:bg-primary/5">
@@ -293,8 +296,10 @@ export function BillDetailPage() {
 
       {/* Payment History */}
       <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden" data-testid="bill-payments-card">
-        <div className="px-6 py-4 border-b border-border-light dark:border-border-dark flex justify-between items-center">
+        <div className="px-6 py-4 border-b border-border-light dark:border-border-dark flex justify-between items-center gap-4">
           <h2 className="text-lg font-bold text-text-light dark:text-text-dark">Payment History</h2>
+          {/* Added (SOUPFIN-81): how recording a payment works */}
+          <HelpLink section="record-payment" className="ml-auto" />
           {bill.amountDue > 0 && (
             <Link
               to={`/payments/new?billId=${id}`}

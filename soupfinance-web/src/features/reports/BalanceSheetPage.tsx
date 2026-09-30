@@ -9,6 +9,9 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getBalanceSheetDirect, exportFinanceReport, type ReportFilters } from '../../api/endpoints/reports';
 import type { BalanceSheet, BalanceSheetItem } from '../../types';
+import { getTodayIsoDate } from '../../utils/date';
+// Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
+import { HelpLink } from '../../components/help';
 
 // Added: Currency formatter for consistent display
 const currencyFormatter = new Intl.NumberFormat('en-US', {
@@ -29,9 +32,9 @@ function formatDateDisplay(dateStr: string): string {
 }
 
 // Added: Get today's date in YYYY-MM-DD format
-function getTodayISO(): string {
-  return new Date().toISOString().split('T')[0];
-}
+// Fix (SOUPFIN-64): was `new Date().toISOString().split('T')[0]`, i.e. UTC
+// today rather than the user's own calendar day.
+const getTodayISO = getTodayIsoDate;
 
 // Fix (SOUPFIN-14): Hard timeout so the PDF export request can't hang indefinitely
 // (was previously stuck in pending forever with no UI feedback).
@@ -146,6 +149,7 @@ export function BalanceSheetPage() {
           <p className="text-subtle-text">
             {balanceSheet ? `As of ${formatDateDisplay(balanceSheet.asOf)}` : 'Assets, liabilities, and equity position'}
           </p>
+          <HelpLink section="balance-sheet" className="mt-1 self-start" />
         </div>
       </div>
 

@@ -30,6 +30,8 @@ import {
   type ExportFormat,
   type ScheduleStatus,
 } from '../../api/endpoints/report-schedules';
+// Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
+import { HelpLink } from '../../components/help';
 
 // =============================================================================
 // Helpers
@@ -430,6 +432,7 @@ export function ScheduledReportsPage() {
             </h1>
           </div>
           <p className="text-subtle-text">Automate report generation and email delivery</p>
+          <HelpLink section="scheduled-reports" className="mt-1 self-start" />
         </div>
         <button
           onClick={() => { setEditSchedule(undefined); setShowForm(true); }}

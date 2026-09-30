@@ -179,14 +179,15 @@ test.describe('Corporate Onboarding Flow', () => {
       await page.waitForURL('**/onboarding/directors*');
     });
 
-    test('back button navigates to registration', async ({ page }) => {
+    // Fix (SOUPFIN-86): the user on step 1 is signed in, so Back returns to the
+    // dashboard rather than the public /register sign-up form.
+    test('back button navigates to the dashboard', async ({ page }) => {
       await page.goto(BASE_URL_COMPANY);
 
       // Added: Click back button
       await page.getByRole('button', { name: 'Back' }).click();
 
-      // Added: Should navigate to register
-      await page.waitForURL('**/register*');
+      await expect(page).toHaveURL(/\/dashboard$/);
     });
 
     test('shows loading state while fetching data', async ({ page }) => {

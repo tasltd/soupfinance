@@ -14,10 +14,12 @@ import {
   exportFinanceReport,
   type ReportFilters,
 } from '../../api/endpoints/reports';
-import { formatDisplayDate } from '../../utils/date';
+import { formatDisplayDate, getTodayIsoDate } from '../../utils/date';
 // Fix (SOUPFIN-33 #4): tenant-currency formatter (was hardcoded USD/"$0.00").
 import { useFormatCurrency } from '../../stores';
 import type { AgingReport, AgingItem } from '../../types';
+// Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
+import { HelpLink } from '../../components/help';
 
 // Fix(SOUPFIN-11/SOUPFIN-16): Earliest date users can pick for historical aging analysis.
 // The browser-native date picker's year navigation is gated by this min — users on
@@ -33,10 +35,10 @@ function getReportExtension(format: 'pdf' | 'xlsx' | 'csv' | null | undefined): 
   return 'pdf';
 }
 
-// Added: Get today's date in ISO format (YYYY-MM-DD)
-function getTodayDate(): string {
-  return new Date().toISOString().split('T')[0];
-}
+// Added: Get today's date in YYYY-MM-DD format
+// Fix (SOUPFIN-64): was `new Date().toISOString().split('T')[0]`, i.e. UTC
+// today rather than the user's own calendar day.
+const getTodayDate = getTodayIsoDate;
 
 /*
  * Fix (SOUPFIN-33 #4): the module-level formatCurrency() that used to live here
@@ -420,6 +422,7 @@ export function AgingReportsPage() {
             {/* Fix (SOUPFIN-30 #12): format the date for display (was raw ISO). */}
             <span className="font-medium text-text-light dark:text-text-dark">{formatDisplayDate(asOfDate)}</span>
           </p>
+          <HelpLink section="aging" className="mt-1 self-start" />
         </div>
 
         {/* As Of Date Picker */}

@@ -23,7 +23,9 @@
     "settings": "Einstellungen",
     "darkMode": "Dunkelmodus",
     "lightMode": "Hellmodus",
-    "language": "Sprache"
+    "language": "Sprache",
+    "openMenu": "Navigationsmenü öffnen",
+    "systemMode": "Systemdesign"
   },
   "breadcrumb": {
     "home": "Startseite",

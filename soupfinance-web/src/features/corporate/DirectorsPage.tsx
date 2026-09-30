@@ -8,6 +8,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { listDirectors, addDirector, updateDirector, deleteDirector } from '../../api/endpoints/corporate';
 import type { CorporateAccountPerson } from '../../types';
+// Added (SOUPFIN-84): "Need Help?" link to this step's part of the user guide
+import { HelpLink } from '../../components/help';
 
 // Added: Role options for directors
 const ROLE_OPTIONS: { value: CorporateAccountPerson['role']; label: string }[] = [
@@ -144,6 +146,7 @@ export function DirectorsPage() {
           <p className="text-subtle-text">
             Add directors, authorized signatories, and beneficial owners
           </p>
+          <HelpLink section="kyc-directors" className="mt-1" />
         </div>
         <div className="flex gap-3">
           <button

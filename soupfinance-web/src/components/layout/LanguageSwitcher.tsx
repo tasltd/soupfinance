@@ -48,7 +48,12 @@ export function LanguageSwitcher() {
         <span className="text-sm font-medium text-text-light dark:text-text-dark hidden sm:inline">
           {currentLanguage.nativeName}
         </span>
-        <span className="material-symbols-outlined text-base text-subtle-text dark:text-subtle-text-dark">
+        {/* Fix (SOUPFIN-63): decorative chevron — was appending "expand_more"
+            to the trigger's name. */}
+        <span
+          aria-hidden="true"
+          className="material-symbols-outlined text-base text-subtle-text dark:text-subtle-text-dark"
+        >
           {isOpen ? 'expand_less' : 'expand_more'}
         </span>
       </button>
@@ -86,7 +91,7 @@ export function LanguageSwitcher() {
                     </span>
                   </div>
                   {i18n.language === code && (
-                    <span className="material-symbols-outlined text-primary ml-auto">
+                    <span aria-hidden="true" className="material-symbols-outlined text-primary ml-auto">
                       check
                     </span>
                   )}

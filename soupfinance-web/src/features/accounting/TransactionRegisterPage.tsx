@@ -27,9 +27,11 @@ import { ApiErrorState, useToast } from '../../components/feedback';
 // SOUPFIN-20: route the raw date filter inputs through the same sanitiser the
 // shared DatePicker uses (SOUPFIN-19) so a null/sentinel/malformed value never
 // renders as the confusing "0/0/0" placeholder the user reported.
-import { sanitizeDateInputValue } from '../../utils/date';
+import { getTodayIsoDate, sanitizeDateInputValue } from '../../utils/date';
 // Fix (SOUPFIN-33 #1/#6): labelled date filter (id/name + <label htmlFor> + empty hint).
 import { DateFilterField } from '../../components/forms';
+// Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
+import { HelpLink } from '../../components/help';
 
 // =============================================================================
 // Added: Type definitions for filtering
@@ -410,7 +412,10 @@ export function TransactionRegisterPage() {
       const link = document.createElement('a');
       const url = URL.createObjectURL(blob);
       link.href = url;
-      link.download = `transactions-${new Date().toISOString().slice(0, 10)}.csv`;
+      // Fix (SOUPFIN-64): stamp the filename with the user's own calendar day.
+      // `toISOString().slice(0, 10)` is UTC today, so east of UTC the export
+      // was named after yesterday for part of every day.
+      link.download = `transactions-${getTodayIsoDate()}.csv`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -477,6 +482,7 @@ export function TransactionRegisterPage() {
               <p className="text-subtle-text dark:text-subtle-text-dark text-base mt-1">
                 View and manage all accounting transactions
               </p>
+              <HelpLink section="transaction-register" className="mt-1 self-start" />
             </div>
             <div className="flex flex-1 gap-3 flex-wrap justify-start sm:justify-end">
               {/* Added: New Journal Entry button */}
