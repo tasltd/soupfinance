@@ -199,7 +199,7 @@ describe('Corporate API Integration', () => {
       const result = await getCurrentCorporate();
 
       // Assert
-      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/corporate/current.json');
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/corporate/current.json', { expectedStatuses: [404] });
       expect(result?.name).toBe('My Company Ltd');
     });
 
@@ -272,7 +272,7 @@ describe('Corporate API Integration', () => {
       expect(result?.id).toBe('corp-current');
       // current.json answered, so the list fallback must not have been needed
       expect(mockAxiosInstance.get).toHaveBeenCalledTimes(1);
-      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/corporate/current.json');
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/corporate/current.json', { expectedStatuses: [404] });
     });
 
     it('falls back to the corporate list when current.json 404s', async () => {
@@ -286,7 +286,7 @@ describe('Corporate API Integration', () => {
       const result = await resolveOnboardingCorporate();
 
       expect(result?.id).toBe('corp-listed');
-      expect(mockAxiosInstance.get).toHaveBeenNthCalledWith(1, '/corporate/current.json');
+      expect(mockAxiosInstance.get).toHaveBeenNthCalledWith(1, '/corporate/current.json', { expectedStatuses: [404] });
       expect(mockAxiosInstance.get).toHaveBeenNthCalledWith(2, '/corporate/index.json?max=1');
     });
 

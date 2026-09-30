@@ -18,7 +18,17 @@ declare module 'axios' {
     metadata?: {
       startTime: number;
     };
+    // Added: statuses the caller handles itself, so they are not reported as errors
+    expectedStatuses?: number[];
   }
+  export interface AxiosRequestConfig {
+    expectedStatuses?: number[];
+  }
+}
+
+// Added: a status the caller asked for (e.g. a 404 it falls back from) is not an error.
+export function isExpectedStatus(config: { expectedStatuses?: number[] } | undefined, status?: number): boolean {
+  return status !== undefined && (config?.expectedStatuses ?? []).includes(status);
 }
 
 // Create axios instance with default config
@@ -91,12 +101,14 @@ apiClient.interceptors.response.use(
       logger.api(method, url, status, duration);
     }
 
-    // Log error details
-    logger.error(`API Error: ${method} ${url}`, {
-      status,
-      statusText: error.response?.statusText,
-      data: error.response?.data,
-    });
+    // Log error details (Changed: skip statuses the caller said it expects)
+    if (!isExpectedStatus(error.config, status)) {
+      logger.error(`API Error: ${method} ${url}`, {
+        status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+      });
+    }
 
     // Handle 401 errors by redirecting to login
     if (status === 401) {
@@ -168,11 +180,13 @@ accountClient.interceptors.response.use(
     if (status) {
       logger.api(method, url, status, duration);
     }
-    logger.error(`API Error: ${method} ${url}`, {
-      status,
-      statusText: error.response?.statusText,
-      data: error.response?.data,
-    });
+    if (!isExpectedStatus(error.config, status)) {
+      logger.error(`API Error: ${method} ${url}`, {
+        status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+      });
+    }
     if (status === 401) {
       logger.auth('session_expired');
       localStorage.removeItem('access_token');

@@ -52,7 +52,8 @@ export async function updateCorporate(id: string, data: Partial<Corporate>): Pro
  */
 export async function getCurrentCorporate(): Promise<Corporate | null> {
   try {
-    const response = await apiClient.get<Corporate>(`${CORPORATE_URL}/current.json`);
+    // Changed: the 404 is the normal answer today, so it is not reported as an error
+    const response = await apiClient.get<Corporate>(`${CORPORATE_URL}/current.json`, { expectedStatuses: [404] });
     return response.data;
   } catch {
     // Returns null if no corporate found for current user
