@@ -265,10 +265,12 @@ test.describe('SOUPFIN-90: landing page palette', () => {
     await expect(navTrial).toHaveCSS('color', WHITE);
 
     // The overlay that keeps the hero text off the photo exists below lg.
+    // Fix (SOUPFIN-93): its stops are now 0.98 / 0.95 / 0.9, near-flat so the right end of
+    // the subtitle no longer sits on the photo; soupfin-93-landing-hero-phone.spec.ts measures it.
     const overlay = page.locator('section').first().locator('.bg-gradient-to-r').first();
     await expect(overlay).toHaveCSS(
       'background-image',
-      'linear-gradient(to right, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.2))'
+      'linear-gradient(to right, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.9))'
     );
 
     const overflow = await page.evaluate(
