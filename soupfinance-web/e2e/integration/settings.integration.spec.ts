@@ -50,7 +50,9 @@ test.describe('Settings Integration Tests', () => {
         await page.goto('/settings');
       }
 
-      await expect(page.getByRole('heading', { name: /settings/i })).toBeVisible({ timeout: 15000 });
+      // Fix: the page has two headings naming Settings (page title and section),
+      // so the bare locator failed Playwright's strict mode on both backends.
+      await expect(page.getByRole('heading', { name: /settings/i }).first()).toBeVisible({ timeout: 15000 });
       await takeScreenshot(page, 'integration-settings-main');
     });
 

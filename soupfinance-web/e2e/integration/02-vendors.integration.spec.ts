@@ -430,14 +430,14 @@ test.describe('Vendor Integration Tests', () => {
     // After update, app navigates to detail page (confirms form submission succeeded)
     await expect(page.getByTestId('vendor-detail-page')).toBeVisible({ timeout: 15000 });
 
-    // KNOWN BACKEND ISSUE: PUT returns 200 with updated data but does NOT persist to database.
-    // The backend's vendor update action has a caching/CSRF issue where the invalidToken closure
-    // returns submitted data without saving. See SOUPFINANCE_BACKEND_CHANGES_NEEDED.md #8.
-    // We verify the form workflow completes but do NOT assert the name changed on the detail page.
-    // TODO: Uncomment when backend fix is deployed:
-    // await page.reload();
-    // await expect(page.getByRole('heading', { name: updatedName })).toBeVisible({ timeout: 10000 });
-    // persistentVendorName = updatedName;
+    // Changed 2026-10-02: the update now persists on both the Grails and the Go route (measured: the
+    // detail page reads "Updated Vendor A <run>" after a reload). The earlier backend issue (PUT
+    // answered 200 without saving, SOUPFINANCE_BACKEND_CHANGES_NEEDED.md #8) is gone, so assert the
+    // saved name and carry it forward: the downstream "persistent vendor" check failed on the
+    // stale original name, not on a missing vendor.
+    await page.reload();
+    await expect(page.getByRole('heading', { name: updatedName })).toBeVisible({ timeout: 10000 });
+    persistentVendorName = updatedName;
 
     await takeScreenshot(page, 'integration-02-vendors-edit-submitted');
     console.log(`[Vendor Test] Edit form submitted for: ${persistentVendorId} (PUT ${updateResponse.status()})`);

@@ -88,6 +88,16 @@ async function saveDraftWithRetry(page: Page, attempts = 3) {
   throw new Error(`Invoice save did not complete after ${attempts} attempts.`);
 }
 
+/**
+ * A due date 30 days after today. Fix (2026-10-02): this was the literal 2026-09-30, which
+ * fell before the invoice date (today) once September ended, so every save was refused 422.
+ */
+function dueDateIso(): string {
+  const d = new Date();
+  d.setDate(d.getDate() + 30);
+  return d.toISOString().slice(0, 10);
+}
+
 /** The auth gate renders before content; never use networkidle on this backend. */
 async function waitForAuthSettled(page: Page) {
   await page.waitForLoadState('domcontentloaded');
@@ -163,14 +173,50 @@ test.describe('Invoice line-item tax persistence (SOUPFIN-37)', () => {
       .poll(async () => (await clientSelect.locator('option').count()), { timeout: 30000 })
       .toBeGreaterThan(1);
 
-    const clientValue = await clientSelect
-      .locator('option')
-      .nth(1)
-      .evaluate((o) => (o as HTMLOptionElement).value);
-    await clientSelect.selectOption(clientValue);
+    // Fix (3 Oct 2026): the first client listed on the dev data has no account services, so
+    // the save was refused ("Selected client has no account services") and the test failed on
+    // data, not on tax. Choose, through the API, the first offered client the form can invoice:
+    // one whose first portfolio carries account services, as resolveAccountServicesId reads it.
+    const offered = await clientSelect.locator('option').evaluateAll((opts) =>
+      opts.map((o) => (o as HTMLOptionElement).value).filter((v) => !!v)
+    );
+    let clientValue = '';
+    for (const id of offered) {
+      const res = await page.request.get(`${API_BASE}/rest/client/show/${id}.json`, {
+        headers: { 'X-Auth-Token': token }, maxRedirects: 0,
+      });
+      if (!res.ok()) continue;
+      const portfolioId = (await res.json())?.portfolioList?.[0]?.id;
+      if (!portfolioId) continue;
+      const pf = await page.request.get(`${API_BASE}/rest/clientPortfolio/show/${portfolioId}.json`, {
+        headers: { 'X-Auth-Token': token }, maxRedirects: 0,
+      });
+      if (pf.ok() && (await pf.json())?.accountServices?.id) {
+        clientValue = id;
+        break;
+      }
+    }
+    if (clientValue) {
+      await clientSelect.selectOption(clientValue);
+    } else {
+      // None can be invoiced (the dev data's clients have no portfolio), so do what a dealer
+      // does: create one in the form. "Create & Select" adds the client, its account services
+      // and the portfolio link, then selects it.
+      await page.getByTestId('invoice-new-client-button').click();
+      await page.getByTestId('new-client-type-individual').click();
+      const stamp = Date.now();
+      await page.getByTestId('new-client-first-name').fill('Tax');
+      await page.getByTestId('new-client-last-name').fill(`Soupfin37 ${stamp}`);
+      await page.getByTestId('new-client-email').fill(`soupfin37+${stamp}@example.com`);
+      await page.getByTestId('new-client-create-button').click();
+      await expect
+        .poll(async () => clientSelect.inputValue(), { timeout: 60000 })
+        .not.toBe('');
+      clientValue = await clientSelect.inputValue();
+    }
 
     const dueDate = page.getByTestId('invoice-due-date-input');
-    await dueDate.fill('2026-09-30');
+    await dueDate.fill(dueDateIso());
 
     const poNumber = `PO-SOUPFIN37-${Date.now()}`;
     const poInput = page.getByTestId('invoice-po-number-input');
@@ -289,7 +335,7 @@ test.describe('Invoice line-item tax persistence (SOUPFIN-37)', () => {
       .evaluate((o) => (o as HTMLOptionElement).value);
     await clientSelect.selectOption(clientValue);
 
-    await page.getByTestId('invoice-due-date-input').fill('2026-09-30');
+    await page.getByTestId('invoice-due-date-input').fill(dueDateIso());
     await page.getByTestId('invoice-item-description-0').fill('Untaxed line (SOUPFIN-37)');
     await page.getByTestId('invoice-item-quantity-0').fill('1');
     await page.getByTestId('invoice-item-unitPrice-0').fill('250');

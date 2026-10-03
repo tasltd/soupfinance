@@ -54,7 +54,7 @@ export const backendTestUsers = {
   // This user should work across tenants
   admin: {
     username: 'soup.support',
-    password: 'secret',
+    password: process.env.E2E_ADMIN_PASSWORD ?? 'secret',
     email: 'soup.support',
     roles: ['ROLE_ADMIN', 'ROLE_USER'],
   },
@@ -76,21 +76,21 @@ export const backendTestUsers = {
   // Test agent user (use primary admin)
   testAgent: {
     username: 'soup.support',
-    password: 'secret',
+    password: process.env.E2E_ADMIN_PASSWORD ?? 'secret',
     email: 'soup.support',
     roles: ['ROLE_USER'],
   },
   // Finance-focused user (use primary admin)
   finance: {
     username: 'soup.support',
-    password: 'secret',
+    password: process.env.E2E_ADMIN_PASSWORD ?? 'secret',
     email: 'soup.support',
     roles: ['ROLE_ADMIN', 'ROLE_USER', 'ROLE_FINANCE_REPORTS'],
   },
   // Legacy reference (same as admin)
   legacyAdmin: {
     username: 'soup.support',
-    password: 'secret',
+    password: process.env.E2E_ADMIN_PASSWORD ?? 'secret',
     email: 'soup.support',
     roles: ['ROLE_ADMIN', 'ROLE_USER'],
   },
