@@ -44,6 +44,47 @@ export const CURRENCIES: Record<string, CurrencyConfig> = {
   DEFAULT: { code: 'USD', symbol: '$', name: 'US Dollar', decimals: 2, symbolPosition: 'before' },
 };
 
+/**
+ * Format a monetary amount against a currency config.
+ *
+ * Fix: the minus sign belongs OUTSIDE the currency symbol. `toLocaleString`
+ * emits its own leading minus, so concatenating `symbol + formatted` produced
+ * "GH₵-1,200.00". We format the absolute value and prefix the sign to the
+ * whole string instead, for both symbol positions:
+ *   before -> "-GH₵1,200.00"    after -> "-1,200 CFA"
+ *
+ * @param amount        the value to format (null/undefined are treated as 0)
+ * @param config        the tenant's currency configuration
+ * @param includeSymbol false renders the number only (input fields, totals)
+ */
+export function formatAmountWithConfig(
+  amount: number | null | undefined,
+  config: CurrencyConfig,
+  includeSymbol = true
+): string {
+  const value = amount ?? 0;
+
+  // Changed: format the magnitude, never the signed value
+  const magnitude = Math.abs(value).toLocaleString('en-US', {
+    minimumFractionDigits: config.decimals,
+    maximumFractionDigits: config.decimals,
+  });
+
+  // A tiny negative that rounds away to zero must not render as "-$0.00"
+  const roundsToZero = /^[0.,]*$/.test(magnitude);
+  const sign = value < 0 && !roundsToZero ? '-' : '';
+
+  if (!includeSymbol) {
+    return `${sign}${magnitude}`;
+  }
+
+  // Changed: sign leads the whole string under BOTH symbol positions
+  if (config.symbolPosition === 'after') {
+    return `${sign}${magnitude} ${config.symbol}`;
+  }
+  return `${sign}${config.symbol}${magnitude}`;
+}
+
 interface AccountState {
   settings: AccountSettings | null;
   currencyConfig: CurrencyConfig;
@@ -112,23 +153,11 @@ export const useAccountStore = create<AccountState>()(
        * Uses the tenant's configured currency
        *
        * @example
-       * formatCurrency(1234.56) // Returns "$1,234.56" or "GH₵1,234.56" etc.
+       * formatCurrency(1234.56)  // Returns "$1,234.56" or "GH₵1,234.56" etc.
+       * formatCurrency(-1200)    // Returns "-$1,200.00" (minus before the symbol)
        */
       formatCurrency: (amount: number | null | undefined): string => {
-        const { currencyConfig } = get();
-        const value = amount ?? 0;
-
-        // Format number with proper decimal places and thousands separator
-        const formatted = value.toLocaleString('en-US', {
-          minimumFractionDigits: currencyConfig.decimals,
-          maximumFractionDigits: currencyConfig.decimals,
-        });
-
-        // Apply symbol position
-        if (currencyConfig.symbolPosition === 'after') {
-          return `${formatted} ${currencyConfig.symbol}`;
-        }
-        return `${currencyConfig.symbol}${formatted}`;
+        return formatAmountWithConfig(amount, get().currencyConfig);
       },
 
       /**
@@ -136,13 +165,7 @@ export const useAccountStore = create<AccountState>()(
        * Useful for input fields and calculations display
        */
       formatCurrencyValue: (amount: number | null | undefined): string => {
-        const { currencyConfig } = get();
-        const value = amount ?? 0;
-
-        return value.toLocaleString('en-US', {
-          minimumFractionDigits: currencyConfig.decimals,
-          maximumFractionDigits: currencyConfig.decimals,
-        });
+        return formatAmountWithConfig(amount, get().currencyConfig, false);
       },
 
       reset: () => {
