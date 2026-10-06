@@ -241,7 +241,10 @@ describe('Reports API', () => {
 
       // Assert
       const callUrl = (apiClient.get as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
-      expect(callUrl).toContain('f=xlsx');
+      // Fix (SOUPFIN-60): the UI's 'xlsx' must go on the wire as 'excel'. The
+      // Grails export plugin has no xlsx exporter, so f=xlsx returned HTTP 500.
+      expect(callUrl).toContain('f=excel');
+      expect(callUrl).not.toContain('f=xlsx');
       expect(callUrl).toContain('accountTransactions');
 
       expect(result).toBeInstanceOf(Blob);
