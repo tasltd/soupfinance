@@ -1,0 +1,381 @@
+<title>SoupFinance Planning Review</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a single reading column of ledger-style sections; summary first, detail after, sticky section index on wide screens. */
+:root{
+  --primary:#f24a0d;
+  --bg:#f8f6f5;
+  --surface:#ffffff;
+  --fg:#181311;
+  --muted:#8a6b60;
+  --line:#e6dedb;
+  --soft:#f5f1f0;
+  --ok:#15803d; --ok-bg:#dcfce7;
+  --warn:#a16207; --warn-bg:#fef9c3;
+  --bad:#b91c1c; --bad-bg:#fee2e2;
+  --info:#1d4ed8; --info-bg:#dbeafe;
+  --neutral-bg:#ede7e4;
+  --font-display:"Manrope","Noto Sans",system-ui,sans-serif;
+  --font-body:"Manrope","Noto Sans",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#221510;--surface:#1f1715;--fg:#efe7e3;--muted:#b49a90;--line:#3a2c27;--soft:#2a1e1a;
+  --ok:#86efac;--ok-bg:#14532d66;--warn:#fde68a;--warn-bg:#713f1266;--bad:#fca5a5;--bad-bg:#7f1d1d66;--info:#93c5fd;--info-bg:#1e3a8a66;--neutral-bg:#33251f;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#221510;--surface:#1f1715;--fg:#efe7e3;--muted:#b49a90;--line:#3a2c27;--soft:#2a1e1a;
+  --ok:#86efac;--ok-bg:#14532d66;--warn:#fde68a;--warn-bg:#713f1266;--bad:#fca5a5;--bad-bg:#7f1d1d66;--info:#93c5fd;--info-bg:#1e3a8a66;--neutral-bg:#33251f;
+  color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:15px;line-height:1.6;margin:0}
+.wrap{max-width:1080px;margin:0 auto;padding-inline:20px;padding-block:32px 64px;display:grid;grid-template-columns:200px minmax(0,1fr);gap:40px}
+@media (max-width:860px){.wrap{grid-template-columns:minmax(0,1fr);gap:16px;padding-inline:16px}.toc{display:none}}
+.toc{position:sticky;top:calc(env(safe-area-inset-top,0px) + 24px);align-self:start;display:flex;flex-direction:column;gap:2px;font-size:13px}
+.toc a{color:var(--muted);text-decoration:none;padding:6px 10px;border-radius:8px;font-weight:500}
+.toc a:hover,.toc a:focus-visible{background:var(--soft);color:var(--primary);outline:none}
+.toc .brand{font-weight:800;color:var(--fg);padding:6px 10px 14px;letter-spacing:-.01em}
+.toc .brand span{color:var(--primary)}
+main{display:flex;flex-direction:column;gap:40px;min-width:0}
+header.hero{display:flex;flex-direction:column;gap:12px;border-bottom:1px solid var(--line);padding-bottom:28px}
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--primary)}
+h1{font-family:var(--font-display);font-weight:800;font-size:clamp(28px,4.6vw,40px);line-height:1.12;letter-spacing:-.033em;margin:0;text-wrap:balance}
+h2{font-family:var(--font-display);font-weight:800;font-size:22px;letter-spacing:-.015em;margin:0;text-wrap:balance}
+h3{font-size:16px;font-weight:700;margin:0}
+p{margin:0;max-width:68ch}
+.lead{color:var(--muted);font-size:16px}
+.meta{display:flex;flex-wrap:wrap;gap:8px 20px;font-size:13px;color:var(--muted)}
+.meta b{color:var(--fg);font-weight:600}
+section{display:flex;flex-direction:column;gap:16px;scroll-margin-top:24px}
+.sec-head{display:flex;flex-direction:column;gap:4px}
+.sec-head p{color:var(--muted)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:2px}
+.stat .n{font-size:30px;font-weight:800;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.stat .l{font-size:13px;color:var(--muted);font-weight:500}
+.stat.accent .n{color:var(--primary)}
+.callout{border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:8px;border:1px solid var(--line);background:var(--surface)}
+.callout.bad{border-color:color-mix(in srgb,var(--bad) 40%,var(--line));background:var(--bad-bg)}
+.callout.free{background:color-mix(in srgb,var(--primary) 10%,var(--surface));border-color:color-mix(in srgb,var(--primary) 35%,var(--line))}
+.callout h3{display:flex;align-items:center;gap:8px}
+ul.clean{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:left;background:var(--soft);padding:10px 14px;font-weight:700;white-space:nowrap}
+td{padding:10px 14px;border-top:1px solid var(--line);vertical-align:top}
+td.id,.mono{font-family:var(--font-mono);font-size:12.5px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.p-ok{background:var(--ok-bg);color:var(--ok)} .p-warn{background:var(--warn-bg);color:var(--warn)}
+.p-bad{background:var(--bad-bg);color:var(--bad)} .p-info{background:var(--info-bg);color:var(--info)}
+.p-n{background:var(--neutral-bg);color:var(--muted)} .p-acc{background:color-mix(in srgb,var(--primary) 15%,transparent);color:var(--primary)}
+.phases{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.phase{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.phase .hd{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12.5px;padding:3px 9px;border-radius:7px;background:var(--soft);border:1px solid var(--line)}
+.chip b{font-family:var(--font-mono);font-weight:600;color:var(--primary);font-size:11.5px;margin-right:4px}
+details{background:var(--surface);border:1px solid var(--line);border-radius:12px}
+details summary{cursor:pointer;padding:14px 16px;font-weight:700;display:flex;justify-content:space-between;gap:12px;align-items:center;list-style:none}
+details summary::-webkit-details-marker{display:none}
+details summary:focus-visible{outline:2px solid var(--primary);outline-offset:2px;border-radius:12px}
+details summary .count{font-size:12px;color:var(--muted);font-weight:600;white-space:nowrap}
+details summary::after{content:"+";color:var(--primary);font-weight:800;margin-left:8px}
+details[open] summary::after{content:"–"}
+details .body{padding:0 16px 16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+details .body .tbl{border-radius:10px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.card .k{font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+a{color:var(--primary)}
+code{font-family:var(--font-mono);font-size:12.5px;background:var(--soft);padding:1px 5px;border-radius:5px;overflow-wrap:anywhere}
+footer{color:var(--muted);font-size:13px;border-top:1px solid var(--line);padding-top:20px}
+@media (prefers-reduced-motion:no-preference){details[open] .body{animation:fade .18s ease-out}@keyframes fade{from{opacity:.4}to{opacity:1}}}
+</style>
+
+<div class="wrap">
+<nav class="toc" aria-label="Sections">
+  <div class="brand">Soup<span>Finance</span></div>
+  <a href="#summary">Summary</a>
+  <a href="#attention">Needs your attention</a>
+  <a href="#roadmap">QuickBooks-class roadmap</a>
+  <a href="#coa">Empty Chart of Accounts</a>
+  <a href="#review">Feature-by-feature review</a>
+  <a href="#findings">Key findings</a>
+  <a href="#order">What to do next</a>
+  <a href="#other">Other actions</a>
+  <a href="#git">Repository changes</a>
+</nav>
+
+<main>
+<header class="hero">
+  <div class="eyebrow">Session report · 6 October 2026</div>
+  <h1>SoupFinance planning, review and task clean-up</h1>
+  <p class="lead">This session turned the QuickBooks feature matrix into a phased roadmap without pricing tiers, found why every new company's Chart of Accounts is empty, and reviewed every existing SOUPFIN task against the code. Each feature now has its own plan and a TASCIM module.</p>
+  <div class="meta">
+    <span>Project <b>SOUPFIN</b> (TASCIM)</span>
+    <span>Repo <b>tasltd/soupfinance</b></span>
+    <span>Branch <b class="mono">claude/gracious-wright-eschac</b></span>
+    <span>No TASCIM sessions triggered · no auto-fix · no code changes</span>
+  </div>
+</header>
+
+<section id="summary">
+  <div class="sec-head"><h2>Summary</h2><p>Counts are from TASCIM at the end of the session.</p></div>
+  <div class="stats">
+    <div class="stat accent"><span class="n">~120</span><span class="l">new tasks created (SOUPFIN-98 to 222)</span></div>
+    <div class="stat"><span class="n">97</span><span class="l">existing tasks reviewed against the code and git history</span></div>
+    <div class="stat"><span class="n">23</span><span class="l">TASCIM modules, every task now filed in one</span></div>
+    <div class="stat"><span class="n">16</span><span class="l">plan files written in <code>plans/</code></span></div>
+    <div class="stat"><span class="n">8</span><span class="l">review agents run, all finished</span></div>
+  </div>
+  <div class="callout free">
+    <h3>No pricing tiers</h3>
+    <p>SoupFinance is free until the end of 2027, so every tier is gone from the plans and tasks. There are no seat limits, no account cap and no upgrade prompts. SOUPFIN-99, 100 and 109 were cancelled and the five <code>tier:*</code> labels deleted. Every feature ships to every company, ordered by how much it helps users.</p>
+  </div>
+</section>
+
+<section id="attention">
+  <div class="sec-head"><h2>Needs your attention</h2><p>Decisions and risks the review turned up that only you can act on.</p></div>
+  <div class="callout bad">
+    <h3><span class="pill p-bad">Urgent</span> A production secret is committed to git (SOUPFIN-217)</h3>
+    <p>The testing review found the Apache <code>Api-Authorization</code> value, and a production database password, committed to the repository and its history. The task is to rotate both, remove them from tracked files and template the config. Rotate first, because the history already exposes them.</p>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Item</th><th>What is needed</th><th>Task</th></tr></thead>
+    <tbody>
+      <tr><td>Excel export returns HTTP 500 in production</td><td>Merge the fix on branch <code>fa12191</code>. The app sends <code>f=xlsx</code>, which the backend does not accept.</td><td class="id">SOUPFIN-60</td></tr>
+      <tr><td>Ledger, Accounting and Voucher return 403 for SERVICES companies</td><td>Backend change in soupmarkets-web to enable the modules. A plan already exists.</td><td class="id">SOUPFIN-144</td></tr>
+      <tr><td>Vendors hidden from the menu, but every bill needs one</td><td>Product decision: show Vendors to SERVICES companies, or not.</td><td class="id">SOUPFIN-173</td></tr>
+      <tr><td>Free-beta banner date</td><td>The branch says "free until November 2027"; the plan says "end of 2027". Confirm which.</td><td class="id">SOUPFIN-89</td></tr>
+      <tr><td>Two tasks the permission system would not let an agent close</td><td>Both fixes are on <code>main</code> with tests. Move them to Done.</td><td class="id">SOUPFIN-58, 86</td></tr>
+      <tr><td>Landing deploy script restarts Apache</td><td>Change it to reload before the next landing deploy. It also overwrites the vhost and skips the logo.</td><td class="id">SOUPFIN-214</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="roadmap">
+  <div class="sec-head"><h2>QuickBooks-class roadmap</h2><p>Epic <span class="mono">SOUPFIN-98</span> · <code>plans/qbo-feature-parity-roadmap.md</code>. The QuickBooks Online matrix was used only as a checklist of useful features. Order is set by user value, not by price.</p></div>
+  <div class="phases">
+    <div class="phase">
+      <div class="hd"><h3>Phase 1 · Everyday bookkeeping</h3><span class="pill p-acc">High</span></div>
+      <div class="chips">
+        <span class="chip"><b>131</b>Bank feeds</span><span class="chip"><b>132</b>Reconciliation</span>
+        <span class="chip"><b>112</b>Estimates</span><span class="chip"><b>114</b>Recurring invoices</span>
+        <span class="chip"><b>128</b>Credit notes</span><span class="chip"><b>103</b>Report framework</span>
+        <span class="chip"><b>104</b>Core reports</span><span class="chip"><b>105</b>Aging</span>
+        <span class="chip"><b>140</b>CSV import/export</span><span class="chip"><b>121</b>Receipt capture</span>
+        <span class="chip"><b>124</b>Bill tracking</span><span class="chip"><b>125</b>Multi-currency</span>
+        <span class="chip"><b>101</b>Accountant access</span>
+      </div>
+    </div>
+    <div class="phase">
+      <div class="hd"><h3>Phase 2 · Growing the business</h3><span class="pill p-info">Medium</span></div>
+      <div class="chips">
+        <span class="chip"><b>133</b>Time tracking</span><span class="chip"><b>135</b>Projects</span>
+        <span class="chip"><b>110</b>Class / Location</span><span class="chip"><b>127</b>Purchase orders</span>
+        <span class="chip"><b>117</b>Progress invoicing</span><span class="chip"><b>118</b>Invoice layouts</span>
+        <span class="chip"><b>136</b>Budgets</span><span class="chip"><b>115</b>Sales reps</span>
+        <span class="chip"><b>123</b>Withholding tax</span><span class="chip"><b>137</b>AI assistant</span>
+        <span class="chip"><b>138</b>Collaboration</span><span class="chip"><b>113</b>Sales channels</span>
+        <span class="chip"><b>122</b>Mileage</span><span class="chip"><b>126</b>Cheques</span>
+        <span class="chip"><b>116</b>Appointments</span>
+      </div>
+    </div>
+    <div class="phase">
+      <div class="hd"><h3>Phase 3 · Scale &amp; control</h3><span class="pill p-n">Low</span></div>
+      <div class="chips">
+        <span class="chip"><b>134</b>Inventory</span><span class="chip"><b>102</b>Custom roles</span>
+        <span class="chip"><b>139</b>Approvals</span><span class="chip"><b>111</b>Custom fields</span>
+        <span class="chip"><b>119</b>Batch invoicing</span><span class="chip"><b>129</b>Batch expenses</span>
+        <span class="chip"><b>130</b>Fixed assets</span><span class="chip"><b>120</b>Revenue recognition</span>
+        <span class="chip"><b>106</b>Profitability</span><span class="chip"><b>107</b>Report builder</span>
+        <span class="chip"><b>108</b>Forecasting</span><span class="chip"><b>141</b>Backup &amp; restore</span>
+      </div>
+    </div>
+  </div>
+  <p class="lead" style="font-size:14px">The tasks are in 9 QBO modules. "Plans, Users &amp; Access" is now "Users &amp; Access". Each task description starts with its phase. Tasks marked <code>backend-required</code> need a soupmarkets-web plan written before the frontend work starts.</p>
+</section>
+
+<section id="coa">
+  <div class="sec-head"><h2>Why the Chart of Accounts is empty</h2><p>Epic <span class="mono">SOUPFIN-142</span> · <code>plans/coa-template-seeding.md</code></p></div>
+  <div class="grid2">
+    <div class="card"><span class="k">Root cause</span>
+      <ul class="clean">
+        <li>Registration sends the business type, but the backend never creates any accounts from it.</li>
+        <li>SERVICES companies get 403 on <code>/rest/ledgerAccount/*</code>, so even seeded accounts would not show.</li>
+        <li>There is no account-category seed or API, so the frontend cannot seed accounts itself.</li>
+        <li>Without A/R, A/P and tax system accounts, invoice and bill posting fails.</li>
+        <li>On the frontend, the page can render blank, and the empty state offers no next step.</li>
+      </ul>
+    </div>
+    <div class="card"><span class="k">Fix, as planned</span>
+      <ul class="clean">
+        <li>COA templates for TRADING and SERVICES, plus a Ghana tax overlay (VAT, NHIL, GETFund, WHT); 60–90 accounts each. <span class="mono">143</span></li>
+        <li>Seed the accounts and enable the modules at registration. <span class="mono">144</span></li>
+        <li><code>applyTemplate</code> with dry-run, plus a template list. <span class="mono">145</span></li>
+        <li>Backfill existing companies whose COA is empty. <span class="mono">146</span></li>
+        <li>Template picker, blank-page fallback, account CRUD and clearer 403 messages. <span class="mono">147–151</span></li>
+        <li>Tests and documentation fixes. <span class="mono">152–153</span></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="review">
+  <div class="sec-head"><h2>Feature-by-feature review</h2><p>Each task's state was set from evidence: <b>Done</b> means the fix is on <code>main</code> with tests; <b>In Review</b> means the fix is on an unmerged branch, or merged but not yet verified in production. Every change has a "Review 2026-10-06" comment on the task.</p></div>
+
+  <details open>
+    <summary>Ledger &amp; Accounting <span class="count">plans/features/ledger-accounting.md · 9 new</span></summary>
+    <div class="body">
+      <p>SOUPFIN-9, 10 and 20 stay Done; their backend parts map to 144. New: Register view and edit links go nowhere (<span class="mono">154</span>), "Save &amp; Post" only saves a draft (<span class="mono">155</span>), voucher lifecycle (<span class="mono">156</span>), voucher types (<span class="mono">157</span>), period close (<span class="mono">158</span>), audit trail (<span class="mono">159</span>), tests (<span class="mono">161</span>), paging and a running-balance ledger (<span class="mono">163</span>), i18n (<span class="mono">164</span>), and voucher FK pickers (<span class="mono">162</span>).</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>Bills &amp; Vendors <span class="count">plans/features/bills-vendors.md · 10 new</span></summary>
+    <div class="body"><div class="tbl"><table>
+      <thead><tr><th>Task</th><th>Change</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td class="id">4, 6</td><td><span class="pill p-n">Done</span> → <span class="pill p-info">In Review</span></td><td>The UX items are still open; they moved to <span class="mono">160</span>.</td></tr>
+        <tr><td class="id">25, 38, 43</td><td><span class="pill p-ok">Done</span></td><td>Fixes on main with tests; 43 verified in production.</td></tr>
+        <tr><td class="id">42</td><td><span class="pill p-info">In Review</span></td><td>Tax fixed; the discount half is covered by 39.</td></tr>
+        <tr><td class="id">47</td><td><span class="pill p-warn">Todo</span></td><td>Still broken, and now unblocked.</td></tr>
+      </tbody></table></div>
+      <p>New: 160 error states, 171 bills paging, 172 vendor history, 173 vendor access decision, 174 backend CSRF/tax, 175 LXC spec, 182 vendor fields, 183 i18n, 184 bill status lifecycle.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>Invoices &amp; Clients · Payments <span class="count">2 plans · 12 new</span></summary>
+    <div class="body"><div class="tbl"><table>
+      <thead><tr><th>Task</th><th>Change</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td class="id">37, 44</td><td><span class="pill p-ok">Done</span></td><td>Merged with unit, E2E and integration specs.</td></tr>
+        <tr><td class="id">39, 40, 41</td><td><span class="pill p-n">Backlog</span></td><td>Backend-only; no backend change recorded.</td></tr>
+        <tr><td class="id">46</td><td><span class="pill p-info">In Review</span></td><td>Fix on an unmerged branch.</td></tr>
+        <tr><td class="id">14, 16, 18, 19, 21</td><td><span class="pill p-ok">Done</span></td><td>Umbrella tasks; every item is fixed or mapped to a task.</td></tr>
+      </tbody></table></div>
+      <p>New: 165 list paging and filters, 166 error states, 167 i18n, 168 several taxes per line, 169/170 production checks, 176 payment FK payload bug, 177 payments list, 178 one payment across several invoices or bills, 179 receipt upload, 180 i18n, 181 structured "module disabled" 403.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>Reports <span class="count">plans/features/reports.md · 9 new</span></summary>
+    <div class="body"><div class="tbl"><table>
+      <thead><tr><th>Task</th><th>Change</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td class="id">35, 56, 64, 68</td><td><span class="pill p-ok">Done</span></td><td>Fixes on main with tests.</td></tr>
+        <tr><td class="id">54, 57, 61, 65</td><td><span class="pill p-n">Cancelled</span></td><td>Duplicates of 67/73, 56 and 64.</td></tr>
+        <tr><td class="id">59, 60, 67</td><td><span class="pill p-info">In Review</span></td><td>Fixes on unmerged branches. 60 is the Excel 500.</td></tr>
+        <tr><td class="id">33</td><td><span class="pill p-info">In Review</span></td><td>All 6 items fixed; production checks split into 208–211.</td></tr>
+        <tr><td class="id">74</td><td><span class="pill p-warn">Todo</span></td><td>Schedule history dates still a day early.</td></tr>
+      </tbody></table></div>
+      <p>New: 190 Cash Flow endpoint, 191 schedules 403, 192 error states, 193 JSON and tests, 194 i18n, 208–211 production checks.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>Auth · Onboarding &amp; KYC · Settings <span class="count">3 plans · 9 new</span></summary>
+    <div class="body"><div class="tbl"><table>
+      <thead><tr><th>Task</th><th>Change</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td class="id">24, 45, 55</td><td><span class="pill p-ok">Done</span></td><td>Fixes on main with tests.</td></tr>
+        <tr><td class="id">49, 89</td><td><span class="pill p-info">In Review</span></td><td>Fixes on unmerged branches. 89 is now high priority.</td></tr>
+        <tr><td class="id">69</td><td><span class="pill p-n">Cancelled</span></td><td>Duplicate of 70.</td></tr>
+        <tr><td class="id">50, 62, 70</td><td><span class="pill p-n">Backlog</span></td><td>Waiting on backend.</td></tr>
+        <tr><td class="id">22</td><td><span class="pill p-warn">Todo</span></td><td>Still broken.</td></tr>
+        <tr><td class="id">58, 86</td><td><span class="pill p-bad">Blocked</span></td><td>Should be Done; the state change was refused.</td></tr>
+      </tbody></table></div>
+      <p>New: 185 i18n, 186 forgot/reset password endpoints, 187 tenant_id check at registration, 188 session-timeout modal, 189 page tests, 196 KYC CSRF, 198 i18n, 200 currency change applies only after reload, 202 settings i18n.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>Dashboard &amp; Layout · Help · Landing <span class="count">3 plans · 14 new</span></summary>
+    <div class="body"><div class="tbl"><table>
+      <thead><tr><th>Task</th><th>Change</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td class="id">52, 63, 75, 76, 84, 91</td><td><span class="pill p-ok">Done</span></td><td>Fixes on main with tests.</td></tr>
+        <tr><td class="id">78</td><td><span class="pill p-n">Cancelled</span></td><td>Duplicate of 91.</td></tr>
+        <tr><td class="id">90, 94</td><td><span class="pill p-info">In Review</span></td><td>Deploy not confirmed, or fix on a branch.</td></tr>
+        <tr><td class="id">71, 97</td><td><span class="pill p-warn">Todo</span></td><td>Nothing merged yet.</td></tr>
+      </tbody></table></div>
+      <p>New: 195 dashboard i18n, 197 real KPIs, 199 charts, 201 welcome checklist, 203 notifications, 204 search, 205 profile menu, 206 mobile nav, 207 accessibility checks, 212–213 help, 214 landing deploy script, 215 "free until end of 2027" copy, 216 built CSS.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>Testing, QA &amp; Deployment <span class="count">plans/features/testing-deployment.md · 6+ new</span></summary>
+    <div class="body">
+      <div class="grid2">
+        <div class="card"><span class="k">Unit tests (run today)</span><p><b>1,712 / 1,712</b> passed across 76 files. CLAUDE.md still says 1,095 across 53 files.</p></div>
+        <div class="card"><span class="k">Lint · CI</span><p>0 errors, 98 warnings. There is no <code>.github/</code> folder, so nothing runs on pull requests. Mock E2E was not run because Firefox could not be downloaded in the container.</p></div>
+      </div>
+      <div class="tbl"><table>
+        <thead><tr><th>Task</th><th>Change</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td class="id">26, 36, 79, 80, 83</td><td><span class="pill p-ok">Done</span></td><td>Fixes on main (Firefox-only configs, guard, flake fixes).</td></tr>
+          <tr><td class="id">32</td><td><span class="pill p-n">Cancelled</span></td><td>Duplicate of 26.</td></tr>
+          <tr><td class="id">48, 77</td><td><span class="pill p-info">In Review</span></td><td>No Firefox run has confirmed them, or the fix is on a branch.</td></tr>
+          <tr><td class="id">17, 66, 82</td><td><span class="pill p-warn">Todo</span></td><td>Specs still unguarded; one test calls the live production site.</td></tr>
+        </tbody></table></div>
+      <p>New: 217 committed secret (urgent), 218 CI quality gate on GitHub Actions, 219 unmocked-API guard as a default fixture, 220 harden <code>deploy-to-production.sh</code> for the gateway balancer (its smoke check accepts a 500 today), 221 refresh deploy and test docs, 222 nightly LXC integration run with tracked results.</p>
+    </div>
+  </details>
+</section>
+
+<section id="findings">
+  <div class="sec-head"><h2>Key findings</h2></div>
+  <div class="grid2">
+    <div class="card"><span class="k">Unmerged fixes</span><p>About 15 finished fixes sit on <code>feature/*auto-fix*</code> branches that were never merged, so <code>main</code> still has those bugs (reports currency and dates, invoices, auth, KYC, landing). They are now marked In Review.</p></div>
+    <div class="card"><span class="k">Module gating</span><p>SERVICES companies cannot use Ledger, Accounting, Vouchers or Payment Methods in production until the backend enables those modules (144).</p></div>
+    <div class="card"><span class="k">Capped lists</span><p>Bills show 20 rows and the Register shows 500, with paging done in the browser. Older records silently drop out.</p></div>
+    <div class="card"><span class="k">Translation</span><p>The translation files exist, but most pages hardcode English. There are i18n tasks for every module.</p></div>
+  </div>
+</section>
+
+<section id="order">
+  <div class="sec-head"><h2>What to do next</h2><p>From <code>plans/soupfinance-master-plan.md</code>.</p></div>
+  <div class="tbl"><table>
+    <thead><tr><th>Stage</th><th>Work</th></tr></thead>
+    <tbody>
+      <tr><td><span class="pill p-bad">0 · Now</span></td><td>Rotate and remove the committed secret (217). Merge the unmerged fix branches, starting with 60. Fix the landing deploy script (214), then ship the "free until 2027" copy (215, 89).</td></tr>
+      <tr><td><span class="pill p-warn">1</span></td><td>Unblock the books on the backend: module enablement (144), COA templates and seeding (142 epic), bill and KYC CSRF, password reset, report schedules, Cash Flow endpoint.</td></tr>
+      <tr><td><span class="pill p-info">2</span></td><td>Finish every existing feature: COA UI, ledger lifecycle, list paging, error states, dashboard, i18n and tests. Add the CI gate (218).</td></tr>
+      <tr><td><span class="pill p-acc">3</span></td><td>QuickBooks-class features, Phases 1 → 3.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="other">
+  <div class="sec-head"><h2>Other actions this session</h2></div>
+  <div class="grid2">
+    <div class="card"><span class="k">Support ticket TKT-00108</span><p>Identified as a <b>SoupFinance (SOUPFIN)</b> ticket: an auto-report raised when an agent used the task type "improvement". The task was re-created as SOUPFIN-163. I added a reply explaining this and listing five TASCIM MCP bugs, including that auto-report subjects leave out the project short name and that the internal-note tool is broken.</p></div>
+    <div class="card"><span class="k">soupmarkets-web-axum-a0a0</span><p>Sent your answers to its four open decisions:</p>
+<ul class="clean">
+  <li><b>Database restarts:</b> after the midnight E2E run, one server at a time.</li>
+  <li><b>ETF, ALT DEBT, FD and EBD levies:</b> no. A policy applies only to the security types it lists. Those types come from domain data, not free text. Every broker uses Fincap's setup for BD, BILL and NOTES. The alignment script is dry-run first, and you sign off any change to client charges.</li>
+  <li><b>"No fees":</b> no reason needed; the trader decides.</li>
+  <li><b>Constant Capital commission gaps:</b> a note goes to the company.</li>
+</ul>
+<p>Also told it the provider is not paused, so it should continue across all its agents and sessions.</p></div>
+  </div>
+</section>
+
+<section id="git">
+  <div class="sec-head"><h2>Repository changes</h2><p>Only plan documents changed; there are no code changes. Merged to <code>main</code> through <a href="https://github.com/tasltd/soupfinance/pull/60">tasltd/soupfinance#60</a> as merge commit <span class="mono">5eb1d2c</span>. The auto-fix branches with unmerged code fixes were left alone; they need review first (Stage 0).</p></div>
+  <div class="tbl"><table>
+    <thead><tr><th>File</th><th>What it holds</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">plans/soupfinance-master-plan.md</td><td>Index of every plan, review findings, overall order</td></tr>
+      <tr><td class="mono">plans/qbo-feature-parity-roadmap.md</td><td>QuickBooks-class roadmap in three user-value phases, no tiers</td></tr>
+      <tr><td class="mono">plans/coa-template-seeding.md</td><td>Root cause and fix for the empty Chart of Accounts</td></tr>
+      <tr><td class="mono">plans/features/*.md</td><td>12 feature plans: auth, onboarding, settings, invoices, payments, bills, ledger, reports, dashboard, help, landing, testing/deploy</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<footer>Generated 6 October 2026 from TASCIM project SOUPFIN and the tasltd/soupfinance repository.</footer>
+</main>
+</div>
