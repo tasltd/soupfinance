@@ -80,11 +80,11 @@ The base account trees are already written in `plans/soupfinance-tenant-architec
 - A fresh registration (TRADING or SERVICES) opens the Chart of Accounts with the template's accounts, grouped by Asset, Liability, Equity, Income and Expense.
 - An invoice and a bill can be saved and posted on a brand-new tenant, because the A/R, A/P and tax system accounts exist.
 - An existing tenant with an empty COA can apply a template from the UI. Applying it twice creates no duplicates.
-- The QBO-parity COA limit (250 on non-Advanced tiers, SOUPFIN-109) counts seeded accounts. Templates must stay well under 250 (target 60-90 accounts).
+- Templates stay lean and usable: 60-90 accounts each. There is no account cap, because SoupFinance has no pricing tiers until the end of 2027 (SOUPFIN-109 cancelled).
 
 ## 5. Related
 
 - `plans/soupfinance-tenant-architecture-refactor.md` — original template trees
 - `plans/soupfinance-ledger-accounting-module-enablement.md` — 403 / module gating
-- `plans/qbo-feature-parity-roadmap.md` — COA limit (SOUPFIN-109), Class/Location (SOUPFIN-110)
+- `plans/qbo-feature-parity-roadmap.md` — Class/Location tracking (SOUPFIN-110), custom fields (SOUPFIN-111)
 - `prd/features/ledger.md`, `prd/04-business-rules.md`
