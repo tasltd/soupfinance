@@ -20,7 +20,13 @@
  * internal route, so the menu path is exercised too.
  */
 import { test, expect, type Page } from '@playwright/test';
-import { mockLoginApi, mockTokenValidationApi, mockDashboardApi, isLxcMode } from './fixtures';
+import {
+  mockAmbientApi,
+  mockLoginApi,
+  mockTokenValidationApi,
+  mockDashboardApi,
+  isLxcMode,
+} from './fixtures';
 
 /**
  * Screenshots go to a git-tracked directory rather than through the shared
@@ -111,6 +117,9 @@ test.describe('SOUPFIN-67 — Cash Flow follows the tenant currency', () => {
   test.skip(isLxcMode(), 'Needs a controlled tenant currency and report payload; mock mode only.');
 
   test.beforeEach(async ({ page }) => {
+    // mockAmbientApi answers the corporate-onboarding lookups every signed-in
+    // page makes; left unmocked they 401 and bounce the reload to /login.
+    await mockAmbientApi(page);
     await mockLoginApi(page, true);
     await mockTokenValidationApi(page, true);
     await mockDashboardApi(page);
