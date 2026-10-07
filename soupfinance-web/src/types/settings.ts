@@ -297,3 +297,66 @@ export function getRoleLabel(role: SbRole): string | null {
   if (!authority) return null;
   return SOUPFINANCE_ROLE_LABELS[authority] || authority.replace('ROLE_', '');
 }
+
+// ============================================================================
+// Accountant Invites (SOUPFIN-101)
+// ============================================================================
+// Added (SOUPFIN-101): mirrors the planned backend domain
+// soupbroker.security.AccountantInvite — see plans/soupfin-101-accountant-invite-backend.md.
+// The backend does not ship it yet; until it does, /rest/accountantInvite/* answers 404.
+
+/** Lifecycle of an invite. EXPIRED is derived server-side from expiresAt. */
+export type AccountantInviteStatus = 'PENDING' | 'ACCEPTED' | 'REVOKED' | 'EXPIRED';
+
+export interface AccountantInvite {
+  id: string;
+  email: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  status: AccountantInviteStatus;
+  dateCreated?: string;
+  lastSentAt?: string | null;
+  sendCount?: number;
+  expiresAt?: string | null;
+  acceptedAt?: string | null;
+  revokedAt?: string | null;
+  invitedBy?: { id: string; serialised?: string; class?: string } | null;
+  /** The accountant's Agent in this tenant, set once the invite is accepted. */
+  agent?: { id: string; serialised?: string; class?: string } | null;
+}
+
+export interface AccountantInviteFormData {
+  email: string;
+  firstName?: string;
+  lastName?: string;
+}
+
+/**
+ * Status as the user should see it. A PENDING invite past its expiresAt reads as
+ * EXPIRED even before the backend lazily rewrites the row.
+ */
+export function getAccountantInviteStatus(
+  invite: AccountantInvite,
+  now: Date = new Date()
+): AccountantInviteStatus {
+  if (invite.status === 'PENDING' && invite.expiresAt) {
+    const expires = new Date(invite.expiresAt);
+    if (!Number.isNaN(expires.getTime()) && expires.getTime() < now.getTime()) return 'EXPIRED';
+  }
+  return invite.status;
+}
+
+/** Resend is offered for invites nobody has accepted yet; revoke for anything still live. */
+export function canResendAccountantInvite(status: AccountantInviteStatus): boolean {
+  return status === 'PENDING' || status === 'EXPIRED';
+}
+
+export function canRevokeAccountantInvite(status: AccountantInviteStatus): boolean {
+  return status === 'PENDING' || status === 'ACCEPTED' || status === 'EXPIRED';
+}
+
+/** "Ama Owusu", or the email when no name was given. */
+export function accountantDisplayName(invite: AccountantInvite): string {
+  const name = [invite.firstName, invite.lastName].filter(Boolean).join(' ').trim();
+  return name || invite.email;
+}

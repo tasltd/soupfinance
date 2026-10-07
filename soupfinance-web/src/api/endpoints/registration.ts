@@ -342,3 +342,54 @@ export async function checkPhoneExists(_phoneNumber: string): Promise<boolean> {
 export async function checkEmailExists(_email: string): Promise<boolean> {
   return false;
 }
+
+// =============================================================================
+// Accountant invite acceptance (SOUPFIN-101)
+// =============================================================================
+// Added (SOUPFIN-101): the invited accountant has no token yet, so these go through
+// /account/* (public, Api-Authorization injected by the proxy), not /rest/*.
+// Contract: plans/soupfin-101-accountant-invite-backend.md.
+
+/** What the accept page needs to know about an invite before the accountant acts. */
+export interface AccountantInviteDetails {
+  status: 'PENDING' | 'ACCEPTED' | 'REVOKED' | 'EXPIRED';
+  email: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  /** The inviting company, shown so the accountant knows whose books they are joining. */
+  companyName?: string | null;
+  /** True when the email already has a SoupFinance login: no password is set here. */
+  existingUser: boolean;
+}
+
+export interface AcceptAccountantInvite {
+  token: string;
+  /** Only for a new login; an existing login keeps its password. */
+  password?: string;
+  confirmPassword?: string;
+}
+
+export interface AcceptAccountantInviteResponse {
+  success: boolean;
+  message?: string;
+  username?: string;
+}
+
+/** GET /account/accountantInvite.json?token= */
+export async function getAccountantInvite(token: string): Promise<AccountantInviteDetails> {
+  const response = await accountApiClient.get<AccountantInviteDetails>(
+    `/account/accountantInvite.json?token=${encodeURIComponent(token)}`
+  );
+  return response.data;
+}
+
+/** POST /account/acceptAccountantInvite.json */
+export async function acceptAccountantInvite(
+  data: AcceptAccountantInvite
+): Promise<AcceptAccountantInviteResponse> {
+  const response = await accountApiClient.post<AcceptAccountantInviteResponse>(
+    '/account/acceptAccountantInvite.json',
+    data
+  );
+  return response.data;
+}

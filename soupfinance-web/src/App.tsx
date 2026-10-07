@@ -33,6 +33,8 @@ import { LoginPage } from './features/auth/LoginPage';
 import { VerifyPage } from './features/auth/VerifyPage';
 // Added (2026-01-30): Email confirmation page for tenant registration
 import { ConfirmEmailPage } from './features/auth/ConfirmEmailPage';
+// Added (SOUPFIN-101): landing page for the link in an accountant invitation email
+import { AcceptInvitePage } from './features/auth/AcceptInvitePage';
 // Resend confirmation email page
 import { ResendConfirmationPage } from './features/auth/ResendConfirmationPage';
 // Forgot password and reset password pages
@@ -96,6 +98,7 @@ import {
   SettingsLayout,
   UserListPage,
   UserFormPage,
+  AccountantListPage,
   BankAccountListPage,
   BankAccountFormPage,
   AccountSettingsPage,
@@ -248,6 +251,8 @@ export default function App() {
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             {/* Reset password (public - accessed via email link with token query param) */}
             <Route path="/reset-password" element={<ResetPasswordPage />} />
+            {/* Added (SOUPFIN-101): accountant accepts an invitation (public - link in the invite email) */}
+            <Route path="/accept-invite" element={<AcceptInvitePage />} />
           </Route>
 
           {/* Protected routes */}
@@ -330,6 +335,8 @@ export default function App() {
               <Route index element={null} />
               {/* User Management (agents with director/signatory managed inline) */}
               <Route path="users" element={<UserListPage />} />
+              {/* Added (SOUPFIN-101): outside accountants; a static segment, so it wins over users/:id */}
+              <Route path="users/accountants" element={<AccountantListPage />} />
               <Route path="users/new" element={<UserFormPage />} />
               <Route path="users/:id" element={<UserFormPage />} />
               {/* Bank Accounts */}

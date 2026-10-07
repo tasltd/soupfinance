@@ -56,6 +56,8 @@ export const HELP_SECTIONS = [
   'scheduled-reports',
   'settings',
   'users',
+  // Added (SOUPFIN-101): outside accountants, and accepting an invitation
+  'accountants',
   'bank-accounts',
   'account-settings',
   'support',
@@ -81,11 +83,17 @@ export function authHelpSection(pathname: string): HelpSection {
   if (pathname.startsWith('/forgot-password') || pathname.startsWith('/reset-password')) {
     return 'password';
   }
+  // Added (SOUPFIN-101): the link in an accountant invitation email
+  if (pathname.startsWith('/accept-invite')) return 'accountants';
   return 'sign-in';
 }
 
 /** Guide section for a Settings tab; the tabs share one header in SettingsLayout. */
 export function settingsHelpSection(pathname: string): HelpSection {
+  // Added (SOUPFIN-101): checked before Users, which shares its /settings/users prefix
+  if (pathname === '/settings/users/accountants' || pathname.startsWith('/settings/users/accountants/')) {
+    return 'accountants';
+  }
   if (pathname.startsWith('/settings/users')) return 'users';
   if (pathname.startsWith('/settings/bank-accounts')) return 'bank-accounts';
   if (pathname.startsWith('/settings/account')) return 'account-settings';

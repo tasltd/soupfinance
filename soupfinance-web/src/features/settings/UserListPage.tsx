@@ -13,6 +13,8 @@ import { getRoleLabel, getAgentUsername } from '../../types/settings';
 import { logger } from '../../utils/logger';
 // Added: normalize backend error for the list-level error banner
 import { normalizeApiError } from '../../utils/apiError';
+// Added (SOUPFIN-101): Team members / Accountants sub-tabs
+import UsersTabs from './UsersTabs';
 
 interface DeleteState {
   isOpen: boolean;
@@ -117,6 +119,8 @@ export default function UserListPage() {
 
   return (
     <div className="flex flex-col gap-6" data-testid="user-list-page">
+      <UsersTabs />
+
       {/* Page Header */}
       <div className="flex flex-wrap justify-between items-center gap-4">
         <div>

@@ -105,6 +105,7 @@ describe('authHelpSection', () => {
     ['/resend-confirmation', 'register'],
     ['/forgot-password', 'password'],
     ['/reset-password', 'password'],
+    ['/accept-invite', 'accountants'],
   ])('%s opens #%s', (path, section) => {
     expect(authHelpSection(path)).toBe(section);
   });
@@ -128,6 +129,9 @@ describe('settingsHelpSection', () => {
     ['/settings/users', 'users'],
     ['/settings/users/new', 'users'],
     ['/settings/users/abc-123', 'users'],
+    // Added (SOUPFIN-101)
+    ['/settings/users/accountants', 'accountants'],
+    ['/settings/users/accountants-not-a-tab', 'users'],
     ['/settings/bank-accounts', 'bank-accounts'],
     ['/settings/bank-accounts/new', 'bank-accounts'],
     ['/settings/account', 'account-settings'],
@@ -146,6 +150,7 @@ describe('Layouts pick the section from the route', () => {
   it.each([
     ['/settings', 'settings'],
     ['/settings/users', 'users'],
+    ['/settings/users/accountants', 'accountants'],
     ['/settings/bank-accounts/new', 'bank-accounts'],
     ['/settings/account', 'account-settings'],
   ])('Settings header at %s links to #%s', (path, section) => {

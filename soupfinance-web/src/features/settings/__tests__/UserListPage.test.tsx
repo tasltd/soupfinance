@@ -250,3 +250,23 @@ describe('UserListPage row display (SOUPFIN-2 bug 10)', () => {
     expect(within(errorBlock).getByText(/Backend tenant unresolved/i)).toBeInTheDocument();
   });
 });
+
+// Added (SOUPFIN-101): Settings → Users is split into Team members and Accountants.
+describe('UserListPage sub-tabs (SOUPFIN-101)', () => {
+  it('shows Team members as current and links to the Accountants tab', async () => {
+    vi.mocked(agentApi.list).mockResolvedValue([]);
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+    render(
+      <QueryClientProvider client={qc}>
+        <MemoryRouter initialEntries={['/settings/users']}>
+          <UserListPage />
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
+    expect(screen.getByRole('link', { name: 'Team members' })).toHaveAttribute('aria-current', 'page');
+    const accountants = screen.getByRole('link', { name: 'Accountants' });
+    expect(accountants).toHaveAttribute('href', '/settings/users/accountants');
+    expect(accountants).not.toHaveAttribute('aria-current');
+    expect(await screen.findByText('No users yet')).toBeInTheDocument();
+  });
+});

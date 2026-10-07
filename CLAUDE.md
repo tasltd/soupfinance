@@ -190,7 +190,7 @@ App.tsx                # Routes + providers (ProtectedRoute, PublicRoute wrapper
 | **Foreign Keys** | Use nested objects `{ vendor: { id: "uuid" } }` not `vendor.id` |
 | **Registration** | Goes through `/account/*` proxy (not `/rest/*`) |
 | **App Identification** | Backend identifies the app via the `Api-Authorization` header injected by the proxy (ApiAuthenticatorInterceptor resolves the ApiConsumer name) |
-| **Settings APIs** | `settings.ts` exports 6 sub-APIs: `agentApi`, `accountBankDetailsApi`, `accountPersonApi`, `rolesApi`, `banksApi`, `accountSettingsApi` (uses `tenantId` from auth store → `/account/show/{tenantId}.json`) |
+| **Settings APIs** | `settings.ts` exports 7 sub-APIs: `accountantInviteApi` (SOUPFIN-101; backend pending — `plans/soupfin-101-accountant-invite-backend.md`), `agentApi`, `accountBankDetailsApi`, `accountPersonApi`, `rolesApi`, `banksApi`, `accountSettingsApi` (uses `tenantId` from auth store → `/account/show/{tenantId}.json`) |
 | **Domain Data** | Tax rates and payment terms are **hardcoded** in `domainData.ts` (no backend endpoint); service descriptions from `/rest/serviceDescription/index.json`; payment methods from `/rest/paymentMethod/index.json` (dynamic, domain class FK) |
 | **PaymentMethod** | Domain class FK (`{ id, name, serialised?, class? }`), NOT a string enum. Use `usePaymentMethods()` hook. Send `paymentMethodId` in create requests |
 
@@ -273,9 +273,9 @@ Both the Vite dev server and production Apache proxy API requests to the Grails 
 - REST-style: `/invoices`, `/invoices/new`, `/invoices/:id`, `/invoices/:id/edit`
 - `ProtectedRoute`: Requires auth, validates token on mount, shows loading while initializing
 - `PublicRoute`: Redirects to dashboard if authenticated
-- Public (unauthenticated) routes: `/login`, `/register`, `/verify`, `/confirm-email`, `/resend-confirmation`, `/forgot-password`, `/reset-password`
+- Public (unauthenticated) routes: `/login`, `/register`, `/verify`, `/confirm-email`, `/resend-confirmation`, `/forgot-password`, `/reset-password`, `/accept-invite` (accountant invitation link, SOUPFIN-101)
 - Onboarding: `/onboarding/company`, `/onboarding/directors`, `/onboarding/documents`, `/onboarding/status`
-- Settings nested: `/settings/users`, `/settings/bank-accounts`, `/settings/account`
+- Settings nested: `/settings/users`, `/settings/users/accountants` (outside accountants, SOUPFIN-101), `/settings/bank-accounts`, `/settings/account`
 
 ---
 

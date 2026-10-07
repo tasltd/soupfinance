@@ -85,7 +85,7 @@ Features: `accounting` (vouchers, journal entries, transaction register), `auth`
 - **endpoints/clients.ts**: Client + AccountServices APIs (invoices reference `accountServices.id` as FK, client metadata from `Client` entity)
 - **endpoints/ledger.ts**: Ledger accounts, transactions, vouchers (payment/receipt/deposit), journal entries (multi-line). CSRF only needed for POST/save; PUT/DELETE do not require CSRF
 - **endpoints/domainData.ts**: Shared domain data lookups — tax rates and payment terms are **hardcoded** (no backend endpoint); service descriptions from `/rest/serviceDescription/index.json`; **payment methods** from `/rest/paymentMethod/index.json` (domain class, dynamic)
-- **endpoints/settings.ts**: 6 sub-APIs: `agentApi` (staff CRUD), `accountBankDetailsApi` (bank accounts), `accountPersonApi` (directors/signatories), `rolesApi` (`/sbRole/index.json`), `banksApi` (`/bank/index.json`), `accountSettingsApi` (reads `tenantId` from auth store → `GET /account/show/{tenantId}.json`)
+- **endpoints/settings.ts**: 7 sub-APIs: `accountantInviteApi` (SOUPFIN-101 accountant invite/resend/revoke under `/rest/accountantInvite/*` — backend not built yet, see `../plans/soupfin-101-accountant-invite-backend.md`; the tab shows "not available yet" on its 404), `agentApi` (staff CRUD), `accountBankDetailsApi` (bank accounts), `accountPersonApi` (directors/signatories), `rolesApi` (`/sbRole/index.json`), `banksApi` (`/bank/index.json`), `accountSettingsApi` (reads `tenantId` from auth store → `GET /account/show/{tenantId}.json`)
 - **endpoints/report-schedules.ts**: Scheduled reports CRUD via `/rest/reportSchedule/*` — plus pause/resume and execution history. UI at `/reports/scheduled` (`ScheduledReportsPage.tsx`)
 - **errors.ts**: `parseApiError()` / `getApiErrorMessage()` — see "API Error Handling" below
 
@@ -226,13 +226,13 @@ All domain types mirror soupmarkets-web Grails domain classes:
 - **Ledger and Accounting are separate route trees** (a frequent source of wrong E2E URLs): `/ledger/accounts` (Chart of Accounts) and `/ledger/transactions` vs `/accounting/transactions` (Transaction Register). There is no bare `/ledger` or `/accounting` route
 - Accounting routes use type-based URLs: `/accounting/voucher/payment`, `/accounting/voucher/receipt`, `/accounting/journal-entry/:id`
 - Reports: `/reports/pnl` (NOT `/reports/profit-loss`), `/reports/balance-sheet`, `/reports/cash-flow`, `/reports/aging` (single page for AR+AP, NOT `/reports/ar-aging`), `/reports/trial-balance`, `/reports/scheduled`
-- Settings are nested children of `/settings`: `account` (NOT `/settings/company` or `/settings/profile`), `users`, `bank-accounts`
+- Settings are nested children of `/settings`: `account` (NOT `/settings/company` or `/settings/profile`), `users`, `users/accountants` (SOUPFIN-101 Accountants sub-tab; a static segment, so it beats `users/:id`), `bank-accounts`
 - Unmatched paths (`*`) redirect to `/dashboard` — a typo'd route silently lands on the dashboard rather than 404ing
 - `/help` embeds the static user guide (`public/user-guide/index.html`) in an iframe; the sidebar Help link goes there. `/help#invoices` deep-links a section. Point at `index.html` explicitly — a bare `/user-guide/` gets the SPA fallback on the Vite dev server
 - **"Need Help?" links (SOUPFIN-81)**: every page header renders `<HelpLink section="..." />` (`src/components/help/`), which opens that guide section **in a new tab** so a half-filled form is never lost, and so it works on the sign-in pages where `/help` is unreachable. Valid sections are the `HELP_SECTIONS` list in `helpSections.ts`; a unit test fails if any is not an `id` in the guide. `SettingsLayout` and `AuthLayout` pick the section from the route. Adding a page: add its link under the subtitle and a row to the page table in `HelpLink.test.tsx`
 - After re-capturing the guide screenshots (`e2e/user-guide-screenshots.spec.ts`), run `node scripts/size-user-guide-images.mjs`. Every guide `<img>` needs its real `width`/`height`, or images loading above a `#section` push it out of view and a help link lands on the wrong content; a unit test enforces it
 - Onboarding routes: `/onboarding/company`, `/onboarding/directors`, `/onboarding/documents`, `/onboarding/status`
-- Public (unauthenticated) routes: `/login`, `/register`, `/verify`, `/confirm-email`, `/resend-confirmation`, `/forgot-password`, `/reset-password`
+- Public (unauthenticated) routes: `/login`, `/register`, `/verify`, `/confirm-email`, `/resend-confirmation`, `/forgot-password`, `/reset-password`, `/accept-invite` (SOUPFIN-101: link in an accountant invitation email; calls `/account/accountantInvite.json` + `/account/acceptAccountantInvite.json`)
 
 ## Code Quality
 

@@ -6,6 +6,7 @@
  * - Account Bank Details
  * - Account Persons (directors, signatories)
  * - Account configuration
+ * - Accountant invites (SOUPFIN-101)
  */
 // Changed: Added CSRF token imports for mutation operations (POST/PUT/DELETE)
 // Fix: Use shared accountClient from client.ts (has proper interceptors for 401/logging)
@@ -22,6 +23,8 @@ import type {
   AccountSettings,
   SbRole,
   Bank,
+  AccountantInvite,
+  AccountantInviteFormData,
 } from '../../types/settings';
 
 // ============================================================================
@@ -520,6 +523,57 @@ export const accountSettingsApi = {
       `/account/update/${data.id}.json?${csrfParams.toString()}`,
       data
     );
+    return response.data;
+  },
+};
+
+// ============================================================================
+// Accountant Invites API (SOUPFIN-101)
+// ============================================================================
+// Added (SOUPFIN-101): an admin invites an outside accountant by email; the accountant
+// accepts through /accept-invite and gets a login scoped to this tenant.
+// Contract: plans/soupfin-101-accountant-invite-backend.md. Only save needs a CSRF token
+// (project convention: POST save only); resend and revoke are commands, not saves.
+
+/** Drops empty optional names so the backend stores null rather than "". */
+function transformAccountantInviteData(data: AccountantInviteFormData): Record<string, unknown> {
+  const transformed: Record<string, unknown> = { email: data.email.trim().toLowerCase() };
+  if (data.firstName?.trim()) transformed.firstName = data.firstName.trim();
+  if (data.lastName?.trim()) transformed.lastName = data.lastName.trim();
+  return transformed;
+}
+
+export const accountantInviteApi = {
+  /** List this tenant's accountant invites, newest first. */
+  list: async (params?: ListParams): Promise<AccountantInvite[]> => {
+    const query = toQueryString({ max: 100, sort: 'dateCreated', order: 'desc', ...params });
+    const response = await apiClient.get<AccountantInvite[]>(`/accountantInvite/index.json?${query}`);
+    // Fix: never let a non-array (e.g. a 302 that resolved to login HTML) render as "no invites".
+    if (!Array.isArray(response.data)) {
+      throw new Error('Accountant invites could not be loaded. Please try again.');
+    }
+    return response.data;
+  },
+
+  /** Send a new invite. */
+  invite: async (data: AccountantInviteFormData): Promise<AccountantInvite> => {
+    const csrf = await getCsrfToken('accountantInvite');
+    const response = await apiClient.post<AccountantInvite>(
+      `/accountantInvite/save.json?${csrfQueryString(csrf)}`,
+      transformAccountantInviteData(data)
+    );
+    return response.data;
+  },
+
+  /** Email the invite again with a fresh link and expiry. */
+  resend: async (id: string): Promise<AccountantInvite> => {
+    const response = await apiClient.post<AccountantInvite>(`/accountantInvite/resend/${id}.json`);
+    return response.data;
+  },
+
+  /** Cancel a pending invite, or end an accepted accountant's access immediately. */
+  revoke: async (id: string): Promise<AccountantInvite> => {
+    const response = await apiClient.post<AccountantInvite>(`/accountantInvite/revoke/${id}.json`);
     return response.data;
   },
 };
