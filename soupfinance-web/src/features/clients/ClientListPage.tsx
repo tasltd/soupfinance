@@ -17,6 +17,8 @@ import type { Client, ClientType } from '../../api/endpoints/clients';
 import { getClientDisplayName } from './getClientDisplayName';
 // Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
 import { HelpLink } from '../../components/help';
+// Added (SOUPFIN-102): hide the create action when the user's role does not grant it
+import { usePermission } from '../../hooks/usePermission';
 
 // Delete confirmation state interface
 interface DeleteState {
@@ -26,6 +28,7 @@ interface DeleteState {
 }
 
 export function ClientListPage() {
+  const canCreate = usePermission('clients', 'create');
   const queryClient = useQueryClient();
 
   // Search and filter state
@@ -124,6 +127,7 @@ export function ClientListPage() {
           <p className="text-subtle-text">Manage your customers and billing contacts</p>
           <HelpLink section="clients" className="mt-1 self-start" />
         </div>
+        {canCreate && (
         <Link
           to="/clients/new"
           className="flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90"
@@ -132,6 +136,7 @@ export function ClientListPage() {
           <span className="material-symbols-outlined text-lg">add</span>
           New Client
         </Link>
+        )}
       </div>
 
       {/* Search and Filter Bar */}
@@ -355,6 +360,7 @@ export function ClientListPage() {
             </span>
             <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">No clients yet</h3>
             <p className="text-subtle-text mb-4">Add your first client to start creating invoices.</p>
+            {canCreate && (
             <Link
               to="/clients/new"
               className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm"
@@ -363,6 +369,7 @@ export function ClientListPage() {
               <span className="material-symbols-outlined text-lg">add</span>
               Add Client
             </Link>
+            )}
           </div>
         )}
       </div>

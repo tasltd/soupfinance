@@ -12,6 +12,8 @@
 import apiClient, { accountClient, toQueryString, getCsrfToken, getCsrfTokenForEdit, csrfQueryString } from '../client';
 // Changed: Static import for authStore (used by accountSettingsApi.get() to read tenantId)
 import { useAuthStore } from '../../stores/authStore';
+// Added (SOUPFIN-102): built-in role groups must never be deleted
+import { isBuiltInRoleGroup } from '../../types/settings';
 import type {
   Agent,
   AgentFormData,
@@ -21,6 +23,8 @@ import type {
   AccountPersonFormData,
   AccountSettings,
   SbRole,
+  SbRoleGroup,
+  RoleGroupFormData,
   Bank,
 } from '../../types/settings';
 
@@ -68,6 +72,13 @@ function transformAgentData(data: AgentFormData): Record<string, unknown> {
     transformed.authorities = data.roles.map((roleAuthority) => ({
       authority: roleAuthority,
     }));
+  }
+
+  // Added (SOUPFIN-102): custom roles are SbRoleGroups bound to Agent.groupAuthorities.
+  // Only sent when the caller set it, so an edit that never touched custom roles
+  // cannot wipe the agent's existing groups.
+  if (data.roleGroupIds !== undefined) {
+    transformed.groupAuthorities = data.roleGroupIds.map((groupId) => ({ id: groupId }));
   }
 
   return transformed;
@@ -354,6 +365,70 @@ export const rolesApi = {
   list: async (): Promise<SbRole[]> => {
     const response = await apiClient.get<SbRole[]>('/sbRole/index.json?max=1000');
     return response.data;
+  },
+};
+
+// ============================================================================
+// Role Groups API (custom roles, SOUPFIN-102)
+// ============================================================================
+
+/**
+ * Added (SOUPFIN-102): a custom role is a tenant-scoped SbRoleGroup whose
+ * authorities are permission SbRoles (`ROLE_PERM_{AREA}_{ACTION}`).
+ *
+ * Authorities are sent as FK references `{ id }` — the SbRole ids come from
+ * rolesApi.list(). The backend binds them onto the SbRoleGroupSbRole junction
+ * (plans/soupfin-102-custom-roles-backend.md §2).
+ *
+ * Built-in groups are refused here as well as hidden in the UI, so a stale page
+ * cannot send the request; the backend refuses them too.
+ */
+function transformRoleGroupData(data: RoleGroupFormData): Record<string, unknown> {
+  return {
+    name: data.name.trim(),
+    authorities: data.authorityIds.map((id) => ({ id })),
+  };
+}
+
+export const roleGroupApi = {
+  /** List role groups visible to this tenant (built-in and custom). */
+  list: async (): Promise<SbRoleGroup[]> => {
+    const response = await apiClient.get<SbRoleGroup[]>(
+      '/sbRoleGroup/index.json?max=1000&sort=name&order=asc'
+    );
+    return response.data;
+  },
+
+  get: async (id: string | number): Promise<SbRoleGroup> => {
+    const response = await apiClient.get<SbRoleGroup>(`/sbRoleGroup/show/${id}.json`);
+    return response.data;
+  },
+
+  /** Create a custom role. POST needs the Grails CSRF token. */
+  create: async (data: RoleGroupFormData): Promise<SbRoleGroup> => {
+    const csrf = await getCsrfToken('sbRoleGroup');
+    const response = await apiClient.post<SbRoleGroup>(
+      `/sbRoleGroup/save.json?${csrfQueryString(csrf)}`,
+      transformRoleGroupData(data)
+    );
+    return response.data;
+  },
+
+  /** Update a custom role. PUT needs no CSRF token. */
+  update: async (id: string | number, data: RoleGroupFormData): Promise<SbRoleGroup> => {
+    const response = await apiClient.put<SbRoleGroup>(`/sbRoleGroup/update/${id}.json`, {
+      id,
+      ...transformRoleGroupData(data),
+    });
+    return response.data;
+  },
+
+  /** Delete a custom role. Built-in roles are refused before any request is sent. */
+  delete: async (group: Pick<SbRoleGroup, 'id' | 'builtIn' | 'tenantId'>): Promise<void> => {
+    if (isBuiltInRoleGroup(group)) {
+      throw new Error('Built-in roles cannot be deleted.');
+    }
+    await apiClient.delete(`/sbRoleGroup/delete/${group.id}.json`);
   },
 };
 

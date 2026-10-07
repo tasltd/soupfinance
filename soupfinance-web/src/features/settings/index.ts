@@ -7,3 +7,6 @@ export { default as UserFormPage } from './UserFormPage';
 export { default as BankAccountListPage } from './BankAccountListPage';
 export { default as BankAccountFormPage } from './BankAccountFormPage';
 export { default as AccountSettingsPage } from './AccountSettingsPage';
+// Added (SOUPFIN-102): custom roles
+export { default as RoleListPage } from './RoleListPage';
+export { default as RoleFormPage } from './RoleFormPage';

@@ -87,6 +87,8 @@ export function authHelpSection(pathname: string): HelpSection {
 /** Guide section for a Settings tab; the tabs share one header in SettingsLayout. */
 export function settingsHelpSection(pathname: string): HelpSection {
   if (pathname.startsWith('/settings/users')) return 'users';
+  // Added (SOUPFIN-102): roles decide what users can do, so they share the Users guide section
+  if (pathname.startsWith('/settings/roles')) return 'users';
   if (pathname.startsWith('/settings/bank-accounts')) return 'bank-accounts';
   if (pathname.startsWith('/settings/account')) return 'account-settings';
   return 'settings';

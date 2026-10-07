@@ -10,8 +10,16 @@ import { useFormatCurrency } from '../../stores';
 import { usePageEntrance } from '../../hooks/useGsapAnimations';
 // Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
 import { HelpLink } from '../../components/help';
+// Added (SOUPFIN-102): hide actions the user's role does not grant; a permission
+// 403 from the API shows "You do not have permission", not the generic failure.
+import { usePermissions } from '../../hooks/usePermission';
+import { parseApiError } from '../../api/errors';
+import { ApiErrorState } from '../../components/feedback/ApiErrorState';
 
 export function InvoiceListPage() {
+  const { can } = usePermissions();
+  const canCreate = can('invoices', 'create');
+  const canEdit = can('invoices', 'edit');
   const formatCurrency = useFormatCurrency();
   // Added: GSAP page entrance animation ref (SOUP-679)
   const pageRef = usePageEntrance();
@@ -34,6 +42,7 @@ export function InvoiceListPage() {
           <p className="text-subtle-text">Manage and track your invoices</p>
           <HelpLink section="invoices" className="mt-1 self-start" />
         </div>
+        {canCreate && (
         <Link
           to="/invoices/new"
           className="flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90"
@@ -42,12 +51,15 @@ export function InvoiceListPage() {
           <span className="material-symbols-outlined text-lg">add</span>
           New Invoice
         </Link>
+        )}
       </div>
 
       {/* Invoice Table */}
       <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden" data-testid="invoice-table-container">
         {isLoading ? (
           <div className="p-8 text-center text-subtle-text" data-testid="invoice-list-loading">Loading invoices...</div>
+        ) : error && parseApiError(error).kind === 'forbidden' ? (
+          <ApiErrorState error={error} testId="invoice-list-forbidden" />
         ) : error ? (
           // Added: Error state when API fails
           <div className="p-12 text-center" data-testid="invoice-list-error">
@@ -99,9 +111,11 @@ export function InvoiceListPage() {
                       </span>
                     </td>
                     <td className="px-4 sm:px-6 py-4 text-center">
+                      {canEdit && (
                       <Link to={`/invoices/${invoice.id}/edit`} className="text-primary hover:underline text-sm" data-testid={`invoice-edit-${invoice.id}`}>
                         Edit
                       </Link>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -113,10 +127,12 @@ export function InvoiceListPage() {
             <span className="material-symbols-outlined text-6xl text-subtle-text/50 mb-4">receipt_long</span>
             <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">No invoices yet</h3>
             <p className="text-subtle-text mb-4">Create your first invoice to start tracking payments.</p>
+            {canCreate && (
             <Link to="/invoices/new" className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm" data-testid="invoice-create-first-button">
               <span className="material-symbols-outlined text-lg">add</span>
               Create Invoice
             </Link>
+            )}
           </div>
         )}
       </div>

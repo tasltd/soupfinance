@@ -11,3 +11,5 @@ export { ApiErrorState } from './ApiErrorState';
 export { ModuleDisabledBanner } from './ModuleDisabledBanner';
 // Added (SOUPFIN-55): dashboard entry point into the KYC onboarding wizard
 export { KycOnboardingBanner } from './KycOnboardingBanner';
+// Added (SOUPFIN-102): role-based page guard and its "You do not have permission" card
+export { RequirePermission, ForbiddenState } from './RequirePermission';

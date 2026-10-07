@@ -146,6 +146,22 @@ export const useAuthStore = create<AuthState>()(
               set({ user: { ...currentUser, tenantId: serverUser.tenantId } });
             }
           }
+
+          // Added (SOUPFIN-102): roles drive usePermission(). The copy stored at login
+          // goes stale the moment an admin edits the user's role, so take the server's
+          // list whenever it sends one. Only when it is an array — an older backend that
+          // omits `roles` must not wipe the stored list and unlock nothing / everything.
+          if (Array.isArray(serverUser?.roles)) {
+            const currentUser = get().user;
+            const serverRoles = serverUser.roles;
+            const changed =
+              !currentUser?.roles ||
+              currentUser.roles.length !== serverRoles.length ||
+              currentUser.roles.some((role) => !serverRoles.includes(role));
+            if (currentUser && changed) {
+              set({ user: { ...currentUser, roles: [...serverRoles] } });
+            }
+          }
           return true;
         } catch (error) {
           // Added: Token is invalid, clear auth state

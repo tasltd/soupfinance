@@ -37,6 +37,34 @@ export interface SbRoleGroup {
   id: number;
   name: string;
   roles?: SbRole[];
+  // Added (SOUPFIN-102): a custom role IS an SbRoleGroup. Its permissions are the
+  // SbRoles exposed by the domain's `getAuthorities()` (SbRoleGroupSbRole junction).
+  // May arrive as a single object when there is one — normalise with normalizeToArray.
+  authorities?: SbRole[] | SbRole;
+  // Domain field. A group with no tenantId is system-wide and therefore built in.
+  tenantId?: string | null;
+  // Added (SOUPFIN-102): planned domain flag (plans/soupfin-102-custom-roles-backend.md).
+  // Built-in groups cannot be edited or deleted.
+  builtIn?: boolean;
+  serialised?: string;
+  class?: string;
+}
+
+/** Added (SOUPFIN-102): form payload for creating/updating a custom role. */
+export interface RoleGroupFormData {
+  name: string;
+  /** SbRole ids of the permission authorities the role grants. */
+  authorityIds: number[];
+}
+
+/**
+ * Added (SOUPFIN-102): built-in roles cannot be deleted or edited. A group is built
+ * in when the backend flags it, or when it has no tenant — a system-wide group
+ * belongs to every tenant, so one tenant must not change it. Treating "unknown"
+ * as built in is the safe failure: worst case a role cannot be deleted from here.
+ */
+export function isBuiltInRoleGroup(group: Pick<SbRoleGroup, 'builtIn' | 'tenantId'>): boolean {
+  return group.builtIn === true || !group.tenantId;
 }
 
 export interface Bank {
@@ -99,6 +127,9 @@ export interface AgentFormData {
   username: string;
   password?: string;
   roles: string[]; // Role authorities (e.g., ['ROLE_ADMIN', 'ROLE_USER'])
+  // Added (SOUPFIN-102): SbRoleGroup ids (custom roles) → Agent.groupAuthorities.
+  // Leave undefined to keep the agent's groups as they are; [] removes them all.
+  roleGroupIds?: number[];
   // Added: Account status toggles
   archived?: boolean;
   disabled?: boolean;

@@ -9,6 +9,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { listVendors, deleteVendor } from '../../api';
 // Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
 import { HelpLink } from '../../components/help';
+// Added (SOUPFIN-102): hide the create action when the user's role does not grant it
+import { usePermission } from '../../hooks/usePermission';
 
 // Added: Delete confirmation state interface
 interface DeleteState {
@@ -18,6 +20,7 @@ interface DeleteState {
 }
 
 export function VendorListPage() {
+  const canCreate = usePermission('vendors', 'create');
   const queryClient = useQueryClient();
 
   // Added: Search state for filtering vendors
@@ -76,6 +79,7 @@ export function VendorListPage() {
           <p className="text-subtle-text">Manage your suppliers and vendors</p>
           <HelpLink section="vendors" className="mt-1 self-start" />
         </div>
+        {canCreate && (
         <Link
           to="/vendors/new"
           className="flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90"
@@ -84,6 +88,7 @@ export function VendorListPage() {
           <span className="material-symbols-outlined text-lg">add</span>
           New Vendor
         </Link>
+        )}
       </div>
 
       {/* Search Input */}
@@ -206,6 +211,7 @@ export function VendorListPage() {
             </span>
             <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">No vendors yet</h3>
             <p className="text-subtle-text mb-4">Add your first vendor to start managing expenses.</p>
+            {canCreate && (
             <Link
               to="/vendors/new"
               className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm"
@@ -214,6 +220,7 @@ export function VendorListPage() {
               <span className="material-symbols-outlined text-lg">add</span>
               Add Vendor
             </Link>
+            )}
           </div>
         )}
       </div>

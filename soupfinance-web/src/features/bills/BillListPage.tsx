@@ -13,8 +13,16 @@ import { listBills } from '../../api/endpoints/bills';
 import { useFormatCurrency } from '../../stores';
 // Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
 import { HelpLink } from '../../components/help';
+// Added (SOUPFIN-102): hide actions the user's role does not grant; a permission
+// 403 from the API shows "You do not have permission", not the generic failure.
+import { usePermissions } from '../../hooks/usePermission';
+import { parseApiError } from '../../api/errors';
+import { ApiErrorState } from '../../components/feedback/ApiErrorState';
 
 export function BillListPage() {
+  const { can } = usePermissions();
+  const canCreate = can('bills', 'create');
+  const canEdit = can('bills', 'edit');
   // Added: Fetch bills from API
   const { data: bills, isLoading, error } = useQuery({
     queryKey: ['bills'],
@@ -35,6 +43,7 @@ export function BillListPage() {
           <p className="text-subtle-text">Manage your expenses and bills</p>
           <HelpLink section="bills" className="mt-1 self-start" />
         </div>
+        {canCreate && (
         <Link
           to="/bills/new"
           className="flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90"
@@ -43,12 +52,15 @@ export function BillListPage() {
           <span className="material-symbols-outlined text-lg">add</span>
           New Bill
         </Link>
+        )}
       </div>
 
       {/* Bill Table */}
       <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden" data-testid="bill-table-container">
         {isLoading ? (
           <div className="p-8 text-center text-subtle-text" data-testid="bill-list-loading">Loading bills...</div>
+        ) : error && parseApiError(error).kind === 'forbidden' ? (
+          <ApiErrorState error={error} testId="bill-list-forbidden" />
         ) : error ? (
           // Added: Error state when API fails
           <div className="p-12 text-center" data-testid="bill-list-error">
@@ -102,9 +114,11 @@ export function BillListPage() {
                       </span>
                     </td>
                     <td className="px-4 sm:px-6 py-4 text-center">
+                      {canEdit && (
                       <Link to={`/bills/${bill.id}/edit`} className="text-primary hover:underline text-sm" data-testid={`bill-edit-${bill.id}`}>
                         Edit
                       </Link>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -117,10 +131,12 @@ export function BillListPage() {
             <span className="material-symbols-outlined text-6xl text-subtle-text/50 mb-4">receipt</span>
             <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">No bills yet</h3>
             <p className="text-subtle-text mb-4">Track your expenses by adding bills from vendors.</p>
+            {canCreate && (
             <Link to="/bills/new" className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm" data-testid="bill-create-first-button">
               <span className="material-symbols-outlined text-lg">add</span>
               Create Bill
             </Link>
+            )}
           </div>
         )}
       </div>
