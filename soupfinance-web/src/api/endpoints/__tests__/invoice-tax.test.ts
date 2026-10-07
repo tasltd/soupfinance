@@ -262,6 +262,32 @@ describe('invoice line-item tax (SOUPFIN-37)', () => {
       expect(invoices[0].totalAmount).toBe(3075);
     });
 
+    it('keeps the readable rows of a line in the total when one row is unreadable', async () => {
+      // Added (SOUPFIN-92): computeInvoiceItemTax() reports such a line as
+      // null so the PDF prints a dash, but the invoice total must still count
+      // the 75.00 it can read, as it did before the line helper was split out.
+      mockGet.mockResolvedValue(
+        invoiceResponse([
+          {
+            id: 'item-1',
+            quantity: 2,
+            unitPrice: 1500,
+            taxEntryInvoiceItemList: [
+              { serialised: 'TaxEntryInvoiceItem(InvoiceItem(x), NHIL-2.5%, 75.0, 3075.0)' },
+              { serialised: 'TaxEntryInvoiceItem' },
+            ],
+          },
+        ])
+      );
+
+      const { listInvoices, computeInvoiceItemTax } = await importApi();
+      const invoices = await listInvoices();
+
+      expect(invoices[0].taxAmount).toBe(75);
+      expect(invoices[0].totalAmount).toBe(3075);
+      expect(computeInvoiceItemTax(invoices[0].invoiceItemList![0])).toBeNull();
+    });
+
     it('falls back to rates embedded in the item serialised for list responses', async () => {
       // List items arrive as bare FK references with no join rows.
       mockGet.mockResolvedValue(

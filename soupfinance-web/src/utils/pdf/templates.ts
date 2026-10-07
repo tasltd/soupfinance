@@ -7,6 +7,7 @@
 import type { Invoice, Bill } from '../../types';
 import type { TrialBalance, ProfitLoss, BalanceSheet, AgingReport } from '../../types';
 import type { CompanyInfo } from './index';
+import { computeInvoiceItemTax } from '../../api/endpoints/invoices';
 
 // =============================================================================
 // Shared Styles
@@ -350,7 +351,7 @@ export function generateInvoiceHtml(
                 <td>${escapeHtml(item.description)}</td>
                 <td class="text-right">${item.quantity}</td>
                 <td class="text-right">${formatCurrency(item.unitPrice)}</td>
-                <td class="text-right">-</td>
+                <td class="text-right">${formatLineTax(computeInvoiceItemTax(item), formatCurrency)}</td>
                 <td class="text-right font-medium">${formatCurrency(item.quantity * item.unitPrice)}</td>
               </tr>
             `).join('')}
@@ -926,6 +927,18 @@ function escapeHtml(text: string | undefined | null): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+}
+
+/**
+ * Added (SOUPFIN-92): one line's tax for the invoice Tax column. `null` means
+ * the line is taxed but its amount could not be read, so it prints a dash
+ * rather than a false 0.00.
+ */
+function formatLineTax(
+  tax: number | null,
+  formatCurrency: (amount: number | null | undefined) => string
+): string {
+  return tax === null ? '-' : formatCurrency(tax);
 }
 
 function getStatusClass(status: string): string {

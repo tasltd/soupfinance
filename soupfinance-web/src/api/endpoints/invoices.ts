@@ -20,7 +20,7 @@
 import apiClient, { toQueryString, getCsrfToken, csrfQueryString } from '../client';
 import type { Invoice, InvoiceStatus, InvoiceItem, InvoicePayment, ListParams } from '../../types';
 import {
-  parseJoinRowTaxAmount,
+  readJoinRowTaxAmount,
   resolveTaxEntryIdFromRows,
   type TaxEntryJoinRow,
 } from './taxEntryJoins';
@@ -96,6 +96,77 @@ function parseTaxRatesFromItemSerialised(serialised?: string): number {
   return totalRate;
 }
 
+/** A line item as either endpoint returns it: full object or FK reference. */
+export interface InvoiceItemTotalsInput {
+  quantity?: number;
+  unitPrice?: number;
+  serialised?: string;
+  taxEntryInvoiceItemList?: Array<{
+    taxAmount?: number;
+    serialised?: string;
+    taxEntry?: { isWithholdingTax?: boolean | null };
+  }> | null;
+}
+
+/** The pre-tax amount of one line: quantity * unitPrice. */
+function computeInvoiceItemAmount(item: InvoiceItemTotalsInput): number {
+  if (typeof item.quantity === 'number' && typeof item.unitPrice === 'number') {
+    // Full item object
+    return item.quantity * item.unitPrice;
+  }
+  if (item.serialised) {
+    // FK reference — parse from serialised string
+    const parsed = parseItemSerialisedForTotal(item.serialised);
+    return parsed.quantity * parsed.unitPrice;
+  }
+  return 0;
+}
+
+/**
+ * The tax on ONE invoice line, mirroring InvoiceItem.getTaxAmount().
+ *
+ * Added (SOUPFIN-92): split out of computeInvoiceTotals() so the invoice PDF can
+ * print each line's tax with the exact figures the Tax total is summed from.
+ * The PDF used to write a dash on every line, so the lines never added up to
+ * the Tax total printed under them.
+ *
+ * @returns the line's tax; `0` when the line has no tax; `null` when a tax
+ *          join row is present but carries no readable amount, because
+ *          printing a partial sum would understate the line.
+ */
+export function computeInvoiceItemTax(item: InvoiceItemTotalsInput): number | null {
+  const { tax, complete } = sumInvoiceItemTax(item);
+  return complete ? tax : null;
+}
+
+/**
+ * Sum a line's tax. `complete` is false when a join row had no readable
+ * amount; that row adds 0 to `tax`, which is what computeInvoiceTotals() has
+ * always counted for it.
+ */
+function sumInvoiceItemTax(item: InvoiceItemTotalsInput): { tax: number; complete: boolean } {
+  const joinRows = item.taxEntryInvoiceItemList || [];
+  if (joinRows.length > 0) {
+    // Preferred: the exact amounts the backend computed and stored.
+    let tax = 0;
+    let complete = true;
+    for (const row of joinRows) {
+      if (row?.taxEntry?.isWithholdingTax) continue;
+      const amount = readJoinRowTaxAmount(row);
+      if (amount === null) {
+        complete = false;
+      } else {
+        tax += amount;
+      }
+    }
+    return { tax, complete };
+  }
+
+  // Fallback for list responses, where items are FK references only.
+  const rate = parseTaxRatesFromItemSerialised(item.serialised);
+  return { tax: rate > 0 ? (computeInvoiceItemAmount(item) * rate) / 100 : 0, complete: true };
+}
+
 /**
  * Compute totals from invoice item list.
  * Items on the invoice list response are FK references with serialised strings.
@@ -111,16 +182,7 @@ function parseTaxRatesFromItemSerialised(serialised?: string): number {
  * Withholding-tax rows are excluded, matching InvoiceItem.getTaxAmount().
  */
 function computeInvoiceTotals(
-  items?: Array<{
-    quantity?: number;
-    unitPrice?: number;
-    serialised?: string;
-    taxEntryInvoiceItemList?: Array<{
-      taxAmount?: number;
-      serialised?: string;
-      taxEntry?: { isWithholdingTax?: boolean | null };
-    }> | null;
-  }> | null
+  items?: InvoiceItemTotalsInput[] | null
 ): {
   subtotal: number;
   taxAmount: number;
@@ -134,31 +196,8 @@ function computeInvoiceTotals(
   let taxAmount = 0;
 
   for (const item of items) {
-    let lineAmount = 0;
-    if (typeof item.quantity === 'number' && typeof item.unitPrice === 'number') {
-      // Full item object
-      lineAmount = item.quantity * item.unitPrice;
-    } else if (item.serialised) {
-      // FK reference — parse from serialised string
-      const parsed = parseItemSerialisedForTotal(item.serialised);
-      lineAmount = parsed.quantity * parsed.unitPrice;
-    }
-    subtotal += lineAmount;
-
-    const joinRows = item.taxEntryInvoiceItemList || [];
-    if (joinRows.length > 0) {
-      // Preferred: the exact amounts the backend computed and stored.
-      for (const row of joinRows) {
-        if (row?.taxEntry?.isWithholdingTax) continue;
-        taxAmount += parseJoinRowTaxAmount(row);
-      }
-    } else {
-      // Fallback for list responses, where items are FK references only.
-      const rate = parseTaxRatesFromItemSerialised(item.serialised);
-      if (rate > 0) {
-        taxAmount += (lineAmount * rate) / 100;
-      }
-    }
+    subtotal += computeInvoiceItemAmount(item);
+    taxAmount += sumInvoiceItemTax(item).tax;
   }
 
   // Money: keep two decimals so repeated float addition cannot surface as
