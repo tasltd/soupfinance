@@ -9,6 +9,7 @@
  * Added: Loading, error, and content states
  * Added: data-testid attributes for E2E testing
  * Updated: Frontend PDF generation and email sending
+ * Added (SOUPFIN-95): Tax column in the Line Items table
  */
 import { useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
@@ -18,6 +19,7 @@ import {
   deleteInvoice,
   listInvoicePayments,
   cancelInvoice,
+  computeInvoiceItemTax,
 } from '../../api/endpoints/invoices';
 import { useFormatCurrency } from '../../stores';
 import { usePdf, useEmailSend } from '../../hooks';
@@ -309,6 +311,8 @@ export function InvoiceDetailPage() {
                   <th className="px-6 py-3 text-left">Description</th>
                   <th className="px-6 py-3 text-right">Qty</th>
                   <th className="px-6 py-3 text-right">Unit Price</th>
+                  {/* Added (SOUPFIN-95): each line's share of the Tax total */}
+                  <th className="px-6 py-3 text-right">Tax</th>
                   <th className="px-6 py-3 text-right">Amount</th>
                 </tr>
               </thead>
@@ -318,6 +322,10 @@ export function InvoiceDetailPage() {
                     <td className="px-6 py-4 text-text-light dark:text-text-dark">{item.description}</td>
                     <td className="px-6 py-4 text-right text-text-light dark:text-text-dark">{item.quantity}</td>
                     <td className="px-6 py-4 text-right text-text-light dark:text-text-dark">{formatCurrency(item.unitPrice)}</td>
+                    {/* Added (SOUPFIN-95): same helper computeInvoiceTotals() sums, so the
+                        column adds up to the Tax figure. null = taxed line whose amount
+                        could not be read: show a dash, never a false 0.00. */}
+                    <td className="px-6 py-4 text-right text-text-light dark:text-text-dark" data-testid="invoice-item-tax">{formatLineTax(computeInvoiceItemTax(item), formatCurrency)}</td>
                     <td className="px-6 py-4 text-right font-medium text-text-light dark:text-text-dark">{formatCurrency(item.quantity * item.unitPrice)}</td>
                   </tr>
                 ))}
@@ -510,4 +518,12 @@ function getPaymentMethodStyle(method: string): string {
     OTHER: 'bg-subtle-text/10 text-subtle-text',
   };
   return styles[method] || styles.OTHER;
+}
+
+/** Added (SOUPFIN-95): a line's tax, or a dash when it could not be read. */
+function formatLineTax(
+  tax: number | null,
+  formatCurrency: (amount: number | null | undefined) => string
+): string {
+  return tax === null ? '-' : formatCurrency(tax);
 }

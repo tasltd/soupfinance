@@ -11,12 +11,20 @@ import { InvoiceDetailPage } from '../InvoiceDetailPage';
 import type { Invoice, InvoicePayment, InvoiceStatus, InvoiceItem } from '../../../types';
 
 // Mock the invoices API
-vi.mock('../../../api/endpoints/invoices', () => ({
-  getInvoice: vi.fn(),
-  deleteInvoice: vi.fn(),
-  listInvoicePayments: vi.fn(),
-  cancelInvoice: vi.fn(),
-}));
+// Changed (SOUPFIN-95): keep the real computeInvoiceItemTax so the Tax column
+// is rendered by the same helper computeInvoiceTotals() sums.
+vi.mock('../../../api/endpoints/invoices', async () => {
+  const actual = await vi.importActual<typeof import('../../../api/endpoints/invoices')>(
+    '../../../api/endpoints/invoices'
+  );
+  return {
+    computeInvoiceItemTax: actual.computeInvoiceItemTax,
+    getInvoice: vi.fn(),
+    deleteInvoice: vi.fn(),
+    listInvoicePayments: vi.fn(),
+    cancelInvoice: vi.fn(),
+  };
+});
 
 // Mock the account store for currency formatting
 vi.mock('../../../stores', () => ({
@@ -327,8 +335,8 @@ describe('InvoiceDetailPage', () => {
       expect(screen.getByTestId('invoice-items-table')).toBeInTheDocument();
     });
 
-    // Changed: Detail page table only shows Description, Qty, Unit Price, Amount columns
-    // Tax rate and discount percent are NOT displayed in the detail page line items table
+    // Changed (SOUPFIN-95): columns are Description, Qty, Unit Price, Tax, Amount.
+    // The tax rate and discount percent are still not shown.
     it('displays line item details correctly', async () => {
       const mockInvoice = createMockInvoice({
         invoiceItemList: [
@@ -387,6 +395,118 @@ describe('InvoiceDetailPage', () => {
       expect(within(table).getByText('Item 1')).toBeInTheDocument();
       expect(within(table).getByText('Item 2')).toBeInTheDocument();
       expect(within(table).getByText('Item 3')).toBeInTheDocument();
+    });
+  });
+
+  // Added (SOUPFIN-95): each line shows its share of the Tax total
+  describe('line items tax column', () => {
+    /** A join row as the show endpoint renders it, with its stored taxAmount. */
+    function joinRow(taxAmount: number, isWithholdingTax = false) {
+      return {
+        id: `te-row-${taxAmount}-${isWithholdingTax}`,
+        taxAmount,
+        taxEntry: { id: isWithholdingTax ? 'wht' : 'vat', isWithholdingTax },
+        serialised: `TaxEntryInvoiceItem(${taxAmount})`,
+      };
+    }
+
+    async function renderWithItems(items: InvoiceItem[], taxAmount: number) {
+      vi.mocked(getInvoice).mockResolvedValue(
+        createMockInvoice({ invoiceItemList: items, taxAmount })
+      );
+      vi.mocked(listInvoicePayments).mockResolvedValue([]);
+      renderInvoiceDetailPage();
+      return screen.findByTestId('invoice-items-table');
+    }
+
+    function parseMoney(text: string | null): number {
+      return Number((text || '').replace(/[^0-9.-]/g, ''));
+    }
+
+    it('adds a Tax header between Unit Price and Amount', async () => {
+      const table = await renderWithItems([createMockInvoiceItem()], 0);
+      const headers = within(table).getAllByRole('columnheader').map((h) => h.textContent);
+      expect(headers).toEqual(['Description', 'Qty', 'Unit Price', 'Tax', 'Amount']);
+    });
+
+    it("shows each line's tax from its TaxEntry join rows, two taxes summed", async () => {
+      const table = await renderWithItems(
+        [
+          createMockInvoiceItem({
+            id: 'taxed',
+            quantity: 2,
+            unitPrice: 1500,
+            taxEntryInvoiceItemList: [joinRow(37.5), joinRow(37.5)],
+          }),
+        ],
+        75
+      );
+      expect(within(table).getByTestId('invoice-item-tax')).toHaveTextContent('$75.00');
+    });
+
+    it('shows 0.00 for an untaxed line', async () => {
+      const table = await renderWithItems(
+        [createMockInvoiceItem({ taxEntryInvoiceItemList: [], serialised: undefined })],
+        0
+      );
+      expect(within(table).getByTestId('invoice-item-tax')).toHaveTextContent('$0.00');
+    });
+
+    it('leaves withholding out of the line, as the total does', async () => {
+      const table = await renderWithItems(
+        [createMockInvoiceItem({ taxEntryInvoiceItemList: [joinRow(150), joinRow(75, true)] })],
+        150
+      );
+      expect(within(table).getByTestId('invoice-item-tax')).toHaveTextContent('$150.00');
+    });
+
+    it('shows a dash, never 0.00, when a taxed line has no readable amount', async () => {
+      const table = await renderWithItems(
+        [
+          createMockInvoiceItem({
+            taxEntryInvoiceItemList: [
+              { id: 'row-x', taxEntry: { id: 'vat' }, serialised: 'TaxEntryInvoiceItem(unknown)' },
+            ],
+          }),
+        ],
+        0
+      );
+      const cell = within(table).getByTestId('invoice-item-tax');
+      expect(cell).toHaveTextContent('-');
+      expect(cell).not.toHaveTextContent('0.00');
+    });
+
+    it('column sums to the Tax figure in the Amount Summary', async () => {
+      const items = [
+        createMockInvoiceItem({ id: 'a', taxEntryInvoiceItemList: [joinRow(1800)] }),
+        createMockInvoiceItem({ id: 'b', taxEntryInvoiceItemList: [joinRow(1200), joinRow(600)] }),
+        createMockInvoiceItem({ id: 'c', taxEntryInvoiceItemList: [], serialised: undefined }),
+      ];
+      const table = await renderWithItems(items, 3600);
+      const sum = within(table)
+        .getAllByTestId('invoice-item-tax')
+        .reduce((acc, cell) => acc + parseMoney(cell.textContent), 0);
+      expect(sum).toBe(3600);
+      expect(parseMoney(screen.getByTestId('invoice-tax').textContent)).toBe(sum);
+    });
+
+    it('renders a tax cell for every line of a 500-line invoice and still sums', async () => {
+      const items = Array.from({ length: 500 }, (_, i) =>
+        createMockInvoiceItem({ id: `l${i}`, taxEntryInvoiceItemList: [joinRow(12.5)] })
+      );
+      const table = await renderWithItems(items, 6250);
+      const cells = within(table).getAllByTestId('invoice-item-tax');
+      expect(cells).toHaveLength(500);
+      const sum = cells.reduce((acc, cell) => acc + parseMoney(cell.textContent), 0);
+      expect(sum).toBe(6250);
+    });
+
+    it('renders no tax cells when there are no line items', async () => {
+      vi.mocked(getInvoice).mockResolvedValue(createMockInvoice({ invoiceItemList: [] }));
+      vi.mocked(listInvoicePayments).mockResolvedValue([]);
+      renderInvoiceDetailPage();
+      expect(await screen.findByTestId('invoice-items-empty')).toBeInTheDocument();
+      expect(screen.queryAllByTestId('invoice-item-tax')).toHaveLength(0);
     });
   });
 
