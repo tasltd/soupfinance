@@ -249,11 +249,12 @@
     <!-- Navigation -->
     <nav class="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-border">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center h-16">
+            <!-- Fix (SOUPFIN-97): gap-3 keeps space between the logo and the CTA when the row is full -->
+            <div class="flex justify-between items-center gap-3 h-16">
                 <!-- Logo - Bowl with SF Steam -->
                 <div class="flex items-center gap-2">
                     <img src="/logo.png" alt="SoupFinance Logo" width="32" height="32">
-                    <span class="text-xl font-bold"><span class="text-[#e31b23]">Soup</span><span class="text-[#4a4a4a]">Finance</span></span>
+                    <span data-testid="nav-wordmark" class="text-lg sm:text-xl font-bold whitespace-nowrap"><span class="text-[#e31b23]">Soup</span><span class="text-[#4a4a4a]">Finance</span></span>
                 </div>
 
                 <!-- Nav Links (Desktop) -->
@@ -265,11 +266,13 @@
                 </div>
 
                 <!-- CTA -->
-                <div class="flex items-center gap-3">
+                <div data-testid="nav-cta" class="flex items-center gap-3">
                     <a href="https://app.soupfinance.com/login" class="hidden sm:inline-flex text-sm font-medium text-text-secondary hover:text-primary transition-colors">
                         Sign In
                     </a>
-                    <a href="https://app.soupfinance.com/register" class="inline-flex items-center justify-center h-10 px-5 bg-primary text-white text-sm font-bold rounded-lg hover:bg-primary-dark transition-colors">
+                    <!-- Fix (SOUPFIN-97): at 320px this button covered the end of the wordmark and its label wrapped.
+                         A smaller wordmark and tighter padding below sm make both fit; nowrap keeps the label on one line. -->
+                    <a data-testid="nav-start-trial" href="https://app.soupfinance.com/register" class="inline-flex shrink-0 items-center justify-center h-10 px-3 sm:px-5 whitespace-nowrap bg-primary text-white text-sm font-bold rounded-lg hover:bg-primary-dark transition-colors">
                         Start Free Trial
                     </a>
                 </div>
