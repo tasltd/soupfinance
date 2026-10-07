@@ -7,6 +7,9 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { useAuthStore, useUIStore, useAccountStore } from '../../stores';
 import type { BusinessLicenceCategory } from '../../types/settings';
 import { Logo } from '../Logo';
+// Added (SOUPFIN-102): hide areas the user's custom role does not grant
+import { usePermissions } from '../../hooks/usePermission';
+import type { PermissionArea } from '../../permissions/catalog';
 
 interface NavItem {
   label: string;
@@ -16,23 +19,27 @@ interface NavItem {
   // Added (SOUPFIN-25): business categories for which this item is hidden.
   // e.g. SERVICES tenants don't use suppliers/inventory, so Vendors is hidden.
   hideForCategories?: BusinessLicenceCategory[];
+  // Added (SOUPFIN-102): permission area whose `view` grant the item needs.
+  // Items without one (Dashboard) are always shown.
+  area?: PermissionArea;
 }
 
 // Changed (2026-01-28): Added Vendors, Accounting section, Trial Balance to Reports
 const navItems: NavItem[] = [
   { label: 'Dashboard', icon: 'dashboard', path: '/dashboard' },
-  { label: 'Invoices', icon: 'receipt_long', path: '/invoices' },
-  { label: 'Bills', icon: 'receipt', path: '/bills' },
+  { label: 'Invoices', icon: 'receipt_long', path: '/invoices', area: 'invoices' },
+  { label: 'Bills', icon: 'receipt', path: '/bills', area: 'bills' },
   // Added: Vendors navigation item
   // Fix (SOUPFIN-25): hidden for SERVICES tenants (no suppliers/inventory)
-  { label: 'Vendors', icon: 'storefront', path: '/vendors', hideForCategories: ['SERVICES'] },
+  { label: 'Vendors', icon: 'storefront', path: '/vendors', hideForCategories: ['SERVICES'], area: 'vendors' },
   // Added: Clients navigation item (gap analysis §4.5 - was only reachable via invoice form)
-  { label: 'Clients', icon: 'people', path: '/clients' },
-  { label: 'Payments', icon: 'payments', path: '/payments' },
+  { label: 'Clients', icon: 'people', path: '/clients', area: 'clients' },
+  { label: 'Payments', icon: 'payments', path: '/payments', area: 'payments' },
   {
     label: 'Ledger',
     icon: 'account_balance',
     path: '/ledger',
+    area: 'ledger',
     children: [
       { label: 'Chart of Accounts', path: '/ledger/accounts' },
       { label: 'Transactions', path: '/ledger/transactions' },
@@ -43,6 +50,7 @@ const navItems: NavItem[] = [
     label: 'Accounting',
     icon: 'calculate',
     path: '/accounting',
+    area: 'ledger',
     children: [
       { label: 'Transaction Register', path: '/accounting/transactions' },
       { label: 'Journal Entry', path: '/accounting/journal-entry' },
@@ -54,6 +62,7 @@ const navItems: NavItem[] = [
     label: 'Reports',
     icon: 'analytics',
     path: '/reports',
+    area: 'reports',
     children: [
       { label: 'All Reports', path: '/reports' },
       { label: 'Profit & Loss', path: '/reports/pnl' },
@@ -71,8 +80,11 @@ const navItems: NavItem[] = [
     label: 'Settings',
     icon: 'settings',
     path: '/settings',
+    area: 'settings',
     children: [
       { label: 'Users', path: '/settings/users' },
+      // Added (SOUPFIN-102)
+      { label: 'Roles', path: '/settings/roles' },
       { label: 'Bank Accounts', path: '/settings/bank-accounts' },
       { label: 'Account Settings', path: '/settings/account' },
     ],
@@ -100,8 +112,12 @@ export function SideNav() {
 
   // Added (SOUPFIN-25): hide items flagged for the current tenant's business category.
   // When the category is unknown (settings not yet loaded), items are shown by default.
+  // Changed (SOUPFIN-102): also hide areas the user's custom role cannot view.
+  const { can } = usePermissions();
   const visibleNavItems = navItems.filter(
-    (item) => !(businessCategory && item.hideForCategories?.includes(businessCategory))
+    (item) =>
+      !(businessCategory && item.hideForCategories?.includes(businessCategory)) &&
+      (!item.area || can(item.area, 'view'))
   );
 
   const isActive = (path: string) => {

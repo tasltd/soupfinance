@@ -11,9 +11,11 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm, type FieldError, type FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { agentApi, accountPersonApi, rolesApi } from '../../api/endpoints/settings';
+import { agentApi, accountPersonApi, rolesApi, roleGroupApi } from '../../api/endpoints/settings';
 import type { AgentFormData } from '../../types/settings';
-import { SOUPFINANCE_ROLES, SOUPFINANCE_ROLE_LABELS, getRoleAuthority, getAgentUsername } from '../../types/settings';
+import { SOUPFINANCE_ROLES, SOUPFINANCE_ROLE_LABELS, getRoleAuthority, getAgentUsername, isBuiltInRoleGroup } from '../../types/settings';
+// Added (SOUPFIN-102): read the agent's role groups whether they arrive as one object or a list
+import { normalizeToArray } from '../../api/client';
 import { logger } from '../../utils/logger';
 // Added: backend error extraction so the form can surface the real failure (bugs 7, 9 in SOUPFIN-2)
 import { normalizeApiError } from '../../utils/apiError';
@@ -115,6 +117,18 @@ export default function UserFormPage() {
   }) || [];
   const rolesUnavailable = Boolean(rolesError) || (allRoles !== undefined && availableRoles.length === 0);
 
+  // Added (SOUPFIN-102): custom roles (tenant SbRoleGroups) the admin can assign.
+  // Built-in groups are not offered — they are managed by the system — but any the
+  // agent already holds are kept in `roleGroupIds` so saving cannot drop them.
+  const { data: allRoleGroups } = useQuery({
+    queryKey: ['roleGroups'],
+    queryFn: () => roleGroupApi.list(),
+    retry: 1,
+  });
+  const customRoleGroups = (allRoleGroups ?? []).filter((group) => !isBuiltInRoleGroup(group));
+  const [roleGroupIds, setRoleGroupIds] = useState<number[]>([]);
+  const [roleGroupsTouched, setRoleGroupsTouched] = useState(false);
+
   const {
     register,
     handleSubmit,
@@ -201,6 +215,21 @@ export default function UserFormPage() {
     }
   }, [existingUser, linkedAccountPerson, reset]);
 
+  // Added (SOUPFIN-102): preload the agent's current role groups.
+  useEffect(() => {
+    if (existingUser) {
+      setRoleGroupIds(normalizeToArray(existingUser.groupAuthorities).map((group) => group.id));
+      setRoleGroupsTouched(false);
+    }
+  }, [existingUser]);
+
+  const handleRoleGroupChange = (groupId: number, checked: boolean) => {
+    setRoleGroupsTouched(true);
+    setRoleGroupIds((current) =>
+      checked ? [...current.filter((g) => g !== groupId), groupId] : current.filter((g) => g !== groupId)
+    );
+  };
+
   // Create/Update mutation
   const saveMutation = useMutation({
     mutationFn: async (data: UserFormValues) => {
@@ -218,6 +247,8 @@ export default function UserFormPage() {
         roles: data.roles,
         archived: data.archived,
         disabled: data.disabled,
+        // Added (SOUPFIN-102): only send custom roles the admin actually changed
+        ...(roleGroupsTouched ? { roleGroupIds } : {}),
       };
 
       let agent;
@@ -586,6 +617,33 @@ export default function UserFormPage() {
             </div>
           )}
           {errors.roles && <p className="text-danger text-xs mt-2">{errors.roles.message}</p>}
+
+          {/* Added (SOUPFIN-102): custom roles built in Settings → Roles */}
+          {customRoleGroups.length > 0 && (
+            <div className="mt-6" data-testid="user-form-custom-roles">
+              <h4 className="text-sm font-bold text-text-light dark:text-text-dark">Custom roles</h4>
+              <p className="text-subtle-text text-xs mb-3">
+                A custom role limits this user to the areas it grants. Administrators keep full access.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {customRoleGroups.map((group) => (
+                  <label
+                    key={group.id}
+                    className="flex items-center gap-3 p-3 rounded-lg border border-border-light dark:border-border-dark hover:bg-primary/5 cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={roleGroupIds.includes(group.id)}
+                      onChange={(e) => handleRoleGroupChange(group.id, e.target.checked)}
+                      className="w-4 h-4 text-primary border-border-light dark:border-border-dark rounded focus:ring-primary"
+                      data-testid={`user-form-custom-role-${group.id}`}
+                    />
+                    <span className="font-medium text-text-light dark:text-text-dark text-sm">{group.name}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Account Person Section */}

@@ -26,3 +26,7 @@ export type { UseEmailSendReturn, EmailSendOptions, ReportEmailOptions } from '.
 // Added (SOUPFIN-55): resolves an unfinished corporate KYC application
 export { useKycOnboarding } from './useKycOnboarding';
 export type { KycOnboardingState } from './useKycOnboarding';
+
+// Added (SOUPFIN-102): role-based visibility of actions (the API remains the authority)
+export { usePermission, usePermissions } from './usePermission';
+export type { UsePermissionsReturn } from './usePermission';

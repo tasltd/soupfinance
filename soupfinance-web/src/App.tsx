@@ -99,7 +99,11 @@ import {
   BankAccountListPage,
   BankAccountFormPage,
   AccountSettingsPage,
+  RoleListPage,
+  RoleFormPage,
 } from './features/settings';
+// Added (SOUPFIN-102): hides pages a custom role does not cover
+import { RequirePermission } from './components/feedback/RequirePermission';
 
 // Added (SOUPFIN-75): In-app user guide
 import { HelpPage } from './features/help/HelpPage';
@@ -263,61 +267,61 @@ export default function App() {
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
             {/* Invoices */}
-            <Route path="/invoices" element={<InvoiceListPage />} />
-            <Route path="/invoices/new" element={<InvoiceFormPage />} />
-            <Route path="/invoices/:id" element={<InvoiceDetailPage />} />
-            <Route path="/invoices/:id/edit" element={<InvoiceFormPage />} />
+            <Route path="/invoices" element={<RequirePermission area="invoices" action="view"><InvoiceListPage /></RequirePermission>} />
+            <Route path="/invoices/new" element={<RequirePermission area="invoices" action="create"><InvoiceFormPage /></RequirePermission>} />
+            <Route path="/invoices/:id" element={<RequirePermission area="invoices" action="view"><InvoiceDetailPage /></RequirePermission>} />
+            <Route path="/invoices/:id/edit" element={<RequirePermission area="invoices" action="edit"><InvoiceFormPage /></RequirePermission>} />
 
             {/* Bills */}
-            <Route path="/bills" element={<BillListPage />} />
-            <Route path="/bills/new" element={<BillFormPage />} />
-            <Route path="/bills/:id" element={<BillDetailPage />} />
-            <Route path="/bills/:id/edit" element={<BillFormPage />} />
+            <Route path="/bills" element={<RequirePermission area="bills" action="view"><BillListPage /></RequirePermission>} />
+            <Route path="/bills/new" element={<RequirePermission area="bills" action="create"><BillFormPage /></RequirePermission>} />
+            <Route path="/bills/:id" element={<RequirePermission area="bills" action="view"><BillDetailPage /></RequirePermission>} />
+            <Route path="/bills/:id/edit" element={<RequirePermission area="bills" action="edit"><BillFormPage /></RequirePermission>} />
 
             {/* Added: Vendors */}
-            <Route path="/vendors" element={<VendorListPage />} />
-            <Route path="/vendors/new" element={<VendorFormPage />} />
+            <Route path="/vendors" element={<RequirePermission area="vendors" action="view"><VendorListPage /></RequirePermission>} />
+            <Route path="/vendors/new" element={<RequirePermission area="vendors" action="create"><VendorFormPage /></RequirePermission>} />
             {/* Changed: Use VendorDetailPage for viewing, VendorFormPage for editing */}
-            <Route path="/vendors/:id" element={<VendorDetailPage />} />
-            <Route path="/vendors/:id/edit" element={<VendorFormPage />} />
+            <Route path="/vendors/:id" element={<RequirePermission area="vendors" action="view"><VendorDetailPage /></RequirePermission>} />
+            <Route path="/vendors/:id/edit" element={<RequirePermission area="vendors" action="edit"><VendorFormPage /></RequirePermission>} />
 
             {/* Added (2026-01-30): Invoice Clients */}
-            <Route path="/clients" element={<ClientListPage />} />
-            <Route path="/clients/new" element={<ClientFormPage />} />
-            <Route path="/clients/:id" element={<ClientDetailPage />} />
-            <Route path="/clients/:id/edit" element={<ClientFormPage />} />
+            <Route path="/clients" element={<RequirePermission area="clients" action="view"><ClientListPage /></RequirePermission>} />
+            <Route path="/clients/new" element={<RequirePermission area="clients" action="create"><ClientFormPage /></RequirePermission>} />
+            <Route path="/clients/:id" element={<RequirePermission area="clients" action="view"><ClientDetailPage /></RequirePermission>} />
+            <Route path="/clients/:id/edit" element={<RequirePermission area="clients" action="edit"><ClientFormPage /></RequirePermission>} />
 
             {/* Payments */}
-            <Route path="/payments" element={<PaymentListPage />} />
-            <Route path="/payments/new" element={<PaymentFormPage />} />
+            <Route path="/payments" element={<RequirePermission area="payments" action="view"><PaymentListPage /></RequirePermission>} />
+            <Route path="/payments/new" element={<RequirePermission area="payments" action="create"><PaymentFormPage /></RequirePermission>} />
 
             {/* Ledger */}
-            <Route path="/ledger/accounts" element={<ChartOfAccountsPage />} />
-            <Route path="/ledger/transactions" element={<LedgerTransactionsPage />} />
+            <Route path="/ledger/accounts" element={<RequirePermission area="ledger" action="view"><ChartOfAccountsPage /></RequirePermission>} />
+            <Route path="/ledger/transactions" element={<RequirePermission area="ledger" action="view"><LedgerTransactionsPage /></RequirePermission>} />
 
             {/* Added: Accounting Transactions */}
-            <Route path="/accounting/transactions" element={<TransactionRegisterPage />} />
+            <Route path="/accounting/transactions" element={<RequirePermission area="ledger" action="view"><TransactionRegisterPage /></RequirePermission>} />
             {/* Changed: Added route for /accounting/journal-entry without /new to match navigation handler */}
-            <Route path="/accounting/journal-entry" element={<JournalEntryPage />} />
-            <Route path="/accounting/journal-entry/new" element={<JournalEntryPage />} />
-            <Route path="/accounting/journal-entry/:id" element={<JournalEntryPage />} />
+            <Route path="/accounting/journal-entry" element={<RequirePermission area="ledger" action="create"><JournalEntryPage /></RequirePermission>} />
+            <Route path="/accounting/journal-entry/new" element={<RequirePermission area="ledger" action="create"><JournalEntryPage /></RequirePermission>} />
+            <Route path="/accounting/journal-entry/:id" element={<RequirePermission area="ledger" action="view"><JournalEntryPage /></RequirePermission>} />
             {/* Changed: Added routes for voucher type URLs to match navigation handlers */}
-            <Route path="/accounting/voucher/payment" element={<VoucherFormPage />} />
-            <Route path="/accounting/voucher/receipt" element={<VoucherFormPage />} />
-            <Route path="/accounting/vouchers" element={<VoucherFormPage />} />
-            <Route path="/accounting/vouchers/new" element={<VoucherFormPage />} />
-            <Route path="/accounting/vouchers/:id" element={<VoucherFormPage />} />
+            <Route path="/accounting/voucher/payment" element={<RequirePermission area="ledger" action="create"><VoucherFormPage /></RequirePermission>} />
+            <Route path="/accounting/voucher/receipt" element={<RequirePermission area="ledger" action="create"><VoucherFormPage /></RequirePermission>} />
+            <Route path="/accounting/vouchers" element={<RequirePermission area="ledger" action="create"><VoucherFormPage /></RequirePermission>} />
+            <Route path="/accounting/vouchers/new" element={<RequirePermission area="ledger" action="create"><VoucherFormPage /></RequirePermission>} />
+            <Route path="/accounting/vouchers/:id" element={<RequirePermission area="ledger" action="view"><VoucherFormPage /></RequirePermission>} />
 
             {/* Reports */}
-            <Route path="/reports" element={<ReportsPage />} />
-            <Route path="/reports/pnl" element={<ProfitLossPage />} />
-            <Route path="/reports/balance-sheet" element={<BalanceSheetPage />} />
-            <Route path="/reports/cash-flow" element={<CashFlowPage />} />
-            <Route path="/reports/aging" element={<AgingReportsPage />} />
+            <Route path="/reports" element={<RequirePermission area="reports" action="view"><ReportsPage /></RequirePermission>} />
+            <Route path="/reports/pnl" element={<RequirePermission area="reports" action="view"><ProfitLossPage /></RequirePermission>} />
+            <Route path="/reports/balance-sheet" element={<RequirePermission area="reports" action="view"><BalanceSheetPage /></RequirePermission>} />
+            <Route path="/reports/cash-flow" element={<RequirePermission area="reports" action="view"><CashFlowPage /></RequirePermission>} />
+            <Route path="/reports/aging" element={<RequirePermission area="reports" action="view"><AgingReportsPage /></RequirePermission>} />
             {/* Added: Trial Balance report */}
-            <Route path="/reports/trial-balance" element={<TrialBalancePage />} />
+            <Route path="/reports/trial-balance" element={<RequirePermission area="reports" action="view"><TrialBalancePage /></RequirePermission>} />
             {/* Added: Scheduled Reports for automated report delivery */}
-            <Route path="/reports/scheduled" element={<ScheduledReportsPage />} />
+            <Route path="/reports/scheduled" element={<RequirePermission area="reports" action="view"><ScheduledReportsPage /></RequirePermission>} />
 
             {/* Added: Corporate KYC Onboarding (protected) */}
             <Route path="/onboarding/company" element={<CompanyInfoPage />} />
@@ -329,15 +333,19 @@ export default function App() {
             <Route path="/settings" element={<SettingsLayout />}>
               <Route index element={null} />
               {/* User Management (agents with director/signatory managed inline) */}
-              <Route path="users" element={<UserListPage />} />
-              <Route path="users/new" element={<UserFormPage />} />
-              <Route path="users/:id" element={<UserFormPage />} />
+              <Route path="users" element={<RequirePermission area="settings" action="view"><UserListPage /></RequirePermission>} />
+              <Route path="users/new" element={<RequirePermission area="settings" action="create"><UserFormPage /></RequirePermission>} />
+              <Route path="users/:id" element={<RequirePermission area="settings" action="view"><UserFormPage /></RequirePermission>} />
               {/* Bank Accounts */}
-              <Route path="bank-accounts" element={<BankAccountListPage />} />
-              <Route path="bank-accounts/new" element={<BankAccountFormPage />} />
-              <Route path="bank-accounts/:id" element={<BankAccountFormPage />} />
+              <Route path="bank-accounts" element={<RequirePermission area="settings" action="view"><BankAccountListPage /></RequirePermission>} />
+              <Route path="bank-accounts/new" element={<RequirePermission area="settings" action="create"><BankAccountFormPage /></RequirePermission>} />
+              <Route path="bank-accounts/:id" element={<RequirePermission area="settings" action="view"><BankAccountFormPage /></RequirePermission>} />
+              {/* Added (SOUPFIN-102): custom roles and their permission matrix */}
+              <Route path="roles" element={<RequirePermission area="settings" action="view"><RoleListPage /></RequirePermission>} />
+              <Route path="roles/new" element={<RequirePermission area="settings" action="create"><RoleFormPage /></RequirePermission>} />
+              <Route path="roles/:id" element={<RequirePermission area="settings" action="view"><RoleFormPage /></RequirePermission>} />
               {/* Account Settings */}
-              <Route path="account" element={<AccountSettingsPage />} />
+              <Route path="account" element={<RequirePermission area="settings" action="view"><AccountSettingsPage /></RequirePermission>} />
             </Route>
 
             {/* Added (SOUPFIN-75): User guide, reached from the sidebar Help link */}

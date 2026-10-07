@@ -56,6 +56,53 @@ function moduleForUrl(url: string | undefined): string | null {
   return match ? match.module : null;
 }
 
+// Added (SOUPFIN-102): the module interceptors' own wording, e.g.
+// "Finance module is not enabled for this tenant" (FinanceModuleInterceptor).
+const MODULE_NOT_ENABLED_MESSAGE = /\b([A-Za-z]+) module is not enabled\b/i;
+
+/**
+ * Added (SOUPFIN-102): decide whether a 403 means "module not enabled" and, if so,
+ * for which module. Returns null when the 403 is a permission denial.
+ *
+ * Order matters:
+ *  1. The module interceptor's message names the module — trust it on ANY URL
+ *     (it also gates invoices and bills, which no URL pattern lists).
+ *  2. A body that is a role/permission denial is a permission denial, even on a
+ *     ledger or voucher URL: `code: "PERMISSION_DENIED"`, or Spring Security's
+ *     default error page (`status` + `path` + any message that is not the module one).
+ *  3. Any other non-empty message is a descriptive denial — also not a module.
+ *  4. No body at all: fall back to the URL patterns, as before SOUPFIN-102.
+ */
+/**
+ * Added (SOUPFIN-102): true when a 403 response body is a role/permission denial
+ * rather than a disabled module. Shared with utils/apiErrors.ts so the payments
+ * pages, which still use isModuleDisabledError(), tell the two apart the same way.
+ */
+export function isPermissionDenialBody(data: unknown): boolean {
+  if (!data || typeof data !== 'object') return false;
+  const obj = data as Record<string, unknown>;
+  if (obj.code === 'PERMISSION_DENIED') return true;
+  const message = extractServerMessage(data);
+  if (message && MODULE_NOT_ENABLED_MESSAGE.test(message)) return false;
+  // Spring Security's default error page: {"timestamp","status":403,"error":"Forbidden","path"}
+  return obj.status === 403 && typeof obj.path === 'string';
+}
+
+function moduleFor403(
+  url: string | undefined,
+  data: unknown,
+  serverMessage: string | null
+): string | null {
+  const moduleMatch = serverMessage?.match(MODULE_NOT_ENABLED_MESSAGE);
+  if (moduleMatch) {
+    const named = moduleMatch[1];
+    return named.charAt(0).toUpperCase() + named.slice(1).toLowerCase();
+  }
+  if (isPermissionDenialBody(data)) return null;
+  if (serverMessage) return null;
+  return moduleForUrl(url);
+}
+
 /**
  * Extract a server-provided message from a Grails error payload, if any.
  * Backend may return `{ error: "..." }`, `{ message: "..." }`, or a plain string.
@@ -141,7 +188,15 @@ export function parseApiError(error: unknown): ParsedApiError {
     }
 
     if (status === 403) {
-      const moduleName = moduleForUrl(url);
+      // Changed (SOUPFIN-102): a 403 used to mean "module disabled" whenever the URL
+      // was module-gated. With custom roles a user can be denied a ledger or voucher
+      // call by their ROLE, and calling that "module not enabled" sends them to the
+      // wrong person with the wrong fix. The two 403s carry different bodies:
+      //   module interceptor  → {"error":"Finance module is not enabled for this tenant"}
+      //   Spring Security     → {"timestamp":…,"status":403,"error":"Forbidden","path":…}
+      //   permission check    → {"code":"PERMISSION_DENIED","error":"…"} (planned)
+      // Read the body first; the URL is only the fallback for an empty body.
+      const moduleName = moduleFor403(url, axErr.response?.data, serverMessage);
       if (moduleName) {
         return {
           kind: 'module_disabled',
@@ -156,8 +211,10 @@ export function parseApiError(error: unknown): ParsedApiError {
       return {
         kind: 'forbidden',
         title: 'You do not have permission',
+        // Changed (SOUPFIN-102): Spring's bare "Forbidden" / "Access Denied" is jargon,
+        // not an explanation — replace it, but keep a descriptive backend sentence.
         message:
-          serverMessage ||
+          (serverMessage && !isGenericAuthFailure(serverMessage) ? serverMessage : null) ||
           'Your account does not have permission to perform this action.',
         actionHint: 'If you believe this is a mistake, contact your administrator.',
         status,

@@ -21,6 +21,13 @@ const settingsNavItems: SettingsNavItem[] = [
     icon: 'group',
     description: 'Manage users and access permissions',
   },
+  // Added (SOUPFIN-102): custom roles with a permission matrix
+  {
+    label: 'Roles',
+    path: '/settings/roles',
+    icon: 'admin_panel_settings',
+    description: 'Choose what each role can see and do',
+  },
   {
     label: 'Bank Accounts',
     path: '/settings/bank-accounts',

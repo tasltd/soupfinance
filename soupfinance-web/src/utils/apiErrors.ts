@@ -7,6 +7,8 @@
  * status for both, so we treat 403 on read endpoints as a module-disabled
  * signal so the UI can offer a useful fallback instead of a generic error.
  */
+import { isPermissionDenialBody } from '../api/errors';
+
 export function getStatus(error: unknown): number | undefined {
   // Duck-type rather than `instanceof AxiosError` so this works in both real
   // network errors and the globally-mocked-axios environment used in unit tests.
@@ -25,7 +27,13 @@ export function isForbiddenError(error: unknown): boolean {
  * 403 on a read endpoint indicates the Finance module is not enabled for the
  * current tenant. This is distinct from auth failures (401), which are handled
  * by the client interceptor (redirect to login).
+ *
+ * Changed (SOUPFIN-102): a 403 whose body is a role/permission denial is NOT a
+ * disabled module — with custom roles a user can be refused a voucher call by
+ * their role, and must see "You do not have permission", not "module disabled".
  */
 export function isModuleDisabledError(error: unknown): boolean {
-  return isForbiddenError(error);
+  if (!isForbiddenError(error)) return false;
+  const data = (error as { response?: { data?: unknown } }).response?.data;
+  return !isPermissionDenialBody(data);
 }
