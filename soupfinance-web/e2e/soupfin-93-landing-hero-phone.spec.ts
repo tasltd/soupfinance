@@ -43,6 +43,7 @@ const LANDING_ORIGIN = 'http://soupfinance-landing.localhost';
  *   alt   98 / 95 / 95      3.9        2.95            12 / 36
  *
  * Desktop (1440, unchanged): subtitle 4.2, accent 3.5.
+ * SOUPFIN-96: accent below lg in primary-dark (#d93f08) on the fix overlay.
  */
 
 /** 18px text-secondary (#8a6b60) subtitle. Desktop reaches about 4.2:1. */
@@ -50,12 +51,15 @@ const MIN_SUBTITLE_CONTRAST = 3.5;
 /** The near-black heading text; it measures about 14:1 with the fix. */
 const MIN_HEADING_CONTRAST = 4.5;
 /**
- * The orange "Made Simple" accent. Brand orange on the warm-tinted hero tops
- * out below 3:1 on phones with any overlay tried (tracked in SOUPFIN-96), so
- * this is the SOUPFIN-90 "can it be seen at all" floor. The old overlay put
- * "Made" on the mid-tone hair at 1.0:1.
+ * The orange "Made Simple" accent: WCAG 3:1 for large text. Brand orange on the
+ * warm-tinted hero topped out at about 2.85:1 below lg with any overlay tried, so
+ * (SOUPFIN-96) the accent is primary-dark below lg and brand orange from lg up.
+ * The old overlay put "Made" on the mid-tone hair at 1.0:1.
  */
-const MIN_ACCENT_CONTRAST = 2.5;
+const MIN_ACCENT_CONTRAST = 3;
+// Added (SOUPFIN-96): accent colour either side of the lg breakpoint.
+const PRIMARY_DARK = 'rgb(217, 63, 8)'; // #d93f08, below lg
+const PRIMARY = 'rgb(242, 74, 13)'; // #f24a0d brand orange, lg and up
 
 const PHONE_OVERLAY =
   'linear-gradient(to right, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.9))';
@@ -327,6 +331,19 @@ test.describe('SOUPFIN-93: landing hero text stays off the photo', () => {
     for (const width of [1024, 1440]) {
       await page.setViewportSize({ width, height: 900 });
       await expect(overlay(page), `${width}px`).toHaveCSS('background-image', DESKTOP_OVERLAY);
+    }
+  });
+
+  // Added (SOUPFIN-96): the darker accent applies below lg only; desktop keeps brand orange.
+  test('the accent is primary-dark below lg and brand orange from lg up (boundary: 1023 / 1024)', async ({ page }) => {
+    await openHomepage(page);
+    for (const width of [320, 375, 768, 1023]) {
+      await page.setViewportSize({ width, height: 900 });
+      await expect(headingAccent(page), `${width}px`).toHaveCSS('color', PRIMARY_DARK);
+    }
+    for (const width of [1024, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      await expect(headingAccent(page), `${width}px`).toHaveCSS('color', PRIMARY);
     }
   });
 

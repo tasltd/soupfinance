@@ -116,7 +116,8 @@ test.describe('SOUPFIN-90: landing page palette', () => {
     expect(await colours(page, 'body')).toMatchObject({ background: BACKGROUND_LIGHT, text: TEXT_PRIMARY });
     expect((await colours(page, 'nav')).border).toBe(BORDER);
     await expect(page.locator('nav').getByRole('link', { name: 'Features' })).toHaveCSS('color', TEXT_SECONDARY);
-    await expect(page.locator('h1 .text-primary')).toHaveCSS('color', PRIMARY);
+    // Fix (SOUPFIN-96): the accent is text-primary-dark lg:text-primary; this test runs at lg.
+    await expect(page.locator('h1 span')).toHaveCSS('color', PRIMARY);
 
     // Domain rule: the landing page links to the app, it never signs anyone in.
     await expect(page.locator('input[type="password"]')).toHaveCount(0);

@@ -303,7 +303,10 @@
             <div class="lg:max-w-lg xl:max-w-xl">
                 <h1 class="text-4xl sm:text-5xl lg:text-5xl xl:text-6xl font-extrabold tracking-tight text-text-primary leading-tight text-center lg:text-left">
                     Corporate Accounting
-                    <span class="text-primary"> Made Simple</span>
+                    <!-- Fix (SOUPFIN-96): below lg the warm tint and the last of the photo pull brand
+                         orange to about 2.85:1, under the 3:1 large-text minimum. primary-dark (4.5:1 on
+                         white) is used there; lg and up keeps brand orange, which reads 3.5:1. -->
+                    <span class="text-primary-dark lg:text-primary"> Made Simple</span>
                 </h1>
                 <p class="mt-6 text-lg sm:text-xl text-text-secondary max-w-xl mx-auto lg:mx-0 text-center lg:text-left">
                     Streamline invoicing, payments, and financial reporting for your business.
