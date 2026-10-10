@@ -38,6 +38,7 @@ import {
   setupResponseValidation,
   installUnmockedApiGuard,
   mockAmbientApi,
+  mockAgingSourcesApi,
   type UnmockedApiGuard,
 } from './fixtures';
 
@@ -167,17 +168,7 @@ const mockCashFlowTransactions = [
   { id: 'tx-1', transactionDate: '2026-01-15', description: 'Customer Payment', debitAmount: 5000, creditAmount: 0 },
 ];
 
-const mockAgedReceivablesResponse = {
-  agedReceivablesList: [
-    { name: 'Acme Corp', notYetOverdue: 5000, thirtyOrLess: 2000, totalUnpaid: 7000 },
-  ],
-};
 
-const mockAgedPayablesResponse = {
-  agedPayablesList: [
-    { name: 'Office Supplies Co', notYetOverdue: 1500, thirtyOrLess: 500, totalUnpaid: 2000 },
-  ],
-};
 
 // ===========================================================================
 // Test Helpers
@@ -243,21 +234,9 @@ async function mockAllReportsApi(page: any) {
     });
   });
 
-  await page.route('**/rest/financeReports/agedReceivables*', (route: any) => {
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify(mockAgedReceivablesResponse),
-    });
-  });
-
-  await page.route('**/rest/financeReports/agedPayables*', (route: any) => {
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify(mockAgedPayablesResponse),
-    });
-  });
+  // Changed (SOUPFIN-228): since SOUPFIN-105 the aging page buckets open
+  // invoices and bills in the browser instead of reading agedReceivables/Payables.
+  await mockAgingSourcesApi(page);
 }
 
 /**
@@ -662,34 +641,37 @@ test.describe('User Journey: Financial Reporting', () => {
     await expect(page.getByTestId('dashboard-page')).toBeVisible();
     await takeScreenshot(page, 'journey-reports-01-dashboard');
 
+    // Fix (SOUPFIN-228): move between reports by clicking the sidebar. Seven full
+    // page loads each wait on the Google Fonts request (about 5 s from this box),
+    // which ran past the 30 s test timeout under full-suite load.
+    const nav = page.getByRole('navigation');
+    const openReport = async (name: string, testId: string) => {
+      await nav.getByRole('link', { name, exact: true }).click();
+      await expect(page.getByTestId(testId)).toBeVisible({ timeout: 10000 });
+    };
+
     // Step 2: Navigate to Reports hub
-    await page.goto('/reports');
-    await expect(page.getByTestId('reports-page')).toBeVisible();
+    await openReport('Reports', 'reports-page');
     await takeScreenshot(page, 'journey-reports-02-hub');
 
     // Step 3: View Profit & Loss
-    await page.goto('/reports/pnl');
-    await expect(page.getByTestId('profit-loss-page')).toBeVisible();
+    await openReport('Profit & Loss', 'profit-loss-page');
     await takeScreenshot(page, 'journey-reports-03-pnl');
 
     // Step 4: View Balance Sheet
-    await page.goto('/reports/balance-sheet');
-    await expect(page.getByTestId('balance-sheet-page')).toBeVisible();
+    await openReport('Balance Sheet', 'balance-sheet-page');
     await takeScreenshot(page, 'journey-reports-04-balance-sheet');
 
     // Step 5: View Cash Flow
-    await page.goto('/reports/cash-flow');
-    await expect(page.getByTestId('cash-flow-page')).toBeVisible();
+    await openReport('Cash Flow', 'cash-flow-page');
     await takeScreenshot(page, 'journey-reports-05-cash-flow');
 
     // Step 6: View Trial Balance
-    await page.goto('/reports/trial-balance');
-    await expect(page.getByTestId('trial-balance-page')).toBeVisible();
+    await openReport('Trial Balance', 'trial-balance-page');
     await takeScreenshot(page, 'journey-reports-06-trial-balance');
 
     // Step 7: View Aging Reports
-    await page.goto('/reports/aging');
-    await expect(page.getByTestId('aging-reports-page')).toBeVisible();
+    await openReport('Aging Reports', 'aging-reports-page');
     await takeScreenshot(page, 'journey-reports-07-aging');
   });
 

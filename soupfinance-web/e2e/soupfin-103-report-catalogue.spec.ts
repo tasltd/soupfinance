@@ -20,6 +20,7 @@ import {
   isLxcMode,
   mockAmbientApi,
   mockDashboardApi,
+  mockAgingSourcesApi,
   mockTokenValidationApi,
   type UnmockedApiGuard,
 } from './fixtures';
@@ -145,22 +146,39 @@ async function mockReports(page: Page) {
     );
   });
 
-  const aging = (name: string) => ({
-    name,
-    notYetOverdue: 10_000,
-    thirtyOrLess: 5_000,
-    thirtyOneToSixty: 0,
-    sixtyOneToNinety: 0,
-    ninetyOneOrMore: 2_000,
-    totalUnpaid: 17_000,
+  // Changed (SOUPFIN-228): since SOUPFIN-105 the aging page buckets open
+  // invoices and bills in the browser. Dates are fixed because the browser clock
+  // is frozen at FROZEN_NOW, not at the test runner's today.
+  await mockAgingSourcesApi(page, {
+    invoices: [
+      {
+        id: 'inv-akosua',
+        number: 41,
+        accountServices: { id: 'as-akosua', serialised: 'Akosua Ltd', class: 'soupbroker.AccountServices' },
+        invoiceDate: '2026-07-01T00:00:00Z',
+        paymentDate: '2026-07-31T00:00:00Z',
+        status: 'SENT',
+        invoiceItemList: [{ id: 'ii-akosua', quantity: 1, unitPrice: 17_000, description: 'Services' }],
+        invoicePaymentList: [],
+      },
+    ],
+    bills: [
+      {
+        id: 'bill-kofi',
+        billNumber: 'BILL-KOFI-1',
+        vendor: { id: 'vendor-kofi', name: 'Kofi Supplies' },
+        billDate: '2026-07-10',
+        paymentDate: '2026-08-09',
+        status: 'PENDING',
+        total: 17_000,
+        amountDue: 17_000,
+      },
+    ],
   });
-  await page.route('**/rest/financeReports/agedReceivables.json*', async (route) => {
+  // The server-side exports (PDF, Excel) still go to agedReceivables/agedPayables.
+  await page.route('**/rest/financeReports/aged*.json*', async (route) => {
     if (await fulfilExport(route)) return;
-    await route.fulfill(json({ agedReceivablesList: [aging('Akosua Ltd')] }));
-  });
-  await page.route('**/rest/financeReports/agedPayables.json*', async (route) => {
-    if (await fulfilExport(route)) return;
-    await route.fulfill(json({ agedPayablesList: [aging('Kofi Supplies')] }));
+    await route.fulfill(json({}));
   });
 }
 
@@ -337,20 +355,22 @@ test.describe('SOUPFIN-103: report catalogue (west of UTC)', () => {
     expect(requests.some((u) => u.pathname.endsWith('/accountBalances.json') && u.searchParams.get('f') === 'csv')).toBe(true);
   });
 
-  test('A/P Aging opens the shared aging page with its own export', async ({ page }) => {
+  test('A/P Aging opens the A/P Aging Summary with a CSV export', async ({ page }) => {
+    // Changed (SOUPFIN-228): SOUPFIN-105 points the hub's A/P entry at its own
+    // A/P Aging Summary page, bucketed in the browser. Its export is a CSV built
+    // from the rows on screen, never a server request.
     const requests = captureReportRequests(page);
     await openHub(page);
     await page.getByTestId('report-link-ap-aging').click();
-    await expect(page).toHaveURL(/\/reports\/aging$/);
-    await expect(page.getByTestId('ap-aging-row-0')).toContainText('Kofi Supplies');
-    await expectNoDollars(page, 'aging-reports-page');
+    await expect(page).toHaveURL(/\/reports\/aging\/payables$/);
+    await expect(page.getByTestId('ap-aging-summary-row-0')).toContainText('Kofi Supplies');
+    await expectNoDollars(page, 'ap-aging-summary-page');
     await shot(page, '12-aging-from-hub');
 
     const download = page.waitForEvent('download');
-    await page.getByTestId('ap-aging-export-csv').click();
-    expect((await download).suggestedFilename()).toBe('ap-aging-2026-08-15.csv');
-    const exported = requests.find((u) => u.searchParams.get('f') === 'csv');
-    expect(exported?.pathname).toMatch(/\/agedPayables\.json$/);
+    await page.getByTestId('ap-aging-summary-export-csv').click();
+    expect((await download).suggestedFilename()).toMatch(/^ap-aging-summary-2026-08-15\.csv$/);
+    expect(requests.some((u) => u.searchParams.get('f') === 'csv')).toBe(false);
   });
 });
 

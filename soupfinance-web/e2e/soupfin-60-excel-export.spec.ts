@@ -153,20 +153,26 @@ test.describe('SOUPFIN-60: Excel export asks for f=excel and downloads a .xls', 
     });
   }
 
-  test('Aging Reports: both AR and AP Excel buttons download a .xls', async ({ page }) => {
+  test('Aging Reports: Excel is not offered; CSV downloads from the rows on screen', async ({ page }) => {
+    // Changed (SOUPFIN-228): SOUPFIN-105 buckets the aging reports in the
+    // browser, because the backend's agedReceivables/agedPayables buckets are
+    // wrong. Exporting those would hand the user different numbers from the
+    // screen, so PDF and Excel are switched off and the CSV is built locally.
     await navigateToReport(page, 'Aging Reports');
     await expect(page.getByTestId('aging-reports-page')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByTestId('ar-aging-table')).toBeVisible({ timeout: 15000 });
     await shot(page, 'aging-before-export');
 
-    const arFile = await clickExcel(page, 'ar-aging-export-excel');
-    expectExcelRequest('agedReceivables');
-    expect(arFile).toMatch(/^ar-aging-.*\.xls$/);
+    for (const side of ['ar-aging', 'ap-aging']) {
+      const excel = page.getByTestId(`${side}-export-excel`);
+      await expect(excel).toBeDisabled();
+      await expect(excel).toHaveAttribute('title', /not available/i);
+    }
 
-    // AR and AP render side by side on the same page; no tab to switch.
-    exportRequests = [];
-    const apFile = await clickExcel(page, 'ap-aging-export-excel');
-    expectExcelRequest('agedPayables');
-    expect(apFile).toMatch(/^ap-aging-.*\.xls$/);
+    const downloadPromise = page.waitForEvent('download', { timeout: 15000 });
+    await page.getByTestId('ar-aging-export-csv').click();
+    expect((await downloadPromise).suggestedFilename()).toMatch(/^ar-aging-.*\.csv$/);
+    expect(exportRequests, 'the aging CSV must not ask the server').toHaveLength(0);
     await shot(page, 'aging-after-export');
   });
 });

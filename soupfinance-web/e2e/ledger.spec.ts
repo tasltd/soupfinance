@@ -3,7 +3,12 @@
  * Tests Chart of Accounts and Ledger Transactions pages
  */
 import { test, expect } from '@playwright/test';
-import { mockTokenValidationApi, takeScreenshot, setupResponseValidation } from './fixtures';
+import {
+  mockTokenValidationApi,
+  takeScreenshot,
+  setupResponseValidation,
+  createResponseGate,
+} from './fixtures';
 
 // ===========================================================================
 // Mock Data
@@ -334,9 +339,11 @@ test.describe('Ledger Management', () => {
     test('shows loading state while fetching', async ({ page }) => {
       await mockTokenValidationApi(page, true);
 
-      // Delay accounts response
+      // Fix (SOUPFIN-228): hold the response until the spinner is asserted; a fixed
+      // delay lost the race against a page load that waits on Google Fonts.
+      const gate = createResponseGate();
       await page.route('**/rest/ledgerAccount/index.json*', async (route) => {
-        await new Promise((resolve) => setTimeout(resolve, 3000));
+        await gate.released;
         route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -345,11 +352,12 @@ test.describe('Ledger Management', () => {
       });
 
       await page.goto('/ledger/accounts', { waitUntil: 'commit' });
-      await page.waitForSelector('[data-testid="chart-of-accounts-page"]', { timeout: 5000 });
+      await page.waitForSelector('[data-testid="chart-of-accounts-page"]', { timeout: 15000 });
 
       // Should show loading state
-      await expect(page.getByTestId('coa-loading')).toBeVisible({ timeout: 2000 });
+      await expect(page.getByTestId('coa-loading')).toBeVisible({ timeout: 10000 });
       await takeScreenshot(page, 'chart-of-accounts-loading');
+      gate.release();
 
       // Wait for data to load
       await expect(page.getByTestId('coa-groups')).toBeVisible({ timeout: 10000 });
@@ -571,9 +579,10 @@ test.describe('Ledger Management', () => {
         });
       });
 
-      // Delay transactions response
+      // Hold transactions until the spinner is asserted (SOUPFIN-228)
+      const gate = createResponseGate();
       await page.route('**/rest/ledgerTransaction/index.json*', async (route) => {
-        await new Promise((resolve) => setTimeout(resolve, 3000));
+        await gate.released;
         route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -582,11 +591,12 @@ test.describe('Ledger Management', () => {
       });
 
       await page.goto('/ledger/transactions', { waitUntil: 'commit' });
-      await page.waitForSelector('[data-testid="ledger-transactions-page"]', { timeout: 5000 });
+      await page.waitForSelector('[data-testid="ledger-transactions-page"]', { timeout: 15000 });
 
       // Should show loading state
-      await expect(page.getByTestId('ledger-loading')).toBeVisible({ timeout: 2000 });
+      await expect(page.getByTestId('ledger-loading')).toBeVisible({ timeout: 10000 });
       await takeScreenshot(page, 'ledger-transactions-loading');
+      gate.release();
 
       // Wait for data to load
       await expect(page.getByTestId('ledger-table')).toBeVisible({ timeout: 10000 });

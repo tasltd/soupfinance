@@ -1292,6 +1292,8 @@ export const mockPaymentMethods = [
  * - `GET /rest/client/index.json` — client pickers on invoice and receipt-voucher forms.
  * - `GET /rest/ledgerAccount/index.json` — account pickers on payment, voucher
  *   and journal-entry forms.
+ * - `GET /rest/invoicePayment/index.json`, `/rest/billPayment/index.json` and
+ *   `/rest/clientPortfolio/index.json` — the aging reports (SOUPFIN-105).
  *
  * Left unmocked these proxy to VITE_PROXY_TARGET; a real backend there answers
  * 401 and the client.ts interceptor redirects the page to /login mid-test.
@@ -1322,6 +1324,12 @@ export async function mockAmbientApi(page: import('@playwright/test').Page) {
   );
   await page.route('**/rest/client/index.json*', (route) => route.fulfill(json([])));
   await page.route('**/rest/ledgerAccount/index.json*', (route) => route.fulfill(json([])));
+  // Added (SOUPFIN-228): since SOUPFIN-105 the aging reports read every invoice
+  // and bill payment (and client portfolios for links) alongside the invoice and
+  // bill lists. Empty defaults; mockAgingSourcesApi supplies real rows.
+  await page.route('**/rest/invoicePayment/index.json*', (route) => route.fulfill(json([])));
+  await page.route('**/rest/billPayment/index.json*', (route) => route.fulfill(json([])));
+  await page.route('**/rest/clientPortfolio/index.json*', (route) => route.fulfill(json([])));
 
   // Added (SOUPFIN-55): the dashboard now resolves whether the tenant has an
   // unfinished corporate KYC application, to decide whether to offer the
@@ -1357,6 +1365,136 @@ export async function mockNoCorporateApplication(page: import('@playwright/test'
   await page.route('**/rest/corporate/index.json*', (route) =>
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) })
   );
+}
+
+// ===========================================================================
+// Aging Report Sources
+// ===========================================================================
+
+/** A local calendar date `offsetDays` from today, as YYYY-MM-DD. */
+function localDateOffset(offsetDays: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/**
+ * Open invoices for the aging reports, one per customer, each due in a
+ * different period relative to today: not yet due, 1-30 days late, 31-60 days.
+ *
+ * Added (SOUPFIN-228): since SOUPFIN-105 the aging pages bucket open invoices
+ * and bills in the browser instead of reading /financeReports/agedReceivables.
+ */
+export const mockAgingInvoices = [
+  {
+    id: 'aging-inv-001',
+    number: 101,
+    accountServices: { id: 'as-aging-001', serialised: 'Kumasi Traders', class: 'soupbroker.AccountServices' },
+    invoiceDate: `${localDateOffset(-5)}T00:00:00Z`,
+    paymentDate: `${localDateOffset(25)}T00:00:00Z`,
+    status: 'SENT',
+    invoiceItemList: [{ id: 'aging-ii-001', quantity: 1, unitPrice: 1200, description: 'Consulting' }],
+    invoicePaymentList: [],
+  },
+  {
+    id: 'aging-inv-002',
+    number: 102,
+    accountServices: { id: 'as-aging-002', serialised: 'Accra Logistics', class: 'soupbroker.AccountServices' },
+    invoiceDate: `${localDateOffset(-40)}T00:00:00Z`,
+    paymentDate: `${localDateOffset(-10)}T00:00:00Z`,
+    status: 'SENT',
+    invoiceItemList: [{ id: 'aging-ii-002', quantity: 2, unitPrice: 800, description: 'Support' }],
+    invoicePaymentList: [],
+  },
+  {
+    id: 'aging-inv-003',
+    number: 103,
+    accountServices: { id: 'as-aging-003', serialised: 'Tema Foods', class: 'soupbroker.AccountServices' },
+    invoiceDate: `${localDateOffset(-75)}T00:00:00Z`,
+    paymentDate: `${localDateOffset(-45)}T00:00:00Z`,
+    status: 'OVERDUE',
+    invoiceItemList: [{ id: 'aging-ii-003', quantity: 1, unitPrice: 2500, description: 'Licence' }],
+    invoicePaymentList: [],
+  },
+];
+
+/** Open bills for the aging reports, one per vendor. Added (SOUPFIN-228). */
+export const mockAgingBills = [
+  {
+    id: 'aging-bill-001',
+    billNumber: 'BILL-AG-001',
+    vendor: { id: 'vendor-aging-001', name: 'Volta Power' },
+    billDate: localDateOffset(-3),
+    paymentDate: localDateOffset(27),
+    status: 'PENDING',
+    total: 650,
+    amountDue: 650,
+  },
+  {
+    id: 'aging-bill-002',
+    billNumber: 'BILL-AG-002',
+    vendor: { id: 'vendor-aging-002', name: 'Coastal Stationery' },
+    billDate: localDateOffset(-50),
+    paymentDate: localDateOffset(-20),
+    status: 'OVERDUE',
+    total: 310,
+    amountDue: 310,
+  },
+];
+
+/** Counts of the aging source requests a spec made, for refetch assertions. */
+export interface AgingSourceRequests {
+  invoices: number;
+  bills: number;
+}
+
+/**
+ * Mock every list the aging pages read: invoices, invoice payments, bills,
+ * bill payments and client portfolios. Each answers in one page (fewer than
+ * 100 rows), so the page-by-page reader stops after the first request.
+ *
+ * Pass `invoices: []` or `bills: []` for an empty side. Register a route of
+ * your own AFTER this call to override one list (for example a 500).
+ *
+ * Added (SOUPFIN-228). CONDITIONAL: Skips mocking in LXC mode.
+ */
+export async function mockAgingSourcesApi(
+  page: import('@playwright/test').Page,
+  options: {
+    invoices?: unknown[];
+    invoicePayments?: unknown[];
+    bills?: unknown[];
+    billPayments?: unknown[];
+  } = {}
+): Promise<AgingSourceRequests> {
+  const requests: AgingSourceRequests = { invoices: 0, bills: 0 };
+  if (isLxcMode()) return requests;
+
+  const {
+    invoices = mockAgingInvoices,
+    invoicePayments = [],
+    bills = mockAgingBills,
+    billPayments = [],
+  } = options;
+  const json = (body: unknown) => ({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify(body),
+  });
+
+  await page.route('**/rest/invoice/index.json*', (route) => {
+    requests.invoices += 1;
+    return route.fulfill(json(invoices));
+  });
+  await page.route('**/rest/invoicePayment/index.json*', (route) => route.fulfill(json(invoicePayments)));
+  await page.route('**/rest/bill/index.json*', (route) => {
+    requests.bills += 1;
+    return route.fulfill(json(bills));
+  });
+  await page.route('**/rest/billPayment/index.json*', (route) => route.fulfill(json(billPayments)));
+  await page.route('**/rest/clientPortfolio/index.json*', (route) => route.fulfill(json([])));
+
+  return requests;
 }
 
 /**

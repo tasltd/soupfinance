@@ -18,6 +18,9 @@ import {
   mockTokenValidationApi,
   setupResponseValidation,
   createResponseGate,
+  mockAgingSourcesApi,
+  mockAgingInvoices,
+  mockAgingBills,
 } from './fixtures';
 
 // =============================================================================
@@ -93,22 +96,8 @@ const mockAccountTransactionsResponse = [
   { id: 'tx-4', transactionDate: '2026-01-18', description: 'Loan Proceeds', debitAmount: 15000, creditAmount: 0, balance: 8000, ledgerAccountId: 'loan-1', ledgerAccountName: 'Bank Loan', reference: 'LOAN-001' },
 ];
 
-// A/R Aging mock data
-const mockAgedReceivablesResponse = {
-  agedReceivablesList: [
-    { name: 'Acme Corp', notYetOverdue: 5000, thirtyOrLess: 2000, thirtyOneToSixty: 1000, sixtyOneToNinety: 500, ninetyOneOrMore: 200, totalUnpaid: 8700 },
-    { name: 'TechStart Inc', notYetOverdue: 3000, thirtyOrLess: 1500, thirtyOneToSixty: 0, sixtyOneToNinety: 0, ninetyOneOrMore: 0, totalUnpaid: 4500 },
-    { name: 'Global Solutions', notYetOverdue: 0, thirtyOrLess: 0, thirtyOneToSixty: 2500, sixtyOneToNinety: 1000, ninetyOneOrMore: 500, totalUnpaid: 4000 },
-  ],
-};
-
-// A/P Aging mock data
-const mockAgedPayablesResponse = {
-  agedPayablesList: [
-    { name: 'Office Supplies Co', notYetOverdue: 1500, thirtyOrLess: 500, thirtyOneToSixty: 0, sixtyOneToNinety: 0, ninetyOneOrMore: 0, totalUnpaid: 2000 },
-    { name: 'Tech Vendor LLC', notYetOverdue: 0, thirtyOrLess: 3000, thirtyOneToSixty: 1500, sixtyOneToNinety: 500, ninetyOneOrMore: 0, totalUnpaid: 5000 },
-  ],
-};
+// Aging data: see mockAgingSourcesApi in fixtures.ts. Since SOUPFIN-105 the
+// aging pages bucket open invoices and bills instead of reading agedReceivables.
 
 // =============================================================================
 // Helper Functions
@@ -899,21 +888,7 @@ test.describe('Aging Reports', () => {
   });
 
   test('navigates to aging reports page', async ({ page }) => {
-    await page.route('**/rest/financeReports/agedReceivables*', (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(mockAgedReceivablesResponse),
-      });
-    });
-
-    await page.route('**/rest/financeReports/agedPayables*', (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(mockAgedPayablesResponse),
-      });
-    });
+    await mockAgingSourcesApi(page);
 
     await page.goto('/reports/aging');
     await takeScreenshot(page, 'aging-reports-page');
@@ -923,21 +898,7 @@ test.describe('Aging Reports', () => {
   });
 
   test('displays as-of date picker', async ({ page }) => {
-    await page.route('**/rest/financeReports/agedReceivables*', (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(mockAgedReceivablesResponse),
-      });
-    });
-
-    await page.route('**/rest/financeReports/agedPayables*', (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(mockAgedPayablesResponse),
-      });
-    });
+    await mockAgingSourcesApi(page);
 
     await page.goto('/reports/aging');
 
@@ -945,94 +906,50 @@ test.describe('Aging Reports', () => {
     await expect(page.getByTestId('aging-reports-reset-date')).toBeVisible();
   });
 
-  test('date filter changes API request', async ({ page }) => {
-    let arCapturedUrl = '';
-    let apCapturedUrl = '';
-
-    await page.route('**/rest/financeReports/agedReceivables*', (route) => {
-      arCapturedUrl = route.request().url();
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(mockAgedReceivablesResponse),
-      });
-    });
-
-    await page.route('**/rest/financeReports/agedPayables*', (route) => {
-      apCapturedUrl = route.request().url();
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(mockAgedPayablesResponse),
-      });
-    });
+  test('changing the as-of date re-buckets the open documents', async ({ page }) => {
+    // Changed (SOUPFIN-228): since SOUPFIN-105 the as-of date is not sent to the
+    // server. The page buckets the open invoices and bills in the browser, so an
+    // earlier date must drop every document that had not been raised yet.
+    await mockAgingSourcesApi(page);
 
     await page.goto('/reports/aging');
+    await expect(page.getByTestId('ar-aging-row-0')).toBeVisible({ timeout: 10000 });
 
-    // Wait for initial load
-    await expect(page.getByTestId('ar-aging-table')).toBeVisible({ timeout: 10000 });
-
-    // Change date
+    // Every fixture document is dated within the last 90 days.
     await page.getByTestId('aging-reports-date-picker').fill('2025-06-30');
 
-    // Wait for API calls
-    await page.waitForTimeout(500);
-
-    expect(arCapturedUrl).toContain('2025-06-30');
-    expect(apCapturedUrl).toContain('2025-06-30');
+    await expect(page.getByTestId('ar-aging-empty')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId('ap-aging-empty')).toBeVisible();
   });
 
   test('Today button refetches even when date is already today (SOUPFIN-11)', async ({ page }) => {
     // Fix(SOUPFIN-11): The Today button was a no-op when the date was already
     // today because setState bailed out on equal values. Verify it now always
-    // refetches by counting API requests.
-    let arRequestCount = 0;
-    let apRequestCount = 0;
-
-    await page.route('**/rest/financeReports/agedReceivables*', (route) => {
-      arRequestCount += 1;
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(mockAgedReceivablesResponse),
-      });
-    });
-
-    await page.route('**/rest/financeReports/agedPayables*', (route) => {
-      apRequestCount += 1;
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(mockAgedPayablesResponse),
-      });
-    });
+    // refetches by counting requests for the invoice and bill lists, which are
+    // what the page reads since SOUPFIN-105.
+    const requests = await mockAgingSourcesApi(page);
 
     await page.goto('/reports/aging');
     await expect(page.getByTestId('ar-aging-table')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId('ap-aging-table')).toBeVisible();
 
-    // After initial load both endpoints have been hit at least once.
-    const arInitial = arRequestCount;
-    const apInitial = apRequestCount;
+    // After initial load both lists have been read at least once.
+    const arInitial = requests.invoices;
+    const apInitial = requests.bills;
     expect(arInitial).toBeGreaterThanOrEqual(1);
     expect(apInitial).toBeGreaterThanOrEqual(1);
 
     // Click Today while date IS already today — must trigger refetch.
     await page.getByTestId('aging-reports-reset-date').click();
-    await page.waitForTimeout(500);
 
-    expect(arRequestCount).toBeGreaterThan(arInitial);
-    expect(apRequestCount).toBeGreaterThan(apInitial);
+    await expect.poll(() => requests.invoices).toBeGreaterThan(arInitial);
+    await expect.poll(() => requests.bills).toBeGreaterThan(apInitial);
   });
 
   test('date picker allows selecting historical years (SOUPFIN-11)', async ({ page }) => {
     // Fix(SOUPFIN-11): The picker now has min=2000-01-01 so users can pick
     // dates from earlier years. Verify a 2024 date is accepted by the input.
-    await page.route('**/rest/financeReports/agedReceivables*', (route) => {
-      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(mockAgedReceivablesResponse) });
-    });
-    await page.route('**/rest/financeReports/agedPayables*', (route) => {
-      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(mockAgedPayablesResponse) });
-    });
+    await mockAgingSourcesApi(page);
 
     await page.goto('/reports/aging');
     await expect(page.getByTestId('aging-reports-date-picker')).toBeVisible({ timeout: 10000 });
@@ -1052,21 +969,7 @@ test.describe('Aging Reports', () => {
   });
 
   test('renders both A/R and A/P tables', async ({ page }) => {
-    await page.route('**/rest/financeReports/agedReceivables*', (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(mockAgedReceivablesResponse),
-      });
-    });
-
-    await page.route('**/rest/financeReports/agedPayables*', (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(mockAgedPayablesResponse),
-      });
-    });
+    await mockAgingSourcesApi(page);
 
     await page.goto('/reports/aging');
 
@@ -1087,21 +990,7 @@ test.describe('Aging Reports', () => {
   });
 
   test('displays aging data rows with correct structure', async ({ page }) => {
-    await page.route('**/rest/financeReports/agedReceivables*', (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(mockAgedReceivablesResponse),
-      });
-    });
-
-    await page.route('**/rest/financeReports/agedPayables*', (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(mockAgedPayablesResponse),
-      });
-    });
+    await mockAgingSourcesApi(page);
 
     await page.goto('/reports/aging');
 
@@ -1116,21 +1005,7 @@ test.describe('Aging Reports', () => {
   });
 
   test('shows empty state for A/R when no receivables', async ({ page }) => {
-    await page.route('**/rest/financeReports/agedReceivables*', (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ agedReceivablesList: [] }),
-      });
-    });
-
-    await page.route('**/rest/financeReports/agedPayables*', (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(mockAgedPayablesResponse),
-      });
-    });
+    await mockAgingSourcesApi(page, { invoices: [] });
 
     await page.goto('/reports/aging');
 
@@ -1140,21 +1015,7 @@ test.describe('Aging Reports', () => {
   });
 
   test('shows empty state for A/P when no payables', async ({ page }) => {
-    await page.route('**/rest/financeReports/agedReceivables*', (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(mockAgedReceivablesResponse),
-      });
-    });
-
-    await page.route('**/rest/financeReports/agedPayables*', (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ agedPayablesList: [] }),
-      });
-    });
+    await mockAgingSourcesApi(page, { bills: [] });
 
     await page.goto('/reports/aging');
 
@@ -1164,21 +1025,15 @@ test.describe('Aging Reports', () => {
   });
 
   test('shows error state on A/R API failure', async ({ page }) => {
-    await page.route('**/rest/financeReports/agedReceivables*', (route) => {
+    await mockAgingSourcesApi(page);
+    // The receivables side fails; registered after the defaults, so it wins.
+    await page.route('**/rest/invoice/index.json*', (route) =>
       route.fulfill({
         status: 500,
         contentType: 'application/json',
         body: JSON.stringify({ error: 'Server error' }),
-      });
-    });
-
-    await page.route('**/rest/financeReports/agedPayables*', (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(mockAgedPayablesResponse),
-      });
-    });
+      })
+    );
 
     await page.goto('/reports/aging');
 
@@ -1188,21 +1043,7 @@ test.describe('Aging Reports', () => {
   });
 
   test('export buttons are visible for both A/R and A/P', async ({ page }) => {
-    await page.route('**/rest/financeReports/agedReceivables*', (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(mockAgedReceivablesResponse),
-      });
-    });
-
-    await page.route('**/rest/financeReports/agedPayables*', (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(mockAgedPayablesResponse),
-      });
-    });
+    await mockAgingSourcesApi(page);
 
     await page.goto('/reports/aging');
 
@@ -1218,21 +1059,7 @@ test.describe('Aging Reports', () => {
   });
 
   test('responsive layout on mobile viewport', async ({ page }) => {
-    await page.route('**/rest/financeReports/agedReceivables*', (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(mockAgedReceivablesResponse),
-      });
-    });
-
-    await page.route('**/rest/financeReports/agedPayables*', (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(mockAgedPayablesResponse),
-      });
-    });
+    await mockAgingSourcesApi(page);
 
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto('/reports/aging');
@@ -1410,29 +1237,26 @@ test.describe('Report Loading States', () => {
   });
 
   test('shows loading states for aging reports', async ({ page }) => {
-    await page.route('**/rest/financeReports/agedReceivables*', async (route) => {
-      await new Promise((resolve) => setTimeout(resolve, 3000));
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(mockAgedReceivablesResponse),
-      });
-    });
-
-    await page.route('**/rest/financeReports/agedPayables*', async (route) => {
-      await new Promise((resolve) => setTimeout(resolve, 3000));
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(mockAgedPayablesResponse),
-      });
-    });
+    // Fix (SOUPFIN-228): the aging page reads the invoice and bill lists since
+    // SOUPFIN-105. Hold both until the spinners have been seen.
+    await mockAgingSourcesApi(page);
+    const gate = createResponseGate();
+    const held = (body: unknown) => async (route: import('@playwright/test').Route) => {
+      await gate.released;
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
+    };
+    await page.route('**/rest/invoice/index.json*', held(mockAgingInvoices));
+    await page.route('**/rest/bill/index.json*', held(mockAgingBills));
 
     await page.goto('/reports/aging');
 
-    await expect(page.getByTestId('ar-aging-loading')).toBeVisible({ timeout: 3000 });
-    await expect(page.getByTestId('ap-aging-loading')).toBeVisible({ timeout: 3000 });
+    await expect(page.getByTestId('ar-aging-loading')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByTestId('ap-aging-loading')).toBeVisible({ timeout: 15000 });
 
     await takeScreenshot(page, 'aging-loading');
+
+    gate.release();
+    await expect(page.getByTestId('ar-aging-table')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId('ap-aging-table')).toBeVisible();
   });
 });

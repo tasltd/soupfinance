@@ -19,7 +19,14 @@
  * in e2e/playwright/screenshots/soupfin-33/ and are committed as evidence.
  */
 import { test, expect, type Page } from '@playwright/test';
-import { mockTokenValidationApi, isLxcMode } from './fixtures';
+import { mockTokenValidationApi, mockAgingSourcesApi, isLxcMode } from './fixtures';
+
+/** A local calendar date `offsetDays` from today, as YYYY-MM-DD. */
+function localDate(offsetDays: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
 
 /**
  * Screenshots go to a git-tracked directory rather than through the shared
@@ -52,23 +59,23 @@ const AGENTS_WITHOUT_EMAIL = [
 ];
 
 /**
- * A single all-zero A/P vendor row — the exact reported scenario for #4.
+ * One open bill, due in 10 days, so the A/P row has an amount in "Current" and
+ * zero in every older column. The zero cells are the exact reported scenario for
+ * #4: they used to short-circuit to a hardcoded "$0.00".
  *
- * These payloads are in the BACKEND shape (`agedPayablesList`, `resultList`) because
- * src/api/endpoints/reports.ts transforms them before the page ever sees them.
+ * Changed (SOUPFIN-228): since SOUPFIN-105 the aging page buckets open bills in
+ * the browser instead of reading /financeReports/agedPayables, and a bill with
+ * nothing owed is not open, so an all-zero row can no longer be mocked.
  */
-const AP_AGING_ZERO = {
-  agedPayablesList: [
-    {
-      name: 'V19 Test Vendor',
-      notYetOverdue: 0,
-      thirtyOrLess: 0,
-      thirtyOneToSixty: 0,
-      sixtyOneToNinety: 0,
-      ninetyOneOrMore: 0,
-      totalUnpaid: 0,
-    },
-  ],
+const AP_OPEN_BILL = {
+  id: 'bill-v19-001',
+  billNumber: 'BILL-V19-001',
+  vendor: { id: 'vendor-v19-001', name: 'V19 Test Vendor' },
+  billDate: localDate(-5),
+  paymentDate: localDate(10),
+  status: 'PENDING',
+  total: 450,
+  amountDue: 450,
 };
 
 const EMPTY_TRIAL_BALANCE = {
@@ -168,20 +175,6 @@ async function signInAndLand(page: Page, currency = 'GHS') {
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify(AGENTS_WITHOUT_EMAIL),
-    })
-  );
-  await page.route('**/rest/financeReports/agedPayables*', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify(AP_AGING_ZERO),
-    })
-  );
-  await page.route('**/rest/financeReports/agedReceivables*', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ agedReceivablesList: [] }),
     })
   );
   // An empty trial balance is what surfaces the empty-state message (#2).
@@ -352,6 +345,8 @@ test.describe('SOUPFIN-33 #4 — aging report amounts use the tenant currency', 
       return;
     }
     await signInAndLand(page, 'GHS');
+    // Registered after the spec's catch-all, so the A/P side has one open bill.
+    await mockAgingSourcesApi(page, { invoices: [], bills: [AP_OPEN_BILL] });
     await clickSubNav(page, 'Reports', 'Aging Reports');
 
     const table = page.getByTestId('ap-aging-table');
