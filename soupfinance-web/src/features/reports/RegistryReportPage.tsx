@@ -114,7 +114,7 @@ function RegistryReport({ definition }: { definition: ReportDefinition }) {
                     <th
                       key={column.key}
                       scope="col"
-                      className={`px-6 py-3 font-semibold ${column.type === 'text' ? 'text-left' : 'text-right'}`}
+                      className={`px-4 py-3 font-semibold whitespace-nowrap ${column.type === 'text' ? 'text-left' : 'text-right'}`}
                     >
                       {column.header}
                     </th>
@@ -131,8 +131,8 @@ function RegistryReport({ definition }: { definition: ReportDefinition }) {
                     {columns.map((column) => (
                       <td
                         key={column.key}
-                        className={`px-6 py-3 text-text-light dark:text-text-dark ${
-                          column.type === 'text' ? 'text-left' : 'text-right font-mono'
+                        className={`px-4 py-3 text-text-light dark:text-text-dark ${
+                          column.type === 'text' ? 'text-left' : 'text-right font-mono whitespace-nowrap'
                         }`}
                       >
                         {formatCell(column, row[column.key])}
@@ -150,8 +150,8 @@ function RegistryReport({ definition }: { definition: ReportDefinition }) {
                     {columns.map((column, index) => (
                       <td
                         key={column.key}
-                        className={`px-6 py-3 text-text-light dark:text-text-dark ${
-                          column.type === 'text' ? 'text-left' : 'text-right font-mono'
+                        className={`px-4 py-3 text-text-light dark:text-text-dark ${
+                          column.type === 'text' ? 'text-left' : 'text-right font-mono whitespace-nowrap'
                         }`}
                       >
                         {column.type === 'text'

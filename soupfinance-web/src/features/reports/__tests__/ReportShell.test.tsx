@@ -187,6 +187,10 @@ describe('Profit & Loss in the shell', () => {
     expect(
       vi.mocked(getIncomeStatement).mock.calls.some(([f]) => f.from === '2026-09-30')
     ).toBe(false);
+    // No report body for a range that cannot be run: no stale figures, and no
+    // empty state claiming the reversed dates were searched.
+    expect(screen.queryByTestId('profit-loss-stats')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('profit-loss-empty')).not.toBeInTheDocument();
   });
 
   it('Reset refetches even when the dates are already the defaults', async () => {

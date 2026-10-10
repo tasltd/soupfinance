@@ -66,7 +66,7 @@ export function ReportsPage() {
       {/* Favourites */}
       <section className="flex flex-col gap-3" data-testid="reports-favourites" aria-labelledby="reports-favourites-heading">
         <div className="flex items-center gap-2">
-          <span className="material-symbols-outlined fill text-primary">star</span>
+          <span className="material-symbols-outlined text-primary">star</span>
           <h2 id="reports-favourites-heading" className="text-lg font-bold text-text-light dark:text-text-dark">
             Favourites
           </h2>
@@ -189,10 +189,16 @@ function ReportGrid({ reports, scope, isFavourite, onToggleFavourite }: ReportGr
               aria-pressed={starred}
               aria-label={starred ? `Remove ${report.title} from favourites` : `Add ${report.title} to favourites`}
               title={starred ? 'Remove from favourites' : 'Add to favourites'}
-              className="absolute top-3 right-3 flex size-9 items-center justify-center rounded-full text-subtle-text hover:bg-primary/10 hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+              // The icon font is loaded without its FILL axis, so a starred report is
+              // marked by a filled chip rather than a filled glyph.
+              className={`absolute top-3 right-3 flex size-9 items-center justify-center rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
+                starred
+                  ? 'bg-primary text-white hover:bg-primary/90'
+                  : 'text-subtle-text hover:bg-primary/10 hover:text-primary'
+              }`}
               data-testid={scope === 'category' ? `report-favourite-toggle-${report.id}` : `report-favourite-remove-${report.id}`}
             >
-              <span className={`material-symbols-outlined ${starred ? 'fill text-primary' : ''}`}>star</span>
+              <span className="material-symbols-outlined">star</span>
             </button>
           </div>
         );

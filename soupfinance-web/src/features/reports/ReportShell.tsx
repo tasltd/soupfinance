@@ -349,7 +349,9 @@ export function ReportShell({
         )}
       </div>
 
-      {children}
+      {/* An invalid range has no report to show. Rendering the body would print an
+          empty state that names the reversed dates as if they had been searched. */}
+      {controls.isRangeValid ? children : null}
     </div>
   );
 }
