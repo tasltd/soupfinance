@@ -7,6 +7,13 @@ We already capture the company profile (business type, country, currency, indust
 
 ---
 
+> **Correction (2026-10-10, SOUPFIN-142 auto-fix):** rows 1 and 2 below are out of date. The backend already
+> seeds a starter chart and enables the Finance module at `/account/register.json` (SOUP-1817; 32 accounts for
+> SERVICES, 37 for TRADING). The page looked empty because it fetched only the backend's default 10 rows, newest
+> first, and dropped accounts without a derivable group. Both are fixed in the frontend. The remaining backend gaps
+> (null A/P default, no system flags, no tenant-admin apply, NULL-licence tenants skipped by the backfill) are in
+> `plans/soupfin-142-coa-seeding-backend.md`, which supersedes this table.
+
 ## 1. Root cause analysis
 
 | # | Cause | Layer | Evidence |

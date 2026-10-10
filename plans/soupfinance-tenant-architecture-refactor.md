@@ -27,7 +27,7 @@ Each SoupFinance customer gets their own `Account` (the multi-tenant discriminat
 |-------|--------|-------|
 | Backend: BusinessLicenceCategory | ✅ Complete | Added TRADING, SERVICES |
 | Backend: Registration endpoints | ✅ Complete | `/account/register.json`, `/account/confirmEmail.json` |
-| Backend: COA seed data | ✅ Complete | TRADING and SERVICES charts included |
+| Backend: COA seed data | ⚠️ Partial | Seeded at registration (`AccountRegistrationService.createDefaultChartOfAccounts`, 32 SERVICES / 37 TRADING accounts). No system-account flags, no "Other Liabilities" category for the A/P lookup, no tenant-admin apply. See `plans/soupfin-142-coa-seeding-backend.md` (verified 2026-10-10, SOUPFIN-153) |
 | Frontend: Registration page | ✅ Complete | Business type selector, no password |
 | Frontend: Email confirmation page | ✅ Complete | Password setting after email verification |
 | Frontend: Registration API | ✅ Complete | Updated endpoints, deprecated old functions |
@@ -422,13 +422,13 @@ User logs in → /dashboard (no onboarding needed)
 
 | Change | Status | Priority | Notes |
 |--------|--------|----------|-------|
-| Add TRADING, SERVICES to BusinessLicenceCategory | NOT DONE | P0 | Update enum |
-| Create `/account/register.json` JSON endpoint | NOT DONE | P0 | Based on SignUpController pattern |
-| Create `/account/confirmEmail.json` endpoint | NOT DONE | P0 | Accept password parameter |
+| Add TRADING, SERVICES to BusinessLicenceCategory | DONE | P0 | Update enum |
+| Create `/account/register.json` JSON endpoint | DONE | P0 | Based on SignUpController pattern |
+| Create `/account/confirmEmail.json` endpoint | DONE | P0 | Accept password parameter |
 | Create InvoiceClientCommand class | NOT DONE | P1 | Generic command for Individual/Corporate |
 | Create InvoiceClientService | NOT DONE | P1 | Creates appropriate entity based on type |
-| Create default COA for TRADING | NOT DONE | P1 | Seed data |
-| Create default COA for SERVICES | NOT DONE | P1 | Seed data |
+| Create default COA for TRADING | PARTIAL | P1 | Seeded at registration; gaps in `plans/soupfin-142-coa-seeding-backend.md` |
+| Create default COA for SERVICES | PARTIAL | P1 | Seeded at registration; gaps in `plans/soupfin-142-coa-seeding-backend.md` |
 
 ### 2. Frontend (soupfinance-web)
 
@@ -614,7 +614,7 @@ Creates a new client for invoicing. Requires authentication.
 - [ ] Password is set during email confirmation (not during registration)
 - [ ] Email verification required before login
 - [ ] Business type selection (Trading/Services) on registration
-- [ ] Default COA created based on business type
+- [~] Default COA created based on business type (seeded since SOUP-1817; system accounts and posting still open, see `plans/soupfin-142-coa-seeding-backend.md`)
 - [ ] Invoice recipients are tenant's own Clients (Individual/Corporate)
 - [ ] Client creation uses generic command object
 - [ ] Basic client info (name, email, phone) sufficient for invoicing
