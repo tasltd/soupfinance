@@ -812,14 +812,13 @@ test.describe('Cash Flow Statement Report', () => {
     await expect(page.getByTestId('cash-flow-export-excel')).toBeVisible();
     await expect(page.getByTestId('cash-flow-export-csv')).toBeVisible();
 
-    // PDF and Excel still need backend support — they stay disabled.
-    await expect(page.getByTestId('cash-flow-export-pdf')).toBeDisabled();
-    await expect(page.getByTestId('cash-flow-export-excel')).toBeDisabled();
-
     // Fix(SOUPFIN-11): CSV is now functional client-side once data has loaded.
     // Wait for the data to appear before asserting the button is enabled.
+    // Changed (SOUPFIN-104): PDF and Excel are built in the browser like the CSV.
     await expect(page.getByTestId('cash-flow-stats')).toBeVisible({ timeout: 10000 });
     await expect(page.getByTestId('cash-flow-export-csv')).toBeEnabled();
+    await expect(page.getByTestId('cash-flow-export-pdf')).toBeEnabled();
+    await expect(page.getByTestId('cash-flow-export-excel')).toBeEnabled();
   });
 
   test('CSV export downloads a file with cash flow data (SOUPFIN-11)', async ({ page }) => {

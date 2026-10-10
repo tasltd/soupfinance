@@ -268,19 +268,23 @@ describe('Cash Flow in the shell', () => {
     endingCashBalance: 2_400_000,
   };
 
-  it('uses the tenant currency, keeps PDF/Excel off, and builds the CSV in the browser', async () => {
+  // Changed (SOUPFIN-104): PDF and Excel are built in the browser too.
+  it('uses the tenant currency and builds CSV and Excel in the browser', async () => {
     vi.mocked(getCashFlowStatement).mockResolvedValue(statement);
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     renderPage(<CashFlowPage />);
 
     expect(await screen.findByTestId('cash-flow-net')).toHaveTextContent('GH₵2,400,000.00');
     expect(screen.getByTestId('cash-flow-page').textContent).not.toContain('$');
-    expect(screen.getByTestId('cash-flow-export-pdf')).toBeDisabled();
-    expect(screen.getByTestId('cash-flow-export-excel')).toBeDisabled();
+    expect(screen.getByTestId('cash-flow-export-pdf')).toBeEnabled();
+    expect(screen.getByTestId('cash-flow-export-excel')).toBeEnabled();
 
     await user.click(screen.getByTestId('cash-flow-export-csv'));
-
     await waitFor(() => expect(downloads).toEqual(['cash-flow-2026-08-01-to-2026-08-15.csv']));
+    await user.click(screen.getByTestId('cash-flow-export-excel'));
+    await waitFor(() =>
+      expect(downloads).toEqual(['cash-flow-2026-08-01-to-2026-08-15.csv', 'cash-flow-2026-08-01-to-2026-08-15.xls'])
+    );
     expect(exportFinanceReport).not.toHaveBeenCalled();
   });
 });

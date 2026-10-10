@@ -16,13 +16,20 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getCashFlowStatement } from '../../api/endpoints/reports';
 import type { CashFlowStatement, CashFlowActivity } from '../../types';
-import { useFormatCurrency } from '../../stores';
+import { useCurrencyConfig, useFormatCurrency } from '../../stores';
 import { formatDisplayDate } from '../../utils/date';
 import { ReportShell } from './ReportShell';
 import { getReportDefinition } from './reportRegistry';
 import { formatDisplayRange } from './reportDates';
 import { useReportControls } from './useReportControls';
 import type { ClientExports } from './useReportExport';
+import {
+  buildReportExcelBlob,
+  buildReportPdfHtml,
+  renderReportPdf,
+  type ReportExportContent,
+} from './reportExportFiles';
+import type { DisplayRow, ReportColumn } from './reportTable';
 
 const DEFINITION = getReportDefinition('cash-flow');
 
@@ -66,9 +73,38 @@ function buildCashFlowCsv(cashFlow: CashFlowStatement): string {
   return rows.join('\n');
 }
 
+// Added (SOUPFIN-104): the statement as an export table, so PDF and Excel are
+// built in the browser like the CSV. The backend cashFlow action has no export.
+const CASH_FLOW_COLUMNS: ReportColumn[] = [
+  { key: 'description', header: 'Description', type: 'text' },
+  { key: 'amount', header: 'Amount', type: 'currency' },
+];
+
+function cashFlowDisplayRows(cashFlow: CashFlowStatement): DisplayRow[] {
+  const rows: DisplayRow[] = [
+    { kind: 'row', row: { description: 'Beginning cash balance', amount: cashFlow.beginningCashBalance } },
+  ];
+  const sections: Array<[string, CashFlowActivity[] | undefined, number]> = [
+    ['Operating Activities', cashFlow.operatingActivities, cashFlow.totalOperatingCashFlow],
+    ['Investing Activities', cashFlow.investingActivities, cashFlow.totalInvestingCashFlow],
+    ['Financing Activities', cashFlow.financingActivities, cashFlow.totalFinancingCashFlow],
+  ];
+  for (const [name, activities, total] of sections) {
+    rows.push({ kind: 'group', label: name });
+    for (const activity of activities ?? []) {
+      rows.push({ kind: 'row', row: { description: activity.description, amount: activity.amount } });
+    }
+    rows.push({ kind: 'subtotal', label: `Total ${name}`, row: { description: `Total ${name}`, amount: total } });
+  }
+  rows.push({ kind: 'total', row: { description: 'Net cash flow', amount: cashFlow.netCashFlow } });
+  rows.push({ kind: 'total', row: { description: 'Ending cash balance', amount: cashFlow.endingCashBalance } });
+  return rows;
+}
+
 export function CashFlowPage() {
   const controls = useReportControls(DEFINITION.page);
   const formatCurrency = useFormatCurrency();
+  const currency = useCurrencyConfig();
   const { from: fromDate, to: toDate } = controls.range;
 
   // Added: Fetch cash flow data using React Query
@@ -105,13 +141,24 @@ export function CashFlowPage() {
   // Fix(SOUPFIN-11): CSV export runs entirely client-side from data already in
   // memory, so users can download the report without a backend export endpoint.
   // The shell keeps the CSV button disabled until the statement has loaded.
-  const clientExports = useMemo<ClientExports | undefined>(
-    () =>
-      cashFlow
-        ? { csv: () => new Blob([buildCashFlowCsv(cashFlow)], { type: 'text/csv;charset=utf-8' }) }
-        : undefined,
-    [cashFlow]
-  );
+  //
+  // Changed (SOUPFIN-104): PDF and Excel are built the same way, from the
+  // statement on screen, so Cash Flow exports all three formats.
+  const clientExports = useMemo<ClientExports | undefined>(() => {
+    if (!cashFlow) return undefined;
+    const content = (): ReportExportContent => ({
+      title: DEFINITION.page.title,
+      subtitle: formatDisplayRange(controls.range),
+      columns: CASH_FLOW_COLUMNS,
+      displayRows: cashFlowDisplayRows(cashFlow),
+      currencyCode: currency.code,
+    });
+    return {
+      csv: () => new Blob([buildCashFlowCsv(cashFlow)], { type: 'text/csv;charset=utf-8' }),
+      xlsx: () => buildReportExcelBlob(content()),
+      pdf: () => renderReportPdf(buildReportPdfHtml(content(), formatCurrency), 'portrait'),
+    };
+  }, [cashFlow, controls.range, currency.code, formatCurrency]);
 
   return (
     <ReportShell

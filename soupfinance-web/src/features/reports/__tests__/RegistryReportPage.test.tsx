@@ -112,7 +112,9 @@ describe('Account Balances: a report that is only a registry entry', () => {
     await screen.findByTestId('account-balances-table');
     expect(screen.getByTestId('account-balances-row-999')).toBeInTheDocument();
     expect(within(screen.getByTestId('account-balances-totals')).getAllByText('GH₵1,000,000,000.00')).toHaveLength(3);
-  });
+    // Fix (SOUPFIN-104): a thousand rows take ~4 s in jsdom on their own and
+    // passed the 5 s default only when the suite was idle.
+  }, 15_000);
 });
 
 describe('adding a report', () => {

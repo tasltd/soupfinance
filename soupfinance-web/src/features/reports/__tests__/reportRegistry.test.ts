@@ -33,8 +33,8 @@ const FINANCE_REPORT_TYPES = [
 ];
 
 describe('registry integrity', () => {
-  it('lists the six migrated reports plus the registry-only Account Balances', () => {
-    expect(REPORTS.map((r) => r.id)).toEqual([
+  it('lists the six migrated reports and Account Balances first', () => {
+    expect(REPORTS.slice(0, 7).map((r) => r.id)).toEqual([
       'profit-loss',
       'balance-sheet',
       'cash-flow',
@@ -73,8 +73,11 @@ describe('registry integrity', () => {
     expect(JSON.stringify(REPORTS)).not.toMatch(/USD|\$/);
   });
 
-  it('marks only entries with a source and columns as registry-only', () => {
-    expect(REPORTS.filter(isRegistryOnlyReport).map((r) => r.id)).toEqual(['account-balances']);
+  it('marks only entries with a source or loader, and columns, as registry-only', () => {
+    // Changed (SOUPFIN-104): every pack report is registry-only; the six
+    // migrated reports keep their own pages.
+    const ownPages = ['profit-loss', 'balance-sheet', 'cash-flow', 'ar-aging', 'ap-aging', 'trial-balance'];
+    expect(REPORTS.filter((r) => !isRegistryOnlyReport(r)).map((r) => r.id)).toEqual(ownPages);
   });
 
   it('finds definitions by id, and refuses unknown ids', () => {
@@ -96,10 +99,20 @@ describe('searchReports', () => {
   });
 
   it('matches title, keywords and category, ignoring case', () => {
-    expect(searchReports('PROFIT').map((r) => r.id)).toEqual(['profit-loss']);
-    expect(searchReports('income statement').map((r) => r.id)).toEqual(['profit-loss']);
-    expect(searchReports('receivable').map((r) => r.id)).toEqual(['ar-aging']);
-    expect(searchReports('what you owe').map((r) => r.id)).toEqual(['ap-aging']);
+    // Changed (SOUPFIN-104): the pack adds P&L variants and renames two categories.
+    expect(searchReports('PROFIT').map((r) => r.id)).toEqual([
+      'profit-loss',
+      'profit-loss-by-month',
+      'profit-loss-comparative',
+      'profit-loss-percent-of-income',
+    ]);
+    expect(searchReports('income statement').map((r) => r.id)).toEqual(['profit-loss', 'profit-loss-by-month']);
+    expect(searchReports('receivable').map((r) => r.id)).toEqual([
+      'ar-aging',
+      'customer-balance-summary',
+      'customer-balance-detail',
+    ]);
+    expect(searchReports('expenses and vendors aging').map((r) => r.id)).toEqual(['ap-aging']);
   });
 
   it('requires every word to match', () => {

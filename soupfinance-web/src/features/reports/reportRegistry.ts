@@ -13,11 +13,18 @@
 import type {
   ExportFormat,
   FinanceReportType,
-  ReportRow,
   ReportRowSource,
 } from '../../api/endpoints/reports';
 import type { DefaultRangeKind } from './reportDates';
 import type { HelpSection } from '../../components/help/helpSections';
+import type { ReportColumn } from './reportTable';
+import type { ReportLoader } from './reportPackLoaders';
+import { REPORT_PACK } from './reportPackRegistry';
+
+// Changed (SOUPFIN-104): the column model and its totals live in reportTable.ts,
+// shared by the page and the export files. Re-exported for existing imports.
+export type { ReportColumn, ReportColumnType } from './reportTable';
+export { toReportNumber, totalReportColumns } from './reportTable';
 
 // =============================================================================
 // Types
@@ -27,6 +34,8 @@ export type ReportCategoryId =
   | 'business-overview'
   | 'who-owes-you'
   | 'what-you-owe'
+  | 'taxes'
+  | 'banking'
   | 'for-my-accountant';
 
 export interface ReportCategory {
@@ -74,15 +83,6 @@ export interface ReportPageConfig {
   inputIds?: { from?: string; to?: string; asOf?: string };
 }
 
-export type ReportColumnType = 'text' | 'currency' | 'number';
-
-export interface ReportColumn {
-  /** Field on the row. */
-  key: string;
-  header: string;
-  type: ReportColumnType;
-}
-
 export interface ReportDefinition {
   id: string;
   title: string;
@@ -104,6 +104,15 @@ export interface ReportDefinition {
   source?: { endpoint: string; rows: ReportRowSource };
   /** Registry-only reports: the table columns. */
   columns?: ReportColumn[];
+  /**
+   * Added (SOUPFIN-104): registry-only reports that need more than one request
+   * or some arithmetic get their rows from a loader instead of `source`.
+   */
+  load?: ReportLoader;
+  /** Group rows by this field, with a header and a subtotal per group. */
+  groupBy?: string;
+  /** False where one sum of every row means nothing (assets plus liabilities). */
+  showTotals?: boolean;
 }
 
 export const EXPORT_FORMATS: ExportFormat[] = ['pdf', 'xlsx', 'csv'];
@@ -121,15 +130,27 @@ export const REPORT_CATEGORIES: ReportCategory[] = [
   },
   {
     id: 'who-owes-you',
-    title: 'Who owes you',
-    description: 'Customers and unpaid invoices',
+    title: 'Sales and customers',
+    description: 'What you sold and who still owes you',
     icon: 'call_received',
   },
   {
     id: 'what-you-owe',
-    title: 'What you owe',
-    description: 'Vendors and unpaid bills',
+    title: 'Expenses and vendors',
+    description: 'What you bought and what you still owe',
     icon: 'call_made',
+  },
+  {
+    id: 'taxes',
+    title: 'Taxes',
+    description: 'Tax collected, paid and owed',
+    icon: 'percent',
+  },
+  {
+    id: 'banking',
+    title: 'Banking',
+    description: 'Money received and paid out',
+    icon: 'account_balance_wallet',
   },
   {
     id: 'for-my-accountant',
@@ -303,6 +324,8 @@ export const REPORTS: ReportDefinition[] = [
       { key: 'endingBalance', header: 'Closing', type: 'currency' },
     ],
   },
+  // Added (SOUPFIN-104): the core report pack.
+  ...REPORT_PACK,
 ];
 
 // =============================================================================
@@ -325,7 +348,7 @@ export function findReportDefinition(id: string | undefined): ReportDefinition |
 
 /** True for entries the generic page can render without their own component. */
 export function isRegistryOnlyReport(definition: ReportDefinition): boolean {
-  return Boolean(definition.source && definition.columns && definition.columns.length > 0);
+  return Boolean((definition.source || definition.load) && definition.columns && definition.columns.length > 0);
 }
 
 /**
@@ -360,18 +383,4 @@ export function groupReportsByCategory(
   })).filter((group) => group.reports.length > 0);
 }
 
-/** A cell value as a number; blanks and non-numbers count as 0. */
-export function toReportNumber(value: unknown): number {
-  const n = typeof value === 'number' ? value : Number(value);
-  return Number.isFinite(n) ? n : 0;
-}
 
-/** Sum of each currency and number column, keyed by column key. */
-export function totalReportColumns(rows: ReportRow[], columns: ReportColumn[]): Record<string, number> {
-  const totals: Record<string, number> = {};
-  for (const column of columns) {
-    if (column.type === 'text') continue;
-    totals[column.key] = rows.reduce((sum, row) => sum + toReportNumber(row[column.key]), 0);
-  }
-  return totals;
-}

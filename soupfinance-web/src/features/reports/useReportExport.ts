@@ -20,8 +20,11 @@ import {
 } from '../../api/endpoints/reports';
 import type { ReportDefinition } from './reportRegistry';
 
-/** Export formats a page builds in the browser instead of asking the backend. */
-export type ClientExports = Partial<Record<ExportFormat, () => Blob>>;
+/**
+ * Export formats a page builds in the browser instead of asking the backend.
+ * Changed (SOUPFIN-104): a builder may be async, since rendering a PDF is.
+ */
+export type ClientExports = Partial<Record<ExportFormat, () => Blob | Promise<Blob>>>;
 
 // Fix (SOUPFIN-14): hard timeout for hung exports.
 export const EXPORT_TIMEOUT_MS = 60_000;
@@ -89,7 +92,7 @@ export function useReportExport(
         const buildInBrowser = clientExports?.[format];
         let blob: Blob;
         if (buildInBrowser) {
-          blob = buildInBrowser();
+          blob = await buildInBrowser();
         } else if (definition.export.backendType) {
           const timeout = new Promise<never>((_, reject) => {
             timer = setTimeout(
