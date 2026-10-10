@@ -1,0 +1,27 @@
+{
+  "_comment": "Values of the NEW enum soupbroker.finance.LedgerAccountType (does not exist in soupmarkets-web yet). Persisted on LedgerAccount.accountType (nullable). singleton=true means at most one account per tenant may carry the value. requiredFor lists the business types whose template must contain it.",
+  "accountTypes": [
+    { "name": "CASH",                         "singleton": true,  "requiredFor": ["SERVICES", "TRADING"], "usedBy": "Cash sales and petty-cash payments" },
+    { "name": "BANK",                         "singleton": false, "requiredFor": ["SERVICES", "TRADING"], "usedBy": "Default deposit target for receipts and source for payments" },
+    { "name": "UNDEPOSITED_FUNDS",            "singleton": true,  "requiredFor": ["SERVICES", "TRADING"], "usedBy": "Customer payments received but not yet banked" },
+    { "name": "ACCOUNTS_RECEIVABLE",          "singleton": true,  "requiredFor": ["SERVICES", "TRADING"], "usedBy": "Invoice posting (debit); wired to Account.defaultReceivableAccount" },
+    { "name": "ACCOUNTS_PAYABLE",             "singleton": true,  "requiredFor": ["SERVICES", "TRADING"], "usedBy": "Bill posting (credit); wired to Account.defaultPayableAccount" },
+    { "name": "INVENTORY_ASSET",              "singleton": true,  "requiredFor": ["TRADING"],             "usedBy": "Stock purchases and cost of goods sold relief" },
+    { "name": "TAX_PAYABLE",                  "singleton": false, "requiredFor": ["SERVICES", "TRADING"], "usedBy": "Output tax on invoices (one per tax, e.g. VAT, NHIL, GETFund)" },
+    { "name": "TAX_RECEIVABLE",               "singleton": false, "requiredFor": ["SERVICES", "TRADING"], "usedBy": "Recoverable input tax on bills" },
+    { "name": "WITHHOLDING_TAX_PAYABLE",      "singleton": false, "requiredFor": [],                      "usedBy": "Tax withheld from supplier payments" },
+    { "name": "WITHHOLDING_TAX_RECEIVABLE",   "singleton": false, "requiredFor": [],                      "usedBy": "Tax customers withheld from our receipts (WHT credit)" },
+    { "name": "INCOME_TAX_PAYABLE",           "singleton": true,  "requiredFor": [],                      "usedBy": "Corporate income tax provision" },
+    { "name": "UNEARNED_REVENUE",             "singleton": true,  "requiredFor": [],                      "usedBy": "Customer deposits and payments received before an invoice" },
+    { "name": "OPENING_BALANCE_EQUITY",       "singleton": true,  "requiredFor": ["SERVICES", "TRADING"], "usedBy": "Counter-entry for opening balances during setup" },
+    { "name": "RETAINED_EARNINGS",            "singleton": true,  "requiredFor": ["SERVICES", "TRADING"], "usedBy": "Year-end close target" },
+    { "name": "CURRENT_YEAR_EARNINGS",        "singleton": true,  "requiredFor": [],                      "usedBy": "Balance-sheet line for profit since the last close" },
+    { "name": "SALES_INCOME",                 "singleton": true,  "requiredFor": ["SERVICES", "TRADING"], "usedBy": "Default income account for invoice lines with no mapped service description" },
+    { "name": "DISCOUNTS_GIVEN",              "singleton": true,  "requiredFor": ["SERVICES", "TRADING"], "usedBy": "Invoice discounts (contra income)" },
+    { "name": "DISCOUNTS_RECEIVED",           "singleton": true,  "requiredFor": [],                      "usedBy": "Supplier discounts on bills" },
+    { "name": "COST_OF_GOODS_SOLD",           "singleton": true,  "requiredFor": ["TRADING"],             "usedBy": "Cost relief when inventory is sold" },
+    { "name": "DEFAULT_EXPENSE",              "singleton": true,  "requiredFor": ["SERVICES", "TRADING"], "usedBy": "Default expense account for bill lines with no mapped service description" },
+    { "name": "FX_GAIN_LOSS",                 "singleton": true,  "requiredFor": ["SERVICES", "TRADING"], "usedBy": "Realised and unrealised exchange differences (SOUPFIN-125)" },
+    { "name": "ROUNDING",                     "singleton": true,  "requiredFor": ["SERVICES", "TRADING"], "usedBy": "Rounding differences on invoices, bills and payments" }
+  ]
+}
