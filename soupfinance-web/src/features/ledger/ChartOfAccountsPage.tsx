@@ -6,15 +6,19 @@
  * Added: Grouping by ledger group (ASSET, LIABILITY, EQUITY, INCOME, EXPENSE)
  * Added: Loading, error, and empty states
  * Added: data-testid attributes for E2E testing
+ * Fix (SOUPFIN-142): fetch every page of accounts (the backend default is 10),
+ *   show accounts with no derivable group under "Uncategorised" instead of
+ *   rendering nothing, and give the empty state a way forward.
  */
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { listLedgerAccounts } from '../../api/endpoints/ledger';
+import { listAllLedgerAccounts } from '../../api/endpoints/ledger';
 import { useFormatCurrency } from '../../stores';
 import { ApiErrorState } from '../../components/feedback';
 import type { LedgerAccount, LedgerGroup } from '../../types';
 // Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
 import { HelpLink } from '../../components/help';
+import { logger } from '../../utils/logger';
 
 // Added: Group configuration with colors and icons
 const GROUP_CONFIG: Record<LedgerGroup, { label: string; icon: string; colorClass: string }> = {
@@ -29,17 +33,33 @@ const GROUP_CONFIG: Record<LedgerGroup, { label: string; icon: string; colorClas
 // Added: Order for displaying groups
 const GROUP_ORDER: LedgerGroup[] = ['ASSET', 'LIABILITY', 'EQUITY', 'INCOME', 'REVENUE', 'EXPENSE'];
 
+// Added (SOUPFIN-142): bucket for accounts whose group cannot be derived from
+// their category (shallow FK, unknown group token). Rendered last.
+const UNCATEGORISED = 'UNCATEGORISED' as const;
+type DisplayGroup = LedgerGroup | typeof UNCATEGORISED;
+const DISPLAY_ORDER: DisplayGroup[] = [...GROUP_ORDER, UNCATEGORISED];
+const DISPLAY_CONFIG: Record<DisplayGroup, { label: string; icon: string; colorClass: string; note?: string }> = {
+  ...GROUP_CONFIG,
+  UNCATEGORISED: {
+    label: 'Uncategorised',
+    icon: 'help',
+    colorClass: 'text-subtle-text bg-subtle-text/10',
+    note: 'Give these accounts a category to include them in reports.',
+  },
+};
+
 export function ChartOfAccountsPage() {
   const formatCurrency = useFormatCurrency();
 
   // Added: Track expanded groups
-  const [expandedGroups, setExpandedGroups] = useState<Set<LedgerGroup>>(new Set(GROUP_ORDER));
+  const [expandedGroups, setExpandedGroups] = useState<Set<DisplayGroup>>(new Set(DISPLAY_ORDER));
 
   // Added: Fetch accounts from API
   // NOTE: do not retry on 403 (module-disabled is permanent until admin enables it)
   const { data: accounts, isLoading, error, refetch } = useQuery({
     queryKey: ['ledger-accounts'],
-    queryFn: () => listLedgerAccounts(),
+    // Fix (SOUPFIN-142): listLedgerAccounts() returned only the backend's default 10 rows
+    queryFn: () => listAllLedgerAccounts(),
     retry: (failureCount, err) => {
       const status = (err as { response?: { status?: number } })?.response?.status;
       if (status === 403 || status === 401) return false;
@@ -48,18 +68,28 @@ export function ChartOfAccountsPage() {
   });
 
   // Added: Group accounts by ledgerGroup
-  // Changed: Use Partial type for groupedAccounts to handle potentially missing groups
-  const groupedAccounts: Partial<Record<LedgerGroup, LedgerAccount[]>> = accounts?.reduce((acc, account) => {
-    const group = account.ledgerGroup;
-    if (!acc[group]) {
-      acc[group] = [];
+  // Fix (SOUPFIN-142): an account whose group is missing or not in GROUP_ORDER used to
+  // be dropped silently — when that was every account the page rendered blank.
+  const groupedAccounts = useMemo(() => {
+    const groups: Partial<Record<DisplayGroup, LedgerAccount[]>> = {};
+    const unknown: LedgerAccount[] = [];
+    for (const account of accounts ?? []) {
+      const group: DisplayGroup = GROUP_ORDER.includes(account.ledgerGroup) ? account.ledgerGroup : UNCATEGORISED;
+      if (group === UNCATEGORISED) unknown.push(account);
+      (groups[group] ??= []).push(account);
     }
-    acc[group].push(account);
-    return acc;
-  }, {} as Record<LedgerGroup, LedgerAccount[]>) ?? {};
+    if (unknown.length > 0) {
+      logger.warn('Chart of accounts: no ledger group for some accounts', unknown.map((a) => ({
+        id: a.id,
+        name: a.name,
+        category: (a.ledgerAccountCategory as { serialised?: string } | undefined)?.serialised,
+      })));
+    }
+    return groups;
+  }, [accounts]);
 
   // Added: Toggle group expansion
-  const toggleGroup = (group: LedgerGroup) => {
+  const toggleGroup = (group: DisplayGroup) => {
     setExpandedGroups(prev => {
       const next = new Set(prev);
       if (next.has(group)) {
@@ -100,14 +130,29 @@ export function ChartOfAccountsPage() {
           <span className="material-symbols-outlined text-6xl text-subtle-text/50 mb-4">account_tree</span>
           <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">No accounts found</h3>
           <p className="text-subtle-text">Your chart of accounts is empty.</p>
+          {/* Added (SOUPFIN-142): a starter chart is seeded at sign-up; until there is a
+              self-service template picker, refresh or escalate to an administrator. */}
+          <p className="text-subtle-text mt-1" data-testid="coa-empty-hint">
+            A starter chart is normally added when your company signs up. Refresh to check again,
+            or ask your administrator to set one up.
+          </p>
+          <button
+            type="button"
+            onClick={() => refetch()}
+            className="mt-6 inline-flex items-center justify-center gap-2 rounded-lg h-10 px-4 bg-primary text-white text-sm font-bold hover:bg-primary/90"
+            data-testid="coa-empty-refresh"
+          >
+            <span className="material-symbols-outlined text-base" aria-hidden="true">refresh</span>
+            Refresh accounts
+          </button>
         </div>
       ) : (
         <div className="space-y-4" data-testid="coa-groups">
-          {GROUP_ORDER.map(group => {
+          {DISPLAY_ORDER.map(group => {
             const groupAccounts = groupedAccounts[group];
             if (!groupAccounts || groupAccounts.length === 0) return null;
 
-            const config = GROUP_CONFIG[group];
+            const config = DISPLAY_CONFIG[group];
             const isExpanded = expandedGroups.has(group);
 
             return (
@@ -129,6 +174,9 @@ export function ChartOfAccountsPage() {
                     <div className="text-left">
                       <h2 className="text-lg font-bold text-text-light dark:text-text-dark">{config.label}</h2>
                       <p className="text-sm text-subtle-text">{groupAccounts.length} account{groupAccounts.length !== 1 ? 's' : ''}</p>
+                      {config.note && (
+                        <p className="text-xs text-subtle-text" data-testid={`coa-group-note-${group.toLowerCase()}`}>{config.note}</p>
+                      )}
                     </div>
                   </div>
                   <span className={`material-symbols-outlined text-subtle-text transition-transform ${isExpanded ? 'rotate-180' : ''}`}>
@@ -152,7 +200,7 @@ export function ChartOfAccountsPage() {
                       </thead>
                       <tbody>
                         {groupAccounts
-                          .sort((a, b) => a.code.localeCompare(b.code))
+                          .sort((a, b) => (a.code ?? '').localeCompare(b.code ?? ''))
                           .map(account => (
                             <tr
                               key={account.id}

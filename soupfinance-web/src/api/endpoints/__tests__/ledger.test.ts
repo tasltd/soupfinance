@@ -124,6 +124,78 @@ describe('ledger account transform (SOUPFIN-30)', () => {
     });
   });
 
+  // Added (SOUPFIN-142): the COA page must show every account, not the backend's default 10.
+  describe('listAllLedgerAccounts (SOUPFIN-142)', () => {
+    const page = (start: number, count: number) =>
+      Array.from({ length: count }, (_, i) =>
+        rawAccount({ id: `a${start + i}`, number: String(1000 + start + i), ledgerAccountCategory: { serialised: 'Cash < ASSET' } })
+      );
+
+    it('returns [] for a tenant with no accounts, after one request', async () => {
+      mockGet.mockResolvedValueOnce({ data: [] });
+      vi.resetModules();
+      const { listAllLedgerAccounts } = await import('../ledger');
+      await expect(listAllLedgerAccounts()).resolves.toEqual([]);
+      expect(mockGet).toHaveBeenCalledTimes(1);
+    });
+
+    it('asks for a full page sorted by number instead of the default 10 newest', async () => {
+      mockGet.mockResolvedValueOnce({ data: page(0, 32) });
+      vi.resetModules();
+      const { listAllLedgerAccounts } = await import('../ledger');
+      const accounts = await listAllLedgerAccounts();
+      expect(accounts).toHaveLength(32);
+      expect(accounts.every((a) => a.ledgerGroup === 'ASSET')).toBe(true);
+      const url = mockGet.mock.calls[0][0] as string;
+      expect(url).toContain('/ledgerAccount/index.json?');
+      expect(url).toContain('max=1000');
+      expect(url).toContain('offset=0');
+      expect(url).toContain('sort=number');
+      expect(url).toContain('order=asc');
+    });
+
+    it('pages past the 1000-row cap for a large tenant (3167 accounts, 4 requests)', async () => {
+      mockGet
+        .mockResolvedValueOnce({ data: page(0, 1000) })
+        .mockResolvedValueOnce({ data: page(1000, 1000) })
+        .mockResolvedValueOnce({ data: page(2000, 1000) })
+        .mockResolvedValueOnce({ data: page(3000, 167) });
+      vi.resetModules();
+      const { listAllLedgerAccounts } = await import('../ledger');
+      const accounts = await listAllLedgerAccounts();
+      expect(accounts).toHaveLength(3167);
+      expect(new Set(accounts.map((a) => a.id)).size).toBe(3167);
+      expect(mockGet).toHaveBeenCalledTimes(4);
+      expect(mockGet.mock.calls[3][0]).toContain('offset=3000');
+    });
+
+    it('stops when the backend ignores offset and repeats page one', async () => {
+      mockGet.mockResolvedValue({ data: page(0, 1000) });
+      vi.resetModules();
+      const { listAllLedgerAccounts } = await import('../ledger');
+      const accounts = await listAllLedgerAccounts();
+      expect(accounts).toHaveLength(1000);
+      expect(mockGet).toHaveBeenCalledTimes(2);
+    });
+
+    it('caps the walk at 50 pages even if every page is new and full', async () => {
+      let call = 0;
+      mockGet.mockImplementation(() => Promise.resolve({ data: page(1000 * call++, 1000) }));
+      vi.resetModules();
+      const { listAllLedgerAccounts } = await import('../ledger');
+      const accounts = await listAllLedgerAccounts();
+      expect(mockGet).toHaveBeenCalledTimes(50);
+      expect(accounts).toHaveLength(50_000);
+    });
+
+    it('propagates a 403 instead of returning an empty chart', async () => {
+      mockGet.mockRejectedValueOnce(Object.assign(new Error('Forbidden'), { response: { status: 403 } }));
+      vi.resetModules();
+      const { listAllLedgerAccounts } = await import('../ledger');
+      await expect(listAllLedgerAccounts()).rejects.toThrow('Forbidden');
+    });
+  });
+
   describe('ledgerGroupMatches (#8)', () => {
     it('matches an exact group and rejects a different one', async () => {
       vi.resetModules();

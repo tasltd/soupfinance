@@ -83,6 +83,66 @@ describe('parseApiError', () => {
     });
   });
 
+  // Added (SOUPFIN-150): a role denial on a gated ledger URL must not be
+  // mislabelled as "Ledger module is not available".
+  describe('module_disabled vs missing role on gated URLs (SOUPFIN-150)', () => {
+    it('keeps module_disabled when the body is the FinanceModuleInterceptor message', () => {
+      const error = makeAxiosError(403, '/ledgerAccount/index.json', {
+        error: 'Finance module is not enabled for this tenant',
+      });
+      const result = parseApiError(error);
+      expect(result.kind).toBe('module_disabled');
+      expect(result.title).toBe('Ledger module is not available');
+    });
+
+    it('keeps module_disabled for the licence wording', () => {
+      const error = makeAxiosError(403, '/voucher/save.json', {
+        message: 'Module not enabled for this license category',
+      });
+      expect(parseApiError(error).kind).toBe('module_disabled');
+    });
+
+    it.each([
+      [{ error: 'Forbidden' }],
+      [{ timestamp: '2026-10-10T10:00:00Z', status: 403, error: 'Forbidden', path: '/rest/ledgerAccount/index.json' }],
+      [{ message: 'Access Denied' }],
+      ['Access is denied'],
+    ])('classifies a role denial %j on a ledger URL as forbidden', (body) => {
+      const error = makeAxiosError(403, '/rest/ledgerAccount/index.json', body);
+      const result = parseApiError(error);
+      expect(result.kind).toBe('forbidden');
+      expect(result.title).toBe('Ledger access restricted');
+      expect(result.message).toBe('Your role does not include access to the Ledger.');
+      expect(result.actionHint).toBe('Ask an administrator to add Ledger access to your role.');
+      // Never leaks the jargon or the raw axios text
+      expect(result.message).not.toMatch(/forbidden|access denied|status code/i);
+    });
+
+    it('names the Accounting module for a role denial on vouchers', () => {
+      const result = parseApiError(makeAxiosError(403, '/voucher/index.json', { error: 'Forbidden' }));
+      expect(result.kind).toBe('forbidden');
+      expect(result.message).toContain('Accounting');
+    });
+
+    it('surfaces a descriptive role message verbatim', () => {
+      const error = makeAxiosError(403, '/ledgerAccount/save.json', {
+        error: 'ROLE_LEDGER_ACCOUNT is required to create ledger accounts',
+      });
+      const result = parseApiError(error);
+      expect(result.kind).toBe('forbidden');
+      expect(result.message).toBe('ROLE_LEDGER_ACCOUNT is required to create ledger accounts');
+    });
+
+    it.each([[undefined], [''], [{}]])('stays module_disabled when the body (%j) carries no evidence', (body) => {
+      expect(parseApiError(makeAxiosError(403, '/ledgerAccount/index.json', body)).kind).toBe('module_disabled');
+    });
+
+    it('treats an over-long body as no evidence (extractServerMessage caps at 300 chars)', () => {
+      const error = makeAxiosError(403, '/ledgerAccount/index.json', { error: 'x'.repeat(5000) });
+      expect(parseApiError(error).kind).toBe('module_disabled');
+    });
+  });
+
   describe('unauthorized', () => {
     it('classifies 401 as unauthorized with a session expired message', () => {
       const error = makeAxiosError(401, '/anything.json');

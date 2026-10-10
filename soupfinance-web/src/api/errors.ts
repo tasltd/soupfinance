@@ -90,12 +90,22 @@ const GENERIC_AUTH_FAILURE_PHRASES = [
   'authentication error',
   'access denied',
   'access_denied',
+  'access is denied', // Added (SOUPFIN-150): Spring Security AccessDeniedException default
   'invalid_grant',
   'invalid_request',
   'invalid token',
   'no message available',
   'forbidden',
 ];
+
+/**
+ * Added (SOUPFIN-150): does a 403 body say the tenant's module is switched off?
+ * Matches the module interceptors ("Finance module is not enabled for this tenant")
+ * and the licence wording ("Module not enabled for this license category").
+ */
+function isModuleDisabledMessage(message: string): boolean {
+  return /\bnot enabled\b/i.test(message) || /\bmodule\b.*\b(disabled|not available|unavailable)\b/i.test(message);
+}
 
 /** True when a server message is a generic auth-failure code rather than a helpful sentence. */
 function isGenericAuthFailure(message: string): boolean {
@@ -107,8 +117,9 @@ function isGenericAuthFailure(message: string): boolean {
  * Convert any thrown error (Axios, native Error, unknown) into a ParsedApiError
  * with a human-readable title and message.
  *
- * Tests must cover: 403 on ledger URL → module_disabled, 403 on other URL →
- * forbidden, 500 → server_error, network failure → network, unknown → unknown.
+ * Tests must cover: 403 on ledger URL → module_disabled, 403 on ledger URL with a
+ * role-denial body → forbidden (SOUPFIN-150), 403 on other URL → forbidden,
+ * 500 → server_error, network failure → network, unknown → unknown.
  */
 export function parseApiError(error: unknown): ParsedApiError {
   // AxiosError path — preferred because we have status + url.
@@ -142,6 +153,22 @@ export function parseApiError(error: unknown): ParsedApiError {
 
     if (status === 403) {
       const moduleName = moduleForUrl(url);
+      // Fix (SOUPFIN-150): a 403 on a gated URL is "module disabled" only when the
+      // body says so (FinanceModuleInterceptor renders "Finance module is not enabled
+      // for this tenant"). Spring Security's role denial on the same URL returns
+      // "Forbidden" / "Access Denied" — that is a missing role, not a missing module.
+      // An empty body stays module_disabled: it carries no evidence either way.
+      if (moduleName && serverMessage && !isModuleDisabledMessage(serverMessage)) {
+        return {
+          kind: 'forbidden',
+          title: `${moduleName} access restricted`,
+          message: isGenericAuthFailure(serverMessage)
+            ? `Your role does not include access to the ${moduleName}.`
+            : serverMessage,
+          actionHint: `Ask an administrator to add ${moduleName} access to your role.`,
+          status,
+        };
+      }
       if (moduleName) {
         return {
           kind: 'module_disabled',

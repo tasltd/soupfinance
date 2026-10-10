@@ -363,8 +363,14 @@ test.describe('SOUPFIN-81: "Need Help?" links and the guide logo', () => {
   test('a module the plan lacks links to the guide answer for it', async ({ page }) => {
     await startAtDashboard(page);
     // The SERVICES license gates Ledger: the backend answers 403 by controller name.
+    // Changed (SOUPFIN-150): use FinanceModuleInterceptor's real body. A bare
+    // "Forbidden" is a role denial and now renders as "access restricted".
     await page.route('**/rest/ledgerAccount/index.json*', (route) =>
-      route.fulfill({ status: 403, contentType: 'application/json', body: JSON.stringify({ error: 'Forbidden' }) })
+      route.fulfill({
+        status: 403,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: 'Finance module is not enabled for this tenant' }),
+      })
     );
 
     await navigate(page, '/ledger/accounts', 'chart-of-accounts-page');

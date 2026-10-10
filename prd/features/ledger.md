@@ -93,6 +93,11 @@ GET  /rest/ledgerTransaction/show/:id.json  - Get transaction details
 
 Created automatically based on business type:
 
+> **Status (2026-10-10, SOUPFIN-153):** registration seeds this chart today, but the shipped lists differ from
+> the outline below: SERVICES has 32 accounts in 9 categories, TRADING 37 (source of truth:
+> `AccountRegistrationService.createServicesChartOfAccounts` / `createTradingChartOfAccounts` in soupmarkets-web).
+> System-account flags and the A/P default link are still open; see `plans/soupfin-142-coa-seeding-backend.md`.
+
 ### TRADING Business
 - 1000 Cash and Bank
 - 1100 Accounts Receivable

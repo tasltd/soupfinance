@@ -92,6 +92,44 @@ export async function listLedgerAccounts(params?: ListParams): Promise<LedgerAcc
   return (response.data || []).map(transformLedgerAccount);
 }
 
+// Added (SOUPFIN-142): page size for listAllLedgerAccounts. LedgerAccountController.index
+// clamps `max` to 1000 and defaults it to 10 (sorted by dateCreated desc).
+export const LEDGER_ACCOUNT_PAGE_SIZE = 1000;
+// Added (SOUPFIN-142): stop after this many pages so a backend that ignores
+// `offset` (and keeps returning a full page) cannot loop forever.
+const LEDGER_ACCOUNT_MAX_PAGES = 50;
+
+/**
+ * Added (SOUPFIN-142): List EVERY ledger account for the Chart of Accounts.
+ *
+ * `listLedgerAccounts()` with no params gets the backend default of 10 rows,
+ * newest first. A freshly seeded SERVICES tenant has 32 accounts, so the page
+ * showed only the last 10 created (mostly expenses) and looked half empty.
+ * Fetch pages of LEDGER_ACCOUNT_PAGE_SIZE, sorted by number, until a short page.
+ */
+export async function listAllLedgerAccounts(): Promise<LedgerAccount[]> {
+  const all: LedgerAccount[] = [];
+  const seen = new Set<string>();
+  for (let page = 0; page < LEDGER_ACCOUNT_MAX_PAGES; page++) {
+    const rows = await listLedgerAccounts({
+      max: LEDGER_ACCOUNT_PAGE_SIZE,
+      offset: page * LEDGER_ACCOUNT_PAGE_SIZE,
+      sort: 'number',
+      order: 'asc',
+    });
+    let added = 0;
+    for (const row of rows) {
+      // Guard: a backend that ignores `offset` returns page 1 again — dedupe by id
+      if (row.id && seen.has(row.id)) continue;
+      if (row.id) seen.add(row.id);
+      all.push(row);
+      added++;
+    }
+    if (rows.length < LEDGER_ACCOUNT_PAGE_SIZE || added === 0) break;
+  }
+  return all;
+}
+
 /**
  * Fix (SOUPFIN-30 #8): Does an account's (derived) ledger group match a target
  * group for dropdown/filtering purposes? INCOME and REVENUE are treated as
