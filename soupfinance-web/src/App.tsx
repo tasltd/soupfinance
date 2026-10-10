@@ -77,6 +77,8 @@ import { ProfitLossPage } from './features/reports/ProfitLossPage';
 import { BalanceSheetPage } from './features/reports/BalanceSheetPage';
 import { CashFlowPage } from './features/reports/CashFlowPage';
 import { AgingReportsPage } from './features/reports/AgingReportsPage';
+// Added (SOUPFIN-105): A/R and A/P aging Summary/Detail, Open Invoices, Unpaid Bills
+import { AgingReportPage } from './features/reports/aging/AgingReportPage';
 // Added: Trial Balance report page
 import { TrialBalancePage } from './features/reports/TrialBalancePage';
 // Added: Scheduled Reports page for automated report delivery
@@ -316,6 +318,14 @@ export default function App() {
             <Route path="/reports/balance-sheet" element={<BalanceSheetPage />} />
             <Route path="/reports/cash-flow" element={<CashFlowPage />} />
             <Route path="/reports/aging" element={<AgingReportsPage />} />
+            {/* Added (SOUPFIN-105): keyed by side, so the customer/vendor filter
+                is kept between Summary and Detail but never carried across sides */}
+            <Route path="/reports/aging/receivables" element={<AgingReportPage key="receivables" side="receivables" view="summary" />} />
+            <Route path="/reports/aging/receivables/detail" element={<AgingReportPage key="receivables" side="receivables" view="detail" />} />
+            <Route path="/reports/open-invoices" element={<AgingReportPage key="receivables" side="receivables" view="open" />} />
+            <Route path="/reports/aging/payables" element={<AgingReportPage key="payables" side="payables" view="summary" />} />
+            <Route path="/reports/aging/payables/detail" element={<AgingReportPage key="payables" side="payables" view="detail" />} />
+            <Route path="/reports/unpaid-bills" element={<AgingReportPage key="payables" side="payables" view="open" />} />
             {/* Added: Trial Balance report */}
             <Route path="/reports/trial-balance" element={<TrialBalancePage />} />
             {/* Added: Scheduled Reports for automated report delivery */}

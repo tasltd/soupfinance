@@ -143,8 +143,12 @@ export const REPORT_CATEGORIES: ReportCategory[] = [
 // Pages
 // =============================================================================
 
-/** A/R and A/P aging share one page, so they share one page config. */
-const AGING_PAGE: ReportPageConfig = {
+/**
+ * The /reports/aging overview: A/R and A/P side by side on one page. It is not
+ * a hub entry of its own (the hub lists the Summary, Detail and Open reports
+ * below); the side navigation's "Aging Reports" link opens it.
+ */
+export const AGING_OVERVIEW_PAGE: ReportPageConfig = {
   title: 'Aging Reports',
   testIdPrefix: 'aging-reports',
   helpSection: 'aging',
@@ -222,27 +226,131 @@ export const REPORTS: ReportDefinition[] = [
     // No backend export yet; the page builds its CSV in the browser.
     export: { fileStem: 'cash-flow' },
   },
+  // Changed (SOUPFIN-105): A/R and A/P each have a Summary (one row per
+  // customer/vendor) and a Detail (one row per document, grouped by aging
+  // period), plus the Open Invoices and Unpaid Bills lists. All six are bucketed
+  // in the browser from the open documents (aging/agingEngine.ts), so they agree
+  // with each other. Exports are CSV built from the rows on screen: the backend
+  // agedReceivables/agedPayables export uses the backend's broken buckets.
   {
     id: 'ar-aging',
-    title: 'A/R Aging',
-    description: 'Unpaid customer invoices by age',
+    title: 'A/R Aging Summary',
+    description: 'What each customer owes, by how overdue it is',
     icon: 'receipt_long',
     category: 'who-owes-you',
-    path: '/reports/aging',
-    keywords: ['accounts receivable', 'receivables', 'aging', 'ageing', 'overdue', 'customers'],
-    page: AGING_PAGE,
-    export: { backendType: 'agedReceivables', fileStem: 'ar-aging' },
+    path: '/reports/aging/receivables',
+    keywords: ['accounts receivable', 'receivables', 'aging', 'ageing', 'overdue', 'customers', 'summary'],
+    page: {
+      title: 'A/R Aging Summary',
+      testIdPrefix: 'ar-aging-summary',
+      helpSection: 'aging',
+      dateMode: 'asOf',
+      maxToday: true,
+      comparison: false,
+      classLocation: true,
+      resetLabel: 'Today',
+    },
+    export: { fileStem: 'ar-aging-summary' },
+  },
+  {
+    id: 'ar-aging-detail',
+    title: 'A/R Aging Detail',
+    description: 'Each unpaid invoice, grouped by how overdue it is',
+    icon: 'format_list_bulleted',
+    category: 'who-owes-you',
+    path: '/reports/aging/receivables/detail',
+    keywords: ['accounts receivable', 'receivables', 'aging', 'ageing', 'overdue', 'invoices', 'detail'],
+    page: {
+      title: 'A/R Aging Detail',
+      testIdPrefix: 'ar-aging-detail',
+      helpSection: 'aging',
+      dateMode: 'asOf',
+      maxToday: true,
+      comparison: false,
+      classLocation: true,
+      resetLabel: 'Today',
+    },
+    export: { fileStem: 'ar-aging-detail' },
+  },
+  {
+    id: 'open-invoices',
+    title: 'Open Invoices',
+    description: 'Every invoice with a balance still to collect',
+    icon: 'request_quote',
+    category: 'who-owes-you',
+    path: '/reports/open-invoices',
+    keywords: ['unpaid invoices', 'outstanding', 'receivables', 'customers', 'balance due'],
+    page: {
+      title: 'Open Invoices',
+      testIdPrefix: 'open-invoices',
+      helpSection: 'aging',
+      dateMode: 'asOf',
+      maxToday: true,
+      comparison: false,
+      classLocation: true,
+      resetLabel: 'Today',
+    },
+    export: { fileStem: 'open-invoices' },
   },
   {
     id: 'ap-aging',
-    title: 'A/P Aging',
-    description: 'Unpaid vendor bills by age',
+    title: 'A/P Aging Summary',
+    description: 'What you owe each vendor, by how overdue it is',
     icon: 'payments',
     category: 'what-you-owe',
-    path: '/reports/aging',
-    keywords: ['accounts payable', 'payables', 'aging', 'ageing', 'overdue', 'vendors', 'bills'],
-    page: AGING_PAGE,
-    export: { backendType: 'agedPayables', fileStem: 'ap-aging' },
+    path: '/reports/aging/payables',
+    keywords: ['accounts payable', 'payables', 'aging', 'ageing', 'overdue', 'vendors', 'bills', 'summary'],
+    page: {
+      title: 'A/P Aging Summary',
+      testIdPrefix: 'ap-aging-summary',
+      helpSection: 'aging',
+      dateMode: 'asOf',
+      maxToday: true,
+      comparison: false,
+      classLocation: true,
+      resetLabel: 'Today',
+    },
+    export: { fileStem: 'ap-aging-summary' },
+  },
+  {
+    id: 'ap-aging-detail',
+    title: 'A/P Aging Detail',
+    description: 'Each unpaid bill, grouped by how overdue it is',
+    icon: 'format_list_bulleted',
+    category: 'what-you-owe',
+    path: '/reports/aging/payables/detail',
+    keywords: ['accounts payable', 'payables', 'aging', 'ageing', 'overdue', 'bills', 'detail'],
+    page: {
+      title: 'A/P Aging Detail',
+      testIdPrefix: 'ap-aging-detail',
+      helpSection: 'aging',
+      dateMode: 'asOf',
+      maxToday: true,
+      comparison: false,
+      classLocation: true,
+      resetLabel: 'Today',
+    },
+    export: { fileStem: 'ap-aging-detail' },
+  },
+  {
+    id: 'unpaid-bills',
+    title: 'Unpaid Bills',
+    description: 'Every bill with a balance still to pay',
+    icon: 'receipt',
+    category: 'what-you-owe',
+    path: '/reports/unpaid-bills',
+    keywords: ['open bills', 'outstanding', 'payables', 'vendors', 'balance due'],
+    page: {
+      title: 'Unpaid Bills',
+      testIdPrefix: 'unpaid-bills',
+      helpSection: 'aging',
+      dateMode: 'asOf',
+      maxToday: true,
+      comparison: false,
+      classLocation: true,
+      resetLabel: 'Today',
+    },
+    export: { fileStem: 'unpaid-bills' },
   },
   {
     id: 'trial-balance',

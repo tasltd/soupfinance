@@ -4,14 +4,17 @@
  * Displays both A/R (Accounts Receivable) and A/P (Accounts Payable) aging reports
  * side by side, with age buckets: Current, 1-30 Days, 31-60 Days, 61-90 Days, Over 90 Days.
  *
+ * Changed (SOUPFIN-105): this overview now buckets the open invoices and bills
+ * itself (aging/agingEngine.ts), like the A/R and A/P Summary and Detail
+ * reports it links to, instead of reading /financeReports/agedReceivables and
+ * /agedPayables. Those endpoints count a 1-30 day amount in four buckets and
+ * never count anything older, so their totals could not match the ledger.
+ *
  * Reference: soupfinance-designs/ar-aging-report/, soupfinance-designs/ap-aging-report/
  */
-import { useQuery } from '@tanstack/react-query';
-import {
-  getARAgingReport,
-  getAPAgingReport,
-  type ReportFilters,
-} from '../../api/endpoints/reports';
+import { useMemo } from 'react';
+import { Link } from 'react-router-dom';
+import type { ReportFilters } from '../../api/endpoints/reports';
 import { formatDisplayDate } from '../../utils/date';
 // Fix (SOUPFIN-33 #4): tenant-currency formatter (was hardcoded USD/"$0.00").
 import { useFormatCurrency } from '../../stores';
@@ -20,11 +23,53 @@ import type { AgingReport, AgingItem } from '../../types';
 // from the shared report shell. A/R and A/P are two registry entries that share
 // this page, so each table keeps its own export buttons.
 import { ReportExportButtons, ReportShell } from './ReportShell';
-import { getReportDefinition, type ReportDefinition } from './reportRegistry';
+import { AGING_OVERVIEW_PAGE, getReportDefinition, type ReportDefinition } from './reportRegistry';
 import { useReportControls } from './useReportControls';
+import type { ClientExports } from './useReportExport';
+import {
+  DEFAULT_BUCKET_CONFIG,
+  buildAgingSummary,
+  buildSummaryCsv,
+  type AgingSummary,
+  type OpenDocument,
+} from './aging/agingEngine';
+import { AGING_SIDES } from './aging/agingSides';
+import { useAgingDocuments } from './aging/useAgingData';
 
 const AR_DEFINITION = getReportDefinition('ar-aging');
 const AP_DEFINITION = getReportDefinition('ap-aging');
+
+/**
+ * Added (SOUPFIN-105): the overview's five fixed columns are the default
+ * Current / 1-30 / 31-60 / 61-90 / Over 90 periods. Custom periods live on the
+ * Summary and Detail reports.
+ */
+function toAgingReport(asOf: string, summary: AgingSummary): AgingReport {
+  const [current, days30, days60, days90, over90] = [0, 1, 2, 3, 4].map((i) => summary.totals[i] ?? 0);
+  return {
+    asOf,
+    items: summary.rows.map((row) => ({
+      entity: { id: row.partyId || row.partyName, name: row.partyName },
+      current: row.amounts[0] ?? 0,
+      days30: row.amounts[1] ?? 0,
+      days60: row.amounts[2] ?? 0,
+      days90: row.amounts[3] ?? 0,
+      over90: row.amounts[4] ?? 0,
+      total: row.total,
+    })),
+    totals: { current, days30, days60, days90, over90, total: summary.total },
+  };
+}
+
+function useOverviewAging(documents: OpenDocument[], asOf: string, partyLabel: string) {
+  return useMemo(() => {
+    const summary = buildAgingSummary(documents, DEFAULT_BUCKET_CONFIG);
+    const clientExports: ClientExports = {
+      csv: () => new Blob([buildSummaryCsv(summary, partyLabel, asOf)], { type: 'text/csv;charset=utf-8' }),
+    };
+    return { report: toAgingReport(asOf, summary), clientExports };
+  }, [documents, asOf, partyLabel]);
+}
 
 /*
  * Fix (SOUPFIN-33 #4): the module-level formatCurrency() that used to live here
@@ -92,6 +137,10 @@ interface AgingTableProps {
   /** The registry entry whose export this table's buttons run. */
   definition: ReportDefinition;
   exportFilters: ReportFilters;
+  /** Added (SOUPFIN-105): the CSV is built from the rows on screen. */
+  clientExports?: ClientExports;
+  /** Added (SOUPFIN-105): the Summary/Detail report for this side. */
+  reportPath: string;
   testIdPrefix: string;
 }
 
@@ -107,6 +156,8 @@ function AgingTable({
   error,
   definition,
   exportFilters,
+  clientExports,
+  reportPath,
   testIdPrefix,
 }: AgingTableProps) {
   // Fix (SOUPFIN-33 #4): amounts follow the tenant's configured currency (GH₵ for
@@ -123,6 +174,13 @@ function AgingTable({
         <div className="flex items-center gap-3">
           <span className="material-symbols-outlined text-xl text-primary">{icon}</span>
           <h3 className="text-lg font-bold text-text-light dark:text-text-dark">{title}</h3>
+          <Link
+            to={reportPath}
+            className="text-sm font-bold text-primary hover:underline"
+            data-testid={`${testIdPrefix}-open-report`}
+          >
+            View details
+          </Link>
         </div>
 
         {/* Export Buttons */}
@@ -131,6 +189,7 @@ function AgingTable({
           filters={exportFilters}
           testIdPrefix={testIdPrefix}
           disabled={isLoading || !data}
+          clientExports={clientExports}
           size="sm"
         />
       </div>
@@ -288,52 +347,32 @@ export function AgingReportsPage() {
   const formatCurrency = useFormatCurrency();
 
   // Changed (SOUPFIN-103): as-of date (default: the user's own today) from the shell
-  const controls = useReportControls(AR_DEFINITION.page);
+  const controls = useReportControls(AGING_OVERVIEW_PAGE);
   const asOfDate = controls.asOf;
 
-  // Fetch A/R aging report
-  const {
-    data: arAgingData,
-    isLoading: arLoading,
-    isFetching: arFetching,
-    isError: arIsError,
-    error: arError,
-    refetch: refetchAr,
-  } = useQuery({
-    queryKey: ['arAging', asOfDate],
-    queryFn: () => getARAgingReport(asOfDate),
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    enabled: controls.isRangeValid,
-  });
-
-  // Fetch A/P aging report
-  const {
-    data: apAgingData,
-    isLoading: apLoading,
-    isFetching: apFetching,
-    isError: apIsError,
-    error: apError,
-    refetch: refetchAp,
-  } = useQuery({
-    queryKey: ['apAging', asOfDate],
-    queryFn: () => getAPAgingReport(asOfDate),
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    enabled: controls.isRangeValid,
-  });
+  // Changed (SOUPFIN-105): open invoices and bills, bucketed in the browser.
+  const ar = useAgingDocuments('receivables', asOfDate, controls.isRangeValid);
+  const ap = useAgingDocuments('payables', asOfDate, controls.isRangeValid);
+  const arOverview = useOverviewAging(ar.documents, asOfDate, AGING_SIDES.receivables.partyLabel);
+  const apOverview = useOverviewAging(ap.documents, asOfDate, AGING_SIDES.payables.partyLabel);
+  const arAgingData = ar.isLoaded ? arOverview.report : undefined;
+  const apAgingData = ap.isLoaded ? apOverview.report : undefined;
+  const arLoading = ar.isLoading;
+  const apLoading = ap.isLoading;
 
   // Fix(SOUPFIN-11): the "Today" button must refresh even when the date is
   // already today. The shell calls this when Reset changes nothing.
   const refreshBoth = () => {
-    refetchAr();
-    refetchAp();
+    ar.refetch();
+    ap.refetch();
   };
 
   return (
     <ReportShell
-      page={AR_DEFINITION.page}
+      page={AGING_OVERVIEW_PAGE}
       controls={controls}
       onRefresh={refreshBoth}
-      isFetching={arFetching || apFetching}
+      isFetching={ar.isFetching || ap.isFetching}
       subtitle={
         <>
           Outstanding receivables and payables by age as of{' '}
@@ -353,10 +392,12 @@ export function AgingReportsPage() {
           entityPlural="customers"
           data={arAgingData}
           isLoading={arLoading}
-          isError={arIsError}
-          error={arError as Error | null}
+          isError={ar.isError}
+          error={ar.error}
           definition={AR_DEFINITION}
           exportFilters={controls.filters}
+          clientExports={arOverview.clientExports}
+          reportPath={AGING_SIDES.receivables.paths.summary}
           testIdPrefix="ar-aging"
         />
 
@@ -369,10 +410,12 @@ export function AgingReportsPage() {
           entityPlural="vendors"
           data={apAgingData}
           isLoading={apLoading}
-          isError={apIsError}
-          error={apError as Error | null}
+          isError={ap.isError}
+          error={ap.error}
           definition={AP_DEFINITION}
           exportFilters={controls.filters}
+          clientExports={apOverview.clientExports}
+          reportPath={AGING_SIDES.payables.paths.summary}
           testIdPrefix="ap-aging"
         />
       </div>
