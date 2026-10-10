@@ -6,42 +6,42 @@
  *
  * Reference: soupfinance-designs/trial-balance-report/
  */
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import {
-  getTrialBalance,
-  exportFinanceReport,
-  getReportExtension,
-  type ReportFilters,
-} from '../../api/endpoints/reports';
-import { formatDisplayDate, getCurrentMonthRange } from '../../utils/date';
+import { getTrialBalance } from '../../api/endpoints/reports';
+import { formatDisplayDate } from '../../utils/date';
 import type { TrialBalanceItem } from '../../types';
 // Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
 import { HelpLink } from '../../components/help';
+// Changed (SOUPFIN-103): tenant currency instead of a hardcoded 'USD' default
+import { CURRENCIES, useCurrencyConfig } from '../../stores';
+import { formatAmountWithConfig, type CurrencyConfig } from '../../stores/accountStore';
+import { ReportShell } from './ReportShell';
+import { getReportDefinition } from './reportRegistry';
+import { useReportControls } from './useReportControls';
+
+const DEFINITION = getReportDefinition('trial-balance');
 
 // Added: Trial balance uses subset of LedgerGroup (excludes 'INCOME' which is aliased to 'REVENUE')
 type TrialBalanceLedgerGroup = 'ASSET' | 'LIABILITY' | 'EQUITY' | 'REVENUE' | 'EXPENSE';
 
-// Fix (SOUPFIN-16): Allow navigating to historic years in the date picker.
-const REPORT_MIN_DATE = '1900-01-01';
-
-// Fix (SOUPFIN-16): Whitelist export format → file extension. Defaults to PDF
-// for unknown / null / undefined values so the download never has a ".null" suffix.
-
-// Added: Get current month date range (first day to last day)
-// Fix (SOUPFIN-64): this used to build the range locally and format both ends
-// through toISOString(), which converts to UTC first — east of UTC the default
-// range started on the previous month's last day and ended a day before month
-// end. getCurrentMonthRange() in utils/date formats from local calendar parts.
-
-// Added: Format currency with proper thousands separator
-function formatCurrency(amount: number, currency = 'USD'): string {
+/**
+ * Format a trial balance amount. Zero renders blank, so each row shows only
+ * its debit or its credit.
+ *
+ * Changed (SOUPFIN-103): totals use the tenant's currency (was a hardcoded
+ * 'USD' default). An account row uses the account's own currency; a code the
+ * app has no symbol for is shown as a code prefix rather than mislabelled with
+ * the tenant's symbol.
+ */
+function formatAmount(amount: number, tenant: CurrencyConfig, accountCurrency?: string): string {
   if (amount === 0) return '';
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: 2,
-  }).format(amount);
+  const code = accountCurrency?.toUpperCase();
+  if (!code || code === tenant.code) return formatAmountWithConfig(amount, tenant);
+  const known = CURRENCIES[code];
+  return known
+    ? formatAmountWithConfig(amount, known)
+    : `${code} ${formatAmountWithConfig(amount, tenant, false)}`;
 }
 
 // Added: Ledger group display configuration
@@ -68,6 +68,9 @@ interface AccountGroupProps {
 
 function AccountGroup({ group, accounts, isExpanded, onToggle }: AccountGroupProps) {
   const config = LEDGER_GROUP_CONFIG[group];
+  const tenantCurrency = useCurrencyConfig();
+  const formatCurrency = (amount: number, currency?: string) =>
+    formatAmount(amount, tenantCurrency, currency);
 
   // Calculate group totals
   const groupTotalDebit = accounts.reduce((sum, acc) => sum + acc.endingDebit, 0);
@@ -131,25 +134,21 @@ function AccountGroup({ group, accounts, isExpanded, onToggle }: AccountGroupPro
  * Trial Balance Report Page Component
  */
 export function TrialBalancePage() {
-  // Added: Date filter state with default to current month
-  const defaultRange = useMemo(() => getCurrentMonthRange(), []);
-  const [filters, setFilters] = useState<ReportFilters>({
-    from: defaultRange.from,
-    to: defaultRange.to,
-  });
+  const controls = useReportControls(DEFINITION.page);
+  const filters = controls.filters;
+  const tenantCurrency = useCurrencyConfig();
+  const formatCurrency = (amount: number) => formatAmount(amount, tenantCurrency);
 
   // Added: Track which ledger groups are expanded (all expanded by default)
   const [expandedGroups, setExpandedGroups] = useState<Set<TrialBalanceLedgerGroup>>(
     new Set(LEDGER_GROUP_ORDER)
   );
 
-  // Added: Export loading state
-  const [exportLoading, setExportLoading] = useState<string | null>(null);
-
   // Fetch trial balance data
   const {
     data: trialBalance,
     isLoading,
+    isFetching,
     isError,
     error,
     refetch,
@@ -157,12 +156,8 @@ export function TrialBalancePage() {
     queryKey: ['trialBalance', filters],
     queryFn: () => getTrialBalance(filters),
     staleTime: 5 * 60 * 1000, // 5 minutes
+    enabled: controls.isRangeValid,
   });
-
-  // Handle date filter changes
-  const handleFilterChange = (field: 'from' | 'to', value: string) => {
-    setFilters((prev) => ({ ...prev, [field]: value }));
-  };
 
   // Toggle ledger group expansion
   const toggleGroup = (group: TrialBalanceLedgerGroup) => {
@@ -186,152 +181,26 @@ export function TrialBalancePage() {
     }
   };
 
-  // Handle export
-  const handleExport = async (format: 'pdf' | 'xlsx' | 'csv') => {
-    setExportLoading(format);
-    try {
-      const blob = await exportFinanceReport('trialBalance', filters, format);
-      // Create download link
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      // Fix (SOUPFIN-16): Use whitelist helper so null/undefined never becomes ".null".
-      const extension = getReportExtension(format);
-      link.download = `trial-balance-${filters.from}-to-${filters.to}.${extension}`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error('Export failed:', err);
-    } finally {
-      setExportLoading(null);
-    }
-  };
-
   // Check if books are balanced
   const isBalanced =
     trialBalance && Math.abs(trialBalance.totalDebit - trialBalance.totalCredit) < 0.01;
 
   return (
-    <div className="flex flex-col gap-6" data-testid="trial-balance-page">
-      {/* Page Header */}
-      <div className="flex flex-wrap justify-between items-center gap-4">
-        <div>
-          <h1
-            className="text-3xl font-black tracking-tight text-text-light dark:text-text-dark"
-            data-testid="trial-balance-heading"
-          >
-            Trial Balance
-          </h1>
-          <p className="text-subtle-text">
-            Debit and credit balances for all accounts
-            {/* Fix (SOUPFIN-30 #12): format the as-of date for display (was raw ISO). */}
-            {trialBalance?.asOf && ` as of ${formatDisplayDate(trialBalance.asOf)}`}
-          </p>
-          <HelpLink section="trial-balance" className="mt-1 self-start" />
-        </div>
-
-        {/* Export Buttons */}
-        <div className="flex flex-wrap gap-3">
-          <button
-            onClick={() => handleExport('pdf')}
-            disabled={exportLoading !== null || isLoading}
-            className="flex items-center gap-2 h-10 px-4 rounded-lg bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-bold text-sm hover:bg-primary/10 disabled:opacity-50"
-            data-testid="trial-balance-export-pdf"
-          >
-            <span className="material-symbols-outlined text-base">picture_as_pdf</span>
-            {exportLoading === 'pdf' ? 'Exporting...' : 'PDF'}
-          </button>
-          <button
-            onClick={() => handleExport('xlsx')}
-            disabled={exportLoading !== null || isLoading}
-            className="flex items-center gap-2 h-10 px-4 rounded-lg bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-bold text-sm hover:bg-primary/10 disabled:opacity-50"
-            data-testid="trial-balance-export-excel"
-          >
-            <span className="material-symbols-outlined text-base">table_view</span>
-            {exportLoading === 'xlsx' ? 'Exporting...' : 'Excel'}
-          </button>
-          <button
-            onClick={() => handleExport('csv')}
-            disabled={exportLoading !== null || isLoading}
-            className="flex items-center gap-2 h-10 px-4 rounded-lg bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-bold text-sm hover:bg-primary/10 disabled:opacity-50"
-            data-testid="trial-balance-export-csv"
-          >
-            <span className="material-symbols-outlined text-base">download</span>
-            {exportLoading === 'csv' ? 'Exporting...' : 'CSV'}
-          </button>
-        </div>
-      </div>
-
-      {/* Filter Section */}
-      <div
-        className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-6"
-        data-testid="trial-balance-filters"
-      >
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-end">
-          {/* From Date */}
-          <label className="flex flex-col">
-            <span className="text-sm font-medium text-text-light dark:text-text-dark pb-2">
-              From Date
-            </span>
-            {/* Fix (SOUPFIN-33 #6): id/name so the field is programmatically identifiable
-                (the wrapping <label> already supplies the implicit association). */}
-            <input
-              type="date"
-              id="trial-balance-from"
-              name="trial-balance-from"
-              aria-label="Trial balance from date"
-              value={filters.from}
-              min={REPORT_MIN_DATE}
-              onChange={(e) => handleFilterChange('from', e.target.value)}
-              className="h-12 px-4 rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary/50 focus:border-primary"
-              data-testid="trial-balance-filter-from"
-            />
-          </label>
-
-          {/* To Date */}
-          <label className="flex flex-col">
-            <span className="text-sm font-medium text-text-light dark:text-text-dark pb-2">
-              To Date
-            </span>
-            <input
-              type="date"
-              id="trial-balance-to"
-              name="trial-balance-to"
-              aria-label="Trial balance to date"
-              value={filters.to}
-              min={REPORT_MIN_DATE}
-              onChange={(e) => handleFilterChange('to', e.target.value)}
-              className="h-12 px-4 rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary/50 focus:border-primary"
-              data-testid="trial-balance-filter-to"
-            />
-          </label>
-
-          {/* Spacer for alignment */}
-          <div className="hidden lg:block" />
-
-          {/* Action Buttons */}
-          <div className="flex gap-3 justify-start lg:justify-end">
-            <button
-              onClick={() => setFilters(defaultRange)}
-              className="flex-1 lg:flex-none h-12 px-4 rounded-lg bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-bold text-sm hover:bg-primary/10"
-              data-testid="trial-balance-filter-reset"
-            >
-              Reset
-            </button>
-            <button
-              onClick={() => refetch()}
-              disabled={isLoading}
-              className="flex-1 lg:flex-none h-12 px-4 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90 disabled:opacity-50"
-              data-testid="trial-balance-filter-apply"
-            >
-              {isLoading ? 'Loading...' : 'Generate Report'}
-            </button>
-          </div>
-        </div>
-      </div>
-
+    <ReportShell
+      page={DEFINITION.page}
+      controls={controls}
+      onRefresh={() => refetch()}
+      exportDefinition={DEFINITION}
+      exportDisabled={isLoading}
+      isFetching={isFetching}
+      subtitle={
+        <>
+          Debit and credit balances for all accounts
+          {/* Fix (SOUPFIN-30 #12): format the as-of date for display (was raw ISO). */}
+          {trialBalance?.asOf && ` as of ${formatDisplayDate(trialBalance.asOf)}`}
+        </>
+      }
+    >
       {/* Balance Status Banner */}
       {trialBalance && !isLoading && (
         <div
@@ -501,6 +370,6 @@ export function TrialBalancePage() {
           </>
         )}
       </div>
-    </div>
+    </ReportShell>
   );
 }

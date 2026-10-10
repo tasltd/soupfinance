@@ -2,70 +2,42 @@
  * Balance Sheet Report Page
  * Reference: soupfinance-designs/balance-sheet-report/
  *
- * Displays Assets, Liabilities, and Equity with the accounting equation:
- * Assets = Liabilities + Equity
+ * Displays Assets, Liabilities, and Equity as of a specific date, with the
+ * accounting equation check: Assets = Liabilities + Equity
+ *
+ * Changed (SOUPFIN-103): renders inside the shared <ReportShell>, which owns the
+ * as-of date, the comparison date, export and the tenant currency. Amounts were
+ * hardcoded to USD; they now follow the tenant's currency.
  */
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import {
-  getBalanceSheetDirect,
-  exportFinanceReport,
-  getReportExtension,
-  type ReportFilters,
-} from '../../api/endpoints/reports';
+import { getBalanceSheetDirect, type ReportFilters } from '../../api/endpoints/reports';
 import type { BalanceSheet, BalanceSheetItem } from '../../types';
-import { getTodayIsoDate } from '../../utils/date';
-// Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
-import { HelpLink } from '../../components/help';
+import { useFormatCurrency } from '../../stores';
+import { formatDisplayDate } from '../../utils/date';
+import { ReportShell } from './ReportShell';
+import { getReportDefinition } from './reportRegistry';
+import { REPORT_MIN_DATE } from './reportDates';
+import { useReportControls } from './useReportControls';
 
-// Added: Currency formatter for consistent display
-const currencyFormatter = new Intl.NumberFormat('en-US', {
-  style: 'currency',
-  currency: 'USD',
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
+const DEFINITION = getReportDefinition('balance-sheet');
 
-// Added: Format date for display (e.g., "January 20, 2026")
-function formatDateDisplay(dateStr: string): string {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
+/** Comparison-date balance per account name. */
+function balancesByAccount(items: BalanceSheetItem[] | undefined): Map<string, number> {
+  return new Map((items ?? []).map((item) => [item.account, item.balance]));
 }
 
-// Added: Get today's date in YYYY-MM-DD format
-// Fix (SOUPFIN-64): was `new Date().toISOString().split('T')[0]`, i.e. UTC
-// today rather than the user's own calendar day.
-const getTodayISO = getTodayIsoDate;
-
-// Fix (SOUPFIN-14): Hard timeout so the PDF export request can't hang indefinitely
-// (was previously stuck in pending forever with no UI feedback).
-const EXPORT_TIMEOUT_MS = 60_000;
-
-// Fix (SOUPFIN-16): Minimum supported reporting date — allows navigating to any
-// historic year (the issue reported the calendar was "stuck" at 2026). We use
-// 1900-01-01 so the browser's native year picker can scroll back over a century.
-const REPORT_MIN_DATE = '1900-01-01';
-
-// Fix (SOUPFIN-16): Map an internal report ID to a file extension. Whitelisting
-// the format prevents a null/undefined sneaking into the filename and producing
-// "balance-sheet-2026-06-08.null" (or .undefined). Defaults to .pdf for unknown.
-
 export function BalanceSheetPage() {
-  // Added: State for "As Of" date filter with default to today
-  const [asOfDate, setAsOfDate] = useState<string>(getTodayISO());
-  // Fix (SOUPFIN-14): Track which format is currently exporting + any error so the
-  // user sees progress (spinner on the active button) and gets feedback on failure.
-  const [exportingFormat, setExportingFormat] = useState<null | 'pdf' | 'xlsx' | 'csv'>(null);
-  const [exportError, setExportError] = useState<string | null>(null);
+  const controls = useReportControls(DEFINITION.page);
+  const formatCurrency = useFormatCurrency();
+  const asOfDate = controls.asOf;
+  const comparisonAsOf = controls.comparisonAsOf;
 
   // Added: Fetch balance sheet data using React Query
   const {
     data: balanceSheet,
     isLoading,
+    isFetching,
     isError,
     error,
     refetch,
@@ -73,7 +45,17 @@ export function BalanceSheetPage() {
     queryKey: ['balanceSheet', asOfDate],
     queryFn: () => getBalanceSheetDirect(asOfDate),
     staleTime: 5 * 60 * 1000, // 5 minutes cache
+    enabled: controls.isRangeValid,
   });
+
+  // Added (SOUPFIN-103): the balance sheet at the comparison date
+  const { data: comparison } = useQuery<BalanceSheet>({
+    queryKey: ['balanceSheet', comparisonAsOf],
+    queryFn: () => getBalanceSheetDirect(comparisonAsOf!),
+    staleTime: 5 * 60 * 1000,
+    enabled: comparisonAsOf !== null,
+  });
+  const compared = comparisonAsOf ? comparison : undefined;
 
   // Added: Calculate accounting equation check
   const equationCheck = useMemo(() => {
@@ -86,187 +68,23 @@ export function BalanceSheetPage() {
     };
   }, [balanceSheet]);
 
-  // Added: Export handler for PDF/Excel/CSV
-  // Fix (SOUPFIN-14): Track in-flight state per click + hard timeout so the user
-  // always gets feedback. Previously the request could remain "pending" forever
-  // (e.g. when the backend report endpoint OOMs on a large dataset) with no UI
-  // indication that anything was happening.
-  const handleExport = async (format: 'pdf' | 'xlsx' | 'csv') => {
-    if (exportingFormat) return; // ignore double-clicks
-    setExportingFormat(format);
-    setExportError(null);
-
-    // Race the export against a manual timeout so we recover from hung requests.
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(
-        () => reject(new Error('Export timed out — the report is taking too long. Try a narrower date range.')),
-        EXPORT_TIMEOUT_MS
-      );
-    });
-
-    try {
-      const filters: ReportFilters = {
-        from: '1900-01-01', // Balance sheet is as-of, not period-based
-        to: asOfDate,
-      };
-      const blob = await Promise.race([
-        exportFinanceReport('balanceSheet', filters, format),
-        timeoutPromise,
-      ]);
-      const url = URL.createObjectURL(blob);
-
-      // Create download link
-      const link = document.createElement('a');
-      link.href = url;
-      // Fix (SOUPFIN-16): Use whitelist helper so a null/undefined format never
-      // produces a ".null" extension (the bug reported on app.soupfinance.com).
-      const extension = getReportExtension(format);
-      link.download = `balance-sheet-${asOfDate}.${extension}`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error('Export failed:', err);
-      const message = err instanceof Error ? err.message : 'Export failed. Please try again.';
-      setExportError(message);
-    } finally {
-      setExportingFormat(null);
-    }
-  };
+  // Balance sheet is as-of, not period-based: the export asks for everything
+  // up to the as-of date, as the page did before the shell.
+  const exportFilters = useMemo<ReportFilters>(
+    () => ({ from: REPORT_MIN_DATE, to: asOfDate }),
+    [asOfDate]
+  );
 
   return (
-    <div className="flex flex-col gap-6" data-testid="balance-sheet-page">
-      {/* Page Header */}
-      <div className="flex flex-wrap justify-between items-center gap-4">
-        <div className="flex flex-col gap-1">
-          <h1
-            className="text-3xl font-black tracking-tight text-text-light dark:text-text-dark"
-            data-testid="balance-sheet-heading"
-          >
-            Balance Sheet
-          </h1>
-          <p className="text-subtle-text">
-            {balanceSheet ? `As of ${formatDateDisplay(balanceSheet.asOf)}` : 'Assets, liabilities, and equity position'}
-          </p>
-          <HelpLink section="balance-sheet" className="mt-1 self-start" />
-        </div>
-      </div>
-
-      {/* Toolbar: Date Picker + Export Buttons */}
-      <div
-        className="flex flex-wrap items-center justify-between gap-4 py-4 border-b border-border-light dark:border-border-dark"
-        data-testid="balance-sheet-toolbar"
-      >
-        {/* Date Picker */}
-        <div className="flex items-center gap-3">
-          <label htmlFor="asOfDate" className="text-sm font-medium text-text-light dark:text-text-dark">
-            As Of Date:
-          </label>
-          <div className="relative">
-            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-subtle-text">
-              calendar_today
-            </span>
-            <input
-              id="asOfDate"
-              type="date"
-              value={asOfDate}
-              min={REPORT_MIN_DATE}
-              onChange={(e) => setAsOfDate(e.target.value)}
-              className="pl-10 pr-4 py-2 h-10 border border-border-light dark:border-border-dark rounded-lg bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary/50 focus:border-primary"
-              data-testid="balance-sheet-date-picker"
-            />
-          </div>
-          <button
-            onClick={() => refetch()}
-            className="flex items-center gap-2 h-10 px-4 border border-border-light dark:border-border-dark rounded-lg bg-surface-light dark:bg-surface-dark hover:bg-background-light dark:hover:bg-background-dark text-text-light dark:text-text-dark"
-            data-testid="balance-sheet-refresh"
-          >
-            <span className="material-symbols-outlined text-lg">refresh</span>
-            Refresh
-          </button>
-        </div>
-
-        {/* Export Buttons */}
-        {/* Fix (SOUPFIN-14): Spinner on active button, disable others, disable while
-            exporting, and surface a visible error banner below the toolbar. */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => handleExport('pdf')}
-            disabled={exportingFormat !== null}
-            className="flex items-center justify-center gap-2 h-10 px-4 border border-primary rounded-lg text-primary hover:bg-primary/10 disabled:opacity-60 disabled:cursor-not-allowed"
-            data-testid="balance-sheet-export-pdf"
-          >
-            <span
-              className={`material-symbols-outlined text-lg ${
-                exportingFormat === 'pdf' ? 'animate-spin' : ''
-              }`}
-            >
-              {exportingFormat === 'pdf' ? 'progress_activity' : 'picture_as_pdf'}
-            </span>
-            <span className="text-sm font-bold">
-              {exportingFormat === 'pdf' ? 'Exporting…' : 'PDF'}
-            </span>
-          </button>
-          <button
-            onClick={() => handleExport('xlsx')}
-            disabled={exportingFormat !== null}
-            className="flex items-center justify-center gap-2 h-10 px-4 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-60 disabled:cursor-not-allowed"
-            data-testid="balance-sheet-export-excel"
-          >
-            <span
-              className={`material-symbols-outlined text-lg ${
-                exportingFormat === 'xlsx' ? 'animate-spin' : ''
-              }`}
-            >
-              {exportingFormat === 'xlsx' ? 'progress_activity' : 'grid_on'}
-            </span>
-            <span className="text-sm font-bold">
-              {exportingFormat === 'xlsx' ? 'Exporting…' : 'Excel'}
-            </span>
-          </button>
-          <button
-            onClick={() => handleExport('csv')}
-            disabled={exportingFormat !== null}
-            className="flex items-center justify-center gap-2 h-10 px-4 border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark disabled:opacity-60 disabled:cursor-not-allowed"
-            data-testid="balance-sheet-export-csv"
-          >
-            <span
-              className={`material-symbols-outlined text-lg ${
-                exportingFormat === 'csv' ? 'animate-spin' : ''
-              }`}
-            >
-              {exportingFormat === 'csv' ? 'progress_activity' : 'download'}
-            </span>
-            <span className="text-sm font-bold">
-              {exportingFormat === 'csv' ? 'Exporting…' : 'CSV'}
-            </span>
-          </button>
-        </div>
-      </div>
-
-      {/* Export error banner — visible feedback for hung or failed exports. */}
-      {exportError && (
-        <div
-          className="bg-danger/10 border border-danger/30 rounded-lg p-3 flex items-start gap-3"
-          data-testid="balance-sheet-export-error"
-          role="alert"
-        >
-          <span className="material-symbols-outlined text-danger">error</span>
-          <div className="flex-1">
-            <p className="text-danger text-sm font-medium">Export failed</p>
-            <p className="text-subtle-text text-xs">{exportError}</p>
-          </div>
-          <button
-            onClick={() => setExportError(null)}
-            className="text-subtle-text hover:text-danger"
-            aria-label="Dismiss"
-          >
-            <span className="material-symbols-outlined">close</span>
-          </button>
-        </div>
-      )}
-
+    <ReportShell
+      page={DEFINITION.page}
+      controls={controls}
+      onRefresh={() => refetch()}
+      exportDefinition={DEFINITION}
+      exportFilters={exportFilters}
+      isFetching={isFetching}
+      subtitle={`As of ${formatDisplayDate(balanceSheet?.asOf ?? asOfDate)}`}
+    >
       {/* Loading State */}
       {isLoading && (
         <div
@@ -313,8 +131,13 @@ export function BalanceSheetPage() {
                 className="text-text-light dark:text-text-dark tracking-tight text-2xl font-bold"
                 data-testid="balance-sheet-total-assets"
               >
-                {currencyFormatter.format(balanceSheet.totalAssets)}
+                {formatCurrency(balanceSheet.totalAssets)}
               </p>
+              {compared && (
+                <p className="text-sm text-subtle-text" data-testid="balance-sheet-total-assets-previous">
+                  Previous: {formatCurrency(compared.totalAssets)}
+                </p>
+              )}
             </div>
 
             {/* Total Liabilities Card */}
@@ -327,8 +150,13 @@ export function BalanceSheetPage() {
                 className="text-text-light dark:text-text-dark tracking-tight text-2xl font-bold"
                 data-testid="balance-sheet-total-liabilities"
               >
-                {currencyFormatter.format(balanceSheet.totalLiabilities)}
+                {formatCurrency(balanceSheet.totalLiabilities)}
               </p>
+              {compared && (
+                <p className="text-sm text-subtle-text" data-testid="balance-sheet-total-liabilities-previous">
+                  Previous: {formatCurrency(compared.totalLiabilities)}
+                </p>
+              )}
             </div>
 
             {/* Total Equity Card */}
@@ -341,10 +169,23 @@ export function BalanceSheetPage() {
                 className="text-text-light dark:text-text-dark tracking-tight text-2xl font-bold"
                 data-testid="balance-sheet-total-equity"
               >
-                {currencyFormatter.format(balanceSheet.totalEquity)}
+                {formatCurrency(balanceSheet.totalEquity)}
               </p>
+              {compared && (
+                <p className="text-sm text-subtle-text" data-testid="balance-sheet-total-equity-previous">
+                  Previous: {formatCurrency(compared.totalEquity)}
+                </p>
+              )}
             </div>
           </div>
+
+          {comparisonAsOf && (
+            <p className="text-sm text-subtle-text -mt-2" data-testid="balance-sheet-comparison-note">
+              {compared
+                ? `Previous figures are as of ${formatDisplayDate(comparisonAsOf)}.`
+                : `Loading figures as of ${formatDisplayDate(comparisonAsOf)}…`}
+            </p>
+          )}
 
           {/* Accounting Equation Check */}
           <div
@@ -369,9 +210,9 @@ export function BalanceSheetPage() {
                     Accounting Equation: Assets = Liabilities + Equity
                   </p>
                   <p className="text-sm text-subtle-text">
-                    {currencyFormatter.format(balanceSheet.totalAssets)} ={' '}
-                    {currencyFormatter.format(balanceSheet.totalLiabilities)} +{' '}
-                    {currencyFormatter.format(balanceSheet.totalEquity)}
+                    {formatCurrency(balanceSheet.totalAssets)} ={' '}
+                    {formatCurrency(balanceSheet.totalLiabilities)} +{' '}
+                    {formatCurrency(balanceSheet.totalEquity)}
                   </p>
                 </div>
               </div>
@@ -379,7 +220,7 @@ export function BalanceSheetPage() {
                 <span className="text-success font-bold">Balanced</span>
               ) : (
                 <span className="text-warning font-bold">
-                  Difference: {currencyFormatter.format(equationCheck.difference)}
+                  Difference: {formatCurrency(equationCheck.difference)}
                 </span>
               )}
             </div>
@@ -394,6 +235,8 @@ export function BalanceSheetPage() {
               iconColor="text-primary"
               items={balanceSheet.assets}
               total={balanceSheet.totalAssets}
+              previousBalances={compared ? balancesByAccount(compared.assets) : undefined}
+              previousTotal={compared?.totalAssets}
               testIdPrefix="assets"
             />
 
@@ -404,6 +247,8 @@ export function BalanceSheetPage() {
               iconColor="text-danger"
               items={balanceSheet.liabilities}
               total={balanceSheet.totalLiabilities}
+              previousBalances={compared ? balancesByAccount(compared.liabilities) : undefined}
+              previousTotal={compared?.totalLiabilities}
               testIdPrefix="liabilities"
             />
 
@@ -414,6 +259,8 @@ export function BalanceSheetPage() {
               iconColor="text-success"
               items={balanceSheet.equity}
               total={balanceSheet.totalEquity}
+              previousBalances={compared ? balancesByAccount(compared.equity) : undefined}
+              previousTotal={compared?.totalEquity}
               testIdPrefix="equity"
             />
           </div>
@@ -431,7 +278,7 @@ export function BalanceSheetPage() {
                 <p className="text-sm text-subtle-text">Should equal Total Assets</p>
               </div>
               <p className="text-2xl font-black text-text-light dark:text-text-dark">
-                {currencyFormatter.format(balanceSheet.totalLiabilities + balanceSheet.totalEquity)}
+                {formatCurrency(balanceSheet.totalLiabilities + balanceSheet.totalEquity)}
               </p>
             </div>
           </div>
@@ -449,13 +296,13 @@ export function BalanceSheetPage() {
           <span className="material-symbols-outlined text-6xl text-subtle-text/50 mb-4">account_balance</span>
           <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">No accounts found</h3>
           <p className="text-subtle-text max-w-md mx-auto">
-            There are no ledger accounts with balances as of {formatDateDisplay(asOfDate)}.
+            There are no ledger accounts with balances as of {formatDisplayDate(asOfDate)}.
             Try a later date, or check that your chart of accounts contains
             asset, liability, and equity accounts with posted transactions.
           </p>
         </div>
       )}
-    </div>
+    </ReportShell>
   );
 }
 
@@ -469,10 +316,25 @@ interface BalanceSheetSectionProps {
   iconColor: string;
   items: BalanceSheetItem[];
   total: number;
+  /** Comparison-date balance per account name; undefined when not comparing. */
+  previousBalances?: Map<string, number>;
+  previousTotal?: number;
   testIdPrefix: string;
 }
 
-function BalanceSheetSection({ title, icon, iconColor, items, total, testIdPrefix }: BalanceSheetSectionProps) {
+function BalanceSheetSection({
+  title,
+  icon,
+  iconColor,
+  items,
+  total,
+  previousBalances,
+  previousTotal,
+  testIdPrefix,
+}: BalanceSheetSectionProps) {
+  const formatCurrency = useFormatCurrency();
+  const comparing = previousBalances !== undefined;
+
   return (
     <div
       className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden"
@@ -484,7 +346,14 @@ function BalanceSheetSection({ title, icon, iconColor, items, total, testIdPrefi
           <span className={`material-symbols-outlined ${iconColor}`}>{icon}</span>
           <h2 className="text-lg font-bold text-text-light dark:text-text-dark">{title}</h2>
         </div>
-        <span className="text-sm text-subtle-text">{items.length} accounts</span>
+        {comparing ? (
+          <span className="flex gap-6 text-xs font-semibold uppercase text-subtle-text">
+            <span>Current</span>
+            <span>Previous</span>
+          </span>
+        ) : (
+          <span className="text-sm text-subtle-text">{items.length} accounts</span>
+        )}
       </div>
 
       {/* Account List */}
@@ -498,6 +367,7 @@ function BalanceSheetSection({ title, icon, iconColor, items, total, testIdPrefi
             <BalanceSheetItemRow
               key={`${testIdPrefix}-${index}`}
               item={item}
+              previousBalances={previousBalances}
               testId={`${testIdPrefix}-item-${index}`}
             />
           ))
@@ -506,12 +376,19 @@ function BalanceSheetSection({ title, icon, iconColor, items, total, testIdPrefi
 
       {/* Section Total */}
       <div
-        className="flex justify-between items-center px-6 py-4 border-t-2 border-text-light dark:border-text-dark bg-background-light dark:bg-background-dark"
+        className="flex justify-between items-center gap-4 px-6 py-4 border-t-2 border-text-light dark:border-text-dark bg-background-light dark:bg-background-dark"
         data-testid={`balance-sheet-${testIdPrefix}-total`}
       >
         <span className="font-bold text-text-light dark:text-text-dark">Total {title}</span>
-        <span className="font-bold text-lg text-text-light dark:text-text-dark">
-          {currencyFormatter.format(total)}
+        <span className="flex gap-6 items-baseline">
+          <span className="font-bold text-lg text-text-light dark:text-text-dark">
+            {formatCurrency(total)}
+          </span>
+          {comparing && (
+            <span className="text-sm text-subtle-text" data-testid={`balance-sheet-${testIdPrefix}-total-previous`}>
+              {formatCurrency(previousTotal ?? 0)}
+            </span>
+          )}
         </span>
       </div>
     </div>
@@ -524,18 +401,20 @@ function BalanceSheetSection({ title, icon, iconColor, items, total, testIdPrefi
  */
 interface BalanceSheetItemRowProps {
   item: BalanceSheetItem;
+  previousBalances?: Map<string, number>;
   testId: string;
   depth?: number;
 }
 
-function BalanceSheetItemRow({ item, testId, depth = 0 }: BalanceSheetItemRowProps) {
+function BalanceSheetItemRow({ item, previousBalances, testId, depth = 0 }: BalanceSheetItemRowProps) {
+  const formatCurrency = useFormatCurrency();
   // Added: Indentation based on depth for hierarchical display
   const paddingLeft = 24 + depth * 16; // Base 24px + 16px per level
 
   return (
     <>
       <div
-        className="flex justify-between items-center py-3 hover:bg-primary/5 transition-colors"
+        className="flex justify-between items-center gap-4 py-3 hover:bg-primary/5 transition-colors"
         style={{ paddingLeft: `${paddingLeft}px`, paddingRight: '24px' }}
         data-testid={testId}
       >
@@ -544,12 +423,19 @@ function BalanceSheetItemRow({ item, testId, depth = 0 }: BalanceSheetItemRowPro
         >
           {item.account}
         </span>
-        <span
-          className={`text-sm font-medium ${
-            depth > 0 ? 'text-subtle-text' : 'text-text-light dark:text-text-dark'
-          }`}
-        >
-          {currencyFormatter.format(item.balance)}
+        <span className="flex gap-6 items-baseline">
+          <span
+            className={`text-sm font-medium ${
+              depth > 0 ? 'text-subtle-text' : 'text-text-light dark:text-text-dark'
+            }`}
+          >
+            {formatCurrency(item.balance)}
+          </span>
+          {previousBalances && (
+            <span className="text-sm text-subtle-text" data-testid={`${testId}-previous`}>
+              {formatCurrency(previousBalances.get(item.account) ?? 0)}
+            </span>
+          )}
         </span>
       </div>
       {/* Render children recursively if present */}
@@ -557,6 +443,7 @@ function BalanceSheetItemRow({ item, testId, depth = 0 }: BalanceSheetItemRowPro
         <BalanceSheetItemRow
           key={`${testId}-child-${index}`}
           item={child}
+          previousBalances={previousBalances}
           testId={`${testId}-child-${index}`}
           depth={depth + 1}
         />
