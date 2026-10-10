@@ -232,11 +232,8 @@ describe('Every page header carries a "Need Help?" link', () => {
     'accounting/JournalEntryPage.tsx': ['journal-entry'],
     'accounting/VoucherFormPage.tsx': ['vouchers'],
     'reports/ReportsPage.tsx': ['reports'],
-    'reports/ProfitLossPage.tsx': ['profit-loss'],
-    'reports/BalanceSheetPage.tsx': ['balance-sheet'],
-    'reports/CashFlowPage.tsx': ['cash-flow'],
-    'reports/AgingReportsPage.tsx': ['aging'],
-    'reports/TrialBalancePage.tsx': ['trial-balance', 'trial-balance-unbalanced'],
+    // Changed (SOUPFIN-103): the report pages render their header through
+    // <ReportShell>, so their link is checked in the block below instead.
     'reports/ScheduledReportsPage.tsx': ['scheduled-reports'],
     // Added (SOUPFIN-84): the four company verification (KYC) wizard steps
     'corporate/CompanyInfoPage.tsx': ['kyc-company-details'],
@@ -254,6 +251,50 @@ describe('Every page header carries a "Need Help?" link', () => {
     const h1 = source.indexOf('<h1');
     expect(h1).toBeGreaterThan(-1);
     expect(source.indexOf(`<HelpLink section="${sections[0]}"`, h1)).toBeGreaterThan(h1);
+  });
+});
+
+// Added (SOUPFIN-103): report pages get their header from <ReportShell>, which
+// renders the registry entry's helpSection. Pin the shell, the registry and the
+// pages, so a report can neither lose its link nor point at the wrong section.
+describe('Report pages carry their "Need Help?" link through the shell (SOUPFIN-103)', () => {
+  const SHELL = readFileSync(resolve(ROOT, 'src/features/reports/ReportShell.tsx'), 'utf8');
+
+  it('the shell renders the page help link directly under its <h1>', () => {
+    const h1 = SHELL.indexOf('<h1');
+    expect(h1).toBeGreaterThan(-1);
+    expect(SHELL.indexOf('<HelpLink section={page.helpSection}', h1)).toBeGreaterThan(h1);
+  });
+
+  // Page file → the registry entry it renders → the section that entry must name.
+  const REPORT_PAGES: [string, string, string][] = [
+    ['reports/ProfitLossPage.tsx', 'profit-loss', 'profit-loss'],
+    ['reports/BalanceSheetPage.tsx', 'balance-sheet', 'balance-sheet'],
+    ['reports/CashFlowPage.tsx', 'cash-flow', 'cash-flow'],
+    ['reports/AgingReportsPage.tsx', 'ar-aging', 'aging'],
+    ['reports/TrialBalancePage.tsx', 'trial-balance', 'trial-balance'],
+  ];
+
+  it.each(REPORT_PAGES)('%s renders registry entry %s, whose section is %s', async (file, reportId, section) => {
+    const { getReportDefinition } = await import('../../../features/reports/reportRegistry');
+    const source = readFileSync(resolve(ROOT, 'src/features', file), 'utf8');
+    expect(source).toContain('<ReportShell');
+    expect(source).toContain(`getReportDefinition('${reportId}')`);
+    expect(getReportDefinition(reportId).page.helpSection).toBe(section);
+  });
+
+  it('every registered report points at a section that exists in the guide', async () => {
+    const { REPORTS } = await import('../../../features/reports/reportRegistry');
+    for (const report of REPORTS) {
+      expect(report.page.helpSection, report.id).toBeDefined();
+      expect(HELP_SECTIONS).toContain(report.page.helpSection);
+      expect(GUIDE_HTML).toContain(`id="${report.page.helpSection}"`);
+    }
+  });
+
+  it('Trial Balance still links the "does not balance" answer beside its status', () => {
+    const source = readFileSync(resolve(ROOT, 'src/features/reports/TrialBalancePage.tsx'), 'utf8');
+    expect(source).toContain('<HelpLink section="trial-balance-unbalanced"');
   });
 });
 

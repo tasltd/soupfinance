@@ -81,6 +81,8 @@ import { AgingReportsPage } from './features/reports/AgingReportsPage';
 import { TrialBalancePage } from './features/reports/TrialBalancePage';
 // Added: Scheduled Reports page for automated report delivery
 import { ScheduledReportsPage } from './features/reports/ScheduledReportsPage';
+// Added (SOUPFIN-103): registry-only reports render through one generic page
+import { RegistryReportPage } from './features/reports/RegistryReportPage';
 
 // Added: Corporate KYC Onboarding
 import {
@@ -318,6 +320,8 @@ export default function App() {
             <Route path="/reports/trial-balance" element={<TrialBalancePage />} />
             {/* Added: Scheduled Reports for automated report delivery */}
             <Route path="/reports/scheduled" element={<ScheduledReportsPage />} />
+            {/* Added (SOUPFIN-103): any registry entry with a source and columns */}
+            <Route path="/reports/view/:reportId" element={<RegistryReportPage />} />
 
             {/* Added: Corporate KYC Onboarding (protected) */}
             <Route path="/onboarding/company" element={<CompanyInfoPage />} />
