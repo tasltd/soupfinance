@@ -7,46 +7,24 @@
  * - Three sections for activity types with amounts
  * - Section subtotals and net cash flow calculation
  * - Beginning/Ending cash balance summary
+ *
+ * Changed (SOUPFIN-103): renders inside the shared <ReportShell>. Amounts were
+ * hardcoded to USD; they now follow the tenant's currency. The backend has no
+ * cash flow export yet, so PDF and Excel stay disabled and CSV is built here.
  */
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { getCashFlowStatement, type ReportFilters } from '../../api/endpoints/reports';
+import { getCashFlowStatement } from '../../api/endpoints/reports';
 import type { CashFlowStatement, CashFlowActivity } from '../../types';
-import { getFirstDayOfCurrentMonth, getTodayIsoDate } from '../../utils/date';
-// Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
-import { HelpLink } from '../../components/help';
+import { useFormatCurrency } from '../../stores';
+import { formatDisplayDate } from '../../utils/date';
+import { ReportShell } from './ReportShell';
+import { getReportDefinition } from './reportRegistry';
+import { formatDisplayRange } from './reportDates';
+import { useReportControls } from './useReportControls';
+import type { ClientExports } from './useReportExport';
 
-// Added: Currency formatter for consistent display
-const currencyFormatter = new Intl.NumberFormat('en-US', {
-  style: 'currency',
-  currency: 'USD',
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
-
-// Added: Format date for display (e.g., "January 20, 2026")
-function formatDateDisplay(dateStr: string): string {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-}
-
-// Added: Get first day of current month in YYYY-MM-DD format
-// Fix (SOUPFIN-64): was `new Date(y, m, 1).toISOString().split('T')[0]`, which
-// converts local midnight to UTC and so returned the previous month's last day
-// for any user east of UTC.
-const getFirstDayOfMonth = getFirstDayOfCurrentMonth;
-
-// Added: Get today's date in YYYY-MM-DD format
-// Fix (SOUPFIN-64): was `new Date().toISOString().split('T')[0]`, i.e. UTC
-// today rather than the user's own calendar day.
-const getTodayISO = getTodayIsoDate;
-
-// Fix (SOUPFIN-16): Allow navigating to historic years in the date picker.
-const REPORT_MIN_DATE = '1900-01-01';
+const DEFINITION = getReportDefinition('cash-flow');
 
 // Fix(SOUPFIN-11): Escape a single CSV cell — quotes the value when it contains
 // a comma, quote, or newline (per RFC 4180).
@@ -89,24 +67,23 @@ function buildCashFlowCsv(cashFlow: CashFlowStatement): string {
 }
 
 export function CashFlowPage() {
-  // Added: State for date range filter with default to current month
-  const [fromDate, setFromDate] = useState<string>(getFirstDayOfMonth());
-  const [toDate, setToDate] = useState<string>(getTodayISO());
+  const controls = useReportControls(DEFINITION.page);
+  const formatCurrency = useFormatCurrency();
+  const { from: fromDate, to: toDate } = controls.range;
 
   // Added: Fetch cash flow data using React Query
   const {
     data: cashFlow,
     isLoading,
+    isFetching,
     isError,
     error,
     refetch,
   } = useQuery<CashFlowStatement>({
     queryKey: ['cashFlowStatement', fromDate, toDate],
-    queryFn: () => {
-      const filters: ReportFilters = { from: fromDate, to: toDate };
-      return getCashFlowStatement(filters);
-    },
+    queryFn: () => getCashFlowStatement({ from: fromDate, to: toDate }),
     staleTime: 5 * 60 * 1000, // 5 minutes cache
+    enabled: controls.isRangeValid,
   });
 
   // Added: Calculate summary values
@@ -125,144 +102,32 @@ export function CashFlowPage() {
     };
   }, [cashFlow]);
 
-  // Fix(SOUPFIN-11): CSV export now runs entirely client-side from data already
-  // in memory, so users can download the report without waiting for a backend
-  // export endpoint. PDF/Excel remain backend-dependent for now.
-  const handleExport = (format: 'pdf' | 'xlsx' | 'csv') => {
-    if (format === 'csv' && cashFlow) {
-      try {
-        const csv = buildCashFlowCsv(cashFlow);
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `cash-flow-${fromDate}-to-${toDate}.csv`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-      } catch (err) {
-        console.error('Cash flow CSV export failed:', err);
-      }
-      return;
-    }
-    // NOTE: PDF/Excel export functionality requires backend endpoint implementation
-    console.log(`Export to ${format} requested - backend endpoint not yet available`);
-    alert(`Export to ${format.toUpperCase()} will be available when backend support is added.`);
-  };
+  // Fix(SOUPFIN-11): CSV export runs entirely client-side from data already in
+  // memory, so users can download the report without a backend export endpoint.
+  // The shell keeps the CSV button disabled until the statement has loaded.
+  const clientExports = useMemo<ClientExports | undefined>(
+    () =>
+      cashFlow
+        ? { csv: () => new Blob([buildCashFlowCsv(cashFlow)], { type: 'text/csv;charset=utf-8' }) }
+        : undefined,
+    [cashFlow]
+  );
 
   return (
-    <div className="flex flex-col gap-6" data-testid="cash-flow-page">
-      {/* Page Header */}
-      <div className="flex flex-wrap justify-between items-center gap-4">
-        <div className="flex flex-col gap-1">
-          <h1
-            className="text-3xl font-black tracking-tight text-text-light dark:text-text-dark"
-            data-testid="cash-flow-heading"
-          >
-            Cash Flow Statement
-          </h1>
-          <p className="text-subtle-text">
-            {cashFlow
-              ? `${formatDateDisplay(cashFlow.periodStart)} to ${formatDateDisplay(cashFlow.periodEnd)}`
-              : 'Cash movements and liquidity analysis'}
-          </p>
-          <HelpLink section="cash-flow" className="mt-1 self-start" />
-        </div>
-      </div>
-
-      {/* Toolbar: Date Range Picker + Export Buttons */}
-      <div
-        className="flex flex-wrap items-center justify-between gap-4 py-4 border-b border-border-light dark:border-border-dark"
-        data-testid="cash-flow-toolbar"
-      >
-        {/* Date Range Picker */}
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2">
-            <label htmlFor="fromDate" className="text-sm font-medium text-text-light dark:text-text-dark">
-              From:
-            </label>
-            <div className="relative">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-subtle-text">
-                calendar_today
-              </span>
-              <input
-                id="fromDate"
-                type="date"
-                value={fromDate}
-                min={REPORT_MIN_DATE}
-                onChange={(e) => setFromDate(e.target.value)}
-                className="pl-10 pr-4 py-2 h-10 border border-border-light dark:border-border-dark rounded-lg bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary/50 focus:border-primary"
-                data-testid="cash-flow-from-date"
-              />
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <label htmlFor="toDate" className="text-sm font-medium text-text-light dark:text-text-dark">
-              To:
-            </label>
-            <div className="relative">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-subtle-text">
-                calendar_today
-              </span>
-              <input
-                id="toDate"
-                type="date"
-                value={toDate}
-                min={REPORT_MIN_DATE}
-                onChange={(e) => setToDate(e.target.value)}
-                className="pl-10 pr-4 py-2 h-10 border border-border-light dark:border-border-dark rounded-lg bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary/50 focus:border-primary"
-                data-testid="cash-flow-to-date"
-              />
-            </div>
-          </div>
-          <button
-            onClick={() => refetch()}
-            className="flex items-center gap-2 h-10 px-4 border border-border-light dark:border-border-dark rounded-lg bg-surface-light dark:bg-surface-dark hover:bg-background-light dark:hover:bg-background-dark text-text-light dark:text-text-dark"
-            data-testid="cash-flow-refresh"
-          >
-            <span className="material-symbols-outlined text-lg">refresh</span>
-            Refresh
-          </button>
-        </div>
-
-        {/* Export Buttons (placeholder - backend not yet available) */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => handleExport('pdf')}
-            disabled
-            className="flex items-center justify-center gap-2 h-10 px-4 border border-border-light dark:border-border-dark rounded-lg text-subtle-text cursor-not-allowed opacity-50"
-            data-testid="cash-flow-export-pdf"
-            title="Export to PDF (coming soon)"
-          >
-            <span className="material-symbols-outlined text-lg">picture_as_pdf</span>
-            <span className="text-sm font-bold">PDF</span>
-          </button>
-          <button
-            onClick={() => handleExport('xlsx')}
-            disabled
-            className="flex items-center justify-center gap-2 h-10 px-4 border border-border-light dark:border-border-dark rounded-lg text-subtle-text cursor-not-allowed opacity-50"
-            data-testid="cash-flow-export-excel"
-            title="Export to Excel (coming soon)"
-          >
-            <span className="material-symbols-outlined text-lg">grid_on</span>
-            <span className="text-sm font-bold">Excel</span>
-          </button>
-          {/* Fix(SOUPFIN-11): CSV export is functional client-side; PDF/Excel
-              still require backend support and remain disabled. */}
-          <button
-            onClick={() => handleExport('csv')}
-            disabled={!cashFlow || isLoading}
-            className="flex items-center justify-center gap-2 h-10 px-4 border border-border-light dark:border-border-dark rounded-lg text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark disabled:opacity-50 disabled:cursor-not-allowed"
-            data-testid="cash-flow-export-csv"
-            title="Export to CSV"
-          >
-            <span className="material-symbols-outlined text-lg">download</span>
-            <span className="text-sm font-bold">CSV</span>
-          </button>
-        </div>
-      </div>
-
+    <ReportShell
+      page={DEFINITION.page}
+      controls={controls}
+      onRefresh={() => refetch()}
+      exportDefinition={DEFINITION}
+      exportDisabled={!cashFlow}
+      clientExports={clientExports}
+      isFetching={isFetching}
+      subtitle={
+        cashFlow
+          ? formatDisplayRange({ from: cashFlow.periodStart, to: cashFlow.periodEnd })
+          : 'Cash inflows and outflows for the period'
+      }
+    >
       {/* Loading State */}
       {isLoading && (
         <div
@@ -309,7 +174,7 @@ export function CashFlowPage() {
                 className="text-text-light dark:text-text-dark tracking-tight text-2xl font-bold"
                 data-testid="cash-flow-beginning-balance"
               >
-                {currencyFormatter.format(summary.beginningBalance)}
+                {formatCurrency(summary.beginningBalance)}
               </p>
             </div>
 
@@ -325,7 +190,7 @@ export function CashFlowPage() {
                 className={`tracking-tight text-2xl font-bold ${summary.netCashFlow >= 0 ? 'text-success' : 'text-danger'}`}
                 data-testid="cash-flow-net"
               >
-                {currencyFormatter.format(summary.netCashFlow)}
+                {formatCurrency(summary.netCashFlow)}
               </p>
             </div>
 
@@ -339,7 +204,7 @@ export function CashFlowPage() {
                 className="text-primary tracking-tight text-2xl font-bold"
                 data-testid="cash-flow-ending-balance"
               >
-                {currencyFormatter.format(summary.endingBalance)}
+                {formatCurrency(summary.endingBalance)}
               </p>
             </div>
           </div>
@@ -395,42 +260,42 @@ export function CashFlowPage() {
               <div className="flex justify-between items-center px-6 py-4">
                 <span className="text-text-light dark:text-text-dark">Beginning Cash Balance</span>
                 <span className="font-medium text-text-light dark:text-text-dark">
-                  {currencyFormatter.format(cashFlow.beginningCashBalance)}
+                  {formatCurrency(cashFlow.beginningCashBalance)}
                 </span>
               </div>
               {/* Operating Cash Flow */}
               <div className="flex justify-between items-center px-6 py-3 pl-10">
                 <span className="text-subtle-text">Cash from Operating Activities</span>
                 <span className={`font-medium ${cashFlow.totalOperatingCashFlow >= 0 ? 'text-success' : 'text-danger'}`}>
-                  {cashFlow.totalOperatingCashFlow >= 0 ? '+' : ''}{currencyFormatter.format(cashFlow.totalOperatingCashFlow)}
+                  {cashFlow.totalOperatingCashFlow >= 0 ? '+' : ''}{formatCurrency(cashFlow.totalOperatingCashFlow)}
                 </span>
               </div>
               {/* Investing Cash Flow */}
               <div className="flex justify-between items-center px-6 py-3 pl-10">
                 <span className="text-subtle-text">Cash from Investing Activities</span>
                 <span className={`font-medium ${cashFlow.totalInvestingCashFlow >= 0 ? 'text-success' : 'text-danger'}`}>
-                  {cashFlow.totalInvestingCashFlow >= 0 ? '+' : ''}{currencyFormatter.format(cashFlow.totalInvestingCashFlow)}
+                  {cashFlow.totalInvestingCashFlow >= 0 ? '+' : ''}{formatCurrency(cashFlow.totalInvestingCashFlow)}
                 </span>
               </div>
               {/* Financing Cash Flow */}
               <div className="flex justify-between items-center px-6 py-3 pl-10">
                 <span className="text-subtle-text">Cash from Financing Activities</span>
                 <span className={`font-medium ${cashFlow.totalFinancingCashFlow >= 0 ? 'text-success' : 'text-danger'}`}>
-                  {cashFlow.totalFinancingCashFlow >= 0 ? '+' : ''}{currencyFormatter.format(cashFlow.totalFinancingCashFlow)}
+                  {cashFlow.totalFinancingCashFlow >= 0 ? '+' : ''}{formatCurrency(cashFlow.totalFinancingCashFlow)}
                 </span>
               </div>
               {/* Net Cash Flow */}
               <div className="flex justify-between items-center px-6 py-4 bg-background-light dark:bg-background-dark">
                 <span className="font-bold text-text-light dark:text-text-dark">Net Cash Flow</span>
                 <span className={`font-bold text-lg ${cashFlow.netCashFlow >= 0 ? 'text-success' : 'text-danger'}`}>
-                  {cashFlow.netCashFlow >= 0 ? '+' : ''}{currencyFormatter.format(cashFlow.netCashFlow)}
+                  {cashFlow.netCashFlow >= 0 ? '+' : ''}{formatCurrency(cashFlow.netCashFlow)}
                 </span>
               </div>
               {/* Ending Cash Balance */}
               <div className="flex justify-between items-center px-6 py-4 border-t-2 border-text-light dark:border-text-dark">
                 <span className="font-black text-text-light dark:text-text-dark">Ending Cash Balance</span>
                 <span className="font-black text-xl text-primary">
-                  {currencyFormatter.format(cashFlow.endingCashBalance)}
+                  {formatCurrency(cashFlow.endingCashBalance)}
                 </span>
               </div>
             </div>
@@ -450,11 +315,11 @@ export function CashFlowPage() {
             <span className="material-symbols-outlined text-6xl text-subtle-text/50 mb-4">water_drop</span>
             <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">No cash flow activities</h3>
             <p className="text-subtle-text">
-              There are no cash flow activities for the period {formatDateDisplay(fromDate)} to {formatDateDisplay(toDate)}.
+              There are no cash flow activities for the period {formatDisplayDate(fromDate)} to {formatDisplayDate(toDate)}.
             </p>
           </div>
         )}
-    </div>
+    </ReportShell>
   );
 }
 
@@ -472,6 +337,7 @@ interface CashFlowSectionProps {
 }
 
 function CashFlowSection({ title, icon, iconColor, activities, total, testIdPrefix }: CashFlowSectionProps) {
+  const formatCurrency = useFormatCurrency();
   return (
     <div
       className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden"
@@ -510,7 +376,7 @@ function CashFlowSection({ title, icon, iconColor, activities, total, testIdPref
       >
         <span className="font-bold text-text-light dark:text-text-dark">Total {title}</span>
         <span className={`font-bold text-lg ${total >= 0 ? 'text-success' : 'text-danger'}`}>
-          {total >= 0 ? '+' : ''}{currencyFormatter.format(total)}
+          {total >= 0 ? '+' : ''}{formatCurrency(total)}
         </span>
       </div>
     </div>
@@ -527,6 +393,7 @@ interface CashFlowActivityRowProps {
 }
 
 function CashFlowActivityRow({ activity, testId }: CashFlowActivityRowProps) {
+  const formatCurrency = useFormatCurrency();
   const isInflow = activity.amount >= 0;
 
   return (
@@ -540,7 +407,7 @@ function CashFlowActivityRow({ activity, testId }: CashFlowActivityRowProps) {
       <span
         className={`text-sm font-medium whitespace-nowrap ${isInflow ? 'text-success' : 'text-danger'}`}
       >
-        {isInflow ? '+' : ''}{currencyFormatter.format(activity.amount)}
+        {isInflow ? '+' : ''}{formatCurrency(activity.amount)}
       </span>
     </div>
   );

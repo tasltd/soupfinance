@@ -4,37 +4,72 @@
  * Displays both A/R (Accounts Receivable) and A/P (Accounts Payable) aging reports
  * side by side, with age buckets: Current, 1-30 Days, 31-60 Days, 61-90 Days, Over 90 Days.
  *
+ * Changed (SOUPFIN-105): this overview now buckets the open invoices and bills
+ * itself (aging/agingEngine.ts), like the A/R and A/P Summary and Detail
+ * reports it links to, instead of reading /financeReports/agedReceivables and
+ * /agedPayables. Those endpoints count a 1-30 day amount in four buckets and
+ * never count anything older, so their totals could not match the ledger.
+ *
  * Reference: soupfinance-designs/ar-aging-report/, soupfinance-designs/ap-aging-report/
  */
-import { useState, useMemo } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  getARAgingReport,
-  getAPAgingReport,
-  exportFinanceReport,
-  getReportExtension,
-  type ReportFilters,
-} from '../../api/endpoints/reports';
-import { formatDisplayDate, getTodayIsoDate } from '../../utils/date';
+import { useMemo } from 'react';
+import { Link } from 'react-router-dom';
+import type { ReportFilters } from '../../api/endpoints/reports';
+import { formatDisplayDate } from '../../utils/date';
 // Fix (SOUPFIN-33 #4): tenant-currency formatter (was hardcoded USD/"$0.00").
 import { useFormatCurrency } from '../../stores';
 import type { AgingReport, AgingItem } from '../../types';
-// Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
-import { HelpLink } from '../../components/help';
+// Changed (SOUPFIN-103): the as-of picker, Today button and export buttons come
+// from the shared report shell. A/R and A/P are two registry entries that share
+// this page, so each table keeps its own export buttons.
+import { ReportExportButtons, ReportShell } from './ReportShell';
+import { AGING_OVERVIEW_PAGE, getReportDefinition, type ReportDefinition } from './reportRegistry';
+import { useReportControls } from './useReportControls';
+import type { ClientExports } from './useReportExport';
+import {
+  DEFAULT_BUCKET_CONFIG,
+  buildAgingSummary,
+  buildSummaryCsv,
+  type AgingSummary,
+  type OpenDocument,
+} from './aging/agingEngine';
+import { AGING_SIDES } from './aging/agingSides';
+import { useAgingDocuments } from './aging/useAgingData';
 
-// Fix(SOUPFIN-11/SOUPFIN-16): Earliest date users can pick for historical aging analysis.
-// The browser-native date picker's year navigation is gated by this min — users on
-// app.soupfinance.com reported the picker was "stuck" at 2026 with no way back, so we
-// widen to 1900-01-01 to expose a full century of historic years in the year selector.
-const AGING_MIN_DATE = '1900-01-01';
+const AR_DEFINITION = getReportDefinition('ar-aging');
+const AP_DEFINITION = getReportDefinition('ap-aging');
 
-// Fix (SOUPFIN-16): Whitelist export format → extension so a null/undefined format
-// never lands in the filename as ".null" (the exact bug reported on production).
+/**
+ * Added (SOUPFIN-105): the overview's five fixed columns are the default
+ * Current / 1-30 / 31-60 / 61-90 / Over 90 periods. Custom periods live on the
+ * Summary and Detail reports.
+ */
+function toAgingReport(asOf: string, summary: AgingSummary): AgingReport {
+  const [current, days30, days60, days90, over90] = [0, 1, 2, 3, 4].map((i) => summary.totals[i] ?? 0);
+  return {
+    asOf,
+    items: summary.rows.map((row) => ({
+      entity: { id: row.partyId || row.partyName, name: row.partyName },
+      current: row.amounts[0] ?? 0,
+      days30: row.amounts[1] ?? 0,
+      days60: row.amounts[2] ?? 0,
+      days90: row.amounts[3] ?? 0,
+      over90: row.amounts[4] ?? 0,
+      total: row.total,
+    })),
+    totals: { current, days30, days60, days90, over90, total: summary.total },
+  };
+}
 
-// Added: Get today's date in YYYY-MM-DD format
-// Fix (SOUPFIN-64): was `new Date().toISOString().split('T')[0]`, i.e. UTC
-// today rather than the user's own calendar day.
-const getTodayDate = getTodayIsoDate;
+function useOverviewAging(documents: OpenDocument[], asOf: string, partyLabel: string) {
+  return useMemo(() => {
+    const summary = buildAgingSummary(documents, DEFAULT_BUCKET_CONFIG);
+    const clientExports: ClientExports = {
+      csv: () => new Blob([buildSummaryCsv(summary, partyLabel, asOf)], { type: 'text/csv;charset=utf-8' }),
+    };
+    return { report: toAgingReport(asOf, summary), clientExports };
+  }, [documents, asOf, partyLabel]);
+}
 
 /*
  * Fix (SOUPFIN-33 #4): the module-level formatCurrency() that used to live here
@@ -99,8 +134,13 @@ interface AgingTableProps {
   isLoading: boolean;
   isError: boolean;
   error: Error | null;
-  onExport: (format: 'pdf' | 'xlsx' | 'csv') => void;
-  exportLoading: string | null;
+  /** The registry entry whose export this table's buttons run. */
+  definition: ReportDefinition;
+  exportFilters: ReportFilters;
+  /** Added (SOUPFIN-105): the CSV is built from the rows on screen. */
+  clientExports?: ClientExports;
+  /** Added (SOUPFIN-105): the Summary/Detail report for this side. */
+  reportPath: string;
   testIdPrefix: string;
 }
 
@@ -114,8 +154,10 @@ function AgingTable({
   isLoading,
   isError,
   error,
-  onExport,
-  exportLoading,
+  definition,
+  exportFilters,
+  clientExports,
+  reportPath,
   testIdPrefix,
 }: AgingTableProps) {
   // Fix (SOUPFIN-33 #4): amounts follow the tenant's configured currency (GH₵ for
@@ -132,38 +174,24 @@ function AgingTable({
         <div className="flex items-center gap-3">
           <span className="material-symbols-outlined text-xl text-primary">{icon}</span>
           <h3 className="text-lg font-bold text-text-light dark:text-text-dark">{title}</h3>
+          <Link
+            to={reportPath}
+            className="text-sm font-bold text-primary hover:underline"
+            data-testid={`${testIdPrefix}-open-report`}
+          >
+            View details
+          </Link>
         </div>
 
         {/* Export Buttons */}
-        <div className="flex gap-2">
-          <button
-            onClick={() => onExport('pdf')}
-            disabled={exportLoading !== null || isLoading || !data}
-            className="flex items-center gap-1.5 h-9 px-3 rounded-lg bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm hover:bg-primary/10 disabled:opacity-50"
-            data-testid={`${testIdPrefix}-export-pdf`}
-          >
-            <span className="material-symbols-outlined text-base">picture_as_pdf</span>
-            <span className="hidden sm:inline">{exportLoading === 'pdf' ? '...' : 'PDF'}</span>
-          </button>
-          <button
-            onClick={() => onExport('xlsx')}
-            disabled={exportLoading !== null || isLoading || !data}
-            className="flex items-center gap-1.5 h-9 px-3 rounded-lg bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm hover:bg-primary/10 disabled:opacity-50"
-            data-testid={`${testIdPrefix}-export-excel`}
-          >
-            <span className="material-symbols-outlined text-base">table_view</span>
-            <span className="hidden sm:inline">{exportLoading === 'xlsx' ? '...' : 'Excel'}</span>
-          </button>
-          <button
-            onClick={() => onExport('csv')}
-            disabled={exportLoading !== null || isLoading || !data}
-            className="flex items-center gap-1.5 h-9 px-3 rounded-lg bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm hover:bg-primary/10 disabled:opacity-50"
-            data-testid={`${testIdPrefix}-export-csv`}
-          >
-            <span className="material-symbols-outlined text-base">download</span>
-            <span className="hidden sm:inline">{exportLoading === 'csv' ? '...' : 'CSV'}</span>
-          </button>
-        </div>
+        <ReportExportButtons
+          definition={definition}
+          filters={exportFilters}
+          testIdPrefix={testIdPrefix}
+          disabled={isLoading || !data}
+          clientExports={clientExports}
+          size="sm"
+        />
       </div>
 
       {/* Table Content */}
@@ -318,152 +346,41 @@ export function AgingReportsPage() {
   // Fix (SOUPFIN-33 #4): summary cards use the tenant currency, not a hardcoded "$".
   const formatCurrency = useFormatCurrency();
 
-  // Added: As-of date filter state with default to today
-  const defaultDate = useMemo(() => getTodayDate(), []);
-  const [asOfDate, setAsOfDate] = useState<string>(defaultDate);
+  // Changed (SOUPFIN-103): as-of date (default: the user's own today) from the shell
+  const controls = useReportControls(AGING_OVERVIEW_PAGE);
+  const asOfDate = controls.asOf;
 
-  // Added: Export loading states for each section
-  const [arExportLoading, setArExportLoading] = useState<string | null>(null);
-  const [apExportLoading, setApExportLoading] = useState<string | null>(null);
+  // Changed (SOUPFIN-105): open invoices and bills, bucketed in the browser.
+  const ar = useAgingDocuments('receivables', asOfDate, controls.isRangeValid);
+  const ap = useAgingDocuments('payables', asOfDate, controls.isRangeValid);
+  const arOverview = useOverviewAging(ar.documents, asOfDate, AGING_SIDES.receivables.partyLabel);
+  const apOverview = useOverviewAging(ap.documents, asOfDate, AGING_SIDES.payables.partyLabel);
+  const arAgingData = ar.isLoaded ? arOverview.report : undefined;
+  const apAgingData = ap.isLoaded ? apOverview.report : undefined;
+  const arLoading = ar.isLoading;
+  const apLoading = ap.isLoading;
 
-  // Fix(SOUPFIN-11): React Query client used by the "Today" button so that
-  // clicking it always refreshes data, even when the date is already today.
-  // The previous implementation only called setAsOfDate, which is a no-op
-  // when the new value equals the old value, leaving the button silent.
-  const queryClient = useQueryClient();
-
-  // Fetch A/R aging report
-  const {
-    data: arAgingData,
-    isLoading: arLoading,
-    isError: arIsError,
-    error: arError,
-  } = useQuery({
-    queryKey: ['arAging', asOfDate],
-    queryFn: () => getARAgingReport(asOfDate),
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
-
-  // Fetch A/P aging report
-  const {
-    data: apAgingData,
-    isLoading: apLoading,
-    isError: apIsError,
-    error: apError,
-  } = useQuery({
-    queryKey: ['apAging', asOfDate],
-    queryFn: () => getAPAgingReport(asOfDate),
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
-
-  // Handle A/R export
-  const handleArExport = async (format: 'pdf' | 'xlsx' | 'csv') => {
-    setArExportLoading(format);
-    try {
-      const filters: ReportFilters = { from: asOfDate, to: asOfDate };
-      const blob = await exportFinanceReport('agedReceivables', filters, format);
-      // Create download link
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      // Fix (SOUPFIN-16): Use whitelist helper so null/undefined never becomes ".null".
-      link.download = `ar-aging-${asOfDate}.${getReportExtension(format)}`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error('A/R export failed:', err);
-    } finally {
-      setArExportLoading(null);
-    }
-  };
-
-  // Handle A/P export
-  const handleApExport = async (format: 'pdf' | 'xlsx' | 'csv') => {
-    setApExportLoading(format);
-    try {
-      const filters: ReportFilters = { from: asOfDate, to: asOfDate };
-      const blob = await exportFinanceReport('agedPayables', filters, format);
-      // Create download link
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      // Fix (SOUPFIN-16): Use whitelist helper so null/undefined never becomes ".null".
-      link.download = `ap-aging-${asOfDate}.${getReportExtension(format)}`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error('A/P export failed:', err);
-    } finally {
-      setApExportLoading(null);
-    }
+  // Fix(SOUPFIN-11): the "Today" button must refresh even when the date is
+  // already today. The shell calls this when Reset changes nothing.
+  const refreshBoth = () => {
+    ar.refetch();
+    ap.refetch();
   };
 
   return (
-    <div className="flex flex-col gap-6" data-testid="aging-reports-page">
-      {/* Page Header */}
-      <div className="flex flex-wrap justify-between items-center gap-4">
-        <div>
-          <h1
-            className="text-3xl font-black tracking-tight text-text-light dark:text-text-dark"
-            data-testid="aging-reports-heading"
-          >
-            Aging Reports
-          </h1>
-          <p className="text-subtle-text">
-            Outstanding receivables and payables by age as of{' '}
-            {/* Fix (SOUPFIN-30 #12): format the date for display (was raw ISO). */}
-            <span className="font-medium text-text-light dark:text-text-dark">{formatDisplayDate(asOfDate)}</span>
-          </p>
-          <HelpLink section="aging" className="mt-1 self-start" />
-        </div>
-
-        {/* As Of Date Picker */}
-        <div className="flex items-center gap-3">
-          {/* Fix (SOUPFIN-33 #6): the label wrapped only the icon/text — it pointed at no
-              control. Bind it to the picker with htmlFor/id. */}
-          <label className="flex items-center gap-2" htmlFor="aging-as-of-date">
-            <span className="material-symbols-outlined text-lg text-subtle-text">schedule</span>
-            <span className="text-sm font-medium text-text-light dark:text-text-dark">As of:</span>
-          </label>
-          <input
-            type="date"
-            id="aging-as-of-date"
-            name="aging-as-of-date"
-            aria-label="Aging reports as-of date"
-            value={asOfDate}
-            onChange={(e) => setAsOfDate(e.target.value)}
-            min={AGING_MIN_DATE}
-            max={getTodayDate()}
-            className="h-10 px-4 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary/50 focus:border-primary"
-            data-testid="aging-reports-date-picker"
-          />
-          <button
-            onClick={() => {
-              // Fix(SOUPFIN-11): Force a refetch even when the date is already
-              // today. Previously this only called setState which React would
-              // bail out of when the value did not change, leaving the button
-              // visually clickable but functionally inert.
-              const today = getTodayDate();
-              if (asOfDate !== today) {
-                setAsOfDate(today);
-              } else {
-                queryClient.invalidateQueries({ queryKey: ['arAging'] });
-                queryClient.invalidateQueries({ queryKey: ['apAging'] });
-              }
-            }}
-            className="flex items-center gap-2 h-10 px-4 rounded-lg bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm hover:bg-primary/10"
-            data-testid="aging-reports-reset-date"
-          >
-            <span className="material-symbols-outlined text-base">today</span>
-            Today
-          </button>
-        </div>
-      </div>
-
+    <ReportShell
+      page={AGING_OVERVIEW_PAGE}
+      controls={controls}
+      onRefresh={refreshBoth}
+      isFetching={ar.isFetching || ap.isFetching}
+      subtitle={
+        <>
+          Outstanding receivables and payables by age as of{' '}
+          {/* Fix (SOUPFIN-30 #12): format the date for display (was raw ISO). */}
+          <span className="font-medium text-text-light dark:text-text-dark">{formatDisplayDate(asOfDate)}</span>
+        </>
+      }
+    >
       {/* Two-Column Grid: A/R and A/P side by side on large screens */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {/* Accounts Receivable Aging */}
@@ -475,10 +392,12 @@ export function AgingReportsPage() {
           entityPlural="customers"
           data={arAgingData}
           isLoading={arLoading}
-          isError={arIsError}
-          error={arError as Error | null}
-          onExport={handleArExport}
-          exportLoading={arExportLoading}
+          isError={ar.isError}
+          error={ar.error}
+          definition={AR_DEFINITION}
+          exportFilters={controls.filters}
+          clientExports={arOverview.clientExports}
+          reportPath={AGING_SIDES.receivables.paths.summary}
           testIdPrefix="ar-aging"
         />
 
@@ -491,10 +410,12 @@ export function AgingReportsPage() {
           entityPlural="vendors"
           data={apAgingData}
           isLoading={apLoading}
-          isError={apIsError}
-          error={apError as Error | null}
-          onExport={handleApExport}
-          exportLoading={apExportLoading}
+          isError={ap.isError}
+          error={ap.error}
+          definition={AP_DEFINITION}
+          exportFilters={controls.filters}
+          clientExports={apOverview.clientExports}
+          reportPath={AGING_SIDES.payables.paths.summary}
           testIdPrefix="ap-aging"
         />
       </div>
@@ -557,6 +478,6 @@ export function AgingReportsPage() {
           </div>
         </div>
       )}
-    </div>
+    </ReportShell>
   );
 }

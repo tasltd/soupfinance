@@ -232,6 +232,11 @@ export interface AccountSettings {
   // Feature flags
   disabled?: boolean;
   archived?: boolean;
+  // Added (SOUPFIN-105): the ledger accounts invoices and bills post to
+  // (soupbroker.Account.defaultReceivableAccount / defaultPayableAccount). The
+  // aging reports reconcile against their Balance Sheet balances.
+  defaultReceivableAccount?: { id: string; serialised?: string; class?: string } | null;
+  defaultPayableAccount?: { id: string; serialised?: string; class?: string } | null;
 }
 
 // ============================================================================

@@ -726,3 +726,72 @@ export async function exportFinanceReport(
   );
   return response.data;
 }
+
+// =============================================================================
+// Added (SOUPFIN-103): Rows for registry-only reports
+// =============================================================================
+
+/**
+ * The response shapes a registry-only report can read rows from.
+ *
+ * - `array`: the body is the row list (or a wrapper normalizeTransactions knows).
+ * - `groupedAccountList`: the FinanceOtherReportsService.accountBalances shape
+ *   that trialBalance and accountBalances both return:
+ *   `{ resultList: { ASSET: { accountList: [...] }, ... } }`. Each row gets a
+ *   readable `ledgerGroup` label added so a column can show it.
+ */
+export type ReportRowSource = 'array' | 'groupedAccountList';
+
+export type ReportRow = Record<string, unknown>;
+
+const LEDGER_GROUP_LABELS: Record<string, string> = {
+  ASSET: 'Assets',
+  LIABILITY: 'Liabilities',
+  EQUITY: 'Equity',
+  REVENUE: 'Revenue',
+  INCOME: 'Revenue',
+  EXPENSE: 'Expenses',
+};
+
+/** Pull the row list out of a report response. Unknown shapes become []. */
+export function extractReportRows(data: unknown, source: ReportRowSource): ReportRow[] {
+  if (source === 'array') {
+    return normalizeTransactions(data) as unknown as ReportRow[];
+  }
+
+  if (!data || typeof data !== 'object') return [];
+  const resultList = (data as { resultList?: unknown }).resultList;
+  if (!resultList || typeof resultList !== 'object') return [];
+
+  const rows: ReportRow[] = [];
+  for (const [group, value] of Object.entries(resultList as Record<string, unknown>)) {
+    const accountList = (value as { accountList?: unknown } | null)?.accountList;
+    if (!Array.isArray(accountList)) continue;
+    for (const account of accountList) {
+      if (account && typeof account === 'object') {
+        rows.push({ ...(account as ReportRow), ledgerGroup: LEDGER_GROUP_LABELS[group] ?? group });
+      }
+    }
+  }
+  return rows;
+}
+
+/**
+ * Fetch the rows of a registry-only report.
+ * GET /rest{endpoint}?from=...&to=...
+ *
+ * Errors propagate (SOUPFIN-30): a failed request must reach React Query as an
+ * error, not render as an empty report.
+ */
+export async function fetchReportRows(
+  endpoint: string,
+  filters: ReportFilters,
+  source: ReportRowSource
+): Promise<ReportRow[]> {
+  const query = toQueryString(filters);
+  const response = await apiClient.get<unknown>(`${endpoint}?${query}`);
+  return extractReportRows(response.data, source);
+}
+
+/** The backend report types the export endpoint accepts. */
+export type FinanceReportType = Parameters<typeof exportFinanceReport>[0];
