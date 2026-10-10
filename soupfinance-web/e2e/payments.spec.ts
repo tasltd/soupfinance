@@ -10,6 +10,7 @@ import {
   installUnmockedApiGuard,
   mockAmbientApi,
   type UnmockedApiGuard,
+  createResponseGate,
 } from './fixtures';
 
 // ===========================================================================
@@ -705,9 +706,11 @@ test.describe('Payment Management', () => {
     test('shows loading state while fetching invoices', async ({ page }) => {
       await mockTokenValidationApi(page, true);
 
-      // Fix: Increased delay to 5s to eliminate race condition with page navigation
+      // Fix (SOUPFIN-228): hold the response until the spinner has been seen; a
+      // fixed delay raced page start-up (see createResponseGate).
+      const gate = createResponseGate();
       await page.route('**/rest/invoice/index.json*', async (route) => {
-        await new Promise((resolve) => setTimeout(resolve, 5000));
+        await gate.released;
         route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -730,8 +733,8 @@ test.describe('Payment Management', () => {
 
       await page.goto('/payments/new');
 
-      // Fix: Increased timeout to 5s to match the delayed response
-      await expect(page.locator('text=Loading')).toBeVisible({ timeout: 5000 });
+      await expect(page.locator('text=Loading')).toBeVisible({ timeout: 15000 });
+      gate.release();
     });
   });
 

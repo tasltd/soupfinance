@@ -18,6 +18,7 @@
  */
 import { test, expect, type Page } from '@playwright/test';
 import {
+  mockAmbientApi,
   mockLoginApi,
   mockTokenValidationApi,
   mockTaxEntriesApi,
@@ -125,6 +126,9 @@ test.describe('SOUPFIN-59 — the minus sign leads the currency symbol', () => {
   test.skip(isLxcMode(), 'Needs a pinned GHS tenant and a loss-making month; mock mode only.');
 
   test.beforeEach(async ({ page }) => {
+    // Fix (SOUPFIN-228): covers the dashboard's corporate KYC lookup, which would
+    // otherwise 401 through the dev proxy and bounce the signed-in page to /login.
+    await mockAmbientApi(page);
     await mockLoginApi(page, true);
     await mockTokenValidationApi(page, true);
     await mockTaxEntriesApi(page);

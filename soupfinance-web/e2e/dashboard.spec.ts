@@ -5,6 +5,8 @@
  */
 import { test, expect } from '@playwright/test';
 import {
+  mockAmbientApi,
+  createResponseGate,
   mockDashboardApi,
   mockTokenValidationApi,
   mockInvoices,
@@ -34,6 +36,9 @@ test.describe('Dashboard', () => {
     });
     // Added: Validate API response shapes at runtime
     await setupResponseValidation(page);
+    // Fix (SOUPFIN-228): tests that mock invoices and bills one by one still load
+    // the dashboard's corporate KYC lookup; unmocked, its 401 sends them to /login.
+    await mockAmbientApi(page);
   });
 
   test.describe('Dashboard Page Loading', () => {
@@ -185,9 +190,12 @@ test.describe('Dashboard', () => {
       // Changed: Use specific endpoint pattern and add token validation mock
       await mockTokenValidationApi(page, true);
 
-      // Changed: Use longer delay (5s) to reliably test loading state
+      // Fix (SOUPFIN-228): hold both responses until the loading state has been
+      // seen. A fixed 5s delay raced page start-up, which takes longer than that
+      // when the whole suite runs in parallel.
+      const gate = createResponseGate();
       await page.route('**/rest/invoice/index.json*', async (route) => {
-        await new Promise((resolve) => setTimeout(resolve, 5000));
+        await gate.released;
         route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -195,7 +203,7 @@ test.describe('Dashboard', () => {
         });
       });
       await page.route('**/rest/bill/index.json*', async (route) => {
-        await new Promise((resolve) => setTimeout(resolve, 5000));
+        await gate.released;
         route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -207,12 +215,13 @@ test.describe('Dashboard', () => {
       await page.goto('/dashboard', { waitUntil: 'commit' });
 
       // Wait for page to start loading data
-      await page.waitForSelector('[data-testid="dashboard-page"]', { timeout: 5000 });
+      await page.waitForSelector('[data-testid="dashboard-page"]', { timeout: 15000 });
 
-      // Should show loading state while API is delayed
-      await expect(page.getByTestId('dashboard-invoices-loading')).toBeVisible({ timeout: 3000 });
+      // Should show loading state while API is held
+      await expect(page.getByTestId('dashboard-invoices-loading')).toBeVisible({ timeout: 10000 });
       await takeScreenshot(page, 'dashboard-loading-state');
 
+      gate.release();
       // Wait for loading to complete
       await expect(page.getByTestId('dashboard-invoices-table')).toBeVisible({ timeout: 10000 });
     });

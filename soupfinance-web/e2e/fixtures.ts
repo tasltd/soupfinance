@@ -997,6 +997,12 @@ export async function mockDashboardApi(
     });
   });
 
+  // Fix (SOUPFIN-228): the dashboard also looks up the tenant's corporate KYC
+  // application (SOUPFIN-55). Unmocked, that call reached the dev proxy, got a 401,
+  // and the client.ts interceptor sent the page to /login, so every spec that
+  // relied on this helper alone timed out in page.goto.
+  await mockNoCorporateApplication(page);
+
   // Mock token validation for authenticated page
   await mockTokenValidationApi(page, true);
 }
@@ -1322,6 +1328,25 @@ export async function mockAmbientApi(page: import('@playwright/test').Page) {
   // onboarding entry point. Default to "none", so existing dashboard specs see
   // no banner and their assertions/screenshots are unaffected. Routes are LIFO,
   // so soupfin-55's own spec still wins by registering its own after this.
+  await mockNoCorporateApplication(page);
+}
+
+/**
+ * Mock the corporate KYC lookup as "this tenant has no corporate application".
+ *
+ * `/rest/corporate/current.json` answers 404 (production has no `current`
+ * action) and the `/rest/corporate/index.json` fallback answers an empty list, so
+ * the dashboard shows no onboarding banner.
+ *
+ * Added (SOUPFIN-228): shared by mockAmbientApi and mockDashboardApi. A spec that
+ * needs a corporate registers its own routes AFTER these, which then take
+ * precedence (Playwright matches route handlers in reverse registration order).
+ *
+ * CONDITIONAL: Skips mocking in LXC mode.
+ */
+export async function mockNoCorporateApplication(page: import('@playwright/test').Page) {
+  if (isLxcMode()) return;
+
   await page.route('**/rest/corporate/current*', (route) =>
     route.fulfill({
       status: 404,
@@ -1329,7 +1354,32 @@ export async function mockAmbientApi(page: import('@playwright/test').Page) {
       body: JSON.stringify({ error: 'Not Found' }),
     })
   );
-  await page.route('**/rest/corporate/index.json*', (route) => route.fulfill(json([])));
+  await page.route('**/rest/corporate/index.json*', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) })
+  );
+}
+
+/**
+ * Hold a mocked response until the test releases it.
+ *
+ * Loading-state tests used to delay their mock by a fixed 3-5 seconds and hope
+ * the spinner was still up when they looked. page.goto() waits for the `load`
+ * event, which waits for the Google Fonts stylesheet; from a slow network or a
+ * busy parallel run that alone takes longer than the delay, so the spinner was
+ * gone before the assertion ran. A gate removes the race: the response stays
+ * pending until the spinner has been seen and screenshotted.
+ *
+ * Usage: create the gate, `await gate.released` inside the route handler, and
+ * call `gate.release()` after the loading assertions.
+ *
+ * Added (SOUPFIN-228).
+ */
+export function createResponseGate() {
+  let release!: () => void;
+  const released = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  return { released, release };
 }
 
 // ===========================================================================

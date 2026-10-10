@@ -13,7 +13,12 @@
  */
 import { test, expect } from '@playwright/test';
 // Changed: Import mockTokenValidationApi to mock /rest/user/current.json during auth initialization
-import { takeScreenshot, mockTokenValidationApi, setupResponseValidation } from './fixtures';
+import {
+  takeScreenshot,
+  mockTokenValidationApi,
+  setupResponseValidation,
+  createResponseGate,
+} from './fixtures';
 
 // =============================================================================
 // Mock Data
@@ -1317,9 +1322,11 @@ test.describe('Report Loading States', () => {
   });
 
   test('shows loading state for trial balance', async ({ page }) => {
-    // Fix: Increased delay from 3s to 5s to eliminate race condition with page navigation
+    // Fix (SOUPFIN-228): hold the response until the spinner has been seen; a
+    // fixed delay raced page start-up (see createResponseGate).
+    const gate = createResponseGate();
     await page.route('**/rest/financeReports/trialBalance*', async (route) => {
-      await new Promise((resolve) => setTimeout(resolve, 5000));
+      await gate.released;
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -1329,17 +1336,21 @@ test.describe('Report Loading States', () => {
 
     await page.goto('/reports/trial-balance');
 
-    await expect(page.getByTestId('trial-balance-loading')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByTestId('trial-balance-loading')).toBeVisible({ timeout: 15000 });
 
     await takeScreenshot(page, 'trial-balance-loading');
 
     // Wait for data to load
+    gate.release();
     await expect(page.getByTestId('trial-balance-table')).toBeVisible({ timeout: 10000 });
   });
 
   test('shows loading state for profit & loss', async ({ page }) => {
+    // Fix (SOUPFIN-228): hold the response until the spinner has been seen; a
+    // fixed delay raced page start-up (see createResponseGate).
+    const gate = createResponseGate();
     await page.route('**/rest/financeReports/incomeStatement*', async (route) => {
-      await new Promise((resolve) => setTimeout(resolve, 3000));
+      await gate.released;
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -1349,15 +1360,18 @@ test.describe('Report Loading States', () => {
 
     await page.goto('/reports/pnl');
 
-    await expect(page.getByTestId('profit-loss-loading')).toBeVisible({ timeout: 3000 });
+    await expect(page.getByTestId('profit-loss-loading')).toBeVisible({ timeout: 15000 });
 
     await takeScreenshot(page, 'profit-loss-loading');
+    gate.release();
   });
 
   test('shows loading state for balance sheet', async ({ page }) => {
-    // Fix: Increased delay from 3s to 5s to eliminate race condition with page navigation
+    // Fix (SOUPFIN-228): hold the response until the spinner has been seen; a
+    // fixed delay raced page start-up (see createResponseGate).
+    const gate = createResponseGate();
     await page.route('**/rest/financeReports/balanceSheet*', async (route) => {
-      await new Promise((resolve) => setTimeout(resolve, 5000));
+      await gate.released;
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -1367,15 +1381,19 @@ test.describe('Report Loading States', () => {
 
     await page.goto('/reports/balance-sheet');
 
-    await expect(page.getByTestId('balance-sheet-loading')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByTestId('balance-sheet-loading')).toBeVisible({ timeout: 15000 });
 
     await takeScreenshot(page, 'balance-sheet-loading');
+    gate.release();
   });
 
   // Fix: Increased mock delay and assertion timeout to eliminate race condition flakiness
   test('shows loading state for cash flow', async ({ page }) => {
+    // Fix (SOUPFIN-228): hold the response until the spinner has been seen; a
+    // fixed delay raced page start-up (see createResponseGate).
+    const gate = createResponseGate();
     await page.route('**/rest/financeReports/accountTransactions*', async (route) => {
-      await new Promise((resolve) => setTimeout(resolve, 5000));
+      await gate.released;
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -1385,9 +1403,10 @@ test.describe('Report Loading States', () => {
 
     await page.goto('/reports/cash-flow');
 
-    await expect(page.getByTestId('cash-flow-loading')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByTestId('cash-flow-loading')).toBeVisible({ timeout: 15000 });
 
     await takeScreenshot(page, 'cash-flow-loading');
+    gate.release();
   });
 
   test('shows loading states for aging reports', async ({ page }) => {

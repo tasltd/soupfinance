@@ -29,6 +29,7 @@ import {
   setupResponseValidation,
   installUnmockedApiGuard,
   mockAmbientApi,
+  createResponseGate,
   type UnmockedApiGuard,
 } from './fixtures';
 
@@ -572,9 +573,12 @@ test.describe('Bill Management', () => {
       // Mock token validation to keep user authenticated
       await mockTokenValidationApi(page, true);
 
-      // Fix: Increased delay to 5s to eliminate race condition with page navigation
+      // Fix (SOUPFIN-228): hold the response until the loading state has been seen.
+      // A fixed 5s delay raced page start-up, which takes longer than that when the
+      // whole suite runs in parallel, so the spinner was gone before it was checked.
+      const gate = createResponseGate();
       await page.route('**/rest/bill/index.json*', async (route: any) => {
-        await new Promise((resolve) => setTimeout(resolve, 5000));
+        await gate.released;
         route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -585,12 +589,13 @@ test.describe('Bill Management', () => {
       // Navigate to the page
       await page.goto('/bills', { waitUntil: 'commit' });
 
-      // Fix: Increased timeout to 5s to match the delayed response
-      await expect(page.getByTestId('bill-list-loading')).toBeVisible({ timeout: 5000 });
+      await expect(page.getByTestId('bill-list-loading')).toBeVisible({ timeout: 15000 });
       await takeScreenshot(page, 'bills-list-loading');
 
-      // Wait for table to appear after delay
-      await expect(page.getByTestId('bill-list-table')).toBeVisible({ timeout: 5000 });
+      // Let the bills through, then the table replaces the spinner
+      gate.release();
+      await expect(page.getByTestId('bill-list-table')).toBeVisible({ timeout: 10000 });
+      await expect(page.getByTestId('bill-list-loading')).toHaveCount(0);
     });
 
     test('shows empty state when no bills exist', async ({ page }) => {

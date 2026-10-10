@@ -19,6 +19,7 @@ import {
   mockTokenValidationApi,
   takeScreenshot,
   setupResponseValidation,
+  createResponseGate,
 } from './fixtures';
 
 // Added: Test constants for corporate onboarding
@@ -191,9 +192,11 @@ test.describe('Corporate Onboarding Flow', () => {
     });
 
     test('shows loading state while fetching data', async ({ page }) => {
-      // Fix: 5000ms delay so loading spinner is reliably visible (page navigation consumes ~2s)
+      // Fix (SOUPFIN-228): hold the response until the spinner has been seen; a
+      // fixed delay raced page start-up (see createResponseGate).
+      const gate = createResponseGate();
       await page.route(`**/rest/corporate/show/${CORPORATE_ID}*`, async (route) => {
-        await new Promise((resolve) => setTimeout(resolve, 5000));
+        await gate.released;
         route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -203,13 +206,15 @@ test.describe('Corporate Onboarding Flow', () => {
 
       await page.goto(BASE_URL_COMPANY);
 
-      // Fix: Check for either spinner or loading text with 5s timeout
-      const hasSpinner = await page.locator('.animate-spin').isVisible({ timeout: 5000 }).catch(() => false);
-      const hasLoadingText = await page.getByText(/loading/i).isVisible({ timeout: 5000 }).catch(() => false);
-      expect(hasSpinner || hasLoadingText).toBeTruthy();
+      // Either the spinner or loading text. isVisible() does not wait, so the old
+      // isVisible({ timeout }) checks only ever looked once.
+      await expect(
+        page.locator('.animate-spin').or(page.getByText(/loading/i)).first()
+      ).toBeVisible({ timeout: 15000 });
       await takeScreenshot(page, 'onboarding-company-loading');
 
-      // Wait for content to load after delay resolves
+      // Wait for content to load after the response is released
+      gate.release();
       await expect(page.getByText('Company Information')).toBeVisible({ timeout: 15000 });
     });
   });
@@ -610,9 +615,11 @@ test.describe('Corporate Onboarding Flow', () => {
     });
 
     test('shows loading state while fetching documents', async ({ page }) => {
-      // Changed: Increased delay from 1s to 3s for reliable loading state detection
+      // Fix (SOUPFIN-228): hold the response until the spinner has been seen; a
+      // fixed delay raced page start-up (see createResponseGate).
+      const gate = createResponseGate();
       await page.route(`**/rest/corporateDocuments/index*`, async (route) => {
-        await new Promise((resolve) => setTimeout(resolve, 3000));
+        await gate.released;
         route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -622,9 +629,9 @@ test.describe('Corporate Onboarding Flow', () => {
 
       await page.goto(BASE_URL_DOCUMENTS);
 
-      // Changed: Added timeout to handle race condition with page load
-      await expect(page.locator('.animate-spin').first()).toBeVisible({ timeout: 3000 });
+      await expect(page.locator('.animate-spin').first()).toBeVisible({ timeout: 15000 });
       await takeScreenshot(page, 'onboarding-documents-loading');
+      gate.release();
     });
   });
 
@@ -779,9 +786,11 @@ test.describe('Corporate Onboarding Flow', () => {
     });
 
     test('shows loading state while fetching data', async ({ page }) => {
-      // Fix: Increased delay to 5s to eliminate race condition with page navigation
+      // Fix (SOUPFIN-228): hold the response until the spinner has been seen; a
+      // fixed delay raced page start-up (see createResponseGate).
+      const gate = createResponseGate();
       await page.route(`**/rest/corporate/show/${CORPORATE_ID}*`, async (route) => {
-        await new Promise((resolve) => setTimeout(resolve, 5000));
+        await gate.released;
         route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -793,9 +802,9 @@ test.describe('Corporate Onboarding Flow', () => {
 
       await page.goto(BASE_URL_STATUS);
 
-      // Fix: Increased timeout to 5s to match the delayed response
-      await expect(page.locator('.animate-spin').first()).toBeVisible({ timeout: 5000 });
+      await expect(page.locator('.animate-spin').first()).toBeVisible({ timeout: 15000 });
       await takeScreenshot(page, 'onboarding-status-loading');
+      gate.release();
     });
   });
 
