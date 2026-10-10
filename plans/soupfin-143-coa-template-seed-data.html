@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SOUPFIN-143 — COA template domain and seed data (backend plan)</title>
+<script type="application/json" id="plan-index">
+{
+  "title": "SOUPFIN-143 — COA template domain and seed data",
+  "revision": "1",
+  "goal": "Every new SERVICES or TRADING tenant starts with a lean 69-90 account chart that contains every system account invoice and bill posting needs, seeded from versioned JSON templates with a Ghana tax overlay and optional industry overlays.",
+  "stories": [
+    {
+      "id": "P1",
+      "title": "Template data (categories, account types, SERVICES, TRADING, GH, 6 industries, service-description map) committed in plans/coa-templates/",
+      "status": "done"
+    },
+    {
+      "id": "P2",
+      "title": "Reference composer and 50-check validator (node --test plans/coa-templates/coa-templates.test.mjs)",
+      "status": "done"
+    },
+    {
+      "id": "P3",
+      "title": "Backend: LedgerAccountType enum, LedgerAccount.accountType, TaxEntry liability/recoverable FKs, Flyway migration",
+      "status": "todo"
+    },
+    {
+      "id": "P4",
+      "title": "Backend: CoaTemplateService (compose, seed with dry run, listTemplates) replacing createTrading/ServicesChartOfAccounts",
+      "status": "todo"
+    },
+    {
+      "id": "P5",
+      "title": "Backend: default A/R and A/P FKs at seed time; linkLookups for service descriptions and tax entries",
+      "status": "todo"
+    },
+    {
+      "id": "P6",
+      "title": "Backend: CoaTemplateServiceSpec + CoaTemplateSeedIntegrationSpec",
+      "status": "todo"
+    }
+  ],
+  "screens": [],
+  "followUps": [
+    "SOUPFIN-144",
+    "SOUPFIN-145",
+    "SOUPFIN-146",
+    "SOUPFIN-231",
+    "SOUPFIN-232",
+    "SOUPFIN-233",
+    "SOUPFIN-234"
+  ]
+}
+</script>
+<style>
+  :root { --primary:#f24a0d; --text:#181311; --subtle:#8a6b60; --border:#e6dedb; --bg:#f8f6f5; --ok:#15803d; --warn:#b45309; --bad:#b91c1c; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: Manrope, "Noto Sans", system-ui, sans-serif; color:var(--text); background:var(--bg); line-height:1.55; }
+  main { max-width: 1100px; margin: 0 auto; padding: 32px 24px 80px; }
+  h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.03em; margin: 0 0 4px; }
+  h2 { font-size: 22px; margin: 40px 0 8px; padding-top: 12px; border-top: 1px solid var(--border); }
+  h3 { font-size: 17px; margin: 24px 0 6px; }
+  p, li { max-width: 78ch; }
+  .meta { color: var(--subtle); margin: 0 0 20px; }
+  .card { background:#fff; border:1px solid var(--border); border-radius:12px; padding:16px 20px; margin:16px 0; }
+  .goal { border-left: 4px solid var(--primary); }
+  table { border-collapse: collapse; width: 100%; background:#fff; border:1px solid var(--border); border-radius:12px; overflow:hidden; margin: 10px 0 18px; font-size: 13.5px; }
+  th { text-align:left; background:#f5f1f0; color:var(--subtle); font-size:12px; text-transform:uppercase; letter-spacing:.03em; padding:8px 10px; }
+  td { padding:6px 10px; border-top:1px solid var(--border); vertical-align: top; }
+  tr.child td:nth-child(2) { padding-left: 28px; }
+  code, pre { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 12.5px; }
+  pre { background:#1f1715; color:#f3ece9; padding:14px 16px; border-radius:10px; overflow-x:auto; }
+  .pill { display:inline-block; padding:1px 8px; border-radius:999px; font-size:11.5px; font-weight:700; }
+  .role { background:#fde9e1; color:#9a2f08; }
+  .lock { background:#e5e7eb; color:#374151; }
+  .cash { background:#dcfce7; color:#166534; }
+  .contra { background:#fef3c7; color:#92400e; }
+  .ok { color: var(--ok); font-weight:700; } .bad { color: var(--bad); font-weight:700; } .warn { color: var(--warn); font-weight:700; }
+  figure { margin: 18px 0; background:#fff; border:1px solid var(--border); border-radius:12px; padding:12px; }
+  figcaption { color: var(--subtle); font-size: 13px; margin-top: 6px; }
+  nav.toc a { color: var(--primary); text-decoration: none; } nav.toc li { margin: 2px 0; }
+</style>
+</head>
+<body>
+<main>
+<h1>Chart of accounts templates: domain and seed data</h1>
+<p class="meta">SOUPFIN-143 · backend plan for <code>soupmarkets-web</code> branch <code>authentication-base-on-multi-tenancy-descriminator</code> · parent epic SOUPFIN-142 · revision 1, 2026-10-10</p>
+
+<div class="card goal">
+  <strong>Goal.</strong> Every new SERVICES or TRADING tenant starts with a lean chart of accounts (69–90 accounts). That chart contains every system account invoice and bill posting needs. The same data seeds existing tenants later.
+</div>
+
+<nav class="toc card"><strong>Contents</strong>
+<ol>
+  <li><a href="#evidence">What the backend does today</a></li>
+  <li><a href="#corrections">Corrections to the parent plan</a></li>
+  <li><a href="#decisions">Design decisions</a></li>
+  <li><a href="#changes">Backend changes, file by file</a></li>
+  <li><a href="#seeding">Seeding algorithm</a></li>
+  <li><a href="#categories">Category catalogue</a></li>
+  <li><a href="#types">Account types (system roles)</a></li>
+  <li><a href="#services">SERVICES template</a></li>
+  <li><a href="#trading">TRADING template</a></li>
+  <li><a href="#ghana">Ghana overlay</a></li>
+  <li><a href="#industry">Industry overlays</a></li>
+  <li><a href="#matrix">Every composition, counted</a></li>
+  <li><a href="#sd">Service description mapping</a></li>
+  <li><a href="#tests">Tests</a></li>
+  <li><a href="#scope">Out of scope and follow-ups</a></li>
+  <li><a href="#sources">Sources</a></li>
+</ol></nav>
+
+<p>The template data is not described here, it is committed. It lives in <code>plans/coa-templates/</code> and the tables below are generated from it. The backend copies those JSON files into <code>grails-app/conf/seed-data/coa/</code> unchanged. <code>compose.mjs</code> is the reference merge, and <code>node --test plans/coa-templates/coa-templates.test.mjs</code> checks every combination.</p>
+
+<h2 id="evidence">1. What the backend does today</h2>
+<p>The parent plan says registration never seeds a chart of accounts. On the multi-tenancy branch that is no longer true. <code>AccountRegistrationService.createDefaultChartOfAccounts</code> already seeds a TRADING or SERVICES chart. That seed has the wrong shape, though, so posting and reports still fail. Every row below was checked against the code or the LXC database on 2026-10-10.</p>
+<table>
+<thead><tr><th>#</th><th>Finding</th><th>Evidence</th><th>Effect</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>The SERVICES seed creates 9 categories and 32 accounts. All six SERVICES tenants on the LXC database have exactly that.</td><td><code>AccountRegistrationService.groovy:1198-1252</code>; SQL count per tenant</td><td>Below the 60-account target.</td></tr>
+<tr><td>2</td><td>Income and expense categories are seeded with <code>ledgerGroup INCOME/EXPENSE</code> and no <code>ledgerSubGroup</code>.</td><td><code>createLedgerAccounts</code> maps <code>type</code> straight to <code>LedgerGroup</code>; DB rows show <code>ledger_sub_group NULL</code></td><td><span class="bad">The income statement drops all revenue and expenses.</span> <code>FinancialStatementsService.incomeStatement</code> reads only categories whose <code>ledgerSubGroup</code> is set.</td></tr>
+<tr><td>3</td><td><code>LedgerAccountType</code> does not exist anywhere in the backend.</td><td><code>git grep LedgerAccountType</code> finds nothing; only <code>plans/soupmarkets-multi-invoice-payment.md</code> uses it, as unbuilt pseudocode</td><td>Posting cannot look accounts up by role. It uses category names and two FKs instead.</td></tr>
+<tr><td>4</td><td>Posting finds A/R and A/P through <code>Account.defaultReceivableAccount</code> / <code>defaultPayableAccount</code>. When those are null it builds them in categories named <code>OTHER ASSETS</code> and <code>OTHER LIABILITIES</code>.</td><td><code>Account.groovy:559-737</code>, <code>InvoiceItemLedgerTransactionListenerService:90</code>, <code>BillItemService:165</code></td><td>Both FKs are NULL on every SERVICES tenant, and <code>OTHER LIABILITIES</code> does not exist. <span class="bad">Bill posting cannot find a payable account.</span></td></tr>
+<tr><td>5</td><td>Service descriptions get their ledger account from categories named <code>INCOME FROM OTHER ACTIVITIES</code> and <code>DIRECT EXPENSES</code>. The validator demands <code>ledgerSubGroup INCOME</code> or <code>EXPENSE</code>.</td><td><code>ServiceDescription.groovy:24-60</code></td><td>All 32 seeded service descriptions have no ledger account on the LXC tenants.</td></tr>
+<tr><td>6</td><td>Tax entries create a ledger account under <code>OTHER EXPENSES</code>. TaxEntry has no tax-liability FK.</td><td><code>TaxEntry.groovy:35-55</code>, <code>TaxEntryInvoiceItemService:158-160</code></td><td>All 13 seeded tax entries have no ledger account. Output tax has nowhere correct to go.</td></tr>
+<tr><td>7</td><td>No seeded account is flagged as a system account, and <code>editable</code>/<code>deletable</code>/<code>cash_flow</code> are NULL.</td><td><code>SELECT system_account, editable, deletable, cash_flow FROM ledger_account</code></td><td>Users can delete A/R. The cash-flow statement finds no cash accounts.</td></tr>
+<tr><td>8</td><td>The Ghana tax seed predates the VAT Act 2025 (Act 1151).</td><td><code>seed-data/country/GH/tax-entries.json</code> still has the COVID-19 levy, VAT 12.5% and the flat rate</td><td>Out of scope here; filed as a follow-up.</td></tr>
+</tbody>
+</table>
+
+<h2 id="corrections">2. Corrections to the parent plan</h2>
+<p><code>plans/coa-template-seeding.md</code> section 1 rows 1 and 4 are updated in this change. Row 1 now says registration seeds the wrong shape, not nothing. Row 4 now says <code>LedgerAccountType</code> is new and introduced by this plan. The acceptance line "every system <code>LedgerAccountType</code> used by invoice and bill posting is present" is met by the account types table below, and the defaults are also wired into the FKs posting reads today.</p>
+
+<h2 id="decisions">3. Design decisions</h2>
+<table>
+<thead><tr><th>Decision</th><th>Why</th><th>Reversible?</th></tr></thead>
+<tbody>
+<tr><td>Templates are <strong>JSON files</strong> under <code>grails-app/conf/seed-data/coa/</code>, read into plain Groovy objects <code>CoaTemplate</code>, <code>CoaTemplateAccount</code> and <code>CoaTemplateCategory</code>. They are not GORM tables.</td><td>Templates are global, but every finance table here is multi-tenant. A template table would need <code>@WithoutTenant</code> plumbing and a migration. JSON ships with the WAR, is reviewed in a diff, and follows the existing <code>seed-data/</code> loader.</td><td>Yes. A table can be added later if admins need to edit templates in the UI.</td></tr>
+<tr><td>Add enum <code>LedgerAccountType</code> and a nullable <code>LedgerAccount.accountType</code> column.</td><td>Posting should find "the A/R account" by role, not by a name a user can change. The enum also gives SOUPFIN-145 and SOUPFIN-147 a stable vocabulary.</td><td>Mostly: a new nullable column. Dropping it later is a migration.</td></tr>
+<tr><td>Also set <code>Account.defaultReceivableAccount</code> and <code>defaultPayableAccount</code> at seed time.</td><td>Today's posting code reads those FKs. Setting them makes invoices and bills post correctly with no posting-code change.</td><td>Yes.</td></tr>
+<tr><td>Keep the category names the backend looks up, spelled exactly, including <code>SHORT -TERM LIABILITIES</code>.</td><td>Eleven code paths find categories by name. Renaming them breaks posting and client registration. <code>LedgerAccountCategory.toString()</code> already title-cases them for display.</td><td>Yes, once those lookups move to <code>accountType</code>.</td></tr>
+<tr><td>Income and expense categories use <code>ledgerGroup EQUITY</code> + <code>ledgerSubGroup INCOME/EXPENSE</code> under <code>RETAINED EARNINGS</code>.</td><td>The broker template, the <code>ServiceDescription</code> validator and the income statement all use this convention. <code>RETAINED EARNINGS</code> keeps a null subgroup so it stays off the income statement (the broker template gives it <code>ASSET</code>, which is a bug).</td><td>Yes.</td></tr>
+<tr><td>Add <code>TaxEntry.liabilityLedgerAccount</code> and <code>TaxEntry.recoverableLedgerAccount</code> (nullable), linked from the country overlay.</td><td>Act 1151 requires VAT, NHIL and GETFund on separate lines and makes each deductible. Each tax needs its own output and input account.</td><td>Yes: nullable FKs. Switching posting to them is a separate task.</td></tr>
+<tr><td>Point each seeded service description at a template account.</td><td>Otherwise <code>checkAndGetLedgerAccount()</code> creates one "&lt;name&gt; Account" per description. That adds 32 accounts and breaks the lean target.</td><td>Yes.</td></tr>
+<tr><td>Overlays may only add, remove or explicitly replace (<code>replace:true</code>). Silent collisions are errors.</td><td>A typo in an overlay must fail the build, not overwrite Accounts Receivable.</td><td>Yes.</td></tr>
+</tbody>
+</table>
+
+<h2 id="changes">4. Backend changes, file by file</h2>
+<table>
+<thead><tr><th>File</th><th>Change</th></tr></thead>
+<tbody>
+<tr><td><code>src/main/groovy/soupbroker/finance/LedgerAccountType.groovy</code></td><td>New enum. Values and the <code>singleton</code> flag come from <code>account-types.json</code>.</td></tr>
+<tr><td><code>grails-app/domain/soupbroker/finance/LedgerAccount.groovy</code></td><td>Add <code>LedgerAccountType accountType</code>, nullable, mapped <code>enumType: 'string'</code>. Add <code>static LedgerAccount findByRole(LedgerAccountType t)</code>, a tenant-scoped <code>findByAccountTypeAndArchived(t, false)</code>.</td></tr>
+<tr><td><code>grails-app/domain/soupbroker/finance/TaxEntry.groovy</code></td><td>Add <code>LedgerAccount liabilityLedgerAccount</code> and <code>LedgerAccount recoverableLedgerAccount</code>, both nullable.</td></tr>
+<tr><td><code>grails-app/views/ledgerAccount/_ledgerAccount.gson</code></td><td>No change. The generic template already renders every property, so <code>accountType</code> reaches the SPA.</td></tr>
+<tr><td><code>src/main/resources/db/migration/V<em>n</em>__coa_template_roles.sql</code></td><td>Next free Flyway number (V12 at the time of writing). SQL below.</td></tr>
+<tr><td><code>grails-app/conf/seed-data/coa/**</code></td><td>Copy <code>plans/coa-templates/{categories,account-types,service-description-map}.json</code>, <code>base/</code>, <code>country/</code> and <code>industry/</code> verbatim.</td></tr>
+<tr><td><code>src/main/groovy/soupbroker/finance/coa/CoaTemplate*.groovy</code></td><td>Plain objects: <code>CoaTemplate</code> (key, name, businessLicenceCategory, accounts), <code>CoaTemplateAccount</code> (fields as in the JSON), <code>CoaTemplateCategory</code>, <code>CoaOverlay</code> (add, remove, taxEntryMap).</td></tr>
+<tr><td><code>grails-app/services/soupbroker/finance/CoaTemplateService.groovy</code></td><td>New. <code>compose(blc, country, industry)</code> ports <code>compose.mjs</code>. <code>seed(Account, CoaSelection, boolean dryRun)</code> runs the algorithm in section 5 and returns a <code>CoaSeedResult</code> (created, skipped and linked counts, plus problems). <code>listTemplates()</code> serves SOUPFIN-145.</td></tr>
+<tr><td><code>grails-app/services/soupbroker/AccountRegistrationService.groovy</code></td><td><code>createDefaultChartOfAccounts</code>: for TRADING and SERVICES, call <code>coaTemplateService.seed(account, [country: account.countryOfOrigin ?: 'GH', industry: cmd.industry])</code>. Delete <code>createTradingChartOfAccounts</code>, <code>createServicesChartOfAccounts</code> and <code>createLedgerAccounts</code>. Keep the broker path. Keep the call order register → COA → modules → lookup data, because the FINANCE module seed skips itself only when categories already exist.</td></tr>
+<tr><td><code>grails-app/services/soupbroker/onboarding/SeedDataLoaderService.groovy</code></td><td>After the <code>service-descriptions</code> and <code>tax-entries</code> groups load, call <code>coaTemplateService.linkLookups(account)</code>. It sets <code>ServiceDescription.ledgerAccount</code> from the mapping and the TaxEntry FKs from <code>taxEntryMap</code>. It never overwrites a link that is already set.</td></tr>
+</tbody>
+</table>
+<h3>Migration</h3>
+<pre>-- V<n>__coa_template_roles.sql  (SOUPFIN-143)
+-- Idempotent: GORM may already have added the columns in dbCreate=update environments.
+ALTER TABLE ledger_account ADD COLUMN IF NOT EXISTS account_type VARCHAR(40) NULL;
+CREATE INDEX IF NOT EXISTS idx_ledger_account_tenant_type ON ledger_account (tenant_id, account_type);
+ALTER TABLE tax_entry
+  ADD COLUMN IF NOT EXISTS liability_ledger_account_id VARCHAR(255) NULL,
+  ADD COLUMN IF NOT EXISTS recoverable_ledger_account_id VARCHAR(255) NULL;
+-- No backfill here. Existing tenants are handled by SOUPFIN-146.</pre>
+<p><code>ledger_account.number</code> is <code>bigint</code> in the seed database even though the domain says <code>text</code>. Every template number is four plain digits, so it fits either type. Do not add letters or dashes to template numbers.</p>
+<h3>Enum</h3>
+<pre>package soupbroker.finance
+
+/** System role of a LedgerAccount (SOUPFIN-143). Seeded from seed-data/coa/account-types.json. */
+enum LedgerAccountType {
+    CASH(true),
+    BANK(false),
+    UNDEPOSITED_FUNDS(true),
+    ACCOUNTS_RECEIVABLE(true),
+    ACCOUNTS_PAYABLE(true),
+    INVENTORY_ASSET(true),
+    TAX_PAYABLE(false),
+    TAX_RECEIVABLE(false),
+    WITHHOLDING_TAX_PAYABLE(false),
+    WITHHOLDING_TAX_RECEIVABLE(false),
+    INCOME_TAX_PAYABLE(true),
+    UNEARNED_REVENUE(true),
+    OPENING_BALANCE_EQUITY(true),
+    RETAINED_EARNINGS(true),
+    CURRENT_YEAR_EARNINGS(true),
+    SALES_INCOME(true),
+    DISCOUNTS_GIVEN(true),
+    DISCOUNTS_RECEIVED(true),
+    COST_OF_GOODS_SOLD(true),
+    DEFAULT_EXPENSE(true),
+    FX_GAIN_LOSS(true),
+    ROUNDING(true);
+    final boolean singleton
+    LedgerAccountType(boolean singleton) { this.singleton = singleton }
+}</pre>
+
+<h2 id="seeding">5. Seeding algorithm</h2>
+<figure>
+<svg viewBox="0 25 1040 140" width="100%" role="img" aria-label="Registration seeding order">
+  <defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8a6b60"/></marker></defs>
+  <g font-family="Manrope, sans-serif" font-size="13">
+    <rect x="10" y="40" width="170" height="70" rx="10" fill="#fff" stroke="#e6dedb"/><text x="95" y="70" text-anchor="middle" font-weight="700">POST /account/register</text><text x="95" y="90" text-anchor="middle" fill="#8a6b60">type, country, industry</text>
+    <rect x="220" y="40" width="200" height="70" rx="10" fill="#fde9e1" stroke="#f24a0d"/><text x="320" y="65" text-anchor="middle" font-weight="700">CoaTemplateService.seed</text><text x="320" y="84" text-anchor="middle" fill="#9a2f08">categories, accounts, roles</text><text x="320" y="101" text-anchor="middle" fill="#9a2f08">default A/R and A/P FKs</text>
+    <rect x="460" y="40" width="170" height="70" rx="10" fill="#fff" stroke="#e6dedb"/><text x="545" y="70" text-anchor="middle" font-weight="700">AccountModules</text><text x="545" y="90" text-anchor="middle" fill="#8a6b60">broker seed skips itself</text>
+    <rect x="670" y="40" width="170" height="70" rx="10" fill="#fff" stroke="#e6dedb"/><text x="755" y="70" text-anchor="middle" font-weight="700">SeedDataLoader</text><text x="755" y="90" text-anchor="middle" fill="#8a6b60">service descriptions, taxes</text>
+    <rect x="880" y="40" width="150" height="70" rx="10" fill="#fde9e1" stroke="#f24a0d"/><text x="955" y="70" text-anchor="middle" font-weight="700">linkLookups</text><text x="955" y="90" text-anchor="middle" fill="#9a2f08">ledgerAccount FKs</text>
+    <line x1="180" y1="75" x2="218" y2="75" stroke="#8a6b60" stroke-width="2" marker-end="url(#arr)"/>
+    <line x1="420" y1="75" x2="458" y2="75" stroke="#8a6b60" stroke-width="2" marker-end="url(#arr)"/>
+    <line x1="630" y1="75" x2="668" y2="75" stroke="#8a6b60" stroke-width="2" marker-end="url(#arr)"/>
+    <line x1="840" y1="75" x2="878" y2="75" stroke="#8a6b60" stroke-width="2" marker-end="url(#arr)"/>
+    <text x="520" y="145" text-anchor="middle" fill="#8a6b60">Orange boxes are new in this plan. The order already exists in AccountRegistrationService.register.</text>
+  </g>
+</svg>
+<figcaption>Figure 1 — Where the template seed runs during registration.</figcaption>
+</figure>
+<ol>
+  <li><strong>Compose.</strong> Base template for <code>account.businessLicenceCategory</code>, then the country overlay, then the industry overlay. The overlay contract errors are fatal: log them and seed nothing.</li>
+  <li><strong>Categories.</strong> Create the categories <code>categoriesFor()</code> returns, parents first. Match existing rows by name, case-insensitively, because the MariaDB unique index is case-insensitive too. Set <code>account</code>, <code>systemCategory=true</code>, <code>deletable=false</code>, and <code>editable</code> from the catalogue.</li>
+  <li><strong>Accounts.</strong> Create each account. Match an existing account by <code>number</code> first, then by name; skip it if found, so applying a template twice adds nothing. Set <code>currency</code> to the tenant currency and copy the flags and <code>accountType</code>.</li>
+  <li><strong>Parents.</strong> Second pass: set <code>parentAccount</code> by number.</li>
+  <li><strong>Defaults.</strong> Set <code>account.defaultReceivableAccount</code> to the <code>ACCOUNTS_RECEIVABLE</code> account and <code>defaultPayableAccount</code> to <code>ACCOUNTS_PAYABLE</code>, but only when they are null.</li>
+  <li><strong>Singleton guard.</strong> If a singleton role is already held by another account, do not stamp the role on a second one. Report it in <code>problems</code>.</li>
+  <li><strong>Transaction.</strong> Run inside the caller's transaction, as today: a separate transaction deadlocks against the new Account row (see the comment in <code>createDefaultChartOfAccounts</code>). Use <code>save(flush: false)</code> and one flush at the end.</li>
+  <li><strong>Dry run.</strong> With <code>dryRun=true</code>, return the composed plan and what would be created or skipped, without saving. SOUPFIN-145 and SOUPFIN-147 build their preview on this.</li>
+</ol>
+
+<h2 id="categories">6. Category catalogue</h2>
+<p>Categories marked <span class="pill lock">looked up</span> are found by exact name somewhere in the backend. Keep their spelling.</p>
+<table><thead><tr><th>Name</th><th>Group</th><th>Sub-group</th><th>Parent</th><th>Found by</th></tr></thead><tbody>
+<tr><td><code>CASH ON HAND</code> <span class="pill lock">looked up</span></td><td>ASSET</td><td></td><td></td><td>AccountModuleUtilityService.createFinanceAccountAndCategory (broker module seed)</td></tr>
+<tr><td><code>DEPOSITS AND BALANCES WITH BANKS/DISCOUNT HOUSES</code> <span class="pill lock">looked up</span></td><td>ASSET</td><td></td><td></td><td>AccountBankDetailsService.save (ledger account for each company bank account)</td></tr>
+<tr><td><code>ACCOUNT RECEIVABLE</code> <span class="pill lock">looked up</span></td><td>ASSET</td><td></td><td></td><td>Account.checkAndGetDefaultReceivableAccount<br>AccountUtilityService.getDefaultReceivableAccount</td></tr>
+<tr><td><code>INVENTORY</code></td><td>ASSET</td><td></td><td></td><td></td></tr>
+<tr><td><code>OTHER ASSETS</code> <span class="pill lock">looked up</span></td><td>ASSET</td><td></td><td></td><td>Account.checkAndGetDefaultReceivableAccount<br>AccountUtilityService.getDefaultReceivableAccount (first choice)</td></tr>
+<tr><td><code>TAX RECOVERABLE</code></td><td>ASSET</td><td></td><td></td><td></td></tr>
+<tr><td><code>FIXED ASSETS</code></td><td>ASSET</td><td></td><td></td><td></td></tr>
+<tr><td><code>ACCOUNTS PAYABLE</code></td><td>LIABILITY</td><td></td><td></td><td></td></tr>
+<tr><td><code>TAXES PAYABLE</code></td><td>LIABILITY</td><td></td><td></td><td></td></tr>
+<tr><td><code>SHORT -TERM LIABILITIES</code> <span class="pill lock">looked up</span></td><td>LIABILITY</td><td></td><td></td><td>ClientUtilityService (client ledger accounts, created for every invoice client)<br>AccountServicesUtilityService<br>AccountServicesService<br>AccountModuleUtilityService (COA-exists guard)</td></tr>
+<tr><td><code>OTHER LIABILITIES</code> <span class="pill lock">looked up</span></td><td>LIABILITY</td><td></td><td></td><td>Account.checkAndGetDefaultPayableAccount<br>AccountUtilityService.getDefaultPayableAccount</td></tr>
+<tr><td><code>LONG-TERM LIABILITIES</code></td><td>LIABILITY</td><td></td><td></td><td></td></tr>
+<tr><td><code>OWNERS EQUITY</code></td><td>EQUITY</td><td></td><td></td><td></td></tr>
+<tr><td><code>RETAINED EARNINGS</code> <span class="pill lock">looked up</span></td><td>EQUITY</td><td></td><td></td><td>Parent of every income and expense category (broker template convention)</td></tr>
+<tr><td><code>INCOME</code> <span class="pill lock">looked up</span></td><td>EQUITY</td><td>INCOME</td><td>RETAINED EARNINGS</td><td>ServiceDescriptionService.save (INVOICE-type service description ledger account)</td></tr>
+<tr><td><code>INCOME FROM OTHER ACTIVITIES</code> <span class="pill lock">looked up</span></td><td>EQUITY</td><td>INCOME</td><td>RETAINED EARNINGS</td><td>ServiceDescription.checkAndGetLedgerAccount (INVOICE)<br>ServiceDescriptionUtilityService</td></tr>
+<tr><td><code>OTHER INCOME</code></td><td>EQUITY</td><td>INCOME</td><td>RETAINED EARNINGS</td><td></td></tr>
+<tr><td><code>COST OF SALES</code></td><td>EQUITY</td><td>EXPENSE</td><td>RETAINED EARNINGS</td><td></td></tr>
+<tr><td><code>DIRECT EXPENSES</code> <span class="pill lock">looked up</span></td><td>EQUITY</td><td>EXPENSE</td><td>RETAINED EARNINGS</td><td>ServiceDescription.checkAndGetLedgerAccount (BILL)<br>ServiceDescriptionService.save (BILL)<br>ServiceDescriptionUtilityService</td></tr>
+<tr><td><code>ADMINISTRATION EXPENSES</code></td><td>EQUITY</td><td>EXPENSE</td><td>RETAINED EARNINGS</td><td></td></tr>
+<tr><td><code>SELLING &amp; PROMOTIONAL</code></td><td>EQUITY</td><td>EXPENSE</td><td>RETAINED EARNINGS</td><td></td></tr>
+<tr><td><code>FINANCE CHARGES</code></td><td>EQUITY</td><td>EXPENSE</td><td>RETAINED EARNINGS</td><td></td></tr>
+<tr><td><code>OTHER EXPENSES</code> <span class="pill lock">looked up</span></td><td>EQUITY</td><td>EXPENSE</td><td>RETAINED EARNINGS</td><td>TaxEntry.checkAndGetExpenseLedgerAccount<br>Vendor.initiateLedgerAccount (findByNameIlike)</td></tr>
+</tbody></table>
+
+<h2 id="types">7. Account types (system roles)</h2>
+<p><span class="pill role">role</span> accounts are always <code>systemAccount=true</code> and <code>deletable=false</code>. A singleton role may sit on one account per tenant.</p>
+<table><thead><tr><th>Value</th><th>Singleton</th><th>Required for</th><th>Used by</th></tr></thead><tbody>
+<tr><td><code>CASH</code></td><td>yes</td><td>SERVICES, TRADING</td><td>Cash sales and petty-cash payments</td></tr>
+<tr><td><code>BANK</code></td><td>no</td><td>SERVICES, TRADING</td><td>Default deposit target for receipts and source for payments</td></tr>
+<tr><td><code>UNDEPOSITED_FUNDS</code></td><td>yes</td><td>SERVICES, TRADING</td><td>Customer payments received but not yet banked</td></tr>
+<tr><td><code>ACCOUNTS_RECEIVABLE</code></td><td>yes</td><td>SERVICES, TRADING</td><td>Invoice posting (debit); wired to Account.defaultReceivableAccount</td></tr>
+<tr><td><code>ACCOUNTS_PAYABLE</code></td><td>yes</td><td>SERVICES, TRADING</td><td>Bill posting (credit); wired to Account.defaultPayableAccount</td></tr>
+<tr><td><code>INVENTORY_ASSET</code></td><td>yes</td><td>TRADING</td><td>Stock purchases and cost of goods sold relief</td></tr>
+<tr><td><code>TAX_PAYABLE</code></td><td>no</td><td>SERVICES, TRADING</td><td>Output tax on invoices (one per tax, e.g. VAT, NHIL, GETFund)</td></tr>
+<tr><td><code>TAX_RECEIVABLE</code></td><td>no</td><td>SERVICES, TRADING</td><td>Recoverable input tax on bills</td></tr>
+<tr><td><code>WITHHOLDING_TAX_PAYABLE</code></td><td>no</td><td>optional</td><td>Tax withheld from supplier payments</td></tr>
+<tr><td><code>WITHHOLDING_TAX_RECEIVABLE</code></td><td>no</td><td>optional</td><td>Tax customers withheld from our receipts (WHT credit)</td></tr>
+<tr><td><code>INCOME_TAX_PAYABLE</code></td><td>yes</td><td>optional</td><td>Corporate income tax provision</td></tr>
+<tr><td><code>UNEARNED_REVENUE</code></td><td>yes</td><td>optional</td><td>Customer deposits and payments received before an invoice</td></tr>
+<tr><td><code>OPENING_BALANCE_EQUITY</code></td><td>yes</td><td>SERVICES, TRADING</td><td>Counter-entry for opening balances during setup</td></tr>
+<tr><td><code>RETAINED_EARNINGS</code></td><td>yes</td><td>SERVICES, TRADING</td><td>Year-end close target</td></tr>
+<tr><td><code>CURRENT_YEAR_EARNINGS</code></td><td>yes</td><td>optional</td><td>Balance-sheet line for profit since the last close</td></tr>
+<tr><td><code>SALES_INCOME</code></td><td>yes</td><td>SERVICES, TRADING</td><td>Default income account for invoice lines with no mapped service description</td></tr>
+<tr><td><code>DISCOUNTS_GIVEN</code></td><td>yes</td><td>SERVICES, TRADING</td><td>Invoice discounts (contra income)</td></tr>
+<tr><td><code>DISCOUNTS_RECEIVED</code></td><td>yes</td><td>optional</td><td>Supplier discounts on bills</td></tr>
+<tr><td><code>COST_OF_GOODS_SOLD</code></td><td>yes</td><td>TRADING</td><td>Cost relief when inventory is sold</td></tr>
+<tr><td><code>DEFAULT_EXPENSE</code></td><td>yes</td><td>SERVICES, TRADING</td><td>Default expense account for bill lines with no mapped service description</td></tr>
+<tr><td><code>FX_GAIN_LOSS</code></td><td>yes</td><td>SERVICES, TRADING</td><td>Realised and unrealised exchange differences (SOUPFIN-125)</td></tr>
+<tr><td><code>ROUNDING</code></td><td>yes</td><td>SERVICES, TRADING</td><td>Rounding differences on invoices, bills and payments</td></tr>
+</tbody></table>
+
+<h2 id="services">8. SERVICES template</h2>
+<p>69 accounts in 21 categories. Consultancies, agencies, clinics, schools and any business that sells time or expertise rather than stock.</p><table><thead><tr><th>Number</th><th>Name</th><th>Category</th><th>Parent</th><th>Flags</th></tr></thead><tbody>
+<tr><td><code>1000</code></td><td>Cash on Hand</td><td>CASH ON HAND</td><td></td><td><span class="pill role">CASH</span> <span class="pill cash">cash flow</span></td></tr>
+<tr><td><code>1010</code></td><td>Petty Cash</td><td>CASH ON HAND</td><td></td><td><span class="pill cash">cash flow</span></td></tr>
+<tr><td><code>1050</code></td><td>Undeposited Funds</td><td>CASH ON HAND</td><td></td><td><span class="pill role">UNDEPOSITED_FUNDS</span> <span class="pill lock">locked name</span> <span class="pill cash">cash flow</span></td></tr>
+<tr><td><code>1100</code></td><td>Bank Accounts</td><td>DEPOSITS AND BALANCES WITH BANKS/DISCOUNT HOUSES</td><td></td><td><span class="pill cash">cash flow</span></td></tr>
+<tr class="child"><td><code>1110</code></td><td>Main Bank (Operating)</td><td>DEPOSITS AND BALANCES WITH BANKS/DISCOUNT HOUSES</td><td><code>1100</code></td><td><span class="pill role">BANK</span> <span class="pill cash">cash flow</span></td></tr>
+<tr><td><code>1200</code></td><td>Accounts Receivable</td><td>ACCOUNT RECEIVABLE</td><td></td><td><span class="pill role">ACCOUNTS_RECEIVABLE</span> <span class="pill lock">locked name</span></td></tr>
+<tr><td><code>1210</code></td><td>Allowance for Doubtful Debts</td><td>ACCOUNT RECEIVABLE</td><td></td><td><span class="pill contra">contra</span></td></tr>
+<tr><td><code>1300</code></td><td>Prepaid Expenses</td><td>OTHER ASSETS</td><td></td><td></td></tr>
+<tr><td><code>1320</code></td><td>Staff Loans and Advances</td><td>OTHER ASSETS</td><td></td><td></td></tr>
+<tr><td><code>1330</code></td><td>Unbilled Revenue (Work in Progress)</td><td>OTHER ASSETS</td><td></td><td></td></tr>
+<tr><td><code>1400</code></td><td>Input Tax Recoverable</td><td>TAX RECOVERABLE</td><td></td><td><span class="pill role">TAX_RECEIVABLE</span></td></tr>
+<tr><td><code>1500</code></td><td>Property, Plant and Equipment</td><td>FIXED ASSETS</td><td></td><td></td></tr>
+<tr class="child"><td><code>1510</code></td><td>Office Equipment</td><td>FIXED ASSETS</td><td><code>1500</code></td><td></td></tr>
+<tr class="child"><td><code>1520</code></td><td>Computer Equipment</td><td>FIXED ASSETS</td><td><code>1500</code></td><td></td></tr>
+<tr class="child"><td><code>1530</code></td><td>Furniture and Fittings</td><td>FIXED ASSETS</td><td><code>1500</code></td><td></td></tr>
+<tr class="child"><td><code>1540</code></td><td>Motor Vehicles</td><td>FIXED ASSETS</td><td><code>1500</code></td><td></td></tr>
+<tr class="child"><td><code>1590</code></td><td>Accumulated Depreciation</td><td>FIXED ASSETS</td><td><code>1500</code></td><td><span class="pill contra">contra</span></td></tr>
+<tr><td><code>2000</code></td><td>Accounts Payable</td><td>ACCOUNTS PAYABLE</td><td></td><td><span class="pill role">ACCOUNTS_PAYABLE</span> <span class="pill lock">locked name</span></td></tr>
+<tr><td><code>2100</code></td><td>Accrued Expenses</td><td>SHORT -TERM LIABILITIES</td><td></td><td></td></tr>
+<tr><td><code>2110</code></td><td>Salaries and Wages Payable</td><td>SHORT -TERM LIABILITIES</td><td></td><td></td></tr>
+<tr><td><code>2120</code></td><td>Customer Deposits and Unearned Revenue</td><td>SHORT -TERM LIABILITIES</td><td></td><td><span class="pill role">UNEARNED_REVENUE</span></td></tr>
+<tr><td><code>2130</code></td><td>Short-term Loans</td><td>SHORT -TERM LIABILITIES</td><td></td><td></td></tr>
+<tr><td><code>2200</code></td><td>Taxes Payable</td><td>TAXES PAYABLE</td><td></td><td></td></tr>
+<tr class="child"><td><code>2210</code></td><td>Sales Tax Payable</td><td>TAXES PAYABLE</td><td><code>2200</code></td><td><span class="pill role">TAX_PAYABLE</span></td></tr>
+<tr class="child"><td><code>2220</code></td><td>Withholding Tax Payable</td><td>TAXES PAYABLE</td><td><code>2200</code></td><td><span class="pill role">WITHHOLDING_TAX_PAYABLE</span></td></tr>
+<tr class="child"><td><code>2230</code></td><td>Income Tax Payable</td><td>TAXES PAYABLE</td><td><code>2200</code></td><td><span class="pill role">INCOME_TAX_PAYABLE</span></td></tr>
+<tr class="child"><td><code>2240</code></td><td>Payroll Taxes Payable</td><td>TAXES PAYABLE</td><td><code>2200</code></td><td></td></tr>
+<tr><td><code>2300</code></td><td>Long-term Loans</td><td>LONG-TERM LIABILITIES</td><td></td><td></td></tr>
+<tr><td><code>2900</code></td><td>Suspense</td><td>OTHER LIABILITIES</td><td></td><td></td></tr>
+<tr><td><code>3000</code></td><td>Share Capital</td><td>OWNERS EQUITY</td><td></td><td></td></tr>
+<tr><td><code>3100</code></td><td>Drawings and Dividends Paid</td><td>OWNERS EQUITY</td><td></td><td><span class="pill contra">contra</span></td></tr>
+<tr><td><code>3200</code></td><td>Opening Balance Equity</td><td>OWNERS EQUITY</td><td></td><td><span class="pill role">OPENING_BALANCE_EQUITY</span> <span class="pill lock">locked name</span></td></tr>
+<tr><td><code>3300</code></td><td>Retained Earnings</td><td>RETAINED EARNINGS</td><td></td><td><span class="pill role">RETAINED_EARNINGS</span> <span class="pill lock">locked name</span></td></tr>
+<tr><td><code>3400</code></td><td>Current Year Earnings</td><td>RETAINED EARNINGS</td><td></td><td><span class="pill role">CURRENT_YEAR_EARNINGS</span> <span class="pill lock">locked name</span></td></tr>
+<tr><td><code>4000</code></td><td>Service Revenue</td><td>INCOME</td><td></td><td><span class="pill role">SALES_INCOME</span></td></tr>
+<tr><td><code>4010</code></td><td>Consulting and Advisory Fees</td><td>INCOME</td><td></td><td></td></tr>
+<tr><td><code>4020</code></td><td>Professional Fees</td><td>INCOME</td><td></td><td></td></tr>
+<tr><td><code>4090</code></td><td>Discounts Given</td><td>INCOME</td><td></td><td><span class="pill role">DISCOUNTS_GIVEN</span> <span class="pill contra">contra</span></td></tr>
+<tr><td><code>4100</code></td><td>Commission Income</td><td>INCOME FROM OTHER ACTIVITIES</td><td></td><td></td></tr>
+<tr><td><code>4110</code></td><td>Reimbursed Expenses Recovered</td><td>INCOME FROM OTHER ACTIVITIES</td><td></td><td></td></tr>
+<tr><td><code>4800</code></td><td>Interest Income</td><td>OTHER INCOME</td><td></td><td></td></tr>
+<tr><td><code>4890</code></td><td>Exchange Gain or Loss</td><td>OTHER INCOME</td><td></td><td><span class="pill role">FX_GAIN_LOSS</span></td></tr>
+<tr><td><code>4900</code></td><td>Other Income</td><td>OTHER INCOME</td><td></td><td></td></tr>
+<tr><td><code>5000</code></td><td>Cost of Services</td><td>DIRECT EXPENSES</td><td></td><td></td></tr>
+<tr class="child"><td><code>5010</code></td><td>Subcontractor and Freelancer Fees</td><td>DIRECT EXPENSES</td><td><code>5000</code></td><td></td></tr>
+<tr class="child"><td><code>5030</code></td><td>Reimbursable Client Expenses</td><td>DIRECT EXPENSES</td><td><code>5000</code></td><td></td></tr>
+<tr><td><code>6000</code></td><td>Salaries and Wages</td><td>ADMINISTRATION EXPENSES</td><td></td><td></td></tr>
+<tr><td><code>6010</code></td><td>Employer Pension and Social Security</td><td>ADMINISTRATION EXPENSES</td><td></td><td></td></tr>
+<tr><td><code>6020</code></td><td>Staff Welfare and Medical</td><td>ADMINISTRATION EXPENSES</td><td></td><td></td></tr>
+<tr><td><code>6100</code></td><td>Rent and Rates</td><td>ADMINISTRATION EXPENSES</td><td></td><td></td></tr>
+<tr><td><code>6110</code></td><td>Utilities</td><td>ADMINISTRATION EXPENSES</td><td></td><td></td></tr>
+<tr><td><code>6120</code></td><td>Repairs and Maintenance</td><td>ADMINISTRATION EXPENSES</td><td></td><td></td></tr>
+<tr><td><code>6130</code></td><td>Printing, Stationery and Office Supplies</td><td>ADMINISTRATION EXPENSES</td><td></td><td></td></tr>
+<tr><td><code>6140</code></td><td>Telephone and Internet</td><td>ADMINISTRATION EXPENSES</td><td></td><td></td></tr>
+<tr><td><code>6150</code></td><td>Software and Subscriptions</td><td>ADMINISTRATION EXPENSES</td><td></td><td></td></tr>
+<tr><td><code>6160</code></td><td>Insurance</td><td>ADMINISTRATION EXPENSES</td><td></td><td></td></tr>
+<tr><td><code>6170</code></td><td>Audit, Accounting and Professional Fees</td><td>ADMINISTRATION EXPENSES</td><td></td><td></td></tr>
+<tr><td><code>6180</code></td><td>Licences, Permits and Levies</td><td>ADMINISTRATION EXPENSES</td><td></td><td></td></tr>
+<tr><td><code>6190</code></td><td>Small Equipment and Tools</td><td>ADMINISTRATION EXPENSES</td><td></td><td></td></tr>
+<tr><td><code>6200</code></td><td>Depreciation Expense</td><td>ADMINISTRATION EXPENSES</td><td></td><td></td></tr>
+<tr><td><code>6300</code></td><td>Advertising and Marketing</td><td>SELLING &amp; PROMOTIONAL</td><td></td><td></td></tr>
+<tr><td><code>6310</code></td><td>Business Promotion and Entertainment</td><td>SELLING &amp; PROMOTIONAL</td><td></td><td></td></tr>
+<tr><td><code>6320</code></td><td>Travel and Transport</td><td>SELLING &amp; PROMOTIONAL</td><td></td><td></td></tr>
+<tr><td><code>6500</code></td><td>Bank and Payment Charges</td><td>FINANCE CHARGES</td><td></td><td></td></tr>
+<tr><td><code>6510</code></td><td>Interest Expense</td><td>FINANCE CHARGES</td><td></td><td></td></tr>
+<tr><td><code>6800</code></td><td>Bad Debt Expense</td><td>OTHER EXPENSES</td><td></td><td></td></tr>
+<tr><td><code>6890</code></td><td>Rounding Differences</td><td>OTHER EXPENSES</td><td></td><td><span class="pill role">ROUNDING</span></td></tr>
+<tr><td><code>6900</code></td><td>Sundry Expenses</td><td>OTHER EXPENSES</td><td></td><td><span class="pill role">DEFAULT_EXPENSE</span></td></tr>
+<tr><td><code>6950</code></td><td>Income Tax Expense</td><td>OTHER EXPENSES</td><td></td><td></td></tr>
+</tbody></table>
+
+<h2 id="trading">9. TRADING template</h2>
+<p>Same numbers as SERVICES wherever the account means the same thing, so one overlay fits both. The differences are inventory (1250–1260), cost of sales (5000–5040) and the revenue lines.</p>
+<p>73 accounts in 23 categories. Shops, distributors, importers and any business that holds stock and reports a cost of goods sold.</p><table><thead><tr><th>Number</th><th>Name</th><th>Category</th><th>Parent</th><th>Flags</th></tr></thead><tbody>
+<tr><td><code>1000</code></td><td>Cash on Hand</td><td>CASH ON HAND</td><td></td><td><span class="pill role">CASH</span> <span class="pill cash">cash flow</span></td></tr>
+<tr><td><code>1010</code></td><td>Petty Cash</td><td>CASH ON HAND</td><td></td><td><span class="pill cash">cash flow</span></td></tr>
+<tr><td><code>1050</code></td><td>Undeposited Funds</td><td>CASH ON HAND</td><td></td><td><span class="pill role">UNDEPOSITED_FUNDS</span> <span class="pill lock">locked name</span> <span class="pill cash">cash flow</span></td></tr>
+<tr><td><code>1100</code></td><td>Bank Accounts</td><td>DEPOSITS AND BALANCES WITH BANKS/DISCOUNT HOUSES</td><td></td><td><span class="pill cash">cash flow</span></td></tr>
+<tr class="child"><td><code>1110</code></td><td>Main Bank (Operating)</td><td>DEPOSITS AND BALANCES WITH BANKS/DISCOUNT HOUSES</td><td><code>1100</code></td><td><span class="pill role">BANK</span> <span class="pill cash">cash flow</span></td></tr>
+<tr><td><code>1200</code></td><td>Accounts Receivable</td><td>ACCOUNT RECEIVABLE</td><td></td><td><span class="pill role">ACCOUNTS_RECEIVABLE</span> <span class="pill lock">locked name</span></td></tr>
+<tr><td><code>1210</code></td><td>Allowance for Doubtful Debts</td><td>ACCOUNT RECEIVABLE</td><td></td><td><span class="pill contra">contra</span></td></tr>
+<tr><td><code>1250</code></td><td>Inventory Asset</td><td>INVENTORY</td><td></td><td><span class="pill role">INVENTORY_ASSET</span></td></tr>
+<tr class="child"><td><code>1260</code></td><td>Goods in Transit</td><td>INVENTORY</td><td><code>1250</code></td><td></td></tr>
+<tr><td><code>1300</code></td><td>Prepaid Expenses</td><td>OTHER ASSETS</td><td></td><td></td></tr>
+<tr><td><code>1320</code></td><td>Staff Loans and Advances</td><td>OTHER ASSETS</td><td></td><td></td></tr>
+<tr><td><code>1400</code></td><td>Input Tax Recoverable</td><td>TAX RECOVERABLE</td><td></td><td><span class="pill role">TAX_RECEIVABLE</span></td></tr>
+<tr><td><code>1500</code></td><td>Property, Plant and Equipment</td><td>FIXED ASSETS</td><td></td><td></td></tr>
+<tr class="child"><td><code>1510</code></td><td>Office Equipment</td><td>FIXED ASSETS</td><td><code>1500</code></td><td></td></tr>
+<tr class="child"><td><code>1520</code></td><td>Computer Equipment</td><td>FIXED ASSETS</td><td><code>1500</code></td><td></td></tr>
+<tr class="child"><td><code>1530</code></td><td>Furniture and Fittings</td><td>FIXED ASSETS</td><td><code>1500</code></td><td></td></tr>
+<tr class="child"><td><code>1540</code></td><td>Motor Vehicles</td><td>FIXED ASSETS</td><td><code>1500</code></td><td></td></tr>
+<tr class="child"><td><code>1590</code></td><td>Accumulated Depreciation</td><td>FIXED ASSETS</td><td><code>1500</code></td><td><span class="pill contra">contra</span></td></tr>
+<tr><td><code>2000</code></td><td>Accounts Payable</td><td>ACCOUNTS PAYABLE</td><td></td><td><span class="pill role">ACCOUNTS_PAYABLE</span> <span class="pill lock">locked name</span></td></tr>
+<tr><td><code>2100</code></td><td>Accrued Expenses</td><td>SHORT -TERM LIABILITIES</td><td></td><td></td></tr>
+<tr><td><code>2110</code></td><td>Salaries and Wages Payable</td><td>SHORT -TERM LIABILITIES</td><td></td><td></td></tr>
+<tr><td><code>2120</code></td><td>Customer Deposits and Unearned Revenue</td><td>SHORT -TERM LIABILITIES</td><td></td><td><span class="pill role">UNEARNED_REVENUE</span></td></tr>
+<tr><td><code>2130</code></td><td>Short-term Loans</td><td>SHORT -TERM LIABILITIES</td><td></td><td></td></tr>
+<tr><td><code>2200</code></td><td>Taxes Payable</td><td>TAXES PAYABLE</td><td></td><td></td></tr>
+<tr class="child"><td><code>2210</code></td><td>Sales Tax Payable</td><td>TAXES PAYABLE</td><td><code>2200</code></td><td><span class="pill role">TAX_PAYABLE</span></td></tr>
+<tr class="child"><td><code>2220</code></td><td>Withholding Tax Payable</td><td>TAXES PAYABLE</td><td><code>2200</code></td><td><span class="pill role">WITHHOLDING_TAX_PAYABLE</span></td></tr>
+<tr class="child"><td><code>2230</code></td><td>Income Tax Payable</td><td>TAXES PAYABLE</td><td><code>2200</code></td><td><span class="pill role">INCOME_TAX_PAYABLE</span></td></tr>
+<tr class="child"><td><code>2240</code></td><td>Payroll Taxes Payable</td><td>TAXES PAYABLE</td><td><code>2200</code></td><td></td></tr>
+<tr><td><code>2300</code></td><td>Long-term Loans</td><td>LONG-TERM LIABILITIES</td><td></td><td></td></tr>
+<tr><td><code>2900</code></td><td>Suspense</td><td>OTHER LIABILITIES</td><td></td><td></td></tr>
+<tr><td><code>3000</code></td><td>Share Capital</td><td>OWNERS EQUITY</td><td></td><td></td></tr>
+<tr><td><code>3100</code></td><td>Drawings and Dividends Paid</td><td>OWNERS EQUITY</td><td></td><td><span class="pill contra">contra</span></td></tr>
+<tr><td><code>3200</code></td><td>Opening Balance Equity</td><td>OWNERS EQUITY</td><td></td><td><span class="pill role">OPENING_BALANCE_EQUITY</span> <span class="pill lock">locked name</span></td></tr>
+<tr><td><code>3300</code></td><td>Retained Earnings</td><td>RETAINED EARNINGS</td><td></td><td><span class="pill role">RETAINED_EARNINGS</span> <span class="pill lock">locked name</span></td></tr>
+<tr><td><code>3400</code></td><td>Current Year Earnings</td><td>RETAINED EARNINGS</td><td></td><td><span class="pill role">CURRENT_YEAR_EARNINGS</span> <span class="pill lock">locked name</span></td></tr>
+<tr><td><code>4000</code></td><td>Sales Revenue</td><td>INCOME</td><td></td><td><span class="pill role">SALES_INCOME</span></td></tr>
+<tr><td><code>4010</code></td><td>Service and Installation Income</td><td>INCOME</td><td></td><td></td></tr>
+<tr><td><code>4080</code></td><td>Sales Returns and Allowances</td><td>INCOME</td><td></td><td><span class="pill contra">contra</span></td></tr>
+<tr><td><code>4090</code></td><td>Discounts Given</td><td>INCOME</td><td></td><td><span class="pill role">DISCOUNTS_GIVEN</span> <span class="pill contra">contra</span></td></tr>
+<tr><td><code>4100</code></td><td>Commission Income</td><td>INCOME FROM OTHER ACTIVITIES</td><td></td><td></td></tr>
+<tr><td><code>4110</code></td><td>Reimbursed Expenses Recovered</td><td>INCOME FROM OTHER ACTIVITIES</td><td></td><td></td></tr>
+<tr><td><code>4800</code></td><td>Interest Income</td><td>OTHER INCOME</td><td></td><td></td></tr>
+<tr><td><code>4890</code></td><td>Exchange Gain or Loss</td><td>OTHER INCOME</td><td></td><td><span class="pill role">FX_GAIN_LOSS</span></td></tr>
+<tr><td><code>4900</code></td><td>Other Income</td><td>OTHER INCOME</td><td></td><td></td></tr>
+<tr><td><code>5000</code></td><td>Cost of Goods Sold</td><td>COST OF SALES</td><td></td><td><span class="pill role">COST_OF_GOODS_SOLD</span></td></tr>
+<tr><td><code>5020</code></td><td>Freight, Duties and Clearing</td><td>COST OF SALES</td><td></td><td></td></tr>
+<tr><td><code>5030</code></td><td>Purchase Discounts</td><td>COST OF SALES</td><td></td><td><span class="pill role">DISCOUNTS_RECEIVED</span> <span class="pill contra">contra</span></td></tr>
+<tr><td><code>5040</code></td><td>Inventory Adjustments and Write-offs</td><td>COST OF SALES</td><td></td><td></td></tr>
+<tr><td><code>5100</code></td><td>Direct Labour</td><td>DIRECT EXPENSES</td><td></td><td></td></tr>
+<tr><td><code>5110</code></td><td>Packaging and Delivery</td><td>DIRECT EXPENSES</td><td></td><td></td></tr>
+<tr><td><code>6000</code></td><td>Salaries and Wages</td><td>ADMINISTRATION EXPENSES</td><td></td><td></td></tr>
+<tr><td><code>6010</code></td><td>Employer Pension and Social Security</td><td>ADMINISTRATION EXPENSES</td><td></td><td></td></tr>
+<tr><td><code>6020</code></td><td>Staff Welfare and Medical</td><td>ADMINISTRATION EXPENSES</td><td></td><td></td></tr>
+<tr><td><code>6100</code></td><td>Rent and Rates</td><td>ADMINISTRATION EXPENSES</td><td></td><td></td></tr>
+<tr><td><code>6110</code></td><td>Utilities</td><td>ADMINISTRATION EXPENSES</td><td></td><td></td></tr>
+<tr><td><code>6120</code></td><td>Repairs and Maintenance</td><td>ADMINISTRATION EXPENSES</td><td></td><td></td></tr>
+<tr><td><code>6130</code></td><td>Printing, Stationery and Office Supplies</td><td>ADMINISTRATION EXPENSES</td><td></td><td></td></tr>
+<tr><td><code>6140</code></td><td>Telephone and Internet</td><td>ADMINISTRATION EXPENSES</td><td></td><td></td></tr>
+<tr><td><code>6150</code></td><td>Software and Subscriptions</td><td>ADMINISTRATION EXPENSES</td><td></td><td></td></tr>
+<tr><td><code>6160</code></td><td>Insurance</td><td>ADMINISTRATION EXPENSES</td><td></td><td></td></tr>
+<tr><td><code>6170</code></td><td>Audit, Accounting and Professional Fees</td><td>ADMINISTRATION EXPENSES</td><td></td><td></td></tr>
+<tr><td><code>6180</code></td><td>Licences, Permits and Levies</td><td>ADMINISTRATION EXPENSES</td><td></td><td></td></tr>
+<tr><td><code>6190</code></td><td>Small Equipment and Tools</td><td>ADMINISTRATION EXPENSES</td><td></td><td></td></tr>
+<tr><td><code>6200</code></td><td>Depreciation Expense</td><td>ADMINISTRATION EXPENSES</td><td></td><td></td></tr>
+<tr><td><code>6300</code></td><td>Advertising and Marketing</td><td>SELLING &amp; PROMOTIONAL</td><td></td><td></td></tr>
+<tr><td><code>6310</code></td><td>Business Promotion and Entertainment</td><td>SELLING &amp; PROMOTIONAL</td><td></td><td></td></tr>
+<tr><td><code>6320</code></td><td>Travel and Transport</td><td>SELLING &amp; PROMOTIONAL</td><td></td><td></td></tr>
+<tr><td><code>6500</code></td><td>Bank and Payment Charges</td><td>FINANCE CHARGES</td><td></td><td></td></tr>
+<tr><td><code>6510</code></td><td>Interest Expense</td><td>FINANCE CHARGES</td><td></td><td></td></tr>
+<tr><td><code>6800</code></td><td>Bad Debt Expense</td><td>OTHER EXPENSES</td><td></td><td></td></tr>
+<tr><td><code>6890</code></td><td>Rounding Differences</td><td>OTHER EXPENSES</td><td></td><td><span class="pill role">ROUNDING</span></td></tr>
+<tr><td><code>6900</code></td><td>Sundry Expenses</td><td>OTHER EXPENSES</td><td></td><td><span class="pill role">DEFAULT_EXPENSE</span></td></tr>
+<tr><td><code>6950</code></td><td>Income Tax Expense</td><td>OTHER EXPENSES</td><td></td><td></td></tr>
+</tbody></table>
+
+<h2 id="ghana">10. Ghana overlay</h2>
+<p>Applied when <code>Account.countryOfOrigin</code> is GH, which is the default. It follows the Value Added Tax Act, 2025 (Act 1151), in force since 1 January 2026. VAT is 15%, NHIL 2.5% and GETFund 2.5%. All three are deductible as input tax and must appear on separate invoice lines. The COVID-19 levy and the VAT flat-rate scheme are abolished.</p>
+<p>Removes <code>2210</code>, <code>2240</code> and adds or replaces 12 accounts.</p><table><thead><tr><th>Number</th><th>Name</th><th>Category</th><th>Parent</th><th>Flags</th></tr></thead><tbody>
+<tr><td><code>1020</code></td><td>Mobile Money Wallets</td><td>CASH ON HAND</td><td></td><td><span class="pill role">BANK</span> <span class="pill cash">cash flow</span></td></tr>
+<tr><td><code>1400</code></td><td>Input Tax Recoverable</td><td>TAX RECOVERABLE</td><td></td><td><span class="pill lock">replaces base</span></td></tr>
+<tr class="child"><td><code>1401</code></td><td>Input VAT Recoverable</td><td>TAX RECOVERABLE</td><td><code>1400</code></td><td><span class="pill role">TAX_RECEIVABLE</span></td></tr>
+<tr class="child"><td><code>1402</code></td><td>Input NHIL Recoverable</td><td>TAX RECOVERABLE</td><td><code>1400</code></td><td><span class="pill role">TAX_RECEIVABLE</span></td></tr>
+<tr class="child"><td><code>1403</code></td><td>Input GETFund Levy Recoverable</td><td>TAX RECOVERABLE</td><td><code>1400</code></td><td><span class="pill role">TAX_RECEIVABLE</span></td></tr>
+<tr><td><code>1420</code></td><td>Withholding Tax Credits</td><td>TAX RECOVERABLE</td><td></td><td><span class="pill role">WITHHOLDING_TAX_RECEIVABLE</span></td></tr>
+<tr class="child"><td><code>2211</code></td><td>Output VAT Payable</td><td>TAXES PAYABLE</td><td><code>2200</code></td><td><span class="pill role">TAX_PAYABLE</span></td></tr>
+<tr class="child"><td><code>2212</code></td><td>NHIL Payable</td><td>TAXES PAYABLE</td><td><code>2200</code></td><td><span class="pill role">TAX_PAYABLE</span></td></tr>
+<tr class="child"><td><code>2213</code></td><td>GETFund Levy Payable</td><td>TAXES PAYABLE</td><td><code>2200</code></td><td><span class="pill role">TAX_PAYABLE</span></td></tr>
+<tr class="child"><td><code>2241</code></td><td>PAYE Payable</td><td>TAXES PAYABLE</td><td><code>2200</code></td><td></td></tr>
+<tr><td><code>2114</code></td><td>SSNIT Tier 1 Payable</td><td>SHORT -TERM LIABILITIES</td><td></td><td></td></tr>
+<tr><td><code>2115</code></td><td>Tier 2 Pension Payable</td><td>SHORT -TERM LIABILITIES</td><td></td><td></td></tr>
+</tbody></table>
+<h3>Tax entry links</h3>
+<p>Keys are the <code>TaxEntry.abbreviation</code> values the backend seeds today. <code>linkLookups</code> sets the two new TaxEntry FKs from this map.</p>
+<table><thead><tr><th>TaxEntry abbreviation</th><th>Liability (output)</th><th>Recoverable (input)</th><th>Note</th></tr></thead><tbody>
+<tr><td><code>VAT</code></td><td><code>2211</code></td><td><code>1401</code></td><td></td></tr>
+<tr><td><code>VAT-S</code></td><td><code>2211</code></td><td><code>1401</code></td><td></td></tr>
+<tr><td><code>NHIL</code></td><td><code>2212</code></td><td><code>1402</code></td><td></td></tr>
+<tr><td><code>GETFL</code></td><td><code>2213</code></td><td><code>1403</code></td><td></td></tr>
+<tr><td><code>WHT</code></td><td><code>2220</code></td><td><code>1420</code></td><td></td></tr>
+<tr><td><code>WHT-S</code></td><td><code>2220</code></td><td><code>1420</code></td><td></td></tr>
+<tr><td><code>Withholding Tax</code></td><td><code>2220</code></td><td><code>1420</code></td><td></td></tr>
+<tr><td><code>RT-Comm</code></td><td><code>2220</code></td><td><code>1420</code></td><td></td></tr>
+<tr><td><code>RT-Non Comm</code></td><td><code>2220</code></td><td><code>1420</code></td><td></td></tr>
+<tr><td><code>TL</code></td><td><code>2250</code></td><td></td><td>Tourism levy. 2250 exists only with the hospitality overlay.</td></tr>
+<tr><td><code>CST</code></td><td></td><td></td><td>Not linked (abolished, or sector-specific)</td></tr>
+<tr><td><code>CL</code></td><td></td><td></td><td>Not linked (abolished, or sector-specific)</td></tr>
+<tr><td><code>VAT-FR</code></td><td></td><td></td><td>Not linked (abolished, or sector-specific)</td></tr>
+</tbody></table>
+
+<h2 id="industry">11. Industry overlays</h2>
+<p>Optional. They apply when registration or onboarding supplies an industry (SOUPFIN-151). Each adds at most 8 accounts.</p>
+<h3>Construction <small>(SERVICES, TRADING)</small></h3><p>Contractors that bill by stage, hold retentions and hire plant.</p><table><thead><tr><th>Number</th><th>Name</th><th>Category</th><th>Parent</th><th>Flags</th></tr></thead><tbody>
+<tr><td><code>1215</code></td><td>Retentions Receivable</td><td>ACCOUNT RECEIVABLE</td><td></td><td></td></tr>
+<tr><td><code>1340</code></td><td>Contract Assets (Costs in Excess of Billings)</td><td>OTHER ASSETS</td><td></td><td></td></tr>
+<tr class="child"><td><code>1550</code></td><td>Plant and Machinery</td><td>FIXED ASSETS</td><td><code>1500</code></td><td></td></tr>
+<tr><td><code>2140</code></td><td>Retentions Payable</td><td>SHORT -TERM LIABILITIES</td><td></td><td></td></tr>
+<tr><td><code>2145</code></td><td>Contract Liabilities (Billings in Excess of Costs)</td><td>SHORT -TERM LIABILITIES</td><td></td><td></td></tr>
+<tr><td><code>5050</code></td><td>Construction Materials</td><td>DIRECT EXPENSES</td><td></td><td></td></tr>
+<tr><td><code>5060</code></td><td>Plant and Equipment Hire</td><td>DIRECT EXPENSES</td><td></td><td></td></tr>
+<tr><td><code>5070</code></td><td>Site Labour</td><td>DIRECT EXPENSES</td><td></td><td></td></tr>
+</tbody></table>
+<h3>Hospitality <small>(SERVICES, TRADING)</small></h3><p>Hotels, guest houses, restaurants and bars.</p><table><thead><tr><th>Number</th><th>Name</th><th>Category</th><th>Parent</th><th>Flags</th></tr></thead><tbody>
+<tr><td><code>4030</code></td><td>Room Revenue</td><td>INCOME</td><td></td><td></td></tr>
+<tr><td><code>4040</code></td><td>Food and Beverage Revenue</td><td>INCOME</td><td></td><td></td></tr>
+<tr><td><code>5080</code></td><td>Food and Beverage Costs</td><td>DIRECT EXPENSES</td><td></td><td></td></tr>
+<tr><td><code>6210</code></td><td>Laundry and Housekeeping</td><td>ADMINISTRATION EXPENSES</td><td></td><td></td></tr>
+<tr><td><code>6220</code></td><td>Guest Supplies and Amenities</td><td>ADMINISTRATION EXPENSES</td><td></td><td></td></tr>
+<tr class="child"><td><code>2250</code></td><td>Tourism Levy Payable</td><td>TAXES PAYABLE</td><td><code>2200</code></td><td><span class="pill role">TAX_PAYABLE</span></td></tr>
+</tbody></table>
+<h3>Non-profit <small>(SERVICES)</small></h3><p>NGOs, churches, associations and foundations that report restricted and unrestricted funds.</p><table><thead><tr><th>Number</th><th>Name</th><th>Category</th><th>Parent</th><th>Flags</th></tr></thead><tbody>
+<tr><td><code>3000</code></td><td>Accumulated Fund (Net Assets)</td><td>OWNERS EQUITY</td><td></td><td><span class="pill lock">replaces base</span></td></tr>
+<tr><td><code>3050</code></td><td>Restricted Funds</td><td>OWNERS EQUITY</td><td></td><td></td></tr>
+<tr><td><code>4050</code></td><td>Grants and Donations - Unrestricted</td><td>INCOME</td><td></td><td></td></tr>
+<tr><td><code>4060</code></td><td>Grants and Donations - Restricted</td><td>INCOME</td><td></td><td></td></tr>
+<tr><td><code>4070</code></td><td>Membership Dues</td><td>INCOME</td><td></td><td></td></tr>
+<tr><td><code>2150</code></td><td>Deferred Grant Income</td><td>SHORT -TERM LIABILITIES</td><td></td><td></td></tr>
+<tr><td><code>5090</code></td><td>Programme Expenses</td><td>DIRECT EXPENSES</td><td></td><td></td></tr>
+<tr><td><code>6350</code></td><td>Fundraising Expenses</td><td>SELLING &amp; PROMOTIONAL</td><td></td><td></td></tr>
+</tbody></table>
+<h3>Professional services <small>(SERVICES)</small></h3><p>Law, accounting, engineering and consulting firms that bill retainers and hold client money.</p><table><thead><tr><th>Number</th><th>Name</th><th>Category</th><th>Parent</th><th>Flags</th></tr></thead><tbody>
+<tr><td><code>4030</code></td><td>Retainer Fees</td><td>INCOME</td><td></td><td></td></tr>
+<tr><td><code>4040</code></td><td>Success and Contingency Fees</td><td>INCOME</td><td></td><td></td></tr>
+<tr><td><code>1335</code></td><td>Client Disbursements Recoverable</td><td>OTHER ASSETS</td><td></td><td></td></tr>
+<tr><td><code>2126</code></td><td>Client Retainers Held</td><td>SHORT -TERM LIABILITIES</td><td></td><td></td></tr>
+<tr><td><code>6165</code></td><td>Professional Indemnity Insurance</td><td>ADMINISTRATION EXPENSES</td><td></td><td></td></tr>
+<tr><td><code>6175</code></td><td>Continuing Professional Development</td><td>ADMINISTRATION EXPENSES</td><td></td><td></td></tr>
+</tbody></table>
+<h3>Retail <small>(TRADING)</small></h3><p>Shops and online stores selling to consumers through tills, cards and mobile money.</p><table><thead><tr><th>Number</th><th>Name</th><th>Category</th><th>Parent</th><th>Flags</th></tr></thead><tbody>
+<tr><td><code>1030</code></td><td>Till Floats</td><td>CASH ON HAND</td><td></td><td><span class="pill cash">cash flow</span></td></tr>
+<tr><td><code>1040</code></td><td>Card and MoMo Settlements in Transit</td><td>CASH ON HAND</td><td></td><td><span class="pill cash">cash flow</span></td></tr>
+<tr><td><code>2135</code></td><td>Gift Card and Voucher Liabilities</td><td>SHORT -TERM LIABILITIES</td><td></td><td></td></tr>
+<tr><td><code>4085</code></td><td>Promotions and Loyalty Rewards</td><td>INCOME</td><td></td><td><span class="pill contra">contra</span></td></tr>
+<tr><td><code>5045</code></td><td>Inventory Shrinkage</td><td>COST OF SALES</td><td></td><td></td></tr>
+<tr><td><code>6330</code></td><td>Point-of-Sale and E-commerce Fees</td><td>SELLING &amp; PROMOTIONAL</td><td></td><td></td></tr>
+<tr><td><code>6340</code></td><td>Store Supplies and Packaging</td><td>SELLING &amp; PROMOTIONAL</td><td></td><td></td></tr>
+</tbody></table>
+<h3>Software and SaaS <small>(SERVICES)</small></h3><p>Software companies billing subscriptions and onboarding fees.</p><table><thead><tr><th>Number</th><th>Name</th><th>Category</th><th>Parent</th><th>Flags</th></tr></thead><tbody>
+<tr><td><code>4005</code></td><td>Subscription Revenue</td><td>INCOME</td><td></td><td></td></tr>
+<tr><td><code>4015</code></td><td>Implementation and Onboarding Fees</td><td>INCOME</td><td></td><td></td></tr>
+<tr><td><code>2125</code></td><td>Deferred Subscription Revenue</td><td>SHORT -TERM LIABILITIES</td><td></td><td></td></tr>
+<tr class="child"><td><code>5085</code></td><td>Hosting and Infrastructure</td><td>DIRECT EXPENSES</td><td><code>5000</code></td><td></td></tr>
+<tr class="child"><td><code>5086</code></td><td>Third-party Software and APIs</td><td>DIRECT EXPENSES</td><td><code>5000</code></td><td></td></tr>
+<tr><td><code>6520</code></td><td>Payment Gateway Fees</td><td>FINANCE CHARGES</td><td></td><td></td></tr>
+<tr class="child"><td><code>1560</code></td><td>Capitalised Software Development</td><td>FIXED ASSETS</td><td><code>1500</code></td><td></td></tr>
+</tbody></table>
+
+<h2 id="matrix">12. Every composition, counted</h2>
+<p>Generated by composing every combination. Each one passes every invariant in <code>validate()</code>.</p>
+<table><thead><tr><th>Composition</th><th>Accounts</th><th>Categories</th><th>Role accounts</th><th>validate()</th></tr></thead><tbody>
+<tr><td><code>services</code></td><td>69</td><td>21</td><td>18</td><td><span class="ok">valid</span></td></tr>
+<tr><td><code>services+construction</code></td><td>77</td><td>21</td><td>18</td><td><span class="ok">valid</span></td></tr>
+<tr><td><code>services+hospitality</code></td><td>75</td><td>21</td><td>19</td><td><span class="ok">valid</span></td></tr>
+<tr><td><code>services+non-profit</code></td><td>76</td><td>21</td><td>18</td><td><span class="ok">valid</span></td></tr>
+<tr><td><code>services+professional-services</code></td><td>75</td><td>21</td><td>18</td><td><span class="ok">valid</span></td></tr>
+<tr><td><code>services+saas</code></td><td>76</td><td>21</td><td>18</td><td><span class="ok">valid</span></td></tr>
+<tr><td><code>services+GH</code></td><td>78</td><td>21</td><td>24</td><td><span class="ok">valid</span></td></tr>
+<tr><td><code>services+GH+construction</code></td><td>86</td><td>21</td><td>24</td><td><span class="ok">valid</span></td></tr>
+<tr><td><code>services+GH+hospitality</code></td><td>84</td><td>21</td><td>25</td><td><span class="ok">valid</span></td></tr>
+<tr><td><code>services+GH+non-profit</code></td><td>85</td><td>21</td><td>24</td><td><span class="ok">valid</span></td></tr>
+<tr><td><code>services+GH+professional-services</code></td><td>84</td><td>21</td><td>24</td><td><span class="ok">valid</span></td></tr>
+<tr><td><code>services+GH+saas</code></td><td>85</td><td>21</td><td>24</td><td><span class="ok">valid</span></td></tr>
+<tr><td><code>trading</code></td><td>73</td><td>23</td><td>21</td><td><span class="ok">valid</span></td></tr>
+<tr><td><code>trading+construction</code></td><td>81</td><td>23</td><td>21</td><td><span class="ok">valid</span></td></tr>
+<tr><td><code>trading+hospitality</code></td><td>79</td><td>23</td><td>22</td><td><span class="ok">valid</span></td></tr>
+<tr><td><code>trading+retail</code></td><td>80</td><td>23</td><td>21</td><td><span class="ok">valid</span></td></tr>
+<tr><td><code>trading+GH</code></td><td>82</td><td>23</td><td>27</td><td><span class="ok">valid</span></td></tr>
+<tr><td><code>trading+GH+construction</code></td><td>90</td><td>23</td><td>27</td><td><span class="ok">valid</span></td></tr>
+<tr><td><code>trading+GH+hospitality</code></td><td>88</td><td>23</td><td>28</td><td><span class="ok">valid</span></td></tr>
+<tr><td><code>trading+GH+retail</code></td><td>89</td><td>23</td><td>27</td><td><span class="ok">valid</span></td></tr>
+</tbody></table>
+
+<h2 id="sd">13. Service description mapping</h2>
+<p>Each of the 32 universal service descriptions points at a template account. When the number is missing from the composed template, the description falls back to the <code>SALES_INCOME</code> account (INVOICE) or the <code>DEFAULT_EXPENSE</code> account (BILL). The <code>ServiceDescription</code> validator only accepts INVOICE → income and BILL → expense, so some best-fit choices were needed: <em>Tax Payment</em>, <em>PAYE</em> and <em>Purchase of Equipment</em> must be expenses. An accountant should review those three.</p>
+<table><thead><tr><th>Service description</th><th>Type</th><th>Number</th><th>SERVICES account</th><th>TRADING account</th></tr></thead><tbody>
+<tr><td>Advisory</td><td>INVOICE</td><td><code>4010</code></td><td>Consulting and Advisory Fees</td><td>Service and Installation Income</td></tr>
+<tr><td>Arrangement Fees</td><td>INVOICE</td><td><code>4010</code></td><td>Consulting and Advisory Fees</td><td>Service and Installation Income</td></tr>
+<tr><td>Commission</td><td>INVOICE</td><td><code>4100</code></td><td>Commission Income</td><td>Commission Income</td></tr>
+<tr><td>Reimbursement</td><td>INVOICE</td><td><code>4110</code></td><td>Reimbursed Expenses Recovered</td><td>Reimbursed Expenses Recovered</td></tr>
+<tr><td>Services</td><td>INVOICE</td><td><code>4020</code></td><td>Professional Fees</td><td>fallback: Sales Revenue</td></tr>
+<tr><td>Advertisement</td><td>BILL</td><td><code>6300</code></td><td>Advertising and Marketing</td><td>Advertising and Marketing</td></tr>
+<tr><td>Advisory Fees</td><td>BILL</td><td><code>6170</code></td><td>Audit, Accounting and Professional Fees</td><td>Audit, Accounting and Professional Fees</td></tr>
+<tr><td>Audit Fees</td><td>BILL</td><td><code>6170</code></td><td>Audit, Accounting and Professional Fees</td><td>Audit, Accounting and Professional Fees</td></tr>
+<tr><td>Business Promotion</td><td>BILL</td><td><code>6310</code></td><td>Business Promotion and Entertainment</td><td>Business Promotion and Entertainment</td></tr>
+<tr><td>CSD Fees</td><td>BILL</td><td><code>6500</code></td><td>Bank and Payment Charges</td><td>Bank and Payment Charges</td></tr>
+<tr><td>Failed Trades</td><td>BILL</td><td><code>6900</code></td><td>Sundry Expenses</td><td>Sundry Expenses</td></tr>
+<tr><td>Food and Entertainment</td><td>BILL</td><td><code>6310</code></td><td>Business Promotion and Entertainment</td><td>Business Promotion and Entertainment</td></tr>
+<tr><td>Independent Audit</td><td>BILL</td><td><code>6170</code></td><td>Audit, Accounting and Professional Fees</td><td>Audit, Accounting and Professional Fees</td></tr>
+<tr><td>Internet Services</td><td>BILL</td><td><code>6140</code></td><td>Telephone and Internet</td><td>Telephone and Internet</td></tr>
+<tr><td>License Renewal</td><td>BILL</td><td><code>6180</code></td><td>Licences, Permits and Levies</td><td>Licences, Permits and Levies</td></tr>
+<tr><td>Marketing</td><td>BILL</td><td><code>6300</code></td><td>Advertising and Marketing</td><td>Advertising and Marketing</td></tr>
+<tr><td>Medical Insurance</td><td>BILL</td><td><code>6020</code></td><td>Staff Welfare and Medical</td><td>Staff Welfare and Medical</td></tr>
+<tr><td>PAYE</td><td>BILL</td><td><code>6000</code></td><td>Salaries and Wages</td><td>Salaries and Wages</td></tr>
+<tr><td>Printing, Stationery &amp; Consumables</td><td>BILL</td><td><code>6130</code></td><td>Printing, Stationery and Office Supplies</td><td>Printing, Stationery and Office Supplies</td></tr>
+<tr><td>Property Management</td><td>BILL</td><td><code>6100</code></td><td>Rent and Rates</td><td>Rent and Rates</td></tr>
+<tr><td>Purchase of Fuel</td><td>BILL</td><td><code>6320</code></td><td>Travel and Transport</td><td>Travel and Transport</td></tr>
+<tr><td>Purchase of Equipment</td><td>BILL</td><td><code>6190</code></td><td>Small Equipment and Tools</td><td>Small Equipment and Tools</td></tr>
+<tr><td>Rent Paid</td><td>BILL</td><td><code>6100</code></td><td>Rent and Rates</td><td>Rent and Rates</td></tr>
+<tr><td>Repairs and Maintenance</td><td>BILL</td><td><code>6120</code></td><td>Repairs and Maintenance</td><td>Repairs and Maintenance</td></tr>
+<tr><td>Subscriptions</td><td>BILL</td><td><code>6150</code></td><td>Software and Subscriptions</td><td>Software and Subscriptions</td></tr>
+<tr><td>Sundry Expense</td><td>BILL</td><td><code>6900</code></td><td>Sundry Expenses</td><td>Sundry Expenses</td></tr>
+<tr><td>Tax Payment</td><td>BILL</td><td><code>6180</code></td><td>Licences, Permits and Levies</td><td>Licences, Permits and Levies</td></tr>
+<tr><td>Technology Service</td><td>BILL</td><td><code>6150</code></td><td>Software and Subscriptions</td><td>Software and Subscriptions</td></tr>
+<tr><td>Tier 1 Contributions</td><td>BILL</td><td><code>6010</code></td><td>Employer Pension and Social Security</td><td>Employer Pension and Social Security</td></tr>
+<tr><td>Tier 2 Contributions</td><td>BILL</td><td><code>6010</code></td><td>Employer Pension and Social Security</td><td>Employer Pension and Social Security</td></tr>
+<tr><td>Travel and Transport</td><td>BILL</td><td><code>6320</code></td><td>Travel and Transport</td><td>Travel and Transport</td></tr>
+<tr><td>Utilities</td><td>BILL</td><td><code>6110</code></td><td>Utilities</td><td>Utilities</td></tr>
+</tbody></table>
+
+<h2 id="tests">14. Tests</h2>
+<h3>Already in this repository</h3>
+<p><code>node --test plans/coa-templates/coa-templates.test.mjs</code> runs 50 checks on every composition and on the overlay contract. They cover both ends: an empty template, a template ten times too large, duplicate names in different case, a second A/R account, and an income account placed in an expense category.</p>
+<h3>To write in soupmarkets-web</h3>
+<table>
+<thead><tr><th>Spec</th><th>Type</th><th>Asserts</th></tr></thead>
+<tbody>
+<tr><td><code>CoaTemplateServiceSpec</code></td><td>Unit (Spock)</td><td>Port every <code>coa-templates.test.mjs</code> case, reading the JSON from <code>seed-data/coa/</code>. One data-table row per composition.</td></tr>
+<tr><td><code>CoaTemplateSeedIntegrationSpec</code></td><td>Integration</td><td>Register a SERVICES+GH and a TRADING+GH tenant. Check the exact account and category counts from section 12. Check the A/R and A/P FKs on <code>Account</code>. Check that every <code>accountType</code> in section 7 is present, and that service descriptions and tax entries are linked.</td></tr>
+<tr><td>Same spec, round trip</td><td>Integration</td><td>Post an invoice with VAT on the new tenant. Then <code>/rest/financeReports/incomeStatement.json</code> shows the revenue on 4000-series lines, and the trial balance balances.</td></tr>
+<tr><td>Same spec, idempotency</td><td>Integration</td><td>Seed the same tenant twice. Counts are unchanged and no unique-constraint error is thrown.</td></tr>
+<tr><td>Same spec, old shape</td><td>Integration</td><td>A tenant that already holds the old 9-category seed ("Other Assets" in mixed case) gets the missing categories and accounts with no duplicate-key error.</td></tr>
+</tbody>
+</table>
+
+<h2 id="scope">15. Out of scope and follow-ups</h2>
+<ul>
+  <li>SOUPFIN-144: call the seed from <code>/account/register.json</code> and enable the Ledger and Accounting modules.</li>
+  <li>SOUPFIN-145: the <code>applyTemplate</code> (with dry run) and <code>coaTemplate/index</code> endpoints, built on <code>CoaTemplateService</code>.</li>
+  <li>SOUPFIN-146: backfill existing tenants, including the old 9-category shape.</li>
+  <li>SOUPFIN-147, SOUPFIN-151, SOUPFIN-152: template picker, industry capture, regression tests.</li>
+  <li>SOUPFIN-231 (filed with this plan): Frontend: the COA page files income and expense accounts under Equity, because <code>deriveLedgerGroup</code> reads the last segment of the category string. Blocks the epic's grouping criterion.</li>
+  <li>SOUPFIN-232 (filed with this plan): Backend: post invoice and bill tax to the new TaxEntry liability and recoverable accounts. Output VAT currently lands in an expense account and A/P.</li>
+  <li>SOUPFIN-233 (filed with this plan): Backend: update the Ghana tax seed for Act 1151 (drop the COVID-19 levy and flat rate, fix the 12.5% VAT row, mark NHIL and GETFund recoverable).</li>
+  <li>SOUPFIN-234 (filed with this plan): Backend: the cash-flow statement filters <code>LedgerAccount</code> by an <code>account</code> property it does not have.</li>
+</ul>
+
+<h2 id="sources">16. Sources</h2>
+<ul>
+  <li>soupmarkets-web, branch <code>authentication-base-on-multi-tenancy-descriminator</code>: <code>AccountRegistrationService</code>, <code>Account</code>, <code>AccountUtilityService</code>, <code>LedgerAccount</code>, <code>LedgerAccountCategory</code>, <code>LedgerGroup</code>, <code>LedgerSubGroup</code>, <code>ServiceDescription</code>, <code>TaxEntry</code>, <code>FinancialStatementsService</code>, <code>SeedDataLoaderService</code>, <code>seed-data/README.md</code>.</li>
+  <li>LXC database <code>soupbroker_seed_source</code> on 10.115.213.114, queried 2026-10-10.</li>
+  <li><a href="https://www.crowe.com/gh/news/ghana-vat-reform-2026">Crowe Ghana — Ghana VAT Reform 2026: A Practical Guide for Businesses</a></li>
+  <li><a href="https://gna.org.gh/2025/11/government-abolishes-covid-19-levy-reduces-vat-rate-in-tax-reforms/">Ghana News Agency — Government abolishes COVID-19 Levy, reduces VAT rate</a></li>
+  <li><a href="https://www.vatupdate.com/2026/01/09/ghana-implements-new-vat-act-2025-higher-threshold-abolished-levies-and-updated-guidelines/">VATupdate — Ghana implements new VAT Act 2025</a></li>
+  <li><code>plans/soupfinance-tenant-architecture-refactor.md:277-330</code> — the original 1000–5999 trees this plan extends.</li>
+</ul>
+</main>
+</body>
+</html>

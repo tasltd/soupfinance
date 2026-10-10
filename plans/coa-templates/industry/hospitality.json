@@ -1,0 +1,15 @@
+{
+  "key": "hospitality",
+  "name": "Hospitality",
+  "appliesTo": ["SERVICES", "TRADING"],
+  "description": "Hotels, guest houses, restaurants and bars.",
+  "remove": [],
+  "add": [
+    { "number": "4030", "name": "Room Revenue", "ledgerAccountCategory": "INCOME" },
+    { "number": "4040", "name": "Food and Beverage Revenue", "ledgerAccountCategory": "INCOME" },
+    { "number": "5080", "name": "Food and Beverage Costs", "ledgerAccountCategory": "DIRECT EXPENSES" },
+    { "number": "6210", "name": "Laundry and Housekeeping", "ledgerAccountCategory": "ADMINISTRATION EXPENSES" },
+    { "number": "6220", "name": "Guest Supplies and Amenities", "ledgerAccountCategory": "ADMINISTRATION EXPENSES" },
+    { "number": "2250", "name": "Tourism Levy Payable", "ledgerAccountCategory": "TAXES PAYABLE", "parentAccount": "2200", "accountType": "TAX_PAYABLE", "systemAccount": true, "deletable": false }
+  ]
+}

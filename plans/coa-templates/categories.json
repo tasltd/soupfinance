@@ -1,0 +1,45 @@
+{
+  "_comment": "LedgerAccountCategory catalogue shared by every SoupFinance COA template (SOUPFIN-143). Field names mirror soupbroker.finance.LedgerAccountCategory. Names in UPPER CASE because existing backend code looks several of them up by exact name (see lookedUpBy). Income and expense categories use ledgerGroup EQUITY + ledgerSubGroup INCOME/EXPENSE with parentCategory RETAINED EARNINGS: that is the convention the broker template, the ServiceDescription.ledgerAccount validator and FinancialStatementsService.incomeStatement all rely on.",
+  "categories": [
+    { "name": "CASH ON HAND", "ledgerGroup": "ASSET", "ledgerSubGroup": null, "parentCategory": null, "editable": false, "requiredByPosting": true,
+      "lookedUpBy": ["AccountModuleUtilityService.createFinanceAccountAndCategory (broker module seed)"] },
+    { "name": "DEPOSITS AND BALANCES WITH BANKS/DISCOUNT HOUSES", "ledgerGroup": "ASSET", "ledgerSubGroup": null, "parentCategory": null, "editable": false, "requiredByPosting": true,
+      "lookedUpBy": ["AccountBankDetailsService.save (ledger account for each company bank account)"] },
+    { "name": "ACCOUNT RECEIVABLE", "ledgerGroup": "ASSET", "ledgerSubGroup": null, "parentCategory": null, "editable": false, "requiredByPosting": true,
+      "lookedUpBy": ["Account.checkAndGetDefaultReceivableAccount", "AccountUtilityService.getDefaultReceivableAccount"] },
+    { "name": "INVENTORY", "ledgerGroup": "ASSET", "ledgerSubGroup": null, "parentCategory": null, "editable": true, "requiredByPosting": false, "lookedUpBy": [] },
+    { "name": "OTHER ASSETS", "ledgerGroup": "ASSET", "ledgerSubGroup": null, "parentCategory": null, "editable": false, "requiredByPosting": true,
+      "lookedUpBy": ["Account.checkAndGetDefaultReceivableAccount", "AccountUtilityService.getDefaultReceivableAccount (first choice)"] },
+    { "name": "TAX RECOVERABLE", "ledgerGroup": "ASSET", "ledgerSubGroup": null, "parentCategory": null, "editable": true, "requiredByPosting": false, "lookedUpBy": [] },
+    { "name": "FIXED ASSETS", "ledgerGroup": "ASSET", "ledgerSubGroup": null, "parentCategory": null, "editable": true, "requiredByPosting": false, "lookedUpBy": [] },
+
+    { "name": "ACCOUNTS PAYABLE", "ledgerGroup": "LIABILITY", "ledgerSubGroup": null, "parentCategory": null, "editable": false, "requiredByPosting": false, "lookedUpBy": [] },
+    { "name": "TAXES PAYABLE", "ledgerGroup": "LIABILITY", "ledgerSubGroup": null, "parentCategory": null, "editable": true, "requiredByPosting": false, "lookedUpBy": [] },
+    { "name": "SHORT -TERM LIABILITIES", "ledgerGroup": "LIABILITY", "ledgerSubGroup": null, "parentCategory": null, "editable": false, "requiredByPosting": true,
+      "lookedUpBy": ["ClientUtilityService (client ledger accounts, created for every invoice client)", "AccountServicesUtilityService", "AccountServicesService", "AccountModuleUtilityService (COA-exists guard)"],
+      "_note": "The space before the hyphen is deliberate: it is the exact string the backend looks up." },
+    { "name": "OTHER LIABILITIES", "ledgerGroup": "LIABILITY", "ledgerSubGroup": null, "parentCategory": null, "editable": false, "requiredByPosting": true,
+      "lookedUpBy": ["Account.checkAndGetDefaultPayableAccount", "AccountUtilityService.getDefaultPayableAccount"] },
+    { "name": "LONG-TERM LIABILITIES", "ledgerGroup": "LIABILITY", "ledgerSubGroup": null, "parentCategory": null, "editable": true, "requiredByPosting": false, "lookedUpBy": [] },
+
+    { "name": "OWNERS EQUITY", "ledgerGroup": "EQUITY", "ledgerSubGroup": null, "parentCategory": null, "editable": true, "requiredByPosting": false, "lookedUpBy": [] },
+    { "name": "RETAINED EARNINGS", "ledgerGroup": "EQUITY", "ledgerSubGroup": null, "parentCategory": null, "editable": false, "requiredByPosting": true,
+      "lookedUpBy": ["Parent of every income and expense category (broker template convention)"],
+      "_note": "ledgerSubGroup stays null on purpose. The broker template gives it ASSET, which drags retained-earnings accounts into the income statement (that report takes every category whose ledgerSubGroup is not null)." },
+
+    { "name": "INCOME", "ledgerGroup": "EQUITY", "ledgerSubGroup": "INCOME", "parentCategory": "RETAINED EARNINGS", "editable": false, "requiredByPosting": true,
+      "lookedUpBy": ["ServiceDescriptionService.save (INVOICE-type service description ledger account)"] },
+    { "name": "INCOME FROM OTHER ACTIVITIES", "ledgerGroup": "EQUITY", "ledgerSubGroup": "INCOME", "parentCategory": "RETAINED EARNINGS", "editable": false, "requiredByPosting": true,
+      "lookedUpBy": ["ServiceDescription.checkAndGetLedgerAccount (INVOICE)", "ServiceDescriptionUtilityService"] },
+    { "name": "OTHER INCOME", "ledgerGroup": "EQUITY", "ledgerSubGroup": "INCOME", "parentCategory": "RETAINED EARNINGS", "editable": true, "requiredByPosting": false, "lookedUpBy": [] },
+
+    { "name": "COST OF SALES", "ledgerGroup": "EQUITY", "ledgerSubGroup": "EXPENSE", "parentCategory": "RETAINED EARNINGS", "editable": true, "requiredByPosting": false, "lookedUpBy": [] },
+    { "name": "DIRECT EXPENSES", "ledgerGroup": "EQUITY", "ledgerSubGroup": "EXPENSE", "parentCategory": "RETAINED EARNINGS", "editable": false, "requiredByPosting": true,
+      "lookedUpBy": ["ServiceDescription.checkAndGetLedgerAccount (BILL)", "ServiceDescriptionService.save (BILL)", "ServiceDescriptionUtilityService"] },
+    { "name": "ADMINISTRATION EXPENSES", "ledgerGroup": "EQUITY", "ledgerSubGroup": "EXPENSE", "parentCategory": "RETAINED EARNINGS", "editable": true, "requiredByPosting": false, "lookedUpBy": [] },
+    { "name": "SELLING & PROMOTIONAL", "ledgerGroup": "EQUITY", "ledgerSubGroup": "EXPENSE", "parentCategory": "RETAINED EARNINGS", "editable": true, "requiredByPosting": false, "lookedUpBy": [] },
+    { "name": "FINANCE CHARGES", "ledgerGroup": "EQUITY", "ledgerSubGroup": "EXPENSE", "parentCategory": "RETAINED EARNINGS", "editable": true, "requiredByPosting": false, "lookedUpBy": [] },
+    { "name": "OTHER EXPENSES", "ledgerGroup": "EQUITY", "ledgerSubGroup": "EXPENSE", "parentCategory": "RETAINED EARNINGS", "editable": false, "requiredByPosting": true,
+      "lookedUpBy": ["TaxEntry.checkAndGetExpenseLedgerAccount", "Vendor.initiateLedgerAccount (findByNameIlike)"] }
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "_comment": "Ghana overlay, applied when Account.countryOfOrigin is GH. Reflects the Value Added Tax Act, 2025 (Act 1151), in force 1 January 2026: 15% VAT + 2.5% NHIL + 2.5% GETFund, all three deductible as input tax and shown on separate invoice lines; the COVID-19 levy and the VAT flat-rate scheme are abolished. Overlay contract: 'remove' drops base numbers (it is an error to remove a number that is not there); 'add' appends accounts (it is an error to reuse a number unless the entry says replace:true).",
+  "country": "GH",
+  "name": "Ghana tax and payroll accounts",
+  "remove": ["2210", "2240"],
+  "add": [
+    { "number": "1020", "name": "Mobile Money Wallets", "ledgerAccountCategory": "CASH ON HAND", "accountType": "BANK", "systemAccount": true, "deletable": false, "cashFlow": true,
+      "description": "MTN MoMo, Telecel Cash and AT Money merchant wallets." },
+    { "number": "1400", "name": "Input Tax Recoverable", "ledgerAccountCategory": "TAX RECOVERABLE", "replace": true,
+      "description": "Header for the three Act 1151 input-tax components. The role moves to the children." },
+    { "number": "1401", "name": "Input VAT Recoverable", "ledgerAccountCategory": "TAX RECOVERABLE", "parentAccount": "1400", "accountType": "TAX_RECEIVABLE", "systemAccount": true, "deletable": false },
+    { "number": "1402", "name": "Input NHIL Recoverable", "ledgerAccountCategory": "TAX RECOVERABLE", "parentAccount": "1400", "accountType": "TAX_RECEIVABLE", "systemAccount": true, "deletable": false },
+    { "number": "1403", "name": "Input GETFund Levy Recoverable", "ledgerAccountCategory": "TAX RECOVERABLE", "parentAccount": "1400", "accountType": "TAX_RECEIVABLE", "systemAccount": true, "deletable": false },
+    { "number": "1420", "name": "Withholding Tax Credits", "ledgerAccountCategory": "TAX RECOVERABLE", "accountType": "WITHHOLDING_TAX_RECEIVABLE", "systemAccount": true, "deletable": false,
+      "description": "Tax customers withheld from our receipts. Offset against income tax with the GRA certificates." },
+    { "number": "2211", "name": "Output VAT Payable", "ledgerAccountCategory": "TAXES PAYABLE", "parentAccount": "2200", "accountType": "TAX_PAYABLE", "systemAccount": true, "deletable": false },
+    { "number": "2212", "name": "NHIL Payable", "ledgerAccountCategory": "TAXES PAYABLE", "parentAccount": "2200", "accountType": "TAX_PAYABLE", "systemAccount": true, "deletable": false },
+    { "number": "2213", "name": "GETFund Levy Payable", "ledgerAccountCategory": "TAXES PAYABLE", "parentAccount": "2200", "accountType": "TAX_PAYABLE", "systemAccount": true, "deletable": false },
+    { "number": "2241", "name": "PAYE Payable", "ledgerAccountCategory": "TAXES PAYABLE", "parentAccount": "2200" },
+    { "number": "2114", "name": "SSNIT Tier 1 Payable", "ledgerAccountCategory": "SHORT -TERM LIABILITIES" },
+    { "number": "2115", "name": "Tier 2 Pension Payable", "ledgerAccountCategory": "SHORT -TERM LIABILITIES" }
+  ],
+  "taxEntryMap": {
+    "_comment": "Keys are TaxEntry.abbreviation values from soupmarkets-web grails-app/conf/seed-data/country/GH/tax-entries.json. liability = number for TaxEntry.liabilityLedgerAccount (output side); recoverable = number for TaxEntry.recoverableLedgerAccount (input side). null = do not link (abolished or sector-specific). optional:true = link only when that number exists in the composed template.",
+    "VAT":             { "liability": "2211", "recoverable": "1401" },
+    "VAT-S":           { "liability": "2211", "recoverable": "1401" },
+    "NHIL":            { "liability": "2212", "recoverable": "1402" },
+    "GETFL":           { "liability": "2213", "recoverable": "1403" },
+    "WHT":             { "liability": "2220", "recoverable": "1420" },
+    "WHT-S":           { "liability": "2220", "recoverable": "1420" },
+    "Withholding Tax": { "liability": "2220", "recoverable": "1420" },
+    "RT-Comm":         { "liability": "2220", "recoverable": "1420" },
+    "RT-Non Comm":     { "liability": "2220", "recoverable": "1420" },
+    "TL":              { "liability": "2250", "recoverable": null, "optional": true, "_note": "Tourism levy. 2250 exists only with the hospitality overlay." },
+    "CST":             null,
+    "CL":              null,
+    "VAT-FR":          null
+  }
+}
