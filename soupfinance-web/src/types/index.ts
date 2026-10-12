@@ -467,7 +467,13 @@ export interface Voucher extends BaseEntity {
   // Underlying ledger transaction (shares same ID)
   ledgerTransaction?: LedgerTransaction;
 
-  status: 'PENDING' | 'APPROVED' | 'POSTED' | 'CANCELLED';
+  // Changed (SOUPFIN-156): the backend status is an ApprovalState, so REJECTED
+  // is a real value; POSTED/CANCELLED come from mocks and older payloads. A
+  // posted voucher is APPROVED with a verified ledger transaction; read it
+  // through voucherLifecycleStatus(), not this field alone.
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'POSTED' | 'CANCELLED';
+  verifiedTransaction?: boolean; // Added (SOUPFIN-156): delegated from ledgerTransaction
+  approvalList?: Array<{ id: string; serialised?: string; class?: string }>; // Added (SOUPFIN-156)
 }
 
 // Added: Journal entry line item for UI forms

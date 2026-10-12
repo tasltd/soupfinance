@@ -29,7 +29,7 @@ vi.mock('../../../api/endpoints/ledger', () => ({
   reverseTransactionGroup: vi.fn(),
   deleteTransactionGroup: vi.fn(),
   postVoucher: vi.fn(),
-  cancelVoucher: vi.fn(),
+  rejectVoucher: vi.fn(),
   deleteVoucher: vi.fn(),
 }));
 
