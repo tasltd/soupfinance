@@ -1,0 +1,238 @@
+/**
+ * Unit tests for the SOUPFIN-142 Chart of Accounts fixes.
+ *
+ * 1. The page lists accounts through listAllLedgerAccounts (every page), not
+ *    listLedgerAccounts() — which got the backend default of 10 newest rows.
+ * 2. Accounts whose ledger group cannot be derived go in an "Uncategorised"
+ *    group (SOUPFIN-148). Before, they were dropped; if every account was
+ *    affected the page rendered nothing at all, not even the empty state.
+ * 3. The empty state explains where a chart comes from and offers a refresh.
+ *    SOUPFIN-147: it now leads with a "Set up your chart of accounts" call to
+ *    action that opens the template picker.
+ * 4. A role denial on the ledger renders as "You do not have permission", not
+ *    "module not available" (SOUPFIN-150).
+ */
+import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
+import { render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import type { LedgerAccount } from '../../../types';
+
+vi.mock('../../../api/endpoints/ledger', async () => {
+  const actual = await vi.importActual<typeof import('../../../api/endpoints/ledger')>(
+    '../../../api/endpoints/ledger'
+  );
+  return { ...actual, listAllLedgerAccounts: vi.fn(), listLedgerAccounts: vi.fn() };
+});
+
+vi.mock('../../../api/endpoints/coaTemplates', async () => {
+  const actual = await vi.importActual<typeof import('../../../api/endpoints/coaTemplates')>(
+    '../../../api/endpoints/coaTemplates'
+  );
+  return { ...actual, listCoaTemplates: vi.fn(), applyCoaTemplate: vi.fn() };
+});
+
+import i18n from '../../../i18n';
+import { listAllLedgerAccounts, listLedgerAccounts } from '../../../api/endpoints/ledger';
+import { listCoaTemplates, applyCoaTemplate } from '../../../api/endpoints/coaTemplates';
+import { ChartOfAccountsPage } from '../ChartOfAccountsPage';
+
+const account = (over: Partial<LedgerAccount>): LedgerAccount =>
+  ({
+    id: 'x',
+    code: '0000',
+    name: 'Account',
+    ledgerGroup: 'ASSET',
+    balance: 0,
+    isActive: true,
+    ...over,
+  }) as LedgerAccount;
+
+function renderPage() {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter>
+        <ChartOfAccountsPage />
+      </MemoryRouter>
+    </QueryClientProvider>
+  );
+}
+
+function axios403(url: string, data: unknown) {
+  return Object.assign(new Error('Request failed with status code 403'), {
+    isAxiosError: true,
+    config: { url },
+    response: { status: 403, data },
+  });
+}
+
+describe('ChartOfAccountsPage (SOUPFIN-142)', () => {
+  beforeAll(async () => {
+    await i18n.changeLanguage('en');
+  });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('loads every account through listAllLedgerAccounts, never the 10-row default', async () => {
+    // 32 accounts = the SERVICES template seeded at registration
+    const seeded = Array.from({ length: 32 }, (_, i) =>
+      account({ id: `s${i}`, code: String(1000 + i * 10), name: `Seeded ${i}`, ledgerGroup: i < 12 ? 'ASSET' : 'EXPENSE' })
+    );
+    vi.mocked(listAllLedgerAccounts).mockResolvedValue(seeded);
+    renderPage();
+
+    expect(await screen.findByTestId('coa-group-asset')).toHaveTextContent('12 accounts');
+    expect(screen.getByTestId('coa-group-expense')).toHaveTextContent('20 accounts');
+    expect(screen.getAllByTestId(/^coa-account-/)).toHaveLength(32);
+    expect(listAllLedgerAccounts).toHaveBeenCalledTimes(1);
+    expect(listLedgerAccounts).not.toHaveBeenCalled();
+  });
+
+  it('shows accounts with no derivable group under Uncategorised, after the known groups', async () => {
+    vi.mocked(listAllLedgerAccounts).mockResolvedValue([
+      account({ id: 'cash', code: '1000', name: 'Cash', ledgerGroup: 'ASSET' }),
+      account({ id: 'odd', code: '9000', name: 'Mystery', ledgerGroup: undefined as unknown as LedgerAccount['ledgerGroup'] }),
+      account({ id: 'bad', code: '9100', name: 'Typo group', ledgerGroup: 'ASSETS' as LedgerAccount['ledgerGroup'] }),
+    ]);
+    renderPage();
+
+    const group = await screen.findByTestId('coa-group-uncategorised');
+    expect(within(group).getByText('Uncategorised')).toBeInTheDocument();
+    expect(within(group).getByText('2 accounts')).toBeInTheDocument();
+    expect(screen.getByTestId('coa-group-note-uncategorised')).toHaveTextContent(
+      'Give these accounts a category to include them in reports.'
+    );
+    expect(within(group).getByTestId('coa-account-odd')).toBeInTheDocument();
+    expect(within(group).getByTestId('coa-account-bad')).toBeInTheDocument();
+    // Known groups render first and keep their own accounts
+    const groups = screen.getAllByTestId(/^coa-group-(asset|uncategorised)$/);
+    expect(groups.map((g) => g.dataset.testid)).toEqual(['coa-group-asset', 'coa-group-uncategorised']);
+  });
+
+  it('renders the groups instead of a blank page when NO account has a known group', async () => {
+    vi.mocked(listAllLedgerAccounts).mockResolvedValue(
+      Array.from({ length: 5 }, (_, i) =>
+        account({ id: `u${i}`, code: `${i}`, ledgerGroup: undefined as unknown as LedgerAccount['ledgerGroup'] })
+      )
+    );
+    renderPage();
+
+    expect(await screen.findByTestId('coa-group-uncategorised')).toHaveTextContent('5 accounts');
+    expect(screen.queryByTestId('coa-empty')).not.toBeInTheDocument();
+  });
+
+  it('sorts accounts with a missing code without throwing', async () => {
+    vi.mocked(listAllLedgerAccounts).mockResolvedValue([
+      account({ id: 'b', code: '2000', name: 'B' }),
+      account({ id: 'n', code: undefined as unknown as string, name: 'No code' }),
+      account({ id: 'a', code: '1000', name: 'A' }),
+    ]);
+    renderPage();
+
+    await screen.findByTestId('coa-table-asset');
+    const rows = screen.getAllByTestId(/^coa-account-/).map((r) => r.dataset.testid);
+    expect(rows).toEqual(['coa-account-n', 'coa-account-a', 'coa-account-b']);
+  });
+
+  it('empty state offers to set up the chart and still refreshes on click (SOUPFIN-147)', async () => {
+    vi.mocked(listAllLedgerAccounts).mockResolvedValueOnce([]).mockResolvedValueOnce([
+      account({ id: 'cash', code: '1000', name: 'Cash' }),
+    ]);
+    renderPage();
+
+    expect(await screen.findByTestId('coa-empty')).toHaveTextContent('Set up your chart of accounts');
+    expect(screen.getByTestId('coa-empty-hint')).toHaveTextContent(
+      'Start from a template built for your kind of business.'
+    );
+    expect(screen.getByTestId('coa-setup-cta')).toHaveTextContent('Set up chart of accounts');
+    await userEvent.click(screen.getByRole('button', { name: /Refresh accounts/ }));
+
+    expect(await screen.findByTestId('coa-account-cash')).toBeInTheDocument();
+    expect(listAllLedgerAccounts).toHaveBeenCalledTimes(2);
+  });
+
+  it('the set-up CTA opens the picker; applying refetches the list and reports what was added', async () => {
+    vi.mocked(listAllLedgerAccounts)
+      .mockResolvedValueOnce([])
+      .mockResolvedValue([
+        account({ id: 'cash', code: '1000', name: 'Cash on Hand' }),
+        account({ id: 'rev', code: '4000', name: 'Service Revenue', ledgerGroup: 'INCOME' }),
+      ]);
+    vi.mocked(listCoaTemplates).mockResolvedValue({
+      templates: [
+        {
+          key: 'services', name: 'Services business', businessLicenceCategory: 'SERVICES',
+          accountCount: 2, categoryCount: 2, systemAccountCount: 1, previewTruncated: false,
+          preview: [
+            { number: '1000', name: 'Cash on Hand', ledgerAccountCategory: 'CASH ON HAND', ledgerGroup: 'ASSET' },
+            { number: '4000', name: 'Service Revenue', ledgerAccountCategory: 'REVENUE', ledgerGroup: 'INCOME' },
+          ],
+        },
+      ],
+      overlays: [],
+      recommended: { template: 'services', overlays: [] },
+    });
+    const applied = {
+      template: 'services', overlays: [], composedKey: 'services',
+      created: [
+        { number: '1000', name: 'Cash on Hand', ledgerAccountCategory: 'CASH ON HAND', ledgerGroup: 'ASSET' as const },
+        { number: '4000', name: 'Service Revenue', ledgerAccountCategory: 'REVENUE', ledgerGroup: 'INCOME' as const },
+      ],
+      skipped: [], categoriesCreated: [], problems: [],
+      summary: { templateAccounts: 2, created: 2, skipped: 0, categoriesCreated: 2 },
+    };
+    vi.mocked(applyCoaTemplate)
+      .mockResolvedValueOnce({ ...applied, dryRun: true })
+      .mockResolvedValueOnce({ ...applied, dryRun: false });
+    renderPage();
+
+    await userEvent.click(await screen.findByTestId('coa-setup-cta'));
+    expect(await screen.findByTestId('coa-template-picker')).toBeInTheDocument();
+    await userEvent.click(await screen.findByTestId('coa-template-review'));
+    await userEvent.click(await screen.findByTestId('coa-template-apply'));
+
+    expect(await screen.findByTestId('coa-setup-success')).toHaveTextContent(
+      '2 accounts added from the Services business template.'
+    );
+    expect(screen.queryByTestId('coa-template-picker')).not.toBeInTheDocument();
+    expect(await screen.findByTestId('coa-account-cash')).toBeInTheDocument();
+    expect(screen.getByTestId('coa-account-rev')).toBeInTheDocument();
+    expect(listAllLedgerAccounts).toHaveBeenCalledTimes(2);
+    expect(applyCoaTemplate).toHaveBeenLastCalledWith({ template: 'services', overlays: [], dryRun: false });
+  });
+
+  // Changed (SOUPFIN-152): asserts the SOUPFIN-150 copy that shipped on main, and
+  // mocks the Spring Boot error envelope the role check really returns.
+  it('labels a role denial as a permission problem, not module unavailable', async () => {
+    vi.mocked(listAllLedgerAccounts).mockRejectedValue(
+      axios403('/ledgerAccount/index.json', {
+        timestamp: '2026-10-12T10:00:00.000+00:00',
+        status: 403,
+        error: 'Forbidden',
+        path: '/rest/ledgerAccount/index.json',
+      })
+    );
+    renderPage();
+
+    const card = await screen.findByTestId('coa-error');
+    expect(card).toHaveAttribute('data-error-kind', 'forbidden');
+    expect(card).toHaveTextContent('You do not have permission');
+    expect(card).toHaveTextContent('Your account does not have permission to use Ledger.');
+    expect(card).not.toHaveTextContent('module is not available');
+    expect(card).not.toHaveTextContent('Forbidden');
+  });
+
+  it('still labels the interceptor 403 as module disabled', async () => {
+    vi.mocked(listAllLedgerAccounts).mockRejectedValue(
+      axios403('/ledgerAccount/index.json', { error: 'Finance module is not enabled for this tenant' })
+    );
+    renderPage();
+
+    await waitFor(() => expect(screen.getByTestId('coa-error')).toHaveAttribute('data-error-kind', 'module_disabled'));
+    expect(screen.getByTestId('coa-error')).toHaveTextContent('Ledger module is not available');
+  });
+});

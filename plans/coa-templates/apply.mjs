@@ -45,11 +45,27 @@ function overlayIndex(catalogue) {
   return index;
 }
 
-function previewAccount(a) {
+/**
+ * Added (SOUPFIN-147): the statement section an account lands in, for the picker's
+ * grouped preview. Income and expense categories are stored as ledgerGroup EQUITY with
+ * ledgerSubGroup INCOME/EXPENSE (categories.json _comment), so the sub-group wins there.
+ * Returns ASSET, LIABILITY, EQUITY, INCOME or EXPENSE, or null for an unknown category.
+ */
+export function effectiveLedgerGroup(catalogue, categoryName) {
+  const category = catalogue.categories.find((c) => c.name === categoryName);
+  if (!category) return null;
+  if (category.ledgerGroup === 'EQUITY' && ['INCOME', 'EXPENSE'].includes(category.ledgerSubGroup)) {
+    return category.ledgerSubGroup;
+  }
+  return category.ledgerGroup;
+}
+
+function previewAccount(catalogue, a) {
   return {
     number: a.number,
     name: a.name,
     ledgerAccountCategory: a.ledgerAccountCategory,
+    ledgerGroup: effectiveLedgerGroup(catalogue, a.ledgerAccountCategory),
     parentAccount: a.parentAccount ?? null,
     accountType: a.accountType ?? null,
     systemAccount: Boolean(a.systemAccount),
@@ -74,7 +90,7 @@ export function listTemplates(catalogue, tenant = null) {
         accountCount: composed.accounts.length,
         categoryCount: composed.categories.length,
         systemAccountCount: composed.accounts.filter((a) => a.systemAccount).length,
-        preview: composed.accounts.slice(0, PREVIEW_LIMIT).map(previewAccount),
+        preview: composed.accounts.slice(0, PREVIEW_LIMIT).map((a) => previewAccount(catalogue, a)),
         previewTruncated: composed.accounts.length > PREVIEW_LIMIT,
       };
     });
@@ -89,7 +105,7 @@ export function listTemplates(catalogue, tenant = null) {
       appliesTo: kind === 'industry' ? overlay.appliesTo : Object.keys(catalogue.bases).sort(),
       addCount: (overlay.add ?? []).length,
       removeCount: (overlay.remove ?? []).length,
-      preview: (overlay.add ?? []).map(previewAccount),
+      preview: (overlay.add ?? []).map((a) => previewAccount(catalogue, a)),
       removes: overlay.remove ?? [],
     }));
 
@@ -172,6 +188,7 @@ export function applyTemplate(store, tenantId, catalogue, body) {
     number: a.number,
     name: a.name,
     ledgerAccountCategory: a.ledgerAccountCategory,
+    ledgerGroup: effectiveLedgerGroup(catalogue, a.ledgerAccountCategory),
     parentAccount: a.parentAccount ?? null,
     accountType: a.accountType ?? null,
   }));

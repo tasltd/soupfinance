@@ -282,6 +282,15 @@ describe('listTemplates (coaTemplate/index)', () => {
     }
   });
 
+  test('every preview row carries the statement group its number range implies (SOUPFIN-147)', () => {
+    const byPrefix = { 1: 'ASSET', 2: 'LIABILITY', 3: 'EQUITY', 4: 'INCOME' };
+    const rows = [...index.templates.flatMap((t) => t.preview), ...index.overlays.flatMap((o) => o.preview)];
+    assert.ok(rows.length > 100);
+    for (const a of rows) {
+      assert.equal(a.ledgerGroup, byPrefix[a.number[0]] ?? 'EXPENSE', `${a.number} ${a.name}`);
+    }
+  });
+
   test('every overlay is listed once with its kind, add and remove counts', () => {
     const expectedKeys = [...Object.keys(catalogue.countries), ...Object.keys(catalogue.industries)].sort((a, b) => a.localeCompare(b));
     assert.deepEqual(index.overlays.map((o) => o.key), expectedKeys);

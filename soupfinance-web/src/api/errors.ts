@@ -45,6 +45,8 @@ const MODULE_GATED_PATTERNS: Array<{ pattern: RegExp; module: string }> = [
   { pattern: /\/ledgeraccount\b/i, module: 'Ledger' },
   { pattern: /\/ledgertransaction\b/i, module: 'Ledger' },
   { pattern: /\/ledgertransactiongroup\b/i, module: 'Ledger' },
+  // Added (SOUPFIN-147): coaTemplate is added to FinanceModuleInterceptor by SOUPFIN-145
+  { pattern: /\/coatemplate\b/i, module: 'Ledger' },
   { pattern: /\/voucher\b/i, module: 'Accounting' },
   { pattern: /\/paymentmethod\b/i, module: 'Accounting' },
 ];

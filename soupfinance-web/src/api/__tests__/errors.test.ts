@@ -45,6 +45,8 @@ describe('parseApiError', () => {
       ['/ledgerAccount/index.json', 'Ledger'],
       ['/ledgerTransaction/index.json', 'Ledger'],
       ['/ledgerTransactionGroup/index.json', 'Ledger'],
+      // Added (SOUPFIN-147): the template picker's index is gated with the finance module
+      ['/coaTemplate/index.json', 'Ledger'],
       ['/voucher/index.json', 'Accounting'],
       ['/paymentMethod/index.json', 'Accounting'],
       // Production paths still flow through the /rest prefix in some clients
