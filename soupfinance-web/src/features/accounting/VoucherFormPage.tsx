@@ -11,7 +11,8 @@
  * Changed: Now fetches ledger accounts from API via useLedgerAccounts hook
  */
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation, useParams, Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema';
@@ -25,7 +26,9 @@ import { Radio, type RadioOption } from '../../components/forms/Radio';
 import { MoneyInput } from '../../components/forms/MoneyInput';
 // Added (SOUPFIN-30 #16): tenant-currency formatter for displayed amounts.
 import { useFormatCurrency } from '../../stores';
-import { createVoucher, ledgerGroupMatches } from '../../api/endpoints/ledger';
+import { createVoucher, getVoucher, updateVoucher, ledgerGroupMatches } from '../../api/endpoints/ledger';
+// Added (SOUPFIN-154): prefill the form when opening an existing voucher
+import { voucherToFormValues } from './voucherFormValues';
 import { useLedgerAccounts } from '../../hooks/useLedgerAccounts';
 import { usePaymentMethods } from '../../hooks/usePaymentMethods';
 import { DEFAULT_CURRENCIES } from '../../api/endpoints/domainData';
@@ -111,6 +114,31 @@ export function VoucherFormPage() {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Added (SOUPFIN-154): /accounting/vouchers/:id shows a voucher read-only and
+  // /accounting/vouchers/:id/edit edits it. Before this the :id was ignored and
+  // both rendered a blank PAYMENT create form.
+  const { id: voucherId } = useParams<{ id: string }>();
+  const isExisting = !!voucherId && voucherId !== 'new';
+  const isEditRoute = location.pathname.endsWith('/edit');
+
+  const {
+    data: existingVoucher,
+    isLoading: isLoadingVoucher,
+    error: voucherLoadError,
+  } = useQuery({
+    queryKey: ['voucher', voucherId],
+    queryFn: () => getVoucher(voucherId!),
+    enabled: isExisting,
+  });
+
+  // A posted, cancelled or reversed voucher opens read-only even on the /edit
+  // URL. This matches the register, which offers Edit for every other status.
+  const lockedStatus = ['POSTED', 'CANCELLED', 'REVERSED'].includes(
+    String(existingVoucher?.status ?? '').toUpperCase()
+  );
+  const canEditVoucher = !lockedStatus;
+  const isReadOnly = isExisting && (!isEditRoute || !canEditVoucher);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   // Changed (SOUPFIN-9): expose the accounts query error so we can render a
@@ -151,6 +179,7 @@ export function VoucherFormPage() {
     handleSubmit,
     watch,
     setValue,
+    reset,
     formState: { errors },
   } = useForm<VoucherFormData>({
     resolver: standardSchemaResolver(voucherFormSchema),
@@ -174,6 +203,13 @@ export function VoucherFormPage() {
     },
   });
 
+  // Added (SOUPFIN-154): fill the form once the existing voucher arrives
+  useEffect(() => {
+    if (existingVoucher) {
+      reset(voucherToFormValues(existingVoucher));
+    }
+  }, [existingVoucher, reset]);
+
   // Added: Watch voucher type and beneficiary type for conditional rendering
   const watchedVoucherType = watch('voucherType');
   const watchedVoucherTo = watch('voucherTo');
@@ -183,7 +219,13 @@ export function VoucherFormPage() {
   const isReceiptType = watchedVoucherType === 'RECEIPT' || watchedVoucherType === 'DEPOSIT';
 
   // Added: Dynamic page title based on voucher type
+  // Changed (SOUPFIN-154): an existing voucher is titled by its type, with
+  // "Edit" in front when it is open for editing.
   const pageTitle = useMemo(() => {
+    if (isExisting) {
+      const typeLabel = VOUCHER_TYPE_OPTIONS.find((o) => o.value === watchedVoucherType)?.label ?? 'Voucher';
+      return isReadOnly ? typeLabel : `Edit ${typeLabel}`;
+    }
     switch (watchedVoucherType) {
       case 'PAYMENT':
         return 'New Payment Voucher';
@@ -194,10 +236,15 @@ export function VoucherFormPage() {
       default:
         return 'New Voucher';
     }
-  }, [watchedVoucherType]);
+  }, [watchedVoucherType, isExisting, isReadOnly]);
 
   // Added: Dynamic subtitle based on voucher type
   const pageSubtitle = useMemo(() => {
+    if (isExisting) {
+      const number = existingVoucher?.voucherNumber;
+      const status = existingVoucher?.status;
+      return [number, status].filter(Boolean).join(' · ') || 'Voucher details';
+    }
     switch (watchedVoucherType) {
       case 'PAYMENT':
         return 'Record a payment made to a beneficiary';
@@ -208,7 +255,7 @@ export function VoucherFormPage() {
       default:
         return 'Create a financial voucher';
     }
-  }, [watchedVoucherType]);
+  }, [watchedVoucherType, isExisting, existingVoucher]);
 
   // Changed: Filter accounts by ledger group for bank/cash selection (ASSET accounts)
   const cashAccountOptions: SelectOption[] = useMemo(() =>
@@ -257,23 +304,26 @@ export function VoucherFormPage() {
   );
 
   // Added: Clear conditional fields when voucher type changes
-  useEffect(() => {
-    if (isPaymentType) {
+  // Changed (SOUPFIN-154): run from the user's click rather than an effect, so
+  // filling the form from a loaded voucher does not wipe its accounts.
+  const handleVoucherTypeChange = useCallback((nextType: VoucherType) => {
+    if (nextType === 'PAYMENT') {
       setValue('incomeAccountId', '');
     } else {
       setValue('expenseAccountId', '');
     }
-  }, [isPaymentType, setValue]);
+  }, [setValue]);
 
   // Added: Clear party-specific fields when beneficiary type changes
-  useEffect(() => {
+  // Changed (SOUPFIN-154): from the user's change only, for the same reason.
+  const handleVoucherToChange = useCallback((nextTo: string) => {
     setValue('clientId', '');
     setValue('vendorId', '');
     setValue('staffId', '');
-    if (watchedVoucherTo === 'OTHER') {
+    if (nextTo === 'OTHER') {
       setValue('beneficiaryName', '');
     }
-  }, [watchedVoucherTo, setValue]);
+  }, [setValue]);
 
   // Added: Form submission handler
   const onSubmit = useCallback(async (data: VoucherFormData) => {
@@ -302,10 +352,16 @@ export function VoucherFormPage() {
         ...(data.exchangeRate && { exchangeRate: data.exchangeRate }),
       };
 
-      await createVoucher(request);
+      // Changed (SOUPFIN-154): update the voucher being edited, create otherwise
+      if (isExisting && voucherId) {
+        await updateVoucher(voucherId, request);
+      } else {
+        await createVoucher(request);
+      }
 
-      // Added: Navigate back to vouchers list after successful save
-      navigate('/accounting/vouchers');
+      // Changed (SOUPFIN-154): vouchers are listed in the Transaction Register;
+      // /accounting/vouchers used to render a fresh blank form here.
+      navigate('/accounting/transactions');
     } catch (error) {
       // Changed (SOUPFIN-9): use parseApiError so 403 ("module disabled")
       // shows a useful message instead of raw axios "Request failed..." text.
@@ -313,7 +369,7 @@ export function VoucherFormPage() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [navigate]);
+  }, [navigate, isExisting, voucherId]);
 
   // Added: Wrapper for save draft action - explicitly typed for TypeScript
   const handleSaveDraft = handleSubmit(onSubmit);
@@ -328,6 +384,16 @@ export function VoucherFormPage() {
 
   // Added: Get dynamic label for beneficiary/payer based on voucher type
   const beneficiaryLabel = isPaymentType ? 'Beneficiary' : 'Payer';
+
+  // Added (SOUPFIN-154): loading state while an existing voucher is fetched
+  if (isExisting && isLoadingVoucher) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4" data-testid="voucher-form-page">
+        <span className="material-symbols-outlined animate-spin text-4xl text-primary">progress_activity</span>
+        <p className="text-subtle-text">Loading voucher</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6" data-testid="voucher-form-page">
@@ -350,12 +416,24 @@ export function VoucherFormPage() {
         <div className="flex gap-3">
           <button
             type="button"
-            onClick={() => navigate('/accounting/vouchers')}
+            onClick={() => navigate('/accounting/transactions')}
             className="h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm hover:bg-primary/5"
             data-testid="voucher-form-cancel-button"
           >
-            Cancel
+            {isReadOnly ? 'Back' : 'Cancel'}
           </button>
+          {/* Added (SOUPFIN-154): an editable voucher shown read-only offers Edit */}
+          {isReadOnly && canEditVoucher && (
+            <Link
+              to={`/accounting/vouchers/${voucherId}/edit`}
+              className="h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90 flex items-center gap-2"
+              data-testid="voucher-form-edit-button"
+            >
+              <span className="material-symbols-outlined text-base">edit</span>
+              Edit
+            </Link>
+          )}
+          {!isReadOnly && (
           <button
             type="button"
             onClick={handleSaveDraft}
@@ -363,8 +441,12 @@ export function VoucherFormPage() {
             className="h-10 px-4 rounded-lg bg-primary/20 text-primary font-bold text-sm hover:bg-primary/30 disabled:opacity-50 disabled:cursor-not-allowed"
             data-testid="voucher-form-save-draft-button"
           >
-            Save Draft
+            {isExisting ? 'Save Changes' : 'Save Draft'}
           </button>
+          )}
+          {/* Changed (SOUPFIN-154): posting an existing voucher is a register
+              action, so the edit form only saves */}
+          {!isReadOnly && !isExisting && (
           <button
             type="button"
             onClick={handleApproveAndPost}
@@ -377,8 +459,31 @@ export function VoucherFormPage() {
             )}
             Approve & Post
           </button>
+          )}
         </div>
       </div>
+
+      {/* Added (SOUPFIN-154): the voucher could not be loaded */}
+      {isExisting && voucherLoadError && (
+        <div
+          className="p-4 rounded-lg bg-danger/10 border border-danger/30 text-danger text-sm flex items-center gap-2"
+          data-testid="voucher-form-load-error"
+        >
+          <span className="material-symbols-outlined text-xl">error</span>
+          {`This voucher could not be loaded. ${getApiErrorMessage(voucherLoadError)}`}
+        </div>
+      )}
+
+      {/* Added (SOUPFIN-154): explain why a voucher on the /edit URL is locked */}
+      {isExisting && isEditRoute && existingVoucher && !canEditVoucher && (
+        <div
+          className="p-4 rounded-lg bg-primary/10 border border-primary/30 text-sm text-text-light dark:text-text-dark flex items-center gap-2"
+          data-testid="voucher-form-readonly-banner"
+        >
+          <span className="material-symbols-outlined text-xl text-primary">lock</span>
+          {`This voucher is ${existingVoucher.status?.toLowerCase()}, so it can no longer be edited.`}
+        </div>
+      )}
 
       {/* Added (SOUPFIN-9): module-disabled banner. Renders only when the
           accounts query failed with 403 on a Ledger/Voucher endpoint so the
@@ -403,6 +508,13 @@ export function VoucherFormPage() {
         </div>
       )}
 
+      {/* Changed (SOUPFIN-154): one fieldset so a read-only voucher disables
+          every input, select and type tab at once */}
+      <fieldset
+        disabled={isReadOnly || (isExisting && !existingVoucher)}
+        className="flex flex-col gap-6 min-w-0 border-0 p-0 m-0"
+        data-testid="voucher-form-fields"
+      >
       {/* Voucher Type Selection */}
       <div
         className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden"
@@ -422,7 +534,10 @@ export function VoucherFormPage() {
                   <button
                     key={option.value}
                     type="button"
-                    onClick={() => field.onChange(option.value)}
+                    onClick={() => {
+                      handleVoucherTypeChange(option.value as VoucherType);
+                      field.onChange(option.value);
+                    }}
                     className={`
                       h-12 px-6 rounded-lg text-sm font-bold transition-colors
                       ${field.value === option.value
@@ -521,7 +636,10 @@ export function VoucherFormPage() {
                   label={`${beneficiaryLabel} Type`}
                   options={BENEFICIARY_TYPE_OPTIONS}
                   value={field.value}
-                  onChange={field.onChange}
+                  onChange={(e) => {
+                    handleVoucherToChange(e.target.value);
+                    field.onChange(e);
+                  }}
                   error={errors.voucherTo?.message}
                   containerClassName="flex-row flex-wrap gap-4"
                 />
@@ -816,6 +934,7 @@ export function VoucherFormPage() {
           </div>
         </div>
       </div>
+      </fieldset>
     </div>
   );
 }

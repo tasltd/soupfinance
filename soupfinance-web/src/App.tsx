@@ -305,12 +305,19 @@ export default function App() {
             <Route path="/accounting/journal-entry" element={<JournalEntryPage />} />
             <Route path="/accounting/journal-entry/new" element={<JournalEntryPage />} />
             <Route path="/accounting/journal-entry/:id" element={<JournalEntryPage />} />
+            {/* Added (SOUPFIN-154): the register's Edit action links here */}
+            <Route path="/accounting/journal-entry/:id/edit" element={<JournalEntryPage />} />
             {/* Changed: Added routes for voucher type URLs to match navigation handlers */}
             <Route path="/accounting/voucher/payment" element={<VoucherFormPage />} />
             <Route path="/accounting/voucher/receipt" element={<VoucherFormPage />} />
-            <Route path="/accounting/vouchers" element={<VoucherFormPage />} />
+            {/* Fix (SOUPFIN-154): there is no voucher list page; vouchers are
+                listed in the Transaction Register, so send the list URL there
+                instead of rendering a blank create form */}
+            <Route path="/accounting/vouchers" element={<Navigate to="/accounting/transactions" replace />} />
             <Route path="/accounting/vouchers/new" element={<VoucherFormPage />} />
+            {/* Changed (SOUPFIN-154): :id is a read-only view, :id/edit the edit form */}
             <Route path="/accounting/vouchers/:id" element={<VoucherFormPage />} />
+            <Route path="/accounting/vouchers/:id/edit" element={<VoucherFormPage />} />
 
             {/* Reports */}
             <Route path="/reports" element={<ReportsPage />} />
