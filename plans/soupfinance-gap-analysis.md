@@ -108,7 +108,7 @@ Dashboard → Settings → Account Settings → Financial Year → Chart of Acco
 | Service Description management | P1 | Users can't manage their service/product catalog |
 | Account Settings: logo/favicon upload | P2 | Branding on invoices/reports |
 | Account Settings: startOfFiscalYear | P2 | Affects report defaults |
-| Account Category management | P2 | Auto-seeded but users can't customize |
+| Account Category management | P2 | A hard-coded set is seeded at registration, and users can't customize it. Template seeding is planned: see [`coa-template-seeding.md`](coa-template-seeding.md) |
 | Exchange Rate management | P2 | Required for multi-currency support |
 
 ---
