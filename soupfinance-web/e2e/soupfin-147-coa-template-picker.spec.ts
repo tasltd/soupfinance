@@ -16,18 +16,17 @@
  *
  * Run: npx playwright test e2e/soupfin-147-coa-template-picker.spec.ts --project=firefox
  */
-import { test, expect, type Page, type Route } from '@playwright/test';
-import { installGuideMocks, seedAuthenticatedSession, accountSettings } from './user-guide/guide-mocks';
+import { test, expect, type Page } from '@playwright/test';
+import { installGuideMocks, seedAuthenticatedSession } from './user-guide/guide-mocks';
 import { installUnmockedApiGuard, isLxcMode, type UnmockedApiGuard } from './fixtures';
+// Changed (SOUPFIN-152): the contract-backed mock backend now lives in coa-template-backend.ts,
+// shared with the SOUPFIN-152 regression spec.
+import { TENANT, createStore, json, openChartOfAccountsFromMenu, serveCoaBackend } from './coa-template-backend';
 // The SOUPFIN-145 contract, runnable (plain ESM; types are inferred from the JS)
 import { loadCatalogue } from '../../plans/coa-templates/compose.mjs';
-import { applyTemplate, effectiveLedgerGroup, listTemplates as listTemplatesJs } from '../../plans/coa-templates/apply.mjs';
-
-// listTemplates' tenant parameter defaults to null, so the inferred type is null
-const listTemplates = listTemplatesJs as (catalogue: unknown, tenant: { businessLicenceCategory: string; country: string }) => unknown;
+import { applyTemplate } from '../../plans/coa-templates/apply.mjs';
 
 const SHOT_DIR = 'e2e/playwright/screenshots/soupfin-147';
-const TENANT = 'tenant-147';
 
 test.use({ viewport: { width: 1440, height: 900 } });
 test.setTimeout(120_000);
@@ -35,118 +34,6 @@ test.setTimeout(120_000);
 async function shot(page: Page, name: string, fullPage = false) {
   await page.evaluate(() => document.fonts.ready.then(() => true));
   await page.screenshot({ path: `${SHOT_DIR}/${name}.png`, fullPage });
-}
-
-type Row = Record<string, unknown> & { id: string; name: string; number: string; ledgerAccountCategory: string | null };
-type Cat = { id: string; name: string; ledgerGroup: string; ledgerSubGroup?: string | null };
-
-/** Tenant-scoped store with the shape apply.mjs expects (see createStore in apply.test.mjs). */
-function createStore() {
-  const accounts: Row[] = [];
-  const categories: Cat[] = [];
-  let seq = 0;
-  return {
-    accounts: () => accounts.map((a) => ({ ...a })),
-    categories: () => categories.map((c) => ({ ...c })),
-    transaction(_tenant: string, fn: (tx: unknown) => void) {
-      fn({
-        categories: () => categories.map((c) => ({ ...c })),
-        insertCategory: (row: Omit<Cat, 'id'>) => {
-          const saved = { id: `cat-${++seq}`, ...row };
-          categories.push(saved);
-          return saved;
-        },
-        insertAccount: (row: Omit<Row, 'id'>) => {
-          const saved = { id: `la-${++seq}`, ...row } as unknown as Row;
-          accounts.push(saved);
-          return saved;
-        },
-      });
-    },
-  };
-}
-type Store = ReturnType<typeof createStore>;
-
-/**
- * Serve the SOUPFIN-145 endpoints from the reference implementation and
- * ledgerAccount/index from the same store. Returns a log of what the page sent.
- */
-async function serveCoaBackend(page: Page, store: Store, tenant = { businessLicenceCategory: 'SERVICES', country: 'GH' }) {
-  const catalogue = loadCatalogue();
-  const log = { indexCalls: 0, tokensIssued: [] as string[], applies: [] as Array<{ token: string | null; body: Record<string, unknown> }> };
-
-  // The tenant's own settings, so a client-side fallback would pick the same template
-  await page.route('**/account/show/*.json*', (route) =>
-    route.fulfill(json({ ...accountSettings, businessLicenceCategory: tenant.businessLicenceCategory, countryOfOrigin: tenant.country }))
-  );
-
-  await page.route('**/rest/coaTemplate/index.json*', (route) => {
-    log.indexCalls += 1;
-    return route.fulfill(json(listTemplates(catalogue, tenant)));
-  });
-
-  await page.route('**/rest/ledgerAccount/create.json*', (route) => {
-    const token = `csrf-${log.tokensIssued.length + 1}`;
-    log.tokensIssued.push(token);
-    return route.fulfill(json({ SYNCHRONIZER_TOKEN: token, SYNCHRONIZER_URI: '/ledgerAccount/create' }));
-  });
-
-  const used = new Set<string>();
-  await page.route('**/rest/ledgerAccount/applyTemplate.json*', (route: Route) => {
-    const url = new URL(route.request().url());
-    const token = url.searchParams.get('SYNCHRONIZER_TOKEN');
-    const body = route.request().postDataJSON() as Record<string, unknown>;
-    log.applies.push({ token, body });
-    // withForm: a missing, unknown or reused token is refused
-    if (!token || !log.tokensIssued.includes(token) || used.has(token)) {
-      return route.fulfill({ status: 409, contentType: 'application/json', body: JSON.stringify({ status: 409, code: 'invalid-token', message: 'The form expired. Please try again.' }) });
-    }
-    used.add(token);
-    try {
-      return route.fulfill(json(applyTemplate(store, TENANT, catalogue, body)));
-    } catch (e) {
-      const err = e as { status?: number; code?: string; message: string };
-      // Contract error body: { status, code, message }
-      return route.fulfill({ status: err.status ?? 500, contentType: 'application/json', body: JSON.stringify({ status: err.status ?? 500, code: err.code, message: err.message }) });
-    }
-  });
-
-  // Backend-shaped rows: the group lives in the category's serialised string
-  await page.route('**/rest/ledgerAccount/index.json*', (route: Route) => {
-    const url = new URL(route.request().url());
-    const cats = new Map(store.categories().map((c) => [c.id, c]));
-    const rows = store
-      .accounts()
-      .sort((a, b) => a.number.localeCompare(b.number, 'en', { numeric: true }))
-      .map((a) => {
-        const cat = a.ledgerAccountCategory ? cats.get(a.ledgerAccountCategory) : undefined;
-        const group = cat ? effectiveLedgerGroup(catalogue, cat.name) ?? cat.ledgerGroup : null;
-        return {
-          id: a.id,
-          name: a.name,
-          number: a.number,
-          ledgerAccountCategory: cat ? { id: cat.id, class: 'soupbroker.finance.LedgerAccountCategory', serialised: `${cat.name} < ${group}` } : null,
-          systemAccount: Boolean(a.systemAccount),
-        };
-      });
-    const max = Math.min(Number(url.searchParams.get('max')) || 10, 1000);
-    const offset = Number(url.searchParams.get('offset')) || 0;
-    return route.fulfill(json(rows.slice(offset, offset + max)));
-  });
-
-  return log;
-}
-
-function json(body: unknown) {
-  return { status: 200, contentType: 'application/json', body: JSON.stringify(body) };
-}
-
-async function openChartOfAccountsFromMenu(page: Page) {
-  await page.goto('/dashboard');
-  await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 20_000 });
-  await page.locator('aside').locator('a[href="/ledger/accounts"]').first().click();
-  await expect(page).toHaveURL(/\/ledger\/accounts$/);
-  await expect(page.getByTestId('chart-of-accounts-page')).toBeVisible({ timeout: 15_000 });
 }
 
 let apiGuard: UnmockedApiGuard;
