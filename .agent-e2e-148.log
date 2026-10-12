@@ -1,0 +1,2100 @@
+
+Running 518 tests using 8 workers
+
+  ✓    6 [firefox] › e2e/accounting.spec.ts:348:5 › Accounting Module › Transaction Register Page › displays list of transactions (6.9s)
+  ✓    1 [firefox] › e2e/accounting.spec.ts:365:5 › Accounting Module › Transaction Register Page › shows loading state while fetching (9.0s)
+  ✓    3 [firefox] › e2e/accounting.spec.ts:398:5 › Accounting Module › Transaction Register Page › shows empty state when no transactions (8.0s)
+  ✓    8 [firefox] › e2e/accounting.spec.ts:460:5 › Accounting Module › Transaction Register Page › search filters transactions (9.0s)
+  ✓    5 [firefox] › e2e/accounting.spec.ts:502:5 › Accounting Module › Transaction Register Page › can filter by type (9.9s)
+  ✓    2 [firefox] › e2e/accounting.spec.ts:480:5 › Accounting Module › Transaction Register Page › can filter by status (9.3s)
+  ✓    9 [firefox] › e2e/accounting.spec.ts:536:5 › Accounting Module › Transaction Register Page › can navigate to new payment voucher (7.5s)
+  ✓    7 [firefox] › e2e/accounting.spec.ts:427:5 › Accounting Module › Transaction Register Page › shows error state on API failure (11.4s)
+  ✓   10 [firefox] › e2e/accounting.spec.ts:546:5 › Accounting Module › Transaction Register Page › can select transactions for batch actions (7.5s)
+  ✓   11 [firefox] › e2e/accounting.spec.ts:561:5 › Accounting Module › Transaction Register Page › can select all transactions (6.5s)
+  ✓   12 [firefox] › e2e/accounting.spec.ts:577:5 › Accounting Module › Transaction Register Page › can navigate to transaction detail (6.8s)
+  ✓    4 [firefox] › e2e/accounting.spec.ts:526:5 › Accounting Module › Transaction Register Page › can navigate to new journal entry (11.4s)
+  ✓   13 [firefox] › e2e/accounting.spec.ts:595:5 › Accounting Module › Journal Entry Page › displays empty form for new entry (7.9s)
+  ✓   14 [firefox] › e2e/accounting.spec.ts:610:5 › Accounting Module › Journal Entry Page › form has required fields (9.2s)
+  ✓   16 [firefox] › e2e/accounting.spec.ts:645:5 › Accounting Module › Journal Entry Page › shows debit/credit totals (6.3s)
+  ✓   15 [firefox] › e2e/accounting.spec.ts:628:5 › Accounting Module › Journal Entry Page › can add journal entry lines (9.1s)
+  ✓   19 [firefox] › e2e/accounting.spec.ts:701:5 › Accounting Module › Journal Entry Page › cancel button returns to transaction register (7.6s)
+  ✓   18 [firefox] › e2e/accounting.spec.ts:678:5 › Accounting Module › Journal Entry Page › can remove journal entry line (8.1s)
+  ✓   17 [firefox] › e2e/accounting.spec.ts:658:5 › Accounting Module › Journal Entry Page › balance indicator shows when debits equal credits (8.7s)
+  ✓   22 [firefox] › e2e/accounting.spec.ts:749:5 › Accounting Module › Voucher Form Page › payment voucher shows correct fields (5.1s)
+  ✓   21 [firefox] › e2e/accounting.spec.ts:734:5 › Accounting Module › Voucher Form Page › displays voucher type tabs (6.7s)
+  ✓   20 [firefox] › e2e/accounting.spec.ts:714:5 › Accounting Module › Journal Entry Page › loads existing entry data for editing (9.9s)
+  ✓   23 [firefox] › e2e/accounting.spec.ts:772:5 › Accounting Module › Voucher Form Page › receipt voucher shows correct fields (8.1s)
+  ✓   26 [firefox] › e2e/accounting.spec.ts:820:5 › Accounting Module › Voucher Form Page › shows journal entry preview (8.7s)
+  ✓   24 [firefox] › e2e/accounting.spec.ts:792:5 › Accounting Module › Voucher Form Page › deposit voucher shows correct fields (9.1s)
+  ✓   29 [firefox] › e2e/accounting.spec.ts:860:5 › Accounting Module › Voucher Form Page › beneficiary section shows based on voucher type (6.3s)
+  ✓   27 [firefox] › e2e/accounting.spec.ts:835:5 › Accounting Module › Voucher Form Page › cancel button returns to transaction register (8.2s)
+  ✓   25 [firefox] › e2e/accounting.spec.ts:806:5 › Accounting Module › Voucher Form Page › shows amount preview (9.9s)
+  ✓   28 [firefox] › e2e/accounting.spec.ts:847:5 › Accounting Module › Voucher Form Page › form has action buttons (9.0s)
+  ✓   30 [firefox] › e2e/accounting.spec.ts:880:5 › Accounting Module › Navigation Integration › can navigate from register to journal entry and back (10.5s)
+  ✓   31 [firefox] › e2e/accounting.spec.ts:896:5 › Accounting Module › Navigation Integration › can navigate from register to voucher and back (8.2s)
+  ✓   32 [firefox] › e2e/accounting.spec.ts:918:5 › Accounting Module › Responsiveness › transaction register is usable on mobile viewport (6.8s)
+  ✓   35 [firefox] › e2e/auth.spec.ts:34:5 › Authentication › Login Page › login page renders correctly (7.1s)
+  ✓   34 [firefox] › e2e/accounting.spec.ts:948:5 › Accounting Module › Responsiveness › voucher form is usable on mobile viewport (7.4s)
+  ✓   33 [firefox] › e2e/accounting.spec.ts:933:5 › Accounting Module › Responsiveness › journal entry form is usable on mobile viewport (7.6s)
+  ✓   36 [firefox] › e2e/auth.spec.ts:52:5 › Authentication › Login Page › login page has correct form placeholders (6.6s)
+  ✓   37 [firefox] › e2e/auth.spec.ts:66:5 › Authentication › Login Page › login page shows remember me checkbox (8.8s)
+  ✓   38 [firefox] › e2e/auth.spec.ts:74:5 › Authentication › Login Page › login page shows forgot password link (7.0s)
+  ✓   43 [firefox] › e2e/auth.spec.ts:218:5 › Authentication › OTP Request Flow › can request OTP for corporate client (8.2s)
+  ✓   41 [firefox] › e2e/auth.spec.ts:159:5 › Authentication › Login with invalid credentials › shows error message for invalid credentials (9.0s)
+  ✓   40 [firefox] › e2e/auth.spec.ts:109:5 › Authentication › Login with valid credentials › login button shows loading state while submitting (10.9s)
+  ✓   42 [firefox] › e2e/auth.spec.ts:181:5 › Authentication › Login with invalid credentials › error message clears when user starts typing (11.4s)
+  ✓   45 [firefox] › e2e/auth.spec.ts:265:5 › Authentication › Logout › protected routes redirect to login when not authenticated (8.7s)
+  ✓   48 [firefox] › e2e/bills.spec.ts:546:5 › Bill Management › Bill List Page › displays bills data in table (5.5s)
+  ✓   47 [firefox] › e2e/bills.spec.ts:534:5 › Bill Management › Bill List Page › bill list page loads correctly (8.2s)
+  ✘   39 [firefox] › e2e/auth.spec.ts:83:5 › Authentication › Login with valid credentials › successful login redirects to dashboard (17.6s)
+  ✓   50 [firefox] › e2e/bills.spec.ts:596:5 › Bill Management › Bill List Page › shows empty state when no bills exist (6.8s)
+  ✘   46 [firefox] › e2e/auth.spec.ts:282:5 › Authentication › Navigation › can navigate from login to register (12.2s)
+  ✓   52 [firefox] › e2e/bills.spec.ts:639:5 › Bill Management › Bill List Page › clicking row navigates to bill detail page (5.7s)
+  ✘   49 [firefox] › e2e/bills.spec.ts:565:5 › Bill Management › Bill List Page › shows loading state while fetching bills (8.0s)
+  ✓   51 [firefox] › e2e/bills.spec.ts:621:5 › Bill Management › Bill List Page › displays correct bill status badges (7.7s)
+  ✓   53 [firefox] › e2e/bills.spec.ts:659:5 › Bill Management › Bill List Page › new bill button navigates to form (6.3s)
+  ✓   54 [firefox] › e2e/bills.spec.ts:691:5 › Bill Management › Bill List Page › bills table shows amounts correctly (5.3s)
+  ✓   56 [firefox] › e2e/bills.spec.ts:727:5 › Bill Management › Create New Bill › vendor selection dropdown populates with vendors (4.1s)
+  ✓   57 [firefox] › e2e/bills.spec.ts:763:5 › Bill Management › Create New Bill › can remove line items from bill (6.6s)
+  ✓   55 [firefox] › e2e/bills.spec.ts:677:5 › Bill Management › Bill List Page › bills table shows vendor names (9.0s)
+  ✓   61 [firefox] › e2e/bills.spec.ts:814:5 › Bill Management › Create New Bill › save bill creates bill with DRAFT status (7.2s)
+  ✓   59 [firefox] › e2e/bills.spec.ts:789:5 › Bill Management › Create New Bill › calculates subtotal, tax, and total automatically (8.1s)
+  ✓   62 [firefox] › e2e/bills.spec.ts:856:5 › Bill Management › Create New Bill › shows validation errors for empty vendor (7.4s)
+  ✘   44 [firefox] › e2e/auth.spec.ts:241:5 › Authentication › Logout › logout redirects to login page (30.3s)
+  ✓   58 [firefox] › e2e/bills.spec.ts:710:5 › Bill Management › Create New Bill › new bill form loads with empty fields (9.8s)
+  ✓   60 [firefox] › e2e/bills.spec.ts:742:5 › Bill Management › Create New Bill › can add line items to bill (9.1s)
+  ✓   63 [firefox] › e2e/bills.spec.ts:876:5 › Bill Management › Create New Bill › shows validation errors for empty line items (7.5s)
+  ✓   64 [firefox] › e2e/bills.spec.ts:900:5 › Bill Management › Create New Bill › cancel button navigates back to bill list (6.3s)
+  ✓   65 [firefox] › e2e/bills.spec.ts:917:5 › Bill Management › Create New Bill › empty state create button opens new bill form (5.7s)
+  ✓   67 [firefox] › e2e/bills.spec.ts:971:5 › Bill Management › Edit Bill › edit form shows existing line items (6.1s)
+  ✓   66 [firefox] › e2e/bills.spec.ts:952:5 › Bill Management › Edit Bill › edit form loads with existing bill data (6.6s)
+  ✓   68 [firefox] › e2e/bills.spec.ts:1015:5 › Bill Management › Edit Bill › clicking edit from list navigates to edit form (7.3s)
+  ✓   71 [firefox] › e2e/bills.spec.ts:1061:5 › Bill Management › Bill Detail Page › displays line items table (5.1s)
+  ✓   69 [firefox] › e2e/bills.spec.ts:1042:5 › Bill Management › Bill Detail Page › displays bill header info correctly (7.1s)
+  ✓   72 [firefox] › e2e/bills.spec.ts:1075:5 › Bill Management › Bill Detail Page › displays payment history (6.5s)
+  ✓   74 [firefox] › e2e/bills.spec.ts:1102:5 › Bill Management › Bill Detail Page › shows edit button (5.9s)
+  ✓   73 [firefox] › e2e/bills.spec.ts:1090:5 › Bill Management › Bill Detail Page › shows record payment button (6.7s)
+  ✓   75 [firefox] › e2e/bills.spec.ts:1119:5 › Bill Management › Bill Detail Page › can delete bill with browser confirmation (5.8s)
+  ✓   70 [firefox] › e2e/bills.spec.ts:987:5 › Bill Management › Edit Bill › can modify fields and save (9.8s)
+  ✓   76 [firefox] › e2e/bills.spec.ts:1139:5 › Bill Management › Bill Detail Page › displays amount due correctly (6.0s)
+  ✓   77 [firefox] › e2e/bills.spec.ts:1162:5 › Bill Management › Bill Payments › record payment button navigates to payment form (8.3s)
+  ✓   78 [firefox] › e2e/bills.spec.ts:1179:5 › Bill Management › Bill Payments › payment history displays recorded payments (8.9s)
+  ✓   79 [firefox] › e2e/bills.spec.ts:1214:5 › Bill Management › Bill Payments › shows empty payments state when no payments (6.9s)
+  ✓   82 [firefox] › e2e/bills.spec.ts:1274:5 › Bill Management › Bill API Error Handling › handles network timeout gracefully (6.7s)
+  ✓   80 [firefox] › e2e/bills.spec.ts:1227:5 › Bill Management › Bill Payments › record payment button hidden for fully paid bills (7.4s)
+  ✓   81 [firefox] › e2e/bills.spec.ts:1246:5 › Bill Management › Bill API Error Handling › handles API error gracefully on list page (9.1s)
+  ✓   84 [firefox] › e2e/bills.spec.ts:1341:5 › Bill Management › Bill Page Responsiveness › bill list is usable on mobile (7.1s)
+  ✓   83 [firefox] › e2e/bills.spec.ts:1296:5 › Bill Management › Bill API Error Handling › handles 404 for non-existent bill (8.1s)
+  ✓   92 [firefox] › e2e/branding-theme.spec.ts:42:3 › Favicon & Branding › favicon SVG contains orange bowl color (1.2s)
+  ✓   85 [firefox] › e2e/bills.spec.ts:1354:5 › Bill Management › Bill Page Responsiveness › bill table scrolls horizontally on small screens (6.8s)
+  ✓   93 [firefox] › e2e/branding-theme.spec.ts:61:3 › Favicon & Branding › logo SVG contains orange bowl color (1.1s)
+  ✓   86 [firefox] › e2e/bills.spec.ts:1370:5 › Bill Management › Bill Page Responsiveness › bill form is usable on mobile (6.4s)
+  ✓   87 [firefox] › e2e/bills.spec.ts:1383:5 › Bill Management › Bill Page Responsiveness › bill detail page is usable on mobile (7.7s)
+  ✓   90 [firefox] › e2e/bills.spec.ts:1434:5 › Bill Management › Navigation from Bills › back link from detail returns to list (5.7s)
+  ✓   91 [firefox] › e2e/branding-theme.spec.ts:16:3 › Favicon & Branding › favicon SVG links have cache-busting params (6.0s)
+  ✓   89 [firefox] › e2e/bills.spec.ts:1416:5 › Bill Management › Navigation from Bills › protected route requires authentication (9.3s)
+  ✓   94 [firefox] › e2e/branding-theme.spec.ts:75:3 › Favicon & Branding › login page renders with correct branding (7.1s)
+  ✓   96 [firefox] › e2e/branding-theme.spec.ts:112:5 › Dark Mode Theme › Login Page Dark Mode › login page renders correctly in dark mode (6.1s)
+  ✓   88 [firefox] › e2e/bills.spec.ts:1403:5 › Bill Management › Navigation from Bills › can navigate to dashboard from bills (13.1s)
+  ✓   95 [firefox] › e2e/branding-theme.spec.ts:98:5 › Dark Mode Theme › Login Page Dark Mode › login page renders correctly in light mode (8.8s)
+  ✓   99 [firefox] › e2e/branding-theme.spec.ts:229:5 › Dark Mode Theme › Dark Mode Semantic Tokens › valid semantic tokens apply correct styles (6.7s)
+  ✓  100 [firefox] › e2e/branding-theme.spec.ts:261:5 › Dark Mode Theme › Dark Mode Semantic Tokens › non-existent tokens do NOT apply styles (7.5s)
+  ✓   97 [firefox] › e2e/branding-theme.spec.ts:159:5 › Dark Mode Theme › Dashboard Dark Mode Toggle › dark mode toggle button is visible in TopNav (11.6s)
+  ✓  101 [firefox] › e2e/branding-theme.spec.ts:294:5 › Dark Mode Theme › Dark Mode Semantic Tokens › dark mode token pairs render in both modes (7.7s)
+  ✓  102 [firefox] › e2e/branding-theme.spec.ts:332:5 › Dark Mode Theme › Register Page Dark Mode › register page supports dark mode with screenshots (7.7s)
+  ✓  104 [firefox] › e2e/dashboard.spec.ts:52:5 › Dashboard › Dashboard Page Loading › unauthenticated users are redirected to login (7.3s)
+  ✓  105 [firefox] › e2e/dashboard.spec.ts:69:5 › Dashboard › Financial Summary Cards › displays all financial summary cards (6.9s)
+  ✓   98 [firefox] › e2e/branding-theme.spec.ts:176:5 › Dark Mode Theme › Dashboard Dark Mode Toggle › clicking toggle cycles through light/dark/system modes with screenshot (17.4s)
+  ✘  103 [firefox] › e2e/dashboard.spec.ts:40:5 › Dashboard › Dashboard Page Loading › dashboard loads after login (13.2s)
+  ✘  106 [firefox] › e2e/dashboard.spec.ts:85:5 › Dashboard › Financial Summary Cards › total revenue card displays correct values (11.2s)
+  ✘  110 [firefox] › e2e/dashboard.spec.ts:143:5 › Dashboard › Recent Transactions Table › shows recent invoices table with data (12.9s)
+  ✘  111 [firefox] › e2e/dashboard.spec.ts:157:5 › Dashboard › Recent Transactions Table › displays correct invoice data in table (12.6s)
+  ✘  107 [firefox] › e2e/dashboard.spec.ts:99:5 › Dashboard › Financial Summary Cards › outstanding invoices card displays correctly (16.6s)
+  ✘  112 [firefox] › e2e/dashboard.spec.ts:184:5 › Dashboard › Recent Transactions Table › shows loading state while fetching invoices (12.6s)
+  ✘  108 [firefox] › e2e/dashboard.spec.ts:113:5 › Dashboard › Financial Summary Cards › expenses card displays correctly (20.5s)
+  ✘  109 [firefox] › e2e/dashboard.spec.ts:127:5 › Dashboard › Financial Summary Cards › net profit card displays correctly (22.1s)
+  ✘  113 [firefox] › e2e/dashboard.spec.ts:220:5 › Dashboard › Recent Transactions Table › shows empty state when no invoices exist (17.4s)
+  ✓  117 [firefox] › e2e/dashboard.spec.ts:308:5 › Dashboard › Dashboard Performance › dashboard loads within acceptable time (12.8s)
+  ✓  119 [firefox] › e2e/invoice-account-services.spec.ts:107:3 › SOUPFIN-27: Invoice AccountServices resolution › client dropdown shows one option per client with resolved names (9.3s)
+  ✓  118 [firefox] › e2e/dashboard.spec.ts:322:5 › Dashboard › Dashboard Navigation › can access dashboard from any authenticated page (16.2s)
+  ✓  120 [firefox] › e2e/invoice-account-services.spec.ts:123:3 › SOUPFIN-27: Invoice AccountServices resolution › selecting a client resolves accountServices and creates the invoice (13.0s)
+  ✓  122 [firefox] › e2e/invoices.spec.ts:86:5 › Invoice Management › Invoice List Page › displays invoice data in table (8.2s)
+  ✘  116 [firefox] › e2e/dashboard.spec.ts:288:5 › Dashboard › Dashboard Responsiveness › table is scrollable on small screens (17.2s)
+  ✘  115 [firefox] › e2e/dashboard.spec.ts:274:5 › Dashboard › Dashboard Responsiveness › KPI cards stack on mobile viewport (19.9s)
+  ✓  121 [firefox] › e2e/invoices.spec.ts:74:5 › Invoice Management › Invoice List Page › invoice list page loads correctly (9.4s)
+  ✓  123 [firefox] › e2e/invoice-account-services.spec.ts:201:3 › SOUPFIN-27: Invoice AccountServices resolution › honors the ?clientId URL parameter and resolves its accountServices (11.2s)
+  ✓  125 [firefox] › e2e/invoices.spec.ts:130:5 › Invoice Management › Invoice List Page › shows empty state when no invoices exist (7.4s)
+  ✘  114 [firefox] › e2e/dashboard.spec.ts:255:5 › Dashboard › Recent Transactions Table › view all invoices link navigates to invoices page (30.9s)
+  ✓  126 [firefox] › e2e/invoices.spec.ts:153:5 › Invoice Management › Invoice List Page › displays correct invoice status badges (7.3s)
+  ✓  127 [firefox] › e2e/invoices.spec.ts:202:5 › Invoice Management › Create New Invoice › cancel button returns to invoice list (7.6s)
+  ✘  124 [firefox] › e2e/invoices.spec.ts:105:5 › Invoice Management › Invoice List Page › shows loading state while fetching invoices (11.1s)
+  ✓  131 [firefox] › e2e/invoices.spec.ts:254:5 › Invoice Management › Edit Invoice › clicking edit navigates to edit form (7.1s)
+  ✓  132 [firefox] › e2e/invoices.spec.ts:295:5 › Invoice Management › Invoice Detail Page › clicking invoice link navigates to detail page (6.1s)
+  ✓  130 [firefox] › e2e/invoices.spec.ts:220:5 › Invoice Management › Create New Invoice › empty state create button opens new invoice form (8.9s)
+  ✓  134 [firefox] › e2e/invoices.spec.ts:323:5 › Invoice Management › Invoice Table Interactions › invoice rows are clickable (7.6s)
+  ✓  128 [firefox] › e2e/invoices.spec.ts:188:5 › Invoice Management › Create New Invoice › new invoice form has correct buttons (11.4s)
+  ✓  129 [firefox] › e2e/invoices.spec.ts:171:5 › Invoice Management › Create New Invoice › clicking New Invoice navigates to form (13.5s)
+  ✓  135 [firefox] › e2e/invoices.spec.ts:353:5 › Invoice Management › Invoice Page Responsiveness › invoice list is usable on mobile (8.2s)
+  ✓  137 [firefox] › e2e/invoices.spec.ts:366:5 › Invoice Management › Invoice Page Responsiveness › invoice table scrolls horizontally on small screens (7.1s)
+  ✓  133 [firefox] › e2e/invoices.spec.ts:275:5 › Invoice Management › Edit Invoice › edit form shows correct heading (11.5s)
+  ✓  139 [firefox] › e2e/invoices.spec.ts:397:5 › Invoice Management › Navigation from Invoices › protected route requires authentication (7.8s)
+  ✓  140 [firefox] › e2e/invoices.spec.ts:411:5 › Invoice Management › Invoice API Error Handling › handles API error gracefully (9.2s)
+  ✓  143 [firefox] › e2e/landing-page.spec.ts:38:5 › Landing Page › Desktop › navigation Sign In link is clickable (5.8s)
+  ✓  136 [firefox] › e2e/invoices.spec.ts:337:5 › Invoice Management › Invoice Table Interactions › invoice amounts are properly formatted (12.3s)
+  ✓  142 [firefox] › e2e/landing-page.spec.ts:13:5 › Landing Page › Desktop › hero section CTA buttons are clickable (6.4s)
+Element at button center: {
+  tagName: [32m'A'[39m,
+  href: [32m'https://app.soupfinance.com/register'[39m,
+  text: [32m'Start Free Trial\n                        arrow_forward'[39m
+}
+  ✓  145 [firefox] › e2e/landing-page.spec.ts:62:5 › Landing Page › Mobile › hero section CTA buttons are clickable on mobile (3.6s)
+  ✓  141 [firefox] › e2e/invoices.spec.ts:429:5 › Invoice Management › Invoice API Error Handling › handles network timeout gracefully (8.3s)
+Found 2 login links
+Element at See How It Works button center: { tagName: [32m'A'[39m, href: [32m'#screenshots'[39m }
+Found 5 register/trial links
+  ✓  146 [firefox] › e2e/landing-page.spec.ts:109:5 › Landing Page › Mobile › See How It Works button is clickable on mobile (4.7s)
+  ✓  149 [firefox] › e2e/landing-page.spec.ts:178:5 › Landing Page › All CTA Links › all login links point to correct URL (3.9s)
+  ✓  147 [firefox] › e2e/landing-page.spec.ts:148:5 › Landing Page › Mobile › mobile navigation Start Free Trial is visible and clickable (4.3s)
+  ✓  148 [firefox] › e2e/landing-page.spec.ts:161:5 › Landing Page › All CTA Links › all register links point to correct URL (4.3s)
+  ✓  150 [firefox] › e2e/ledger.spec.ts:235:5 › Ledger Management › Chart of Accounts Page › displays page with account groups (5.4s)
+  ✓  144 [firefox] › e2e/landing-page.spec.ts:48:5 › Landing Page › Desktop › navigation Start Free Trial button is clickable (11.5s)
+  ✓  151 [firefox] › e2e/ledger.spec.ts:248:5 › Ledger Management › Chart of Accounts Page › shows all account groups with correct labels (6.4s)
+  ✓  152 [firefox] › e2e/ledger.spec.ts:268:5 › Ledger Management › Chart of Accounts Page › shows account count per group (5.8s)
+  ✓  155 [firefox] › e2e/ledger.spec.ts:324:5 › Ledger Management › Chart of Accounts Page › shows active and inactive status badges (6.3s)
+  ✓  153 [firefox] › e2e/ledger.spec.ts:282:5 › Ledger Management › Chart of Accounts Page › displays accounts in expanded groups (6.9s)
+  ✓  154 [firefox] › e2e/ledger.spec.ts:301:5 › Ledger Management › Chart of Accounts Page › can collapse and expand account groups (6.8s)
+  ✓  157 [firefox] › e2e/ledger.spec.ts:358:5 › Ledger Management › Chart of Accounts Page › shows empty state when no accounts (7.3s)
+  ✓  138 [firefox] › e2e/invoices.spec.ts:384:5 › Invoice Management › Navigation from Invoices › can navigate to dashboard from invoices (27.8s)
+  ✓  159 [firefox] › e2e/ledger.spec.ts:397:5 › Ledger Management › Chart of Accounts Page › sorts accounts by code within groups (5.8s)
+  ✘  156 [firefox] › e2e/ledger.spec.ts:334:5 › Ledger Management › Chart of Accounts Page › shows loading state while fetching (7.6s)
+  ✓  160 [firefox] › e2e/ledger.spec.ts:418:5 › Ledger Management › Ledger Transactions Page › displays page with filters and transactions (6.0s)
+  ✓  162 [firefox] › e2e/ledger.spec.ts:455:5 › Ledger Management › Ledger Transactions Page › shows debit and credit columns correctly (7.4s)
+  ✓  158 [firefox] › e2e/ledger.spec.ts:370:5 › Ledger Management › Chart of Accounts Page › shows error state on API failure (10.5s)
+  ✓  161 [firefox] › e2e/ledger.spec.ts:435:5 › Ledger Management › Ledger Transactions Page › shows transactions in table (8.0s)
+  ✓  164 [firefox] › e2e/ledger.spec.ts:483:5 › Ledger Management › Ledger Transactions Page › can filter by account (7.6s)
+  ✓  163 [firefox] › e2e/ledger.spec.ts:472:5 › Ledger Management › Ledger Transactions Page › shows status badges with correct styling (8.8s)
+  ✓  166 [firefox] › e2e/ledger.spec.ts:544:5 › Ledger Management › Ledger Transactions Page › can clear all filters (7.8s)
+  ✓  165 [firefox] › e2e/ledger.spec.ts:498:5 › Ledger Management › Ledger Transactions Page › can filter by status (9.4s)
+  ✓  168 [firefox] › e2e/ledger.spec.ts:595:5 › Ledger Management › Ledger Transactions Page › shows empty state when no transactions (7.9s)
+  ✓  170 [firefox] › e2e/ledger.spec.ts:610:5 › Ledger Management › Ledger Transactions Page › shows filtered empty state when no matching transactions (7.6s)
+  ✘  167 [firefox] › e2e/ledger.spec.ts:562:5 › Ledger Management › Ledger Transactions Page › shows loading state while fetching (8.3s)
+  ✓  173 [firefox] › e2e/ledger.spec.ts:671:5 › Ledger Management › Ledger Transactions Page › shows totals in summary (7.8s)
+  ✓  172 [firefox] › e2e/ledger.spec.ts:662:5 › Ledger Management › Ledger Transactions Page › can navigate to create new journal entry (9.9s)
+  ✓  176 [firefox] › e2e/ledger.spec.ts:715:5 › Ledger Management › Responsiveness › ledger transactions is usable on mobile viewport (7.2s)
+  ✓  174 [firefox] › e2e/ledger.spec.ts:682:5 › Ledger Management › Ledger Transactions Page › account filter shows all accounts (9.0s)
+  ✓  171 [firefox] › e2e/ledger.spec.ts:628:5 › Ledger Management › Ledger Transactions Page › shows error state on API failure (11.8s)
+  ✓  169 [firefox] › e2e/ledger.spec.ts:517:5 › Ledger Management › Ledger Transactions Page › can filter by date range (14.4s)
+  ✓  175 [firefox] › e2e/ledger.spec.ts:700:5 › Ledger Management › Responsiveness › chart of accounts is usable on mobile viewport (10.8s)
+  ✓  178 [firefox] › e2e/onboarding.spec.ts:100:5 › Corporate Onboarding Flow › Company Info Page › industry dropdown has all options (7.9s)
+  ✓  180 [firefox] › e2e/onboarding.spec.ts:153:5 › Corporate Onboarding Flow › Company Info Page › same as physical checkbox copies address fields (8.6s)
+  ✓  181 [firefox] › e2e/onboarding.spec.ts:172:5 › Corporate Onboarding Flow › Company Info Page › skip button navigates to directors page (8.6s)
+  ✓  182 [firefox] › e2e/onboarding.spec.ts:184:5 › Corporate Onboarding Flow › Company Info Page › back button navigates to the dashboard (9.3s)
+  ✓  184 [firefox] › e2e/onboarding.spec.ts:225:5 › Corporate Onboarding Flow › Directors Page › renders with empty directors list (6.9s)
+  ✓  179 [firefox] › e2e/onboarding.spec.ts:114:5 › Corporate Onboarding Flow › Company Info Page › can fill and submit company info (11.7s)
+  ✓  183 [firefox] › e2e/onboarding.spec.ts:193:5 › Corporate Onboarding Flow › Company Info Page › shows loading state while fetching data (12.0s)
+  ✓  177 [firefox] › e2e/onboarding.spec.ts:64:5 › Corporate Onboarding Flow › Company Info Page › renders with all form sections (14.7s)
+  ✓  187 [firefox] › e2e/onboarding.spec.ts:310:5 › Corporate Onboarding Flow › Directors Page › can edit existing director (7.2s)
+  ✓  190 [firefox] › e2e/onboarding.spec.ts:398:5 › Corporate Onboarding Flow › Directors Page › cancel button closes modal without saving (6.5s)
+  ✓  185 [firefox] › e2e/onboarding.spec.ts:243:5 › Corporate Onboarding Flow › Directors Page › renders with existing directors (10.9s)
+  ✓  189 [firefox] › e2e/onboarding.spec.ts:379:5 › Corporate Onboarding Flow › Directors Page › validates required fields in add modal (7.6s)
+  ✓  188 [firefox] › e2e/onboarding.spec.ts:345:5 › Corporate Onboarding Flow › Directors Page › can delete director with confirmation (8.1s)
+  ✓  186 [firefox] › e2e/onboarding.spec.ts:264:5 › Corporate Onboarding Flow › Directors Page › can add a new director (10.8s)
+  ✓  191 [firefox] › e2e/onboarding.spec.ts:416:5 › Corporate Onboarding Flow › Directors Page › continue button navigates to documents page (7.6s)
+  ✓  192 [firefox] › e2e/onboarding.spec.ts:438:5 › Corporate Onboarding Flow › Documents Page › renders with all document type slots (6.0s)
+  ✓  193 [firefox] › e2e/onboarding.spec.ts:463:5 › Corporate Onboarding Flow › Documents Page › shows uploaded documents (5.7s)
+  ✓  194 [firefox] › e2e/onboarding.spec.ts:481:5 › Corporate Onboarding Flow › Documents Page › can upload document via file input (8.5s)
+  ✓  195 [firefox] › e2e/onboarding.spec.ts:522:5 › Corporate Onboarding Flow › Documents Page › can delete uploaded document (8.5s)
+  ✓  197 [firefox] › e2e/onboarding.spec.ts:571:5 › Corporate Onboarding Flow › Documents Page › submit navigates to status page (9.0s)
+  ✓  196 [firefox] › e2e/onboarding.spec.ts:550:5 › Corporate Onboarding Flow › Documents Page › submit button enabled when all required docs uploaded (9.2s)
+  ✓  198 [firefox] › e2e/onboarding.spec.ts:599:5 › Corporate Onboarding Flow › Documents Page › back button navigates to directors page (8.8s)
+  ✓  199 [firefox] › e2e/onboarding.spec.ts:612:5 › Corporate Onboarding Flow › Documents Page › shows loading state while fetching documents (7.4s)
+  ✓  200 [firefox] › e2e/onboarding.spec.ts:635:5 › Corporate Onboarding Flow › KYC Status Page › shows pending status with timeline (7.4s)
+  ✓  201 [firefox] › e2e/onboarding.spec.ts:658:5 › Corporate Onboarding Flow › KYC Status Page › shows approved status with dashboard button (7.1s)
+  ✓  202 [firefox] › e2e/onboarding.spec.ts:676:5 › Corporate Onboarding Flow › KYC Status Page › dashboard button navigates correctly when approved (7.1s)
+  ✓  204 [firefox] › e2e/onboarding.spec.ts:717:5 › Corporate Onboarding Flow › KYC Status Page › update documents button navigates when rejected (8.6s)
+  ✓  208 [firefox] › e2e/onboarding.spec.ts:781:5 › Corporate Onboarding Flow › KYC Status Page › shows loading state while fetching data (7.3s)
+  ✓  205 [firefox] › e2e/onboarding.spec.ts:731:5 › Corporate Onboarding Flow › KYC Status Page › shows company information summary (9.3s)
+  ✓  203 [firefox] › e2e/onboarding.spec.ts:699:5 › Corporate Onboarding Flow › KYC Status Page › shows rejected status with update button (10.9s)
+  ✓  209 [firefox] › e2e/onboarding.spec.ts:806:5 › Corporate Onboarding Flow › Full Onboarding Flow › complete onboarding flow from company info to status (8.0s)
+  ✓  207 [firefox] › e2e/onboarding.spec.ts:766:5 › Corporate Onboarding Flow › KYC Status Page › shows directors list summary (8.7s)
+  ✓  206 [firefox] › e2e/onboarding.spec.ts:746:5 › Corporate Onboarding Flow › KYC Status Page › shows document checklist (9.8s)
+  ✓  210 [firefox] › e2e/payments.spec.ts:317:5 › Payment Management › Payment List Page › displays payment list with tabs (7.7s)
+  ✓  214 [firefox] › e2e/payments.spec.ts:405:5 › Payment Management › Payment List Page › shows empty state when no incoming payments (6.2s)
+  ✓  215 [firefox] › e2e/payments.spec.ts:432:5 › Payment Management › Payment List Page › shows error state on API failure (7.4s)
+  ✓  211 [firefox] › e2e/payments.spec.ts:332:5 › Payment Management › Payment List Page › shows incoming payments in table (8.9s)
+  ✓  212 [firefox] › e2e/payments.spec.ts:353:5 › Payment Management › Payment List Page › switches to outgoing payments tab (9.3s)
+  ✓  216 [firefox] › e2e/payments.spec.ts:417:5 › Payment Management › Payment List Page › shows empty state when no outgoing payments (8.2s)
+  ✓  217 [firefox] › e2e/payments.spec.ts:461:5 › Payment Management › Payment List Page › can navigate to record payment (8.1s)
+  ✓  218 [firefox] › e2e/payments.spec.ts:470:5 › Payment Management › Payment List Page › shows payment count badges on tabs (8.4s)
+  ✘  213 [firefox] › e2e/payments.spec.ts:372:5 › Payment Management › Payment List Page › shows loading state while fetching (8.7s)
+[RESPONSE VALIDATION] http://localhost:5197/rest/ledgerAccount/index.json: Response.ledgerAccount[0]: missing required field 'ledgerGroup'
+[RESPONSE VALIDATION] http://localhost:5197/rest/ledgerAccount/index.json: Response.ledgerAccount[0]: missing required field 'ledgerGroup'
+  ✓  223 [firefox] › e2e/payments.spec.ts:563:5 › Payment Management › Payment Form Page › shows balance due when invoice selected (7.4s)
+[RESPONSE VALIDATION] http://localhost:5197/rest/ledgerAccount/index.json: Response.ledgerAccount[0]: missing required field 'ledgerGroup'
+[RESPONSE VALIDATION] http://localhost:5197/rest/ledgerAccount/index.json: Response.ledgerAccount[0]: missing required field 'ledgerGroup'
+  ✓  219 [firefox] › e2e/payments.spec.ts:491:5 › Payment Management › Payment Form Page › displays form with payment type toggle (11.0s)
+  ✓  220 [firefox] › e2e/payments.spec.ts:508:5 › Payment Management › Payment Form Page › shows invoice dropdown for incoming payment (10.1s)
+[RESPONSE VALIDATION] http://localhost:5197/rest/ledgerAccount/index.json: Response.ledgerAccount[0]: missing required field 'ledgerGroup'
+  ✓  222 [firefox] › e2e/payments.spec.ts:549:5 › Payment Management › Payment Form Page › submit button is disabled without document selection (11.0s)
+[RESPONSE VALIDATION] http://localhost:5197/rest/ledgerAccount/index.json: Response.ledgerAccount[0]: missing required field 'ledgerGroup'
+[RESPONSE VALIDATION] http://localhost:5197/rest/ledgerAccount/index.json: Response.ledgerAccount[0]: missing required field 'ledgerGroup'
+[RESPONSE VALIDATION] http://localhost:5197/rest/bill/index.json?max=100: Response.bill[0]: missing required field 'billDate'
+  ✓  221 [firefox] › e2e/payments.spec.ts:527:5 › Payment Management › Payment Form Page › switches to bill payment and shows bill dropdown (13.5s)
+  ✓  225 [firefox] › e2e/payments.spec.ts:598:5 › Payment Management › Payment Form Page › prevents submission when amount exceeds balance due (9.3s)
+  ✓  224 [firefox] › e2e/payments.spec.ts:583:5 › Payment Management › Payment Form Page › pay full balance button fills amount (12.8s)
+[RESPONSE VALIDATION] http://localhost:5197/rest/ledgerAccount/index.json: Response.ledgerAccount[0]: missing required field 'ledgerGroup'
+[RESPONSE VALIDATION] http://localhost:5197/rest/ledgerAccount/index.json: Response.ledgerAccount[0]: missing required field 'ledgerGroup'
+  ✓  227 [firefox] › e2e/payments.spec.ts:644:5 › Payment Management › Payment Form Page › can submit invoice payment successfully (12.0s)
+[RESPONSE VALIDATION] http://localhost:5197/rest/ledgerAccount/index.json: Response.ledgerAccount[0]: missing required field 'ledgerGroup'
+[RESPONSE VALIDATION] http://localhost:5197/rest/ledgerAccount/index.json: Response.ledgerAccount[0]: missing required field 'ledgerGroup'
+[RESPONSE VALIDATION] http://localhost:5197/rest/ledgerAccount/index.json: Response.ledgerAccount[0]: missing required field 'ledgerGroup'
+  ✓  229 [firefox] › e2e/payments.spec.ts:679:5 › Payment Management › Payment Form Page › cancel button returns to payment list (11.5s)
+[RESPONSE VALIDATION] http://localhost:5197/rest/bill/index.json?max=100: Response.bill[0]: missing required field 'billDate'
+  ✓  230 [firefox] › e2e/payments.spec.ts:691:5 › Payment Management › Payment Form Page › shows all payment methods in dropdown (10.4s)
+  ✓  228 [firefox] › e2e/payments.spec.ts:660:5 › Payment Management › Payment Form Page › can submit bill payment successfully (13.2s)
+  ✓  232 [firefox] › e2e/payments.spec.ts:743:5 › Payment Management › Responsiveness › payment list is usable on mobile viewport (8.8s)
+  ✓  226 [firefox] › e2e/payments.spec.ts:623:5 › Payment Management › Payment Form Page › can fill all form fields (13.0s)
+  ✓  231 [firefox] › e2e/payments.spec.ts:705:5 › Payment Management › Payment Form Page › shows loading state while fetching invoices (9.1s)
+[RESPONSE VALIDATION] http://localhost:5197/rest/ledgerAccount/index.json: Response.ledgerAccount[0]: missing required field 'ledgerGroup'
+  ✓  233 [firefox] › e2e/payments.spec.ts:759:5 › Payment Management › Responsiveness › payment form is usable on mobile viewport (11.2s)
+  ✓  235 [firefox] › e2e/registration.spec.ts:101:5 › Tenant Registration › Registration Form Rendering › registration form has correct placeholders (7.6s)
+  ✓  236 [firefox] › e2e/registration.spec.ts:123:5 › Tenant Registration › Registration Form Rendering › business type buttons show TRADING and SERVICES options (8.3s)
+  ✓  237 [firefox] › e2e/registration.spec.ts:136:5 › Tenant Registration › Registration Form Rendering › SERVICES is selected by default (9.2s)
+  ✓  238 [firefox] › e2e/registration.spec.ts:145:5 › Tenant Registration › Registration Form Rendering › shows login link for existing users (9.9s)
+  ✓  239 [firefox] › e2e/registration.spec.ts:154:5 › Tenant Registration › Form Validation › shows validation errors for missing required fields (9.9s)
+  ✓  240 [firefox] › e2e/registration.spec.ts:172:5 › Tenant Registration › Form Validation › shows email validation error for invalid format (12.0s)
+  ✓  234 [firefox] › e2e/registration.spec.ts:80:5 › Tenant Registration › Registration Form Rendering › registration form renders with all required fields (15.1s)
+  ✓  241 [firefox] › e2e/registration.spec.ts:196:5 › Tenant Registration › Form Validation › clears validation error when user corrects input (12.4s)
+  ✓  242 [firefox] › e2e/registration.spec.ts:233:5 › Tenant Registration › Successful Registration › redirects to login when backend skips email confirmation (11.2s)
+  ✓  245 [firefox] › e2e/registration.spec.ts:292:5 › Tenant Registration › Registration Failures › shows error message when registration fails (12.3s)
+  ✓  247 [firefox] › e2e/registration.spec.ts:334:5 › Tenant Registration › Form Interactions › can select different business types (11.3s)
+  ✓  248 [firefox] › e2e/registration.spec.ts:351:5 › Tenant Registration › Form Interactions › form fields maintain state when validation fails (10.7s)
+  ✓  244 [firefox] › e2e/registration.spec.ts:263:5 › Tenant Registration › Successful Registration › submit button shows loading state during registration (14.4s)
+  ✓  246 [firefox] › e2e/registration.spec.ts:319:5 › Tenant Registration › Navigation › can navigate from registration to login (13.8s)
+  ✓  243 [firefox] › e2e/registration.spec.ts:251:5 › Tenant Registration › Successful Registration › shows "Check Your Email" screen when backend requires confirmation (17.9s)
+  ✓  249 [firefox] › e2e/reports.spec.ts:164:3 › Trial Balance Report › navigates to trial balance page (12.1s)
+  ✓  255 [firefox] › e2e/reports.spec.ts:301:3 › Trial Balance Report › export buttons are visible (5.5s)
+  ✓  250 [firefox] › e2e/reports.spec.ts:180:3 › Trial Balance Report › displays default date filters (current month) (11.9s)
+  ✓  252 [firefox] › e2e/reports.spec.ts:232:3 › Trial Balance Report › renders report data with accounts and totals (7.9s)
+  ✓  253 [firefox] › e2e/reports.spec.ts:263:3 › Trial Balance Report › shows empty state when no accounts (9.8s)
+  ✓  254 [firefox] › e2e/reports.spec.ts:284:3 › Trial Balance Report › shows error state on API failure (10.8s)
+  ✓  251 [firefox] › e2e/reports.spec.ts:199:3 › Trial Balance Report › date filter interaction changes API request (13.6s)
+  ✓  256 [firefox] › e2e/reports.spec.ts:317:3 › Trial Balance Report › responsive layout on mobile viewport (10.5s)
+  ✓  260 [firefox] › e2e/reports.spec.ts:406:3 › Profit & Loss Report › renders income and expense data (8.0s)
+  ✓  258 [firefox] › e2e/reports.spec.ts:363:3 › Profit & Loss Report › displays date range filters (13.0s)
+  ✓  259 [firefox] › e2e/reports.spec.ts:379:3 › Profit & Loss Report › date filter interaction works (13.6s)
+  ✓  257 [firefox] › e2e/reports.spec.ts:347:3 › Profit & Loss Report › navigates to profit & loss page (16.3s)
+  ✓  261 [firefox] › e2e/reports.spec.ts:434:3 › Profit & Loss Report › shows empty state when no transactions (10.9s)
+  ✓  264 [firefox] › e2e/reports.spec.ts:483:3 › Profit & Loss Report › responsive layout on mobile viewport (8.0s)
+  ✓  262 [firefox] › e2e/reports.spec.ts:451:3 › Profit & Loss Report › shows error state on API failure (11.2s)
+  ✓  263 [firefox] › e2e/reports.spec.ts:467:3 › Profit & Loss Report › export buttons are visible (11.5s)
+  ✓  265 [firefox] › e2e/reports.spec.ts:512:3 › Balance Sheet Report › navigates to balance sheet page (9.9s)
+  ✓  266 [firefox] › e2e/reports.spec.ts:528:3 › Balance Sheet Report › displays as-of date picker (7.9s)
+  ✓  267 [firefox] › e2e/reports.spec.ts:543:3 › Balance Sheet Report › date filter interaction works (8.8s)
+  ✓  268 [firefox] › e2e/reports.spec.ts:568:3 › Balance Sheet Report › renders assets, liabilities, and equity sections (8.4s)
+  ✓  270 [firefox] › e2e/reports.spec.ts:617:3 › Balance Sheet Report › shows error state on API failure (9.8s)
+  ✓  269 [firefox] › e2e/reports.spec.ts:600:3 › Balance Sheet Report › shows empty state when no accounts (11.1s)
+  ✓  271 [firefox] › e2e/reports.spec.ts:633:3 › Balance Sheet Report › export buttons are visible (10.5s)
+  ✓  272 [firefox] › e2e/reports.spec.ts:649:3 › Balance Sheet Report › responsive layout on mobile viewport (9.0s)
+  ✓  274 [firefox] › e2e/reports.spec.ts:694:3 › Cash Flow Statement Report › displays date range filters (8.1s)
+  ✓  273 [firefox] › e2e/reports.spec.ts:678:3 › Cash Flow Statement Report › navigates to cash flow page (11.5s)
+  ✓  275 [firefox] › e2e/reports.spec.ts:710:3 › Cash Flow Statement Report › date filter interaction works (8.8s)
+  ✓  277 [firefox] › e2e/reports.spec.ts:766:3 › Cash Flow Statement Report › shows empty state when no activities (7.2s)
+  ✓  276 [firefox] › e2e/reports.spec.ts:737:3 › Cash Flow Statement Report › renders cash flow sections and summary (9.5s)
+  ✓  280 [firefox] › e2e/reports.spec.ts:825:3 › Cash Flow Statement Report › CSV export downloads a file with cash flow data (SOUPFIN-11) (7.0s)
+  ✓  279 [firefox] › e2e/reports.spec.ts:799:3 › Cash Flow Statement Report › export buttons render with correct enabled/disabled state (SOUPFIN-11) (9.2s)
+  ✓  281 [firefox] › e2e/reports.spec.ts:844:3 › Cash Flow Statement Report › does not crash when backend returns wrapped non-array response (SOUPFIN-11) (8.2s)
+  ✓  282 [firefox] › e2e/reports.spec.ts:867:3 › Cash Flow Statement Report › responsive layout on mobile viewport (6.5s)
+  ✓  278 [firefox] › e2e/reports.spec.ts:783:3 › Cash Flow Statement Report › shows error state on API failure (12.3s)
+  ✓  284 [firefox] › e2e/reports.spec.ts:920:3 › Aging Reports › displays as-of date picker (7.0s)
+  ✘  283 [firefox] › e2e/reports.spec.ts:896:3 › Aging Reports › navigates to aging reports page (14.3s)
+  ✘  288 [firefox] › e2e/reports.spec.ts:1049:3 › Aging Reports › renders both A/R and A/P tables (14.7s)
+  ✘  289 [firefox] › e2e/reports.spec.ts:1084:3 › Aging Reports › displays aging data rows with correct structure (18.5s)
+  ✘  285 [firefox] › e2e/reports.spec.ts:943:3 › Aging Reports › date filter changes API request (23.2s)
+  ✘  286 [firefox] › e2e/reports.spec.ts:980:3 › Aging Reports › Today button refetches even when date is already today (SOUPFIN-11) (19.8s)
+  ✘  290 [firefox] › e2e/reports.spec.ts:1113:3 › Aging Reports › shows empty state for A/R when no receivables (20.2s)
+  ✘  291 [firefox] › e2e/reports.spec.ts:1137:3 › Aging Reports › shows empty state for A/P when no payables (20.5s)
+  ✘  287 [firefox] › e2e/reports.spec.ts:1022:3 › Aging Reports › date picker allows selecting historical years (SOUPFIN-11) (33.2s)
+  ✓  297 [firefox] › e2e/reports.spec.ts:1340:3 › Report Loading States › shows loading state for profit & loss (10.2s)
+  ✓  296 [firefox] › e2e/reports.spec.ts:1295:3 › Report Navigation › protected routes require authentication (12.6s)
+  ✓  298 [firefox] › e2e/reports.spec.ts:1319:3 › Report Loading States › shows loading state for trial balance (16.4s)
+  ✓  300 [firefox] › e2e/reports.spec.ts:1376:3 › Report Loading States › shows loading state for cash flow (7.7s)
+  ✘  294 [firefox] › e2e/reports.spec.ts:1215:3 › Aging Reports › responsive layout on mobile viewport (21.8s)
+  ✓  299 [firefox] › e2e/reports.spec.ts:1357:3 › Report Loading States › shows loading state for balance sheet (10.9s)
+  ✘  293 [firefox] › e2e/reports.spec.ts:1185:3 › Aging Reports › export buttons are visible for both A/R and A/P (23.8s)
+  ✘  292 [firefox] › e2e/reports.spec.ts:1161:3 › Aging Reports › shows error state on A/R API failure (30.4s)
+  ✓  303 [firefox] › e2e/settings.spec.ts:341:5 › Settings - User Management › User List Page › renders roles without crashing when authority is only in serialised (SOUPFIN-24) (6.2s)
+  ✓  302 [firefox] › e2e/settings.spec.ts:316:5 › Settings - User Management › User List Page › displays list of users (6.6s)
+  ✓  295 [firefox] › e2e/reports.spec.ts:1256:3 › Report Navigation › navigates between different report pages (28.7s)
+  ✓  301 [firefox] › e2e/reports.spec.ts:1393:3 › Report Loading States › shows loading states for aging reports (17.7s)
+  ✓  304 [firefox] › e2e/settings.spec.ts:408:5 › Settings - User Management › User List Page › shows empty state when no users (9.4s)
+  ✓  308 [firefox] › e2e/settings.spec.ts:469:5 › Settings - User Management › User List Page › shows correct status badges (8.0s)
+  ✓  309 [firefox] › e2e/settings.spec.ts:484:5 › Settings - User Management › User List Page › can navigate to create user (10.8s)
+  ✓  310 [firefox] › e2e/settings.spec.ts:493:5 › Settings - User Management › User List Page › can navigate to edit user (10.9s)
+  ✓  306 [firefox] › e2e/settings.spec.ts:431:5 › Settings - User Management › User List Page › shows error state on API failure (12.6s)
+  ✓  311 [firefox] › e2e/settings.spec.ts:516:5 › Settings - User Management › User Form › form displays required fields for new user (8.3s)
+  ✓  312 [firefox] › e2e/settings.spec.ts:531:5 › Settings - User Management › User Form › loads existing user data in edit mode (8.4s)
+  ✘  305 [firefox] › e2e/settings.spec.ts:383:5 › Settings - User Management › User List Page › shows loading state while fetching (13.7s)
+  ✓  313 [firefox] › e2e/settings.spec.ts:548:5 › Settings - User Management › User Form › cancel button returns to user list (7.5s)
+  ✓  307 [firefox] › e2e/settings.spec.ts:455:5 › Settings - User Management › User List Page › shows Account Person badge for users with accountPerson (13.6s)
+  ✓  316 [firefox] › e2e/settings.spec.ts:585:5 › Settings - User Management › Delete User › can cancel deletion (7.6s)
+  ✓  318 [firefox] › e2e/settings.spec.ts:723:5 › Settings - Bank Accounts › Bank Account List Page › shows linked ledger account info (6.7s)
+  ✓  315 [firefox] › e2e/settings.spec.ts:691:5 › Settings - Bank Accounts › Bank Account List Page › displays list of bank accounts (8.2s)
+  ✓  317 [firefox] › e2e/settings.spec.ts:710:5 › Settings - Bank Accounts › Bank Account List Page › shows PRIMARY badge for primary accounts (8.2s)
+  ✓  314 [firefox] › e2e/settings.spec.ts:563:5 › Settings - User Management › Delete User › shows confirmation modal when clicking delete (10.0s)
+[RESPONSE VALIDATION] http://localhost:5197/rest/ledgerAccount/index.json?max=1000: Response.ledgerAccount[0]: missing required field 'code'
+  ✓  322 [firefox] › e2e/settings.spec.ts:784:5 › Settings - Bank Accounts › Bank Account Form › form displays required fields (4.6s)
+  ✓  319 [firefox] › e2e/settings.spec.ts:757:5 › Settings - Bank Accounts › Bank Account List Page › can navigate to create bank account (9.0s)
+[RESPONSE VALIDATION] http://localhost:5197/rest/ledgerAccount/index.json?max=1000: Response.ledgerAccount[0]: missing required field 'code'
+  ✓  320 [firefox] › e2e/settings.spec.ts:767:5 › Settings - Bank Accounts › Bank Account List Page › can navigate to edit bank account (9.5s)
+[RESPONSE VALIDATION] http://localhost:5197/rest/ledgerAccount/index.json?max=1000: Response.ledgerAccount[0]: missing required field 'code'
+[RESPONSE VALIDATION] http://localhost:5197/rest/ledgerAccount/index.json?max=1000: Response.ledgerAccount[0]: missing required field 'code'
+  ✓  324 [firefox] › e2e/settings.spec.ts:818:5 › Settings - Bank Accounts › Bank Account Form › cancel returns to list (7.6s)
+  ✓  323 [firefox] › e2e/settings.spec.ts:803:5 › Settings - Bank Accounts › Bank Account Form › loads existing bank account data (7.8s)
+  ✓  326 [firefox] › e2e/settings.spec.ts:896:3 › Settings - Account Settings › displays account settings form (7.2s)
+  ✓  325 [firefox] › e2e/settings.spec.ts:835:5 › Settings - Bank Accounts › Delete Bank Account › shows confirmation modal (7.9s)
+  ✓  329 [firefox] › e2e/settings.spec.ts:951:3 › Settings - Account Settings › reset button clears changes (5.9s)
+  ✓  327 [firefox] › e2e/settings.spec.ts:914:3 › Settings - Account Settings › loads current settings values (7.6s)
+  ✓  321 [firefox] › e2e/settings.spec.ts:737:5 › Settings - Bank Accounts › Bank Account List Page › shows empty state when no bank accounts (12.6s)
+  ✓  328 [firefox] › e2e/settings.spec.ts:933:3 › Settings - Account Settings › shows unsaved changes indicator (10.4s)
+  ✓  332 [firefox] › e2e/settings.spec.ts:1059:3 › Settings Navigation › settings page shows navigation tabs (7.2s)
+  ✓  333 [firefox] › e2e/settings.spec.ts:1080:3 › Settings Navigation › can navigate between settings sections (7.9s)
+  ✓  331 [firefox] › e2e/settings.spec.ts:1007:3 › Settings - Account Settings › loads cleanly when persisted auth state lacks tenantId (SOUPFIN-10) (8.7s)
+  ✓  330 [firefox] › e2e/settings.spec.ts:971:3 › Settings - Account Settings › shows error on API failure (9.2s)
+  ✓  336 [firefox] › e2e/soup-1836-clients.spec.ts:196:3 › SOUP-1836 — Edit Client name field for corporate/unknown types › an "UNKNOWN" client type still exposes an editable, populated name field (7.0s)
+  ✓  335 [firefox] › e2e/soup-1836-clients.spec.ts:172:3 › SOUP-1836 — Edit Client name field for corporate/unknown types › Company Name is populated from `name` for a corporate record missing companyName (10.0s)
+  ✓  334 [firefox] › e2e/soup-1836-clients.spec.ts:138:3 › SOUP-1836 — Clients quick-search uses `q` › typing a name search sends `q` (not `search`) and returns the match (10.4s)
+  ✓  339 [firefox] › e2e/soupfin-103-report-catalogue.spec.ts:274:3 › SOUPFIN-103: report catalogue (west of UTC) › Balance Sheet: compares with the month before and exports a PDF (10.1s)
+  ✓  338 [firefox] › e2e/soupfin-103-report-catalogue.spec.ts:238:3 › SOUPFIN-103: report catalogue (west of UTC) › Profit & Loss: tenant currency, a previous-year comparison, and an Excel export (11.5s)
+  ✓  340 [firefox] › e2e/soupfin-103-report-catalogue.spec.ts:291:3 › SOUPFIN-103: report catalogue (west of UTC) › Trial Balance refuses a reversed date range instead of asking the backend for it (10.7s)
+  ✓  341 [firefox] › e2e/soupfin-103-report-catalogue.spec.ts:316:3 › SOUPFIN-103: report catalogue (west of UTC) › Account Balances, a registry-only report, opens from the hub and exports CSV (11.5s)
+  ✓  343 [firefox] › e2e/soupfin-103-report-catalogue.spec.ts:367:3 › SOUPFIN-103: report dates east of UTC › Profit & Loss opens on the local month to date and compares with the days just before (8.9s)
+  ✓  344 [firefox] › e2e/soupfin-148-coa-uncategorised.spec.ts:110:3 › SOUPFIN-148: Chart of Accounts never renders blank › mixed chart: SHARES/DIVIDENDS in Equity, nested income and expense in their own sections, leftovers Uncategorised (9.9s)
+  ✓  337 [firefox] › e2e/soupfin-103-report-catalogue.spec.ts:195:3 › SOUPFIN-103: report catalogue (west of UTC) › the hub lists reports by category, searches them, and keeps favourites (17.2s)
+  ✓  346 [firefox] › e2e/soupfin-16-v2-fixes.spec.ts:211:3 › SOUPFIN-16 V2 — Account Settings › Save and Reset buttons are enabled on initial load (no longer mysterious) (7.1s)
+  ✓  347 [firefox] › e2e/soupfin-16-v2-fixes.spec.ts:233:3 › SOUPFIN-16 V2 — Account Settings › Logo and Favicon dropzones are functional (no "coming soon" placeholder) (8.3s)
+  ✘  342 [firefox] › e2e/soupfin-103-report-catalogue.spec.ts:340:3 › SOUPFIN-103: report catalogue (west of UTC) › A/P Aging opens the shared aging page with its own export (13.0s)
+  ✓  345 [firefox] › e2e/soupfin-148-coa-uncategorised.spec.ts:143:3 › SOUPFIN-148: Chart of Accounts never renders blank › chart where no account maps to a known group still lists every row (10.2s)
+  ✓  351 [firefox] › e2e/soupfin-16-v2-fixes.spec.ts:334:3 › SOUPFIN-16 V2 — Clients module › Type filter shows visible feedback when applied (7.0s)
+  ✓  348 [firefox] › e2e/soupfin-16-v2-fixes.spec.ts:261:3 › SOUPFIN-16 V2 — Account Settings › Start of Fiscal Year picker is blank when backend returns 0000-00-00 (no 0/0/0) (11.2s)
+  ✓  350 [firefox] › e2e/soupfin-16-v2-fixes.spec.ts:309:3 › SOUPFIN-16 V2 — Clients module › Search with no matches shows the "No clients match" state, not "No clients yet" (8.9s)
+  ✓  349 [firefox] › e2e/soupfin-16-v2-fixes.spec.ts:280:3 › SOUPFIN-16 V2 — Account Settings › SMS Sender ID caps user input at 11 characters (10.9s)
+  ✓  352 [firefox] › e2e/soupfin-16-v2-fixes.spec.ts:358:3 › SOUPFIN-16 V2 — Clients module › Edit form shows First Name and Last Name fields for an individual client (10.1s)
+  ✓  353 [firefox] › e2e/soupfin-16-v2-fixes.spec.ts:418:3 › SOUPFIN-16 V2 — Reports › Balance Sheet date picker permits years before 2026 (10.5s)
+  ✓  355 [firefox] › e2e/soupfin-16-v2-fixes.spec.ts:476:3 › SOUPFIN-16 V2 — Reports › Balance Sheet PDF export downloads with a .pdf extension (never .null) (9.7s)
+  ✓  357 [firefox] › e2e/soupfin-21-frontend-bugs.spec.ts:60:3 › SOUPFIN-21 #1 — delete confirmation shows the resolved client name › corporate client with a null name renders its company name (not a blank) in the dialog (9.4s)
+  ✓  354 [firefox] › e2e/soupfin-16-v2-fixes.spec.ts:460:3 › SOUPFIN-16 V2 — Reports › Trial Balance date pickers permit years before 2026 (13.0s)
+  ✓  358 [firefox] › e2e/soupfin-21-frontend-bugs.spec.ts:97:3 › SOUPFIN-21 #2 — Account Settings locks the form on a load failure › a 500 from account/show locks the fieldset and Save, and a successful retry unlocks it (13.4s)
+  ✓  356 [firefox] › e2e/soupfin-16-v2-fixes.spec.ts:439:3 › SOUPFIN-16 V2 — Reports › Profit & Loss date pickers permit years before 2026 (13.5s)
+  ✓  359 [firefox] › e2e/soupfin-23-account-settings-redirect.spec.ts:51:3 › SOUPFIN-23 — session-expiry redirect on account/show locks the form › a followed 302→login (200 HTML) locks the settings form; a valid retry unlocks it (13.5s)
+  ✓  364 [firefox] › e2e/soupfin-29-login-error-message.spec.ts:64:3 › SOUPFIN-29 — friendly login error messages › generic "Bad credentials" body is replaced with the friendly message (6.7s)
+  ✓  363 [firefox] › e2e/soupfin-29-login-error-message.spec.ts:35:3 › SOUPFIN-29 — friendly login error messages › bare 401 (no body) shows friendly message, not "status code 401" (7.2s)
+  ✓  362 [firefox] › e2e/soupfin-25-vendors-fixes.spec.ts:143:3 › SOUPFIN-25 #1 — Vendor API uses the trading module prefix › vendor list request goes to /rest/trading/vendor/index.json (8.2s)
+  ✓  365 [firefox] › e2e/soupfin-29-login-error-message.spec.ts:87:3 › SOUPFIN-29 — friendly login error messages › Spring Security {error, message} jargon body is fully suppressed (10.2s)
+  ✓  367 [firefox] › e2e/soupfin-29-login-error-message.spec.ts:140:3 › SOUPFIN-29 — friendly login error messages › 403 message "email not confirmed" also passes through with a resend link (9.8s)
+  ✘  360 [firefox] › e2e/soupfin-25-vendors-fixes.spec.ts:73:3 › SOUPFIN-25 #2 — Vendors nav visibility by business category › hides the Vendors nav item for SERVICES tenants (18.8s)
+  ✓  369 [firefox] › e2e/soupfin-29-login-error-message.spec.ts:183:3 › SOUPFIN-29 — friendly login error messages › server 503 shows the same friendly retry guidance (9.3s)
+  ✓  370 [firefox] › e2e/soupfin-30-frontend-fixes.spec.ts:207:3 › SOUPFIN-30 #16a — sidebar survives expanding Reports › every Reports sub-item is reachable and the Logout block is not squashed (9.6s)
+  ✓  366 [firefox] › e2e/soupfin-29-login-error-message.spec.ts:115:3 › SOUPFIN-29 — friendly login error messages › 401 error_description "email not confirmed" surfaces with a resend link (12.1s)
+  ✓  368 [firefox] › e2e/soupfin-29-login-error-message.spec.ts:164:3 › SOUPFIN-29 — friendly login error messages › server error (500) shows a friendly message, not a raw status string (10.5s)
+  ✓  372 [firefox] › e2e/soupfin-30-frontend-fixes.spec.ts:304:3 › SOUPFIN-30 #15 — add-vendor affordance beside the bill vendor dropdown › the bill form shows a labelled "+" button next to the vendor select (8.6s)
+  ✓  373 [firefox] › e2e/soupfin-30-frontend-fixes.spec.ts:357:3 › SOUPFIN-30 #14 — client type tabs while editing › editing a CORPORATE client still offers both tabs so a misclassification can be corrected (8.0s)
+  ✓  374 [firefox] › e2e/soupfin-30-frontend-fixes.spec.ts:386:3 › SOUPFIN-30 #6 — form fields carry ids and associated labels › no field on the new-client form is missing an id or an accessible name (8.0s)
+  ✓  371 [firefox] › e2e/soupfin-30-frontend-fixes.spec.ts:254:3 › SOUPFIN-30 #16b/c — journal entry money fields › renders the tenant currency symbol and refuses letters in the debit field (10.7s)
+  ✓  375 [firefox] › e2e/soupfin-33-frontend-fixes.spec.ts:301:3 › SOUPFIN-33 #2 — trial balance empty state formats its dates › the message reads "Month D, YYYY", never raw ISO (8.6s)
+  ✓  376 [firefox] › e2e/soupfin-33-frontend-fixes.spec.ts:267:3 › SOUPFIN-33 #1 — ledger date filters are named, not anonymous zeroes › From/To announce their purpose and their empty state (10.2s)
+  ✓  377 [firefox] › e2e/soupfin-30-frontend-fixes.spec.ts:332:3 › SOUPFIN-30 #14 — client type tabs while editing › editing an INDIVIDUAL client hides the Corporate tab (10.1s)
+  ✓  378 [firefox] › e2e/soupfin-33-frontend-fixes.spec.ts:323:3 › SOUPFIN-33 #3 — the bank dropdown lists each bank once › 45 duplicate rows collapse to 3 selectable options (8.2s)
+  ✘  361 [firefox] › e2e/soupfin-25-vendors-fixes.spec.ts:100:3 › SOUPFIN-25 #2 — Vendors nav visibility by business category › shows the Vendors nav item for TRADING tenants and navigation works (33.2s)
+  ✓  381 [firefox] › e2e/soupfin-33-frontend-fixes.spec.ts:390:3 › SOUPFIN-33 #6 — list page form fields are labelled and identifiable › /clients — the page named in the report has zero audit findings (7.2s)
+  ✓  382 [firefox] › e2e/soupfin-33-frontend-fixes.spec.ts:418:5 › SOUPFIN-33 #6 — list page form fields are labelled and identifiable › vendors — every rendered control passes the same audit (7.4s)
+  ✓  380 [firefox] › e2e/soupfin-33-frontend-fixes.spec.ts:373:3 › SOUPFIN-33 #5 — no redundant "No email on file" note › a user with a login shows only @username (8.9s)
+  ✓  383 [firefox] › e2e/soupfin-33-frontend-fixes.spec.ts:418:5 › SOUPFIN-33 #6 — list page form fields are labelled and identifiable › ledger transactions — every rendered control passes the same audit (8.9s)
+  ✓  384 [firefox] › e2e/soupfin-33-frontend-fixes.spec.ts:418:5 › SOUPFIN-33 #6 — list page form fields are labelled and identifiable › settings users — every rendered control passes the same audit (9.4s)
+  ✘  379 [firefox] › e2e/soupfin-33-frontend-fixes.spec.ts:349:3 › SOUPFIN-33 #4 — aging report amounts use the tenant currency › A/P zero rows render GH₵0.00, not $0.00 (13.4s)
+  ✓  385 [firefox] › e2e/soupfin-37-invoice-tax.spec.ts:228:3 › SOUPFIN-37 — invoice line-item tax › #1 tax dropdown is populated from the real TaxEntry catalogue (11.1s)
+  ✓  387 [firefox] › e2e/soupfin-37-invoice-tax.spec.ts:289:3 › SOUPFIN-37 — invoice line-item tax › #4 saving sends the TaxEntry id to the item endpoint, not as invoiceItemList params (11.0s)
+  ✓  388 [firefox] › e2e/soupfin-37-invoice-tax.spec.ts:324:3 › SOUPFIN-37 — invoice line-item tax › #5 withholding tax cannot be selected, so it can never inflate the total (10.8s)
+  ✓  386 [firefox] › e2e/soupfin-37-invoice-tax.spec.ts:271:3 › SOUPFIN-37 — invoice line-item tax › #3 selecting a tax updates the previewed Tax and Total (13.3s)
+  ✓  389 [firefox] › e2e/soupfin-37-invoice-tax.spec.ts:346:3 › SOUPFIN-37 — invoice line-item tax › #6 a saved invoice shows a total that includes its tax (12.7s)
+  ✓  392 [firefox] › e2e/soupfin-43-bill-detail-totals.spec.ts:245:3 › SOUPFIN-43 — bill detail Amount Summary › #3 the Bills list Total column shows the taxed total (6.7s)
+  ✓  391 [firefox] › e2e/soupfin-43-bill-detail-totals.spec.ts:210:3 › SOUPFIN-43 — bill detail Amount Summary › #1 Subtotal / Tax / Total come from the bill header, not zero (13.8s)
+  ✓  394 [firefox] › e2e/soupfin-43-bill-detail-totals.spec.ts:259:3 › SOUPFIN-43 — bill detail Amount Summary › #4 a partially paid bill separates Total, Paid and Balance Due (15.8s)
+  ✓  395 [firefox] › e2e/soupfin-43-bill-detail-totals.spec.ts:296:3 › SOUPFIN-43 — bill detail Amount Summary › #6 a genuinely zero bill still renders 0.00, not blank or NaN (14.2s)
+  ✓  393 [firefox] › e2e/soupfin-43-bill-detail-totals.spec.ts:272:3 › SOUPFIN-43 — bill detail Amount Summary › #5 falls back to the line items when the header degrades to zero (16.8s)
+  ✓  390 [firefox] › e2e/soupfin-37-invoice-tax.spec.ts:261:3 › SOUPFIN-37 — invoice line-item tax › #2 the discount column the backend cannot store is gone (22.3s)
+  ✓  396 [firefox] › e2e/soupfin-43-bill-detail-totals.spec.ts:232:3 › SOUPFIN-43 — bill detail Amount Summary › #2 Total and Balance Due agree on the same page (15.0s)
+  ✓  397 [firefox] › e2e/soupfin-44-line-item-tax-rate.spec.ts:241:3 › SOUPFIN-44 — bill line item Tax Rate column › #1/#2/#3 tells apart unknown, untaxed and resolved tax (15.0s)
+  ✓  398 [firefox] › e2e/soupfin-44-line-item-tax-rate.spec.ts:264:3 › SOUPFIN-44 — bill line item Tax Rate column › #4 renders unknown, not 0%, when the tax catalogue is unavailable (14.7s)
+  ✓  399 [firefox] › e2e/soupfin-44-line-item-tax-rate.spec.ts:278:3 › SOUPFIN-44 — bill line item Tax Rate column › #5 holds up on an over-populated bill without any line claiming a false 0% (14.7s)
+  ✓  401 [firefox] › e2e/soupfin-55-kyc-entry-point.spec.ts:126:3 › SOUPFIN-55: KYC onboarding entry point › clicking the banner opens step 1 of the wizard with the corporate id (10.9s)
+  ✓  405 [firefox] › e2e/soupfin-55-kyc-entry-point.spec.ts:200:3 › SOUPFIN-55: KYC onboarding entry point › no banner when the tenant has no corporate application at all (7.3s)
+  ✓  403 [firefox] › e2e/soupfin-55-kyc-entry-point.spec.ts:164:3 › SOUPFIN-55: KYC onboarding entry point › the entry point is reachable from the sidebar, not only on first load (11.1s)
+  ✓  400 [firefox] › e2e/soupfin-55-kyc-entry-point.spec.ts:104:3 › SOUPFIN-55: KYC onboarding entry point › dashboard offers a way into the wizard when verification is pending (13.0s)
+  ✓  402 [firefox] › e2e/soupfin-55-kyc-entry-point.spec.ts:146:3 › SOUPFIN-55: KYC onboarding entry point › a rejected application gets its own wording and still opens the wizard (12.7s)
+  ✓  406 [firefox] › e2e/soupfin-55-kyc-entry-point.spec.ts:210:3 › SOUPFIN-55: KYC onboarding entry point › a forbidden corporate lookup does not break the dashboard (9.7s)
+  ✓  404 [firefox] › e2e/soupfin-55-kyc-entry-point.spec.ts:188:3 › SOUPFIN-55: KYC onboarding entry point › no banner once verification is approved (10.9s)
+  ✓  412 [firefox] › e2e/soupfin-60-excel-export.spec.ts:142:5 › SOUPFIN-60: Excel export asks for f=excel and downloads a .xls › Trial Balance: Excel downloads a .xls from f=excel (11.7s)
+  ✓  413 [firefox] › e2e/soupfin-60-excel-export.spec.ts:142:5 › SOUPFIN-60: Excel export asks for f=excel and downloads a .xls › Balance Sheet: Excel downloads a .xls from f=excel (13.8s)
+  ✓  414 [firefox] › e2e/soupfin-60-excel-export.spec.ts:142:5 › SOUPFIN-60: Excel export asks for f=excel and downloads a .xls › Profit & Loss: Excel downloads a .xls from f=excel (14.2s)
+  ✓  417 [firefox] › e2e/soupfin-62-corporate-current.spec.ts:109:3 › SOUPFIN-62: corporate/current.json error handling › once current.json answers, the index fallback is not called at all (11.8s)
+  ✓  416 [firefox] › e2e/soupfin-62-corporate-current.spec.ts:57:3 › SOUPFIN-62: corporate/current.json error handling › a 500 from current.json still leaves the KYC entry point usable (13.6s)
+  ✘  407 [firefox] › e2e/soupfin-58-logout-currency.spec.ts:95:3 › SOUPFIN-58 — logout clears the previous tenant currency › a USD tenant never sees the previous GHS tenant currency (34.5s)
+  ✘  408 [firefox] › e2e/soupfin-58-logout-currency.spec.ts:134:3 › SOUPFIN-58 — logout clears the previous tenant currency › logout removes account-storage and leaves the auth keys cleared (31.9s)
+  ✓  418 [firefox] › e2e/soupfin-62-corporate-current.spec.ts:145:3 › SOUPFIN-62: corporate/current.json error handling › a 404 from current.json is still treated as "nothing to resume" (9.2s)
+  ✘  410 [firefox] › e2e/soupfin-59-negative-amount-sign.spec.ts:174:3 › SOUPFIN-59 — the minus sign leads the currency symbol › navigating to the dashboard from the side menu shows the same corrected sign (34.8s)
+  ✘  409 [firefox] › e2e/soupfin-59-negative-amount-sign.spec.ts:147:3 › SOUPFIN-59 — the minus sign leads the currency symbol › a negative KPI renders as -GH₵1,200.00, not GH₵-1,200.00 (41.6s)
+  ✘  415 [firefox] › e2e/soupfin-60-excel-export.spec.ts:156:3 › SOUPFIN-60: Excel export asks for f=excel and downloads a .xls › Aging Reports: both AR and AP Excel buttons download a .xls (28.2s)
+  ✓  419 [firefox] › e2e/soupfin-63-nav-accessible-names.spec.ts:128:3 › SOUPFIN-63: nav links are named without the icon ligature › every top-level item navigates when located by its exact name (14.7s)
+  ✘  411 [firefox] › e2e/soupfin-59-negative-amount-sign.spec.ts:197:3 › SOUPFIN-59 — the minus sign leads the currency symbol › a positive figure is unchanged by the fix (43.5s)
+  ✓  420 [firefox] › e2e/soupfin-63-nav-accessible-names.spec.ts:212:3 › SOUPFIN-63: nav links are named without the icon ligature › sub-items remain reachable by exact name under an expanded section (11.2s)
+  ✓  421 [firefox] › e2e/soupfin-63-nav-accessible-names.spec.ts:156:3 › SOUPFIN-63: nav links are named without the icon ligature › no ligature survives in any sidebar link accessible name (12.2s)
+  ✓  422 [firefox] › e2e/soupfin-63-nav-accessible-names.spec.ts:192:3 › SOUPFIN-63: nav links are named without the icon ligature › the icons are still drawn — hiding them from a11y must not blank the UI (13.9s)
+  ✓  424 [firefox] › e2e/soupfin-64-local-date-defaults.spec.ts:108:3 › SOUPFIN-64: date defaults follow the local calendar, not UTC › Trial Balance opens on the whole local month, not one day short at each end (11.2s)
+  ✓  423 [firefox] › e2e/soupfin-63-nav-accessible-names.spec.ts:232:3 › SOUPFIN-63: nav links are named without the icon ligature › collapsing the sidebar keeps every link named (15.0s)
+  ✓  428 [firefox] › e2e/soupfin-64-local-date-defaults.spec.ts:146:3 › SOUPFIN-64: date defaults follow the local calendar, not UTC › Profit & Loss opens on the first of the local month through local today (13.6s)
+  ✓  425 [firefox] › e2e/soupfin-63-nav-accessible-names.spec.ts:261:3 › SOUPFIN-63: nav links are named without the icon ligature › header icon-only buttons are named by intent (16.7s)
+  ✓  426 [firefox] › e2e/soupfin-63-nav-accessible-names.spec.ts:294:3 › SOUPFIN-63: nav links are named without the icon ligature › settings tabs are named without their ligature too (17.3s)
+  ✓  429 [firefox] › e2e/soupfin-64-local-date-defaults.spec.ts:159:3 › SOUPFIN-64: date defaults follow the local calendar, not UTC › Balance Sheet is "as of" the local day (14.1s)
+  ✓  427 [firefox] › e2e/soupfin-64-local-date-defaults.spec.ts:135:3 › SOUPFIN-64: date defaults follow the local calendar, not UTC › Cash Flow opens on the first of the local month through local today (18.4s)
+  ✓  431 [firefox] › e2e/soupfin-64-local-date-defaults.spec.ts:179:3 › SOUPFIN-64: date defaults follow the local calendar, not UTC › a new invoice defaults to the local day, not UTC today (15.2s)
+  ✓  432 [firefox] › e2e/soupfin-75-help-route.spec.ts:75:3 › SOUPFIN-75: the user guide has a route in the app › clicking Help in the sidebar opens the guide inside the app (18.2s)
+  ✓  433 [firefox] › e2e/soupfin-75-help-route.spec.ts:134:3 › SOUPFIN-75: the user guide has a route in the app › "Open in new tab" shows the same guide on its own (15.3s)
+  ✓  434 [firefox] › e2e/soupfin-75-help-route.spec.ts:108:3 › SOUPFIN-75: the user guide has a route in the app › the guide contents work inside the frame (16.7s)
+  ✓  436 [firefox] › e2e/soupfin-75-help-route.spec.ts:174:3 › SOUPFIN-75: the user guide has a route in the app › the guide fits a phone-sized screen, reached from the mobile menu (14.2s)
+  ✓  435 [firefox] › e2e/soupfin-75-help-route.spec.ts:157:3 › SOUPFIN-75: the user guide has a route in the app › Help is still reachable, and named, with the sidebar collapsed (14.8s)
+  ✓  438 [firefox] › e2e/soupfin-76-mobile-drawer-closes.spec.ts:99:3 › SOUPFIN-76: the mobile drawer closes when a nav link is tapped › tapping Help shows the help page, not the drawer (11.5s)
+  ✘  430 [firefox] › e2e/soupfin-64-local-date-defaults.spec.ts:169:3 › SOUPFIN-64: date defaults follow the local calendar, not UTC › Aging Reports are "as of" the local day (24.3s)
+  ✓  437 [firefox] › e2e/soupfin-76-mobile-drawer-closes.spec.ts:83:3 › SOUPFIN-76: the mobile drawer closes when a nav link is tapped › tapping Invoices shows the invoice list, not the drawer (13.5s)
+  ✓  439 [firefox] › e2e/soupfin-76-mobile-drawer-closes.spec.ts:112:3 › SOUPFIN-76: the mobile drawer closes when a nav link is tapped › tapping Reports, then a report inside it, closes the drawer both times (11.7s)
+  ✓  440 [firefox] › e2e/soupfin-76-mobile-drawer-closes.spec.ts:135:3 › SOUPFIN-76: the mobile drawer closes when a nav link is tapped › tapping the link for the page already open closes the drawer (10.9s)
+  ✓  441 [firefox] › e2e/soupfin-76-mobile-drawer-closes.spec.ts:147:3 › SOUPFIN-76: the mobile drawer closes when a nav link is tapped › opening the menu without tapping a link keeps it open (10.0s)
+  ✓  443 [firefox] › e2e/soupfin-81-need-help-links.spec.ts:113:3 › SOUPFIN-81: "Need Help?" links and the guide logo › the user guide shows the same logo as the app (16.8s)
+  ✘  444 [firefox] › e2e/soupfin-81-need-help-links.spec.ts:164:3 › SOUPFIN-81: "Need Help?" links and the guide logo › sign-in, registration and password pages link to getting started (23.6s)
+  ✓  446 [firefox] › e2e/soupfin-81-need-help-links.spec.ts:191:3 › SOUPFIN-81: "Need Help?" links and the guide logo › dashboard: the page and its recent invoices section (19.6s)
+  ✓  445 [firefox] › e2e/soupfin-81-need-help-links.spec.ts:206:3 › SOUPFIN-81: "Need Help?" links and the guide logo › clients and invoices, including a half-filled form that survives a help lookup (28.7s)
+  ✓  450 [firefox] › e2e/soupfin-81-need-help-links.spec.ts:322:3 › SOUPFIN-81: "Need Help?" links and the guide logo › an unbalanced trial balance links to the guide answer for it (14.0s)
+  ✘  442 [firefox] › e2e/soupfin-76-mobile-drawer-closes.spec.ts:160:3 › SOUPFIN-76: the mobile drawer closes when a nav link is tapped › the drawer closes on every tap across many navigations in a row (30.9s)
+  ✓  447 [firefox] › e2e/soupfin-81-need-help-links.spec.ts:246:3 › SOUPFIN-81: "Need Help?" links and the guide logo › vendors, bills and payments (26.5s)
+  ✓  448 [firefox] › e2e/soupfin-81-need-help-links.spec.ts:275:3 › SOUPFIN-81: "Need Help?" links and the guide logo › ledger and accounting (29.7s)
+  ✓  455 [firefox] › e2e/soupfin-90-landing-palette.spec.ts:91:3 › SOUPFIN-90: landing page palette › the config loads and the nav Start Free Trial button is orange with white text (8.6s)
+  ✓  451 [firefox] › e2e/soupfin-81-need-help-links.spec.ts:363:3 › SOUPFIN-81: "Need Help?" links and the guide logo › a module the plan lacks links to the guide answer for it (15.1s)
+  ✓  457 [firefox] › e2e/soupfin-90-landing-palette.spec.ts:125:3 › SOUPFIN-90: landing page palette › clicking through the nav, the dark sections render dark with readable white text (7.4s)
+  ✓  454 [firefox] › e2e/soupfin-84-kyc-help-links.spec.ts:118:3 › SOUPFIN-84: KYC wizard "Need Help?" links › the links are there before anything is filled in (15.5s)
+  ✓  459 [firefox] › e2e/soupfin-90-landing-palette.spec.ts:187:3 › SOUPFIN-90: landing page palette › no visible text is lost against its background (5.4s)
+  ✓  458 [firefox] › e2e/soupfin-90-landing-palette.spec.ts:154:3 › SOUPFIN-90: landing page palette › every class on the page generates CSS (overflow edge: all 220+ classes) (7.4s)
+  ✓  449 [firefox] › e2e/soupfin-81-need-help-links.spec.ts:296:3 › SOUPFIN-81: "Need Help?" links and the guide logo › reports hub and every report (41.0s)
+  ✓  460 [firefox] › e2e/soupfin-90-landing-palette.spec.ts:258:3 › SOUPFIN-90: landing page palette › on a phone the nav button and the hero overlay render (narrow edge) (5.0s)
+  ✓  453 [firefox] › e2e/soupfin-84-kyc-help-links.spec.ts:95:3 › SOUPFIN-84: KYC wizard "Need Help?" links › every step links to its own part of the guide (23.0s)
+  ✓  456 [firefox] › e2e/soupfin-86-kyc-back-button.spec.ts:94:3 › SOUPFIN-86: KYC step 1 Back button › Back on step 1 returns a signed-in user to the dashboard, not /register (17.4s)
+  ✓  461 [firefox] › e2e/soupfin-91-phone-width.spec.ts:178:3 › SOUPFIN-91: signed-in pages fit the screen › dashboard at 360px: everything the ticket named is on screen (8.0s)
+  ✓  452 [firefox] › e2e/soupfin-81-need-help-links.spec.ts:344:3 › SOUPFIN-81: "Need Help?" links and the guide logo › settings: the link follows the open tab (27.0s)
+  ✓  465 [firefox] › e2e/soupfin-91-phone-width.spec.ts:256:3 › SOUPFIN-91: signed-in pages fit the screen › a very long username is truncated instead of widening the top bar (9.1s)
+  ✓  467 [firefox] › e2e/user-guide-screenshots.spec.ts:121:3 › user guide: getting started › captures a filled sign-in form (9.4s)
+  ✓  468 [firefox] › e2e/user-guide-screenshots.spec.ts:133:3 › user guide: getting started › captures the dashboard (11.5s)
+  ✓  464 [firefox] › e2e/soupfin-91-phone-width.spec.ts:232:5 › SOUPFIN-91: signed-in pages fit the screen › every main page fits a 768px screen, reached from the menu (16.6s)
+  ✓  469 [firefox] › e2e/user-guide-screenshots.spec.ts:144:3 › user guide: getting started › captures the dashboard in dark mode (11.2s)
+  ✓  473 [firefox] › e2e/user-guide-screenshots.spec.ts:286:3 › user guide: vendors and bills › captures the vendor list (7.2s)
+  ✓  472 [firefox] › e2e/user-guide-screenshots.spec.ts:258:3 › user guide: clients and invoices › captures the invoice list, the invoice form and an invoice in detail (9.9s)
+  ✓  462 [firefox] › e2e/soupfin-91-phone-width.spec.ts:232:5 › SOUPFIN-91: signed-in pages fit the screen › every main page fits a 320px screen, reached from the menu (27.1s)
+  ✓  471 [firefox] › e2e/user-guide-screenshots.spec.ts:239:3 › user guide: clients and invoices › captures the client list and the new-client form (12.9s)
+  ✓  470 [firefox] › e2e/user-guide-screenshots.spec.ts:168:3 › user guide: company verification › captures the dashboard banner and every step of the wizard (17.3s)
+  ✓  474 [firefox] › e2e/user-guide-screenshots.spec.ts:295:3 › user guide: vendors and bills › captures the bill list and the new-bill form (8.7s)
+  ✓  463 [firefox] › e2e/soupfin-91-phone-width.spec.ts:232:5 › SOUPFIN-91: signed-in pages fit the screen › every main page fits a 360px screen, reached from the menu (28.5s)
+  ✓  475 [firefox] › e2e/user-guide-screenshots.spec.ts:315:3 › user guide: payments › captures the payments list and the record-payment form (8.4s)
+  ✓  476 [firefox] › e2e/user-guide-screenshots.spec.ts:338:3 › user guide: ledger › captures the chart of accounts and the ledger transactions list (9.2s)
+  ✓  481 [firefox] › e2e/user-journeys.spec.ts:415:3 › User Journey: Accounts Receivable › invoice CRUD operations work end-to-end (8.3s)
+  ✓  477 [firefox] › e2e/user-guide-screenshots.spec.ts:357:3 › user guide: accounting › captures the transaction register, journal entry and both vouchers (14.2s)
+  ✓  479 [firefox] › e2e/user-guide-screenshots.spec.ts:422:3 › user guide: settings › captures users, bank accounts and company settings (14.2s)
+  ✓  483 [firefox] › e2e/user-journeys.spec.ts:549:3 › User Journey: Accounts Payable › bill status transitions work correctly (6.2s)
+  ✓  478 [firefox] › e2e/user-guide-screenshots.spec.ts:384:3 › user guide: reports › captures the reports hub and every statement it links to (16.2s)
+  ✓  485 [firefox] › e2e/user-journeys.spec.ts:626:3 › User Journey: Vendor Management › vendor list shows correct data (8.2s)
+  ✓  484 [firefox] › e2e/user-journeys.spec.ts:578:3 › User Journey: Vendor Management › complete flow: list vendors → create vendor → edit vendor → view in bill creation (21.0s)
+  ✘  480 [firefox] › e2e/user-journeys.spec.ts:337:3 › User Journey: Accounts Receivable › complete flow: login → dashboard → create invoice → view invoice → record payment (30.7s)
+  ✓  482 [firefox] › e2e/user-journeys.spec.ts:489:3 › User Journey: Accounts Payable › complete flow: login → bills → create bill → view bill → record payment (29.2s)
+  ✓  490 [firefox] › e2e/user-journeys.spec.ts:797:3 › User Journey: KYC Onboarding › registration form validates required fields (7.3s)
+  ✓  488 [firefox] › e2e/user-journeys.spec.ts:720:3 › User Journey: Financial Reporting › date filters work across all reports (25.4s)
+  ✘  487 [firefox] › e2e/user-journeys.spec.ts:696:3 › User Journey: Financial Reporting › export buttons are visible on all report pages (23.9s)
+  ✓  493 [firefox] › e2e/user-journeys.spec.ts:895:3 › User Journey: Accounting Workflow › journal entry form allows adding/removing lines (7.1s)
+  ✓  492 [firefox] › e2e/user-journeys.spec.ts:808:3 › User Journey: KYC Onboarding › KYC status page shows correct state (14.5s)
+  ✘  486 [firefox] › e2e/user-journeys.spec.ts:658:3 › User Journey: Financial Reporting › complete flow: dashboard → reports hub → view all report types (35.4s)
+  ✓  495 [firefox] › e2e/user-journeys.spec.ts:931:3 › User Journey: Accounting Workflow › transaction register filters work (11.5s)
+  ✘  489 [firefox] › e2e/user-journeys.spec.ts:757:3 › User Journey: KYC Onboarding › complete flow: registration → company info → directors → documents → status (32.2s)
+  ✓  494 [firefox] › e2e/user-journeys.spec.ts:913:3 › User Journey: Accounting Workflow › voucher type selection works correctly (16.8s)
+  ✓  499 [firefox] › e2e/vendors.spec.ts:171:5 › Vendor Management › Vendor List Page › displays list of vendors (7.5s)
+  ✓  500 [firefox] › e2e/vendors.spec.ts:211:5 › Vendor Management › Vendor List Page › shows empty state when no vendors (6.8s)
+  ✘  491 [firefox] › e2e/user-journeys.spec.ts:868:3 › User Journey: Accounting Workflow › complete flow: transaction register → journal entry → voucher → verify in register (33.1s)
+  ✓  497 [firefox] › e2e/user-journeys.spec.ts:1007:3 › Cross-Journey Navigation › back navigation works correctly in forms (17.5s)
+  ✓  501 [firefox] › e2e/vendors.spec.ts:187:5 › Vendor Management › Vendor List Page › shows loading state while fetching (9.5s)
+  ✓  502 [firefox] › e2e/vendors.spec.ts:232:5 › Vendor Management › Vendor List Page › shows error state on API failure (7.0s)
+  ✓  503 [firefox] › e2e/vendors.spec.ts:253:5 › Vendor Management › Vendor List Page › search filters vendors by name (6.1s)
+  ✓  504 [firefox] › e2e/vendors.spec.ts:280:5 › Vendor Management › Vendor List Page › can navigate to vendor detail (6.9s)
+  ✓  505 [firefox] › e2e/vendors.spec.ts:292:5 › Vendor Management › Vendor List Page › can navigate to edit vendor (7.3s)
+  ✓  498 [firefox] › e2e/user-journeys.spec.ts:1027:3 › Cross-Journey Navigation › protected routes redirect to login when session expires (22.1s)
+  ✓  506 [firefox] › e2e/vendors.spec.ts:310:5 › Vendor Management › Create Vendor › form displays required fields (6.8s)
+  ✓  507 [firefox] › e2e/vendors.spec.ts:324:5 › Vendor Management › Create Vendor › form validation shows errors for empty required fields (7.7s)
+  ✘  496 [firefox] › e2e/user-journeys.spec.ts:967:3 › Cross-Journey Navigation › can navigate between all major sections without errors (35.4s)
+  ✓  508 [firefox] › e2e/vendors.spec.ts:271:5 › Vendor Management › Vendor List Page › can navigate to create vendor (9.3s)
+  ✓  512 [firefox] › e2e/vendors.spec.ts:390:5 › Vendor Management › Edit Vendor › can update vendor details (5.6s)
+  ✓  509 [firefox] › e2e/vendors.spec.ts:338:5 › Vendor Management › Create Vendor › can create vendor with valid data (7.0s)
+  ✓  511 [firefox] › e2e/vendors.spec.ts:375:5 › Vendor Management › Edit Vendor › loads existing vendor data (7.6s)
+  ✓  510 [firefox] › e2e/vendors.spec.ts:357:5 › Vendor Management › Create Vendor › cancel button returns to vendor list (9.2s)
+  ✓  513 [firefox] › e2e/vendors.spec.ts:413:5 › Vendor Management › Delete Vendor › shows confirmation modal when clicking delete (7.8s)
+  ✓  515 [firefox] › e2e/vendors.spec.ts:471:5 › Vendor Management › Vendor Detail › displays vendor information (5.7s)
+  ✓  514 [firefox] › e2e/vendors.spec.ts:449:5 › Vendor Management › Delete Vendor › can confirm deletion (6.1s)
+  ✓  518 [firefox] › e2e/vendors.spec.ts:501:5 › Vendor Management › Responsiveness › vendor list is usable on mobile viewport (6.0s)
+  ✓  516 [firefox] › e2e/vendors.spec.ts:484:5 › Vendor Management › Vendor Detail › can navigate to edit from detail page (8.1s)
+  ✓  517 [firefox] › e2e/vendors.spec.ts:430:5 › Vendor Management › Delete Vendor › can cancel deletion (6.3s)
+  ✘  466 [firefox] › e2e/user-guide-screenshots.spec.ts:101:3 › user guide: getting started › captures sign-in, registration and password recovery (2.0m)
+
+
+  1) [firefox] › e2e/auth.spec.ts:83:5 › Authentication › Login with valid credentials › successful login redirects to dashboard 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveText[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator: getByTestId('dashboard-heading')
+    Expected: [32m"Financial Overview"[39m
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toHaveText" with timeout 5000ms[22m
+    [2m  - waiting for getByTestId('dashboard-heading')[22m
+    [2m    - waiting for" http://localhost:5197/login" navigation to finish...[22m
+    [2m    - navigated to "http://localhost:5197/login"[22m
+
+
+      104 |       // Verify we're on the dashboard
+      105 |       await expect(page.getByTestId('dashboard-page')).toBeVisible();
+    > 106 |       await expect(page.getByTestId('dashboard-heading')).toHaveText('Financial Overview');
+          |                                                           ^
+      107 |     });
+      108 |
+      109 |     test('login button shows loading state while submitting', async ({ page }) => {
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/auth.spec.ts:106:59
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/auth-Authentication-Login--fe2df-ogin-redirects-to-dashboard-firefox/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/auth-Authentication-Login--fe2df-ogin-redirects-to-dashboard-firefox/error-context.md
+
+  2) [firefox] › e2e/auth.spec.ts:241:5 › Authentication › Logout › logout redirects to login page ─
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+    [2m  - waiting for getByTestId('logout-button')[22m
+    [2m    - waiting for navigation to finish...[22m
+    [2m    - navigated to "http://localhost:5197/login"[22m
+
+
+      255 |
+      256 |       // Click logout — apiLogout() clears storage and navigates to /login
+    > 257 |       await page.getByTestId('logout-button').click();
+          |                                               ^
+      258 |
+      259 |       // Should redirect to login page (apiLogout does window.location.href = '/login')
+      260 |       await expect(page).toHaveURL(/\/login/, { timeout: 10000 });
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/auth.spec.ts:257:47
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/auth-Authentication-Logout-logout-redirects-to-login-page-firefox/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/auth-Authentication-Logout-logout-redirects-to-login-page-firefox/error-context.md
+
+  3) [firefox] › e2e/auth.spec.ts:282:5 › Authentication › Navigation › can navigate from login to register 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByTestId('registration-page')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 5000ms[22m
+    [2m  - waiting for getByTestId('registration-page')[22m
+
+
+      288 |       // Should be on registration page
+      289 |       await expect(page).toHaveURL(/\/register/);
+    > 290 |       await expect(page.getByTestId('registration-page')).toBeVisible();
+          |                                                           ^
+      291 |       await takeScreenshot(page, 'auth-login-to-register');
+      292 |     });
+      293 |   });
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/auth.spec.ts:290:59
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/auth-Authentication-Naviga-a83c0-gate-from-login-to-register-firefox/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/auth-Authentication-Naviga-a83c0-gate-from-login-to-register-firefox/error-context.md
+
+  4) [firefox] › e2e/bills.spec.ts:565:5 › Bill Management › Bill List Page › shows loading state while fetching bills 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByTestId('bill-list-loading')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 5000ms[22m
+    [2m  - waiting for getByTestId('bill-list-loading')[22m
+
+
+      587 |
+      588 |       // Fix: Increased timeout to 5s to match the delayed response
+    > 589 |       await expect(page.getByTestId('bill-list-loading')).toBeVisible({ timeout: 5000 });
+          |                                                           ^
+      590 |       await takeScreenshot(page, 'bills-list-loading');
+      591 |
+      592 |       // Wait for table to appear after delay
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/bills.spec.ts:589:59
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/bills-Bill-Management-Bill-d7e9e--state-while-fetching-bills-firefox/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/bills-Bill-Management-Bill-d7e9e--state-while-fetching-bills-firefox/error-context.md
+
+  5) [firefox] › e2e/dashboard.spec.ts:40:5 › Dashboard › Dashboard Page Loading › dashboard loads after login 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByTestId('dashboard-page')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 5000ms[22m
+    [2m  - waiting for getByTestId('dashboard-page')[22m
+
+
+      46 |
+      47 |       // Verify dashboard is visible
+    > 48 |       await expect(page.getByTestId('dashboard-page')).toBeVisible();
+         |                                                        ^
+      49 |       await expect(page.getByTestId('dashboard-heading')).toHaveText('Financial Overview');
+      50 |     });
+      51 |
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/dashboard.spec.ts:48:56
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/dashboard-Dashboard-Dashbo-12fe9-dashboard-loads-after-login-firefox/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/dashboard-Dashboard-Dashbo-12fe9-dashboard-loads-after-login-firefox/error-context.md
+
+  6) [firefox] › e2e/dashboard.spec.ts:85:5 › Dashboard › Financial Summary Cards › total revenue card displays correct values 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveText[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator: getByTestId('stat-total-revenue-value')
+    Expected: [32m"$4,750.50"[39m
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toHaveText" with timeout 5000ms[22m
+    [2m  - waiting for getByTestId('stat-total-revenue-value')[22m
+    [2m    - waiting for" http://localhost:5197/login" navigation to finish...[22m
+    [2m    - navigated to "http://localhost:5197/login"[22m
+
+
+      93 |       // Changed: Expected values match calculated stats from mockInvoices
+      94 |       // totalRevenue = sum of PAID invoices = $4,750.50
+    > 95 |       await expect(page.getByTestId('stat-total-revenue-value')).toHaveText('$4,750.50');
+         |                                                                  ^
+      96 |       await expect(page.getByTestId('stat-total-revenue-change')).toHaveText('+0.0%');
+      97 |     });
+      98 |
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/dashboard.spec.ts:95:66
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/dashboard-Dashboard-Financ-3a00c-ard-displays-correct-values-firefox/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/dashboard-Dashboard-Financ-3a00c-ard-displays-correct-values-firefox/error-context.md
+
+  7) [firefox] › e2e/dashboard.spec.ts:99:5 › Dashboard › Financial Summary Cards › outstanding invoices card displays correctly 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByTestId('stat-outstanding-invoices')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 5000ms[22m
+    [2m  - waiting for getByTestId('stat-outstanding-invoices')[22m
+    [2m    - waiting for" http://localhost:5197/login" navigation to finish...[22m
+    [2m    - navigated to "http://localhost:5197/login"[22m
+
+
+      103 |
+      104 |       const invoicesCard = page.getByTestId('stat-outstanding-invoices');
+    > 105 |       await expect(invoicesCard).toBeVisible();
+          |                                  ^
+      106 |
+      107 |       // Changed: Expected values match calculated stats from mockInvoices
+      108 |       // outstandingInvoices = SENT + OVERDUE = $2,500 + $1,200 = $3,700
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/dashboard.spec.ts:105:34
+
+    Error Context: test-results/dashboard-Dashboard-Financ-72861-ces-card-displays-correctly-firefox/error-context.md
+
+  8) [firefox] › e2e/dashboard.spec.ts:113:5 › Dashboard › Financial Summary Cards › expenses card displays correctly 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveText[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator: getByTestId('stat-expenses-value')
+    Expected: [32m"$3,190.00"[39m
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toHaveText" with timeout 5000ms[22m
+    [2m  - waiting for getByTestId('stat-expenses-value')[22m
+    [2m    - waiting for" http://localhost:5197/login" navigation to finish...[22m
+    [2m    - navigated to "http://localhost:5197/login"[22m
+
+
+      121 |       // Changed: Expected values match calculated stats from mockBills
+      122 |       // expensesMTD = bills in Jan 2026 = $990 + $2,200 = $3,190
+    > 123 |       await expect(page.getByTestId('stat-expenses-value')).toHaveText('$3,190.00');
+          |                                                             ^
+      124 |       await expect(page.getByTestId('stat-expenses-change')).toHaveText('+0.0%');
+      125 |     });
+      126 |
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/dashboard.spec.ts:123:61
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/dashboard-Dashboard-Financ-a3b6b-ses-card-displays-correctly-firefox/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/dashboard-Dashboard-Financ-a3b6b-ses-card-displays-correctly-firefox/error-context.md
+
+  9) [firefox] › e2e/dashboard.spec.ts:127:5 › Dashboard › Financial Summary Cards › net profit card displays correctly 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveText[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator: getByTestId('stat-net-profit-value')
+    Expected: [32m"$1,560.50"[39m
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toHaveText" with timeout 5000ms[22m
+    [2m  - waiting for getByTestId('stat-net-profit-value')[22m
+    [2m    - waiting for navigation to finish...[22m
+    [2m    - navigated to "http://localhost:5197/login"[22m
+
+
+      135 |       // Changed: Expected values match calculated stats
+      136 |       // netProfit = totalRevenue - expensesMTD = $4,750.50 - $3,190 = $1,560.50
+    > 137 |       await expect(page.getByTestId('stat-net-profit-value')).toHaveText('$1,560.50');
+          |                                                               ^
+      138 |       await expect(page.getByTestId('stat-net-profit-change')).toHaveText('+0.0%');
+      139 |     });
+      140 |   });
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/dashboard.spec.ts:137:63
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/dashboard-Dashboard-Financ-52736-fit-card-displays-correctly-firefox/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/dashboard-Dashboard-Financ-52736-fit-card-displays-correctly-firefox/error-context.md
+
+  10) [firefox] › e2e/dashboard.spec.ts:143:5 › Dashboard › Recent Transactions Table › shows recent invoices table with data 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByTestId('dashboard-recent-invoices')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 5000ms[22m
+    [2m  - waiting for getByTestId('dashboard-recent-invoices')[22m
+    [2m    - waiting for" http://localhost:5197/login" navigation to finish...[22m
+    [2m    - navigated to "http://localhost:5197/login"[22m
+
+
+      149 |       await expect(page.getByTestId('dashboard-invoices-loading')).not.toBeVisible({ timeout: 5000 });
+      150 |
+    > 151 |       await expect(page.getByTestId('dashboard-recent-invoices')).toBeVisible();
+          |                                                                   ^
+      152 |       await expect(page.getByTestId('dashboard-invoices-table')).toBeVisible();
+      153 |
+      154 |       await takeScreenshot(page, 'dashboard-invoices-table');
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/dashboard.spec.ts:151:67
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/dashboard-Dashboard-Recent-46e91-nt-invoices-table-with-data-firefox/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/dashboard-Dashboard-Recent-46e91-nt-invoices-table-with-data-firefox/error-context.md
+
+  11) [firefox] › e2e/dashboard.spec.ts:157:5 › Dashboard › Recent Transactions Table › displays correct invoice data in table 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByTestId('dashboard-invoices-table')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 5000ms[22m
+    [2m  - waiting for getByTestId('dashboard-invoices-table')[22m
+    [2m    - waiting for" http://localhost:5197/login" navigation to finish...[22m
+    [2m    - navigated to "http://localhost:5197/login"[22m
+
+
+      166 |       // Verify table headers
+      167 |       const table = page.getByTestId('dashboard-invoices-table');
+    > 168 |       await expect(table).toBeVisible();
+          |                           ^
+      169 |
+      170 |       // Changed: Invoice numbers are now integers (Grails domain `number` field)
+      171 |       // Dashboard renders String(invoice.number) → "1", "2", "3"
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/dashboard.spec.ts:168:27
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/dashboard-Dashboard-Recent-61e5e-rrect-invoice-data-in-table-firefox/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/dashboard-Dashboard-Recent-61e5e-rrect-invoice-data-in-table-firefox/error-context.md
+
+  12) [firefox] › e2e/dashboard.spec.ts:184:5 › Dashboard › Recent Transactions Table › shows loading state while fetching invoices 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByTestId('dashboard-invoices-loading')
+    Expected: visible
+    Timeout: 3000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 3000ms[22m
+    [2m  - waiting for getByTestId('dashboard-invoices-loading')[22m
+    [2m    - waiting for" http://localhost:5197/login" navigation to finish...[22m
+    [2m    - navigated to "http://localhost:5197/login"[22m
+
+
+      211 |
+      212 |       // Should show loading state while API is delayed
+    > 213 |       await expect(page.getByTestId('dashboard-invoices-loading')).toBeVisible({ timeout: 3000 });
+          |                                                                    ^
+      214 |       await takeScreenshot(page, 'dashboard-loading-state');
+      215 |
+      216 |       // Wait for loading to complete
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/dashboard.spec.ts:213:68
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/dashboard-Dashboard-Recent-fea30-ate-while-fetching-invoices-firefox/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/dashboard-Dashboard-Recent-fea30-ate-while-fetching-invoices-firefox/error-context.md
+
+  13) [firefox] › e2e/dashboard.spec.ts:220:5 › Dashboard › Recent Transactions Table › shows empty state when no invoices exist 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByTestId('dashboard-no-invoices')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 5000ms[22m
+    [2m  - waiting for getByTestId('dashboard-no-invoices')[22m
+
+
+      245 |
+      246 |       // Should show empty state
+    > 247 |       await expect(page.getByTestId('dashboard-no-invoices')).toBeVisible();
+          |                                                               ^
+      248 |       await expect(page.getByTestId('dashboard-no-invoices')).toContainText(
+      249 |         'No invoices yet'
+      250 |       );
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/dashboard.spec.ts:247:63
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/dashboard-Dashboard-Recent-f47c4-tate-when-no-invoices-exist-firefox/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/dashboard-Dashboard-Recent-f47c4-tate-when-no-invoices-exist-firefox/error-context.md
+
+  14) [firefox] › e2e/dashboard.spec.ts:255:5 › Dashboard › Recent Transactions Table › view all invoices link navigates to invoices page 
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/dashboard-Dashboard-Recent-c16f0--navigates-to-invoices-page-firefox/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/dashboard-Dashboard-Recent-c16f0--navigates-to-invoices-page-firefox/error-context.md
+
+  15) [firefox] › e2e/dashboard.spec.ts:274:5 › Dashboard › Dashboard Responsiveness › KPI cards stack on mobile viewport 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByTestId('stat-total-revenue')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 5000ms[22m
+    [2m  - waiting for getByTestId('stat-total-revenue')[22m
+    [2m    - waiting for" http://localhost:5197/login" navigation to finish...[22m
+    [2m    - navigated to "http://localhost:5197/login"[22m
+
+
+      282 |
+      283 |       // All cards should still be visible
+    > 284 |       await expect(page.getByTestId('stat-total-revenue')).toBeVisible();
+          |                                                            ^
+      285 |       await expect(page.getByTestId('stat-net-profit')).toBeVisible();
+      286 |     });
+      287 |
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/dashboard.spec.ts:284:60
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/dashboard-Dashboard-Dashbo-fa0bf-ds-stack-on-mobile-viewport-firefox/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  16) [firefox] › e2e/dashboard.spec.ts:288:5 › Dashboard › Dashboard Responsiveness › table is scrollable on small screens 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByTestId('dashboard-invoices-table')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 5000ms[22m
+    [2m  - waiting for getByTestId('dashboard-invoices-table')[22m
+    [2m    - waiting for" http://localhost:5197/login" navigation to finish...[22m
+    [2m    - navigated to "http://localhost:5197/login"[22m
+
+
+      299 |       // Table should be visible (may require scrolling)
+      300 |       const table = page.getByTestId('dashboard-invoices-table');
+    > 301 |       await expect(table).toBeVisible();
+          |                           ^
+      302 |
+      303 |       await takeScreenshot(page, 'dashboard-mobile-table');
+      304 |     });
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/dashboard.spec.ts:301:27
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/dashboard-Dashboard-Dashbo-6da29-scrollable-on-small-screens-firefox/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/dashboard-Dashboard-Dashbo-6da29-scrollable-on-small-screens-firefox/error-context.md
+
+  17) [firefox] › e2e/invoices.spec.ts:105:5 › Invoice Management › Invoice List Page › shows loading state while fetching invoices 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByTestId('invoice-list-loading')
+    Expected: visible
+    Timeout: 3000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 3000ms[22m
+    [2m  - waiting for getByTestId('invoice-list-loading')[22m
+
+
+      121 |
+      122 |       // Should show loading state - use short timeout since it should be visible immediately
+    > 123 |       await expect(page.getByTestId('invoice-list-loading')).toBeVisible({ timeout: 3000 });
+          |                                                              ^
+      124 |       await takeScreenshot(page, 'invoices-list-loading');
+      125 |
+      126 |       // Wait for table to appear after delay resolves
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/invoices.spec.ts:123:62
+
+    Error Context: test-results/invoices-Invoice-Managemen-f0edc-ate-while-fetching-invoices-firefox/error-context.md
+
+  18) [firefox] › e2e/ledger.spec.ts:334:5 › Ledger Management › Chart of Accounts Page › shows loading state while fetching 
+
+    TimeoutError: page.waitForSelector: Timeout 5000ms exceeded.
+    Call log:
+    [2m  - waiting for locator('[data-testid="chart-of-accounts-page"]') to be visible[22m
+
+
+      346 |
+      347 |       await page.goto('/ledger/accounts', { waitUntil: 'commit' });
+    > 348 |       await page.waitForSelector('[data-testid="chart-of-accounts-page"]', { timeout: 5000 });
+          |                  ^
+      349 |
+      350 |       // Should show loading state
+      351 |       await expect(page.getByTestId('coa-loading')).toBeVisible({ timeout: 2000 });
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/ledger.spec.ts:348:18
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/ledger-Ledger-Management-C-fc936-oading-state-while-fetching-firefox/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/ledger-Ledger-Management-C-fc936-oading-state-while-fetching-firefox/error-context.md
+
+  19) [firefox] › e2e/ledger.spec.ts:562:5 › Ledger Management › Ledger Transactions Page › shows loading state while fetching 
+
+    TimeoutError: page.waitForSelector: Timeout 5000ms exceeded.
+    Call log:
+    [2m  - waiting for locator('[data-testid="ledger-transactions-page"]') to be visible[22m
+
+
+      583 |
+      584 |       await page.goto('/ledger/transactions', { waitUntil: 'commit' });
+    > 585 |       await page.waitForSelector('[data-testid="ledger-transactions-page"]', { timeout: 5000 });
+          |                  ^
+      586 |
+      587 |       // Should show loading state
+      588 |       await expect(page.getByTestId('ledger-loading')).toBeVisible({ timeout: 2000 });
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/ledger.spec.ts:585:18
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/ledger-Ledger-Management-L-93b0d-oading-state-while-fetching-firefox/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/ledger-Ledger-Management-L-93b0d-oading-state-while-fetching-firefox/error-context.md
+
+  20) [firefox] › e2e/payments.spec.ts:372:5 › Payment Management › Payment List Page › shows loading state while fetching 
+
+    TimeoutError: page.waitForSelector: Timeout 5000ms exceeded.
+    Call log:
+    [2m  - waiting for locator('[data-testid="payment-list-page"]') to be visible[22m
+
+
+      393 |
+      394 |       await page.goto('/payments', { waitUntil: 'commit' });
+    > 395 |       await page.waitForSelector('[data-testid="payment-list-page"]', { timeout: 5000 });
+          |                  ^
+      396 |
+      397 |       // Should show loading state
+      398 |       await expect(page.getByTestId('payment-list-loading')).toBeVisible({ timeout: 2000 });
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/payments.spec.ts:395:18
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/payments-Payment-Managemen-0d251-oading-state-while-fetching-firefox/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/payments-Payment-Managemen-0d251-oading-state-while-fetching-firefox/error-context.md
+
+  21) [firefox] › e2e/reports.spec.ts:896:3 › Aging Reports › navigates to aging reports page ──────
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveText[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator: getByTestId('aging-reports-heading')
+    Expected: [32m"Aging Reports"[39m
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toHaveText" with timeout 5000ms[22m
+    [2m  - waiting for getByTestId('aging-reports-heading')[22m
+    [2m    2 × waiting for" http://localhost:5197/login" navigation to finish...[22m
+    [2m    - navigated to "http://localhost:5197/login"[22m
+
+
+      915 |
+      916 |     await expect(page.getByTestId('aging-reports-page')).toBeVisible();
+    > 917 |     await expect(page.getByTestId('aging-reports-heading')).toHaveText('Aging Reports');
+          |                                                             ^
+      918 |   });
+      919 |
+      920 |   test('displays as-of date picker', async ({ page }) => {
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/reports.spec.ts:917:61
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/reports-Aging-Reports-navigates-to-aging-reports-page-firefox/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/reports-Aging-Reports-navigates-to-aging-reports-page-firefox/error-context.md
+
+  22) [firefox] › e2e/reports.spec.ts:943:3 › Aging Reports › date filter changes API request ──────
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByTestId('ar-aging-table')
+    Expected: visible
+    Timeout: 10000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 10000ms[22m
+    [2m  - waiting for getByTestId('ar-aging-table')[22m
+    [2m    - waiting for" http://localhost:5197/login" navigation to finish...[22m
+
+
+      966 |
+      967 |     // Wait for initial load
+    > 968 |     await expect(page.getByTestId('ar-aging-table')).toBeVisible({ timeout: 10000 });
+          |                                                      ^
+      969 |
+      970 |     // Change date
+      971 |     await page.getByTestId('aging-reports-date-picker').fill('2025-06-30');
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/reports.spec.ts:968:54
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/reports-Aging-Reports-date-filter-changes-API-request-firefox/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/reports-Aging-Reports-date-filter-changes-API-request-firefox/error-context.md
+
+  23) [firefox] › e2e/reports.spec.ts:980:3 › Aging Reports › Today button refetches even when date is already today (SOUPFIN-11) 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByTestId('ar-aging-table')
+    Expected: visible
+    Timeout: 10000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 10000ms[22m
+    [2m  - waiting for getByTestId('ar-aging-table')[22m
+    [2m    - waiting for" http://localhost:5197/login" navigation to finish...[22m
+    [2m    - navigated to "http://localhost:5197/login"[22m
+
+
+      1004 |
+      1005 |     await page.goto('/reports/aging');
+    > 1006 |     await expect(page.getByTestId('ar-aging-table')).toBeVisible({ timeout: 10000 });
+           |                                                      ^
+      1007 |
+      1008 |     // After initial load both endpoints have been hit at least once.
+      1009 |     const arInitial = arRequestCount;
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/reports.spec.ts:1006:54
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/reports-Aging-Reports-Toda-23302-s-already-today-SOUPFIN-11--firefox/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/reports-Aging-Reports-Toda-23302-s-already-today-SOUPFIN-11--firefox/error-context.md
+
+  24) [firefox] › e2e/reports.spec.ts:1022:3 › Aging Reports › date picker allows selecting historical years (SOUPFIN-11) 
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    Error: locator.fill: Test timeout of 30000ms exceeded.
+    Call log:
+    [2m  - waiting for getByTestId('aging-reports-date-picker')[22m
+    [2m    - locator resolved to <input type="date" min="1900-01-01" max="2026-10-12" value="2026-10-12" id="aging-as-of-date" name="aging-as-of-date" aria-label="Aging reports as-of date" data-testid="aging-reports-date-picker" class="h-10 px-3 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary/50 focus:border-primary"/>[22m
+    [2m    - fill("2024-03-15")[22m
+    [2m  - attempting fill action[22m
+    [2m    - waiting for navigation to finish...[22m
+    [2m    - waiting for element to be visible, enabled and editable[22m
+    [2m  - element was detached from the DOM, retrying[22m
+    [2m    2 × waiting for" http://localhost:5197/login" navigation to finish...[22m
+    [2m      - navigated to "http://localhost:5197/login"[22m
+
+
+      1034 |
+      1035 |     const datePicker = page.getByTestId('aging-reports-date-picker');
+    > 1036 |     await datePicker.fill('2024-03-15');
+           |                      ^
+      1037 |     await expect(datePicker).toHaveValue('2024-03-15');
+      1038 |
+      1039 |     // Min attribute should be set so the native picker exposes earlier years.
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/reports.spec.ts:1036:22
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/reports-Aging-Reports-date-e78ad-istorical-years-SOUPFIN-11--firefox/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/reports-Aging-Reports-date-e78ad-istorical-years-SOUPFIN-11--firefox/error-context.md
+
+  25) [firefox] › e2e/reports.spec.ts:1049:3 › Aging Reports › renders both A/R and A/P tables ─────
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByTestId('ar-aging-table')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 5000ms[22m
+    [2m  - waiting for getByTestId('ar-aging-table')[22m
+    [2m    - waiting for" http://localhost:5197/login" navigation to finish...[22m
+    [2m    - navigated to "http://localhost:5197/login"[22m
+
+
+      1068 |     // Check A/R section
+      1069 |     await expect(page.getByTestId('ar-aging-container')).toBeVisible({ timeout: 10000 });
+    > 1070 |     await expect(page.getByTestId('ar-aging-table')).toBeVisible();
+           |                                                      ^
+      1071 |     await expect(page.getByTestId('ar-aging-totals')).toBeVisible();
+      1072 |
+      1073 |     // Check A/P section
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/reports.spec.ts:1070:54
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/reports-Aging-Reports-renders-both-A-R-and-A-P-tables-firefox/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/reports-Aging-Reports-renders-both-A-R-and-A-P-tables-firefox/error-context.md
+
+  26) [firefox] › e2e/reports.spec.ts:1084:3 › Aging Reports › displays aging data rows with correct structure 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByTestId('ar-aging-row-0')
+    Expected: visible
+    Timeout: 10000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 10000ms[22m
+    [2m  - waiting for getByTestId('ar-aging-row-0')[22m
+
+
+      1102 |
+      1103 |     // Check A/R rows
+    > 1104 |     await expect(page.getByTestId('ar-aging-row-0')).toBeVisible({ timeout: 10000 });
+           |                                                      ^
+      1105 |     await expect(page.getByTestId('ar-aging-row-1')).toBeVisible();
+      1106 |     await expect(page.getByTestId('ar-aging-row-2')).toBeVisible();
+      1107 |
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/reports.spec.ts:1104:54
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/reports-Aging-Reports-disp-c57e0-rows-with-correct-structure-firefox/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/reports-Aging-Reports-disp-c57e0-rows-with-correct-structure-firefox/error-context.md
+
+  27) [firefox] › e2e/reports.spec.ts:1113:3 › Aging Reports › shows empty state for A/R when no receivables 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByTestId('ar-aging-empty')
+    Expected: visible
+    Timeout: 10000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 10000ms[22m
+    [2m  - waiting for getByTestId('ar-aging-empty')[22m
+    [2m    2 × waiting for" http://localhost:5197/login" navigation to finish...[22m
+
+
+      1130 |     await page.goto('/reports/aging');
+      1131 |
+    > 1132 |     await expect(page.getByTestId('ar-aging-empty')).toBeVisible({ timeout: 10000 });
+           |                                                      ^
+      1133 |
+      1134 |     await takeScreenshot(page, 'aging-ar-empty');
+      1135 |   });
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/reports.spec.ts:1132:54
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/reports-Aging-Reports-show-a8054-for-A-R-when-no-receivables-firefox/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/reports-Aging-Reports-show-a8054-for-A-R-when-no-receivables-firefox/error-context.md
+
+  28) [firefox] › e2e/reports.spec.ts:1137:3 › Aging Reports › shows empty state for A/P when no payables 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByTestId('ap-aging-empty')
+    Expected: visible
+    Timeout: 10000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 10000ms[22m
+    [2m  - waiting for getByTestId('ap-aging-empty')[22m
+    [2m    - waiting for" http://localhost:5197/login" navigation to finish...[22m
+    [2m    - navigated to "http://localhost:5197/login"[22m
+
+
+      1154 |     await page.goto('/reports/aging');
+      1155 |
+    > 1156 |     await expect(page.getByTestId('ap-aging-empty')).toBeVisible({ timeout: 10000 });
+           |                                                      ^
+      1157 |
+      1158 |     await takeScreenshot(page, 'aging-ap-empty');
+      1159 |   });
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/reports.spec.ts:1156:54
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/reports-Aging-Reports-show-5e64e-te-for-A-P-when-no-payables-firefox/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/reports-Aging-Reports-show-5e64e-te-for-A-P-when-no-payables-firefox/error-context.md
+
+  29) [firefox] › e2e/reports.spec.ts:1161:3 › Aging Reports › shows error state on A/R API failure 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByTestId('ar-aging-error')
+    Expected: visible
+    Timeout: 10000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 10000ms[22m
+    [2m  - waiting for getByTestId('ar-aging-error')[22m
+
+
+      1178 |     await page.goto('/reports/aging');
+      1179 |
+    > 1180 |     await expect(page.getByTestId('ar-aging-error')).toBeVisible({ timeout: 10000 });
+           |                                                      ^
+      1181 |
+      1182 |     await takeScreenshot(page, 'aging-ar-error');
+      1183 |   });
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/reports.spec.ts:1180:54
+
+  30) [firefox] › e2e/reports.spec.ts:1185:3 › Aging Reports › export buttons are visible for both A/R and A/P 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByTestId('ar-aging-export-excel')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 5000ms[22m
+    [2m  - waiting for getByTestId('ar-aging-export-excel')[22m
+    [2m    - waiting for navigation to finish...[22m
+    [2m    - waiting for" http://localhost:5197/login" navigation to finish...[22m
+    [2m    - navigated to "http://localhost:5197/login"[22m
+
+
+      1204 |     // A/R export buttons
+      1205 |     await expect(page.getByTestId('ar-aging-export-pdf')).toBeVisible();
+    > 1206 |     await expect(page.getByTestId('ar-aging-export-excel')).toBeVisible();
+           |                                                             ^
+      1207 |     await expect(page.getByTestId('ar-aging-export-csv')).toBeVisible();
+      1208 |
+      1209 |     // A/P export buttons
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/reports.spec.ts:1206:61
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/reports-Aging-Reports-expo-49774-isible-for-both-A-R-and-A-P-firefox/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/reports-Aging-Reports-expo-49774-isible-for-both-A-R-and-A-P-firefox/error-context.md
+
+  31) [firefox] › e2e/reports.spec.ts:1215:3 › Aging Reports › responsive layout on mobile viewport 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByTestId('ap-aging-container')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 5000ms[22m
+    [2m  - waiting for getByTestId('ap-aging-container')[22m
+    [2m    2 × waiting for" http://localhost:5197/login" navigation to finish...[22m
+    [2m    - navigated to "http://localhost:5197/login"[22m
+
+
+      1237 |     // Tables should stack vertically on mobile
+      1238 |     await expect(page.getByTestId('ar-aging-container')).toBeVisible();
+    > 1239 |     await expect(page.getByTestId('ap-aging-container')).toBeVisible();
+           |                                                          ^
+      1240 |
+      1241 |     await takeScreenshot(page, 'aging-reports-mobile');
+      1242 |   });
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/reports.spec.ts:1239:58
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/reports-Aging-Reports-responsive-layout-on-mobile-viewport-firefox/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/reports-Aging-Reports-responsive-layout-on-mobile-viewport-firefox/error-context.md
+
+  32) [firefox] › e2e/settings.spec.ts:383:5 › Settings - User Management › User List Page › shows loading state while fetching 
+
+    TimeoutError: page.waitForSelector: Timeout 5000ms exceeded.
+    Call log:
+    [2m  - waiting for locator('[data-testid="user-list-page"]') to be visible[22m
+
+
+      400 |
+      401 |       await page.goto('/settings/users', { waitUntil: 'commit' });
+    > 402 |       await page.waitForSelector('[data-testid="user-list-page"]', { timeout: 5000 });
+          |                  ^
+      403 |
+      404 |       // Should show loading state
+      405 |       await expect(page.locator('text=Loading users...')).toBeVisible({ timeout: 2000 });
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/settings.spec.ts:402:18
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/settings-Settings---User-M-e1f9c-oading-state-while-fetching-firefox/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/settings-Settings---User-M-e1f9c-oading-state-while-fetching-firefox/error-context.md
+
+  33) [firefox] › e2e/soupfin-103-report-catalogue.spec.ts:340:3 › SOUPFIN-103: report catalogue (west of UTC) › A/P Aging opens the shared aging page with its own export 
+
+    Error: [2mexpect([22m[31mpage[39m[2m).[22mtoHaveURL[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Expected pattern: [32m/\/reports\/aging$/[39m
+    Received string:  [31m"http://localhost:5197/reports/aging/payables"[39m
+    Timeout: 5000ms
+
+    Call log:
+    [2m  - Expect "toHaveURL" with timeout 5000ms[22m
+    [2m    8 × unexpected value "http://localhost:5197/reports/aging/payables"[22m
+
+
+      342 |     await openHub(page);
+      343 |     await page.getByTestId('report-link-ap-aging').click();
+    > 344 |     await expect(page).toHaveURL(/\/reports\/aging$/);
+          |                        ^
+      345 |     await expect(page.getByTestId('ap-aging-row-0')).toContainText('Kofi Supplies');
+      346 |     await expectNoDollars(page, 'aging-reports-page');
+      347 |     await shot(page, '12-aging-from-hub');
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/soupfin-103-report-catalogue.spec.ts:344:24
+
+    Error: 1 unmocked backend endpoint(s) were called. In mock mode these proxy to VITE_PROXY_TARGET and a 401 would redirect the page to /login. Add mocks for:
+      GET /rest/billPayment/index.json?max=100&offset=0
+
+       at fixtures.ts:1403
+
+      1401 |       if (calls.length === 0) return;
+      1402 |       const unique = [...new Set(calls)].sort();
+    > 1403 |       throw new Error(
+           |             ^
+      1404 |         `${context ? `${context}: ` : ''}${unique.length} unmocked backend ` +
+      1405 |           `endpoint(s) were called. In mock mode these proxy to ` +
+      1406 |           `VITE_PROXY_TARGET and a 401 would redirect the page to /login. ` +
+        at Object.assertNone (/home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/fixtures.ts:1403:13)
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/soupfin-103-report-catalogue.spec.ts:193:30
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/soupfin-103-report-catalog-65635-ng-page-with-its-own-export-firefox/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/soupfin-103-report-catalog-65635-ng-page-with-its-own-export-firefox/error-context.md
+
+  34) [firefox] › e2e/soupfin-25-vendors-fixes.spec.ts:73:3 › SOUPFIN-25 #2 — Vendors nav visibility by business category › hides the Vendors nav item for SERVICES tenants 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: locator('aside a[href="/dashboard"]').first()
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 5000ms[22m
+    [2m  - waiting for locator('aside a[href="/dashboard"]').first()[22m
+
+
+      93 |     await expect(vendorsLink).toHaveCount(0, { timeout: 15000 });
+      94 |     // Sanity: other nav items still render.
+    > 95 |     await expect(page.locator('aside a[href="/dashboard"]').first()).toBeVisible();
+         |                                                                      ^
+      96 |     await expect(page.locator('aside a[href="/clients"]').first()).toBeVisible();
+      97 |     await takeScreenshot(page, 'soupfin-25/services-vendors-nav-hidden');
+      98 |   });
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/soupfin-25-vendors-fixes.spec.ts:95:70
+
+  35) [firefox] › e2e/soupfin-25-vendors-fixes.spec.ts:100:3 › SOUPFIN-25 #2 — Vendors nav visibility by business category › shows the Vendors nav item for TRADING tenants and navigation works 
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+    [2m  - waiting for locator('aside a[href="/vendors"]')[22m
+    [2m    2 × waiting for navigation to finish...[22m
+    [2m      - navigated to "http://localhost:5197/login"[22m
+    [2m    - locator resolved to <a href="/vendors" data-discover="true" class="↵                      flex items-center gap-3 px-3 py-2 rounded-lg transition-colors↵                      text-subtle-text hover:bg-primary/5 hover:text-text-light dark:hover:text-text-dark↵                    ">…</a>[22m
+    [2m  - attempting click action[22m
+    [2m    - waiting for element to be visible, enabled and stable[22m
+    [2m    - element is visible, enabled and stable[22m
+    [2m    - scrolling into view if needed[22m
+    [2m    - done scrolling[22m
+
+
+      130 |
+      131 |     // Navigate via the menu click (NOT page.goto) per E2E navigation rules.
+    > 132 |     await vendorsLink.click();
+          |                       ^
+      133 |     await expect(page).toHaveURL(/\/vendors$/);
+      134 |     await expect(page.getByTestId('vendor-list-page')).toBeVisible({ timeout: 15000 });
+      135 |     // The list rendered from the trading-prefixed endpoint.
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/soupfin-25-vendors-fixes.spec.ts:132:23
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/soupfin-25-vendors-fixes-S-e7e55-enants-and-navigation-works-firefox/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  36) [firefox] › e2e/soupfin-33-frontend-fixes.spec.ts:349:3 › SOUPFIN-33 #4 — aging report amounts use the tenant currency › A/P zero rows render GH₵0.00, not $0.00 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByTestId('ap-aging-table')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 5000ms[22m
+    [2m  - waiting for getByTestId('ap-aging-table')[22m
+
+
+      356 |
+      357 |     const table = page.getByTestId('ap-aging-table');
+    > 358 |     await expect(table).toBeVisible();
+          |                         ^
+      359 |
+      360 |     const tableText = (await table.textContent()) ?? '';
+      361 |     expect(tableText).toContain('GH₵0.00');
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/soupfin-33-frontend-fixes.spec.ts:358:25
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/soupfin-33-frontend-fixes--01005-ows-render-GH₵0-00-not-0-00-firefox/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/soupfin-33-frontend-fixes--01005-ows-render-GH₵0-00-not-0-00-firefox/error-context.md
+
+  37) [firefox] › e2e/soupfin-58-logout-currency.spec.ts:95:3 › SOUPFIN-58 — logout clears the previous tenant currency › a USD tenant never sees the previous GHS tenant currency 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoContainText[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator: getByTestId('stat-total-revenue-value')
+    Expected substring: [32m"GH₵"[39m
+    Timeout: 15000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toContainText" with timeout 15000ms[22m
+    [2m  - waiting for getByTestId('stat-total-revenue-value')[22m
+    [2m    - waiting for navigation to finish...[22m
+    [2m    - navigated to "http://localhost:5197/login"[22m
+
+
+      105 |     // Assert baseline — without this the final assertion would pass even if the
+      106 |     // GHS currency had never been applied in the first place.
+    > 107 |     await expect(revenue(page)).toContainText('GH₵', { timeout: 15000 });
+          |                                 ^
+      108 |     await shot(page, '01-ghs-tenant-dashboard');
+      109 |
+      110 |     // Act 2: the GHS tenant signs out.
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/soupfin-58-logout-currency.spec.ts:107:33
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/soupfin-58-logout-currency-b9196-revious-GHS-tenant-currency-firefox/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/soupfin-58-logout-currency-b9196-revious-GHS-tenant-currency-firefox/error-context.md
+
+  38) [firefox] › e2e/soupfin-58-logout-currency.spec.ts:134:3 › SOUPFIN-58 — logout clears the previous tenant currency › logout removes account-storage and leaves the auth keys cleared 
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    Error: [2mexpect([22m[31mpage[39m[2m).[22mtoHaveURL[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Expected pattern: [32m/\/dashboard/[39m
+    Received string:  [31m"http://localhost:5197/login"[39m
+
+    Call log:
+    [2m  - Expect "toHaveURL" with timeout 15000ms[22m
+    [2m    6 × unexpected value "http://localhost:5197/login"[22m
+
+
+      79 |   await signIn(page);
+      80 |   await page.reload();
+    > 81 |   await expect(page).toHaveURL(/\/dashboard/, { timeout: 15000 });
+         |                      ^
+      82 | }
+      83 |
+      84 | const revenue = (page: Page) => page.getByTestId('stat-total-revenue-value');
+        at signInAndLoadSettings (/home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/soupfin-58-logout-currency.spec.ts:81:22)
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/soupfin-58-logout-currency.spec.ts:137:5
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/soupfin-58-logout-currency-53d65-eaves-the-auth-keys-cleared-firefox/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/soupfin-58-logout-currency-53d65-eaves-the-auth-keys-cleared-firefox/error-context.md
+
+  39) [firefox] › e2e/soupfin-59-negative-amount-sign.spec.ts:147:3 › SOUPFIN-59 — the minus sign leads the currency symbol › a negative KPI renders as -GH₵1,200.00, not GH₵-1,200.00 
+
+    Error: [2mexpect([22m[31mpage[39m[2m).[22mtoHaveURL[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Expected pattern: [32m/\/dashboard/[39m
+    Received string:  [31m"http://localhost:5197/login"[39m
+    Timeout: 15000ms
+
+    Call log:
+    [2m  - Expect "toHaveURL" with timeout 15000ms[22m
+    [2m    17 × unexpected value "http://localhost:5197/login"[22m
+
+
+      117 |   await expect(page).toHaveURL(/\/dashboard/, { timeout: 15000 });
+      118 |   await page.reload();
+    > 119 |   await expect(page).toHaveURL(/\/dashboard/, { timeout: 15000 });
+          |                      ^
+      120 | }
+      121 |
+      122 | const netProfit = (page: Page) => page.getByTestId('stat-net-profit-value');
+        at signInAsGhsTenant (/home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/soupfin-59-negative-amount-sign.spec.ts:119:22)
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/soupfin-59-negative-amount-sign.spec.ts:153:5
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/soupfin-59-negative-amount-38308-H₵1-200-00-not-GH₵-1-200-00-firefox/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/soupfin-59-negative-amount-38308-H₵1-200-00-not-GH₵-1-200-00-firefox/error-context.md
+
+  40) [firefox] › e2e/soupfin-59-negative-amount-sign.spec.ts:174:3 › SOUPFIN-59 — the minus sign leads the currency symbol › navigating to the dashboard from the side menu shows the same corrected sign 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoContainText[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator: getByTestId('stat-net-profit-value')
+    Expected substring: [32m"GH₵"[39m
+    Timeout: 15000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toContainText" with timeout 15000ms[22m
+    [2m  - waiting for getByTestId('stat-net-profit-value')[22m
+    [2m    - waiting for" http://localhost:5197/login" navigation to finish...[22m
+    [2m    - navigated to "http://localhost:5197/login"[22m
+
+
+      177 |     // Arrange: arrive signed in, then leave the dashboard.
+      178 |     await signInAsGhsTenant(page);
+    > 179 |     await expect(netProfit(page)).toContainText('GH₵', { timeout: 15000 });
+          |                                   ^
+      180 |
+      181 |     // SideNav has no nav-* testids, and each link's accessible name carries the
+      182 |     // Material icon ligature ("receipt_long Invoices"), so match on a substring
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/soupfin-59-negative-amount-sign.spec.ts:179:35
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/soupfin-59-negative-amount-2f666-ows-the-same-corrected-sign-firefox/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/soupfin-59-negative-amount-2f666-ows-the-same-corrected-sign-firefox/error-context.md
+
+  41) [firefox] › e2e/soupfin-59-negative-amount-sign.spec.ts:197:3 › SOUPFIN-59 — the minus sign leads the currency symbol › a positive figure is unchanged by the fix 
+
+    Error: [2mexpect([22m[31mpage[39m[2m).[22mtoHaveURL[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Expected pattern: [32m/\/dashboard/[39m
+    Received string:  [31m"http://localhost:5197/login"[39m
+    Timeout: 15000ms
+
+    Call log:
+    [2m  - Expect "toHaveURL" with timeout 15000ms[22m
+    [2m    18 × unexpected value "http://localhost:5197/login"[22m
+
+
+      117 |   await expect(page).toHaveURL(/\/dashboard/, { timeout: 15000 });
+      118 |   await page.reload();
+    > 119 |   await expect(page).toHaveURL(/\/dashboard/, { timeout: 15000 });
+          |                      ^
+      120 | }
+      121 |
+      122 | const netProfit = (page: Page) => page.getByTestId('stat-net-profit-value');
+        at signInAsGhsTenant (/home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/soupfin-59-negative-amount-sign.spec.ts:119:22)
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/soupfin-59-negative-amount-sign.spec.ts:201:5
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/soupfin-59-negative-amount-a8aff-ure-is-unchanged-by-the-fix-firefox/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/soupfin-59-negative-amount-a8aff-ure-is-unchanged-by-the-fix-firefox/error-context.md
+
+  42) [firefox] › e2e/soupfin-60-excel-export.spec.ts:156:3 › SOUPFIN-60: Excel export asks for f=excel and downloads a .xls › Aging Reports: both AR and AP Excel buttons download a .xls 
+
+    TimeoutError: page.waitForEvent: Timeout 15000ms exceeded while waiting for event "download"
+    =========================== logs ===========================
+    waiting for event "download"
+    ============================================================
+
+      101 |   /** Click an Excel button and return the downloaded file name. */
+      102 |   async function clickExcel(page: Page, testId: string): Promise<string> {
+    > 103 |     const downloadPromise = page.waitForEvent('download', { timeout: 15000 });
+          |                                  ^
+      104 |     await page.getByTestId(testId).click();
+      105 |     const download = await downloadPromise;
+      106 |     return download.suggestedFilename();
+        at clickExcel (/home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/soupfin-60-excel-export.spec.ts:103:34)
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/soupfin-60-excel-export.spec.ts:161:26
+
+    Error: locator.click: Test ended.
+    Call log:
+    [2m  - waiting for getByTestId('ar-aging-export-excel')[22m
+    [2m    - locator resolved to <button disabled type="button" data-testid="ar-aging-export-excel" title="Excel export is not available for this report yet" class="flex items-center justify-center gap-2 h-9 px-3 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark hover:border-primary hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-border-light disabled:hover:text-text-light">…</button>[22m
+    [2m  - attempting click action[22m
+    [2m    - waiting for" http://localhost:5197/login" navigation to finish...[22m
+    [2m    - navigated to "http://localhost:5197/login"[22m
+    [2m    - waiting for element to be visible, enabled and stable[22m
+    [2m  - element was detached from the DOM, retrying[22m
+
+
+      102 |   async function clickExcel(page: Page, testId: string): Promise<string> {
+      103 |     const downloadPromise = page.waitForEvent('download', { timeout: 15000 });
+    > 104 |     await page.getByTestId(testId).click();
+          |                                    ^
+      105 |     const download = await downloadPromise;
+      106 |     return download.suggestedFilename();
+      107 |   }
+        at clickExcel (/home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/soupfin-60-excel-export.spec.ts:104:36)
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/soupfin-60-excel-export.spec.ts:161:26
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/soupfin-60-excel-export-SO-9e484-xcel-buttons-download-a-xls-firefox/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/soupfin-60-excel-export-SO-9e484-xcel-buttons-download-a-xls-firefox/error-context.md
+
+  43) [firefox] › e2e/soupfin-64-local-date-defaults.spec.ts:169:3 › SOUPFIN-64: date defaults follow the local calendar, not UTC › Aging Reports are "as of" the local day 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).not.[22mtoHaveValue[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator: locator('input[type="date"]').first()
+    Expected: not [32m"2026-08-15"[39m
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "not toHaveValue" with timeout 5000ms[22m
+    [2m  - waiting for locator('input[type="date"]').first()[22m
+    [2m    - waiting for" http://localhost:5197/login" navigation to finish...[22m
+    [2m    - navigated to "http://localhost:5197/login"[22m
+
+
+      174 |     const asOf = page.locator('input[type="date"]').first();
+      175 |     await expect(asOf).toHaveValue(LOCAL_TODAY);
+    > 176 |     await expect(asOf).not.toHaveValue(BUGGY_TODAY);
+          |                            ^
+      177 |   });
+      178 |
+      179 |   test('a new invoice defaults to the local day, not UTC today', async ({ page }) => {
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/soupfin-64-local-date-defaults.spec.ts:176:28
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/soupfin-64-local-date-defa-08b2b-rts-are-as-of-the-local-day-firefox/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/soupfin-64-local-date-defa-08b2b-rts-are-as-of-the-local-day-firefox/error-context.md
+
+  44) [firefox] › e2e/soupfin-76-mobile-drawer-closes.spec.ts:160:3 › SOUPFIN-76: the mobile drawer closes when a nav link is tapped › the drawer closes on every tap across many navigations in a row 
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).not.[22mtoBeInViewport[2m([22m[2m)[22m failed
+
+    Locator:  locator('aside')
+    Expected: not in viewport
+    Received: in viewport
+
+    Call log:
+    [2m  - Expect "not toBeInViewport" with timeout 5000ms[22m
+    [2m  - waiting for locator('aside')[22m
+    [2m    2 × locator resolved to <aside class="↵          fixed md:sticky top-0 left-0 z-50↵          flex h-screen flex-col↵          border-r border-border-light dark:border-border-dark↵          bg-surface-light dark:bg-surface-dark↵          transition-all duration-300↵          w-64↵          -translate-x-full md:translate-x-0↵        ">…</aside>[22m
+    [2m      - unexpected value "viewport ratio 0.8193359375"[22m
+
+
+      53 | async function expectMenuClosed(page: Page) {
+      54 |   await expect(page.locator(OVERLAY)).toHaveCount(0);
+    > 55 |   await expect(page.locator('aside')).not.toBeInViewport();
+         |                                           ^
+      56 | }
+      57 |
+      58 | test.describe('SOUPFIN-76: the mobile drawer closes when a nav link is tapped', () => {
+        at expectMenuClosed (/home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/soupfin-76-mobile-drawer-closes.spec.ts:55:43)
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/soupfin-76-mobile-drawer-closes.spec.ts:172:9
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/soupfin-76-mobile-drawer-c-6bc8c-s-many-navigations-in-a-row-firefox/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/soupfin-76-mobile-drawer-c-6bc8c-s-many-navigations-in-a-row-firefox/error-context.md
+
+  45) [firefox] › e2e/soupfin-81-need-help-links.spec.ts:164:3 › SOUPFIN-81: "Need Help?" links and the guide logo › sign-in, registration and password pages link to getting started 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByTestId('registration-page')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 5000ms[22m
+    [2m  - waiting for getByTestId('registration-page')[22m
+
+
+      174 |
+      175 |     await page.getByTestId('login-register-link').click();
+    > 176 |     await expect(page.getByTestId('registration-page')).toBeVisible();
+          |                                                         ^
+      177 |     link = await helpLink(page, 'register', 'help-link-auth-page');
+      178 |     guide = await openGuideAt(page, link, 'register', 'Register your company');
+      179 |     await shot(guide, '05-guide-at-register');
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/soupfin-81-need-help-links.spec.ts:176:57
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/soupfin-81-need-help-links-67656-ges-link-to-getting-started-firefox/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/soupfin-81-need-help-links-67656-ges-link-to-getting-started-firefox/error-context.md
+
+  46) [firefox] › e2e/user-guide-screenshots.spec.ts:101:3 › user guide: getting started › captures sign-in, registration and password recovery 
+
+    [31mTest timeout of 120000ms exceeded.[39m
+
+    Error: page.waitForTimeout: Target page, context or browser has been closed
+
+      66 |   // shot catches half-faded cards and the guide looks broken.
+      67 |   await page.waitForLoadState('networkidle').catch(() => {});
+    > 68 |   await page.waitForTimeout(700);
+         |              ^
+      69 |   await page.screenshot({
+      70 |     path: join(IMAGE_DIR, `${name}.jpg`),
+      71 |     type: 'jpeg',
+        at shoot (/home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/user-guide-screenshots.spec.ts:68:14)
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/user-guide-screenshots.spec.ts:118:5
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/user-guide-screenshots-use-21db2-ation-and-password-recovery-firefox/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/user-guide-screenshots-use-21db2-ation-and-password-recovery-firefox/error-context.md
+
+  47) [firefox] › e2e/user-journeys.spec.ts:337:3 › User Journey: Accounts Receivable › complete flow: login → dashboard → create invoice → view invoice → record payment 
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    Error: page.screenshot: Test timeout of 30000ms exceeded.
+    Call log:
+    [2m  - taking page screenshot[22m
+    [2m  - waiting for fonts to load...[22m
+    [2m  - fonts loaded[22m
+
+
+       at fixtures.ts:532
+
+      530 |   name: string
+      531 | ) {
+    > 532 |   await page.screenshot({
+          |              ^
+      533 |     path: `test-results/screenshots/${name}.png`,
+      534 |     fullPage: true,
+      535 |   });
+        at takeScreenshot (/home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/fixtures.ts:532:14)
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/user-journeys.spec.ts:412:11
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/user-journeys-User-Journey-e8828-ew-invoice-→-record-payment-firefox/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/user-journeys-User-Journey-e8828-ew-invoice-→-record-payment-firefox/error-context.md
+
+  48) [firefox] › e2e/user-journeys.spec.ts:658:3 › User Journey: Financial Reporting › complete flow: dashboard → reports hub → view all report types 
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    Error: page.screenshot: Test timeout of 30000ms exceeded.
+    Call log:
+    [2m  - taking page screenshot[22m
+    [2m  - waiting for fonts to load...[22m
+    [2m  - fonts loaded[22m
+
+
+       at fixtures.ts:532
+
+      530 |   name: string
+      531 | ) {
+    > 532 |   await page.screenshot({
+          |              ^
+      533 |     path: `test-results/screenshots/${name}.png`,
+      534 |     fullPage: true,
+      535 |   });
+        at takeScreenshot (/home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/fixtures.ts:532:14)
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/user-journeys.spec.ts:683:11
+
+    Error Context: test-results/user-journeys-User-Journey-f5214-hub-→-view-all-report-types-firefox/error-context.md
+
+  49) [firefox] › e2e/user-journeys.spec.ts:696:3 › User Journey: Financial Reporting › export buttons are visible on all report pages 
+
+    Error: 4 unmocked backend endpoint(s) were called. In mock mode these proxy to VITE_PROXY_TARGET and a 401 would redirect the page to /login. Add mocks for:
+      GET /rest/bill/index.json?max=100&offset=0
+      GET /rest/billPayment/index.json?max=100&offset=0
+      GET /rest/invoice/index.json?max=100&offset=0
+      GET /rest/invoicePayment/index.json?max=100&offset=0
+
+       at fixtures.ts:1403
+
+      1401 |       if (calls.length === 0) return;
+      1402 |       const unique = [...new Set(calls)].sort();
+    > 1403 |       throw new Error(
+           |             ^
+      1404 |         `${context ? `${context}: ` : ''}${unique.length} unmocked backend ` +
+      1405 |           `endpoint(s) were called. In mock mode these proxy to ` +
+      1406 |           `VITE_PROXY_TARGET and a 401 would redirect the page to /login. ` +
+        at Object.assertNone (/home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/fixtures.ts:1403:13)
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/user-journeys.spec.ts:53:13
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/user-journeys-User-Journey-d1899-visible-on-all-report-pages-firefox/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/user-journeys-User-Journey-d1899-visible-on-all-report-pages-firefox/error-context.md
+
+  50) [firefox] › e2e/user-journeys.spec.ts:757:3 › User Journey: KYC Onboarding › complete flow: registration → company info → directors → documents → status 
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    Error: page.screenshot: Test timeout of 30000ms exceeded.
+    Call log:
+    [2m  - taking page screenshot[22m
+    [2m  - waiting for fonts to load...[22m
+    [2m  - fonts loaded[22m
+
+
+       at fixtures.ts:532
+
+      530 |   name: string
+      531 | ) {
+    > 532 |   await page.screenshot({
+          |              ^
+      533 |     path: `test-results/screenshots/${name}.png`,
+      534 |     fullPage: true,
+      535 |   });
+        at takeScreenshot (/home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/fixtures.ts:532:14)
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/user-journeys.spec.ts:794:11
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/user-journeys-User-Journey-81da7-ectors-→-documents-→-status-firefox/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/user-journeys-User-Journey-81da7-ectors-→-documents-→-status-firefox/error-context.md
+
+  51) [firefox] › e2e/user-journeys.spec.ts:868:3 › User Journey: Accounting Workflow › complete flow: transaction register → journal entry → voucher → verify in register 
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    Error: page.screenshot: Test timeout of 30000ms exceeded.
+    Call log:
+    [2m  - taking page screenshot[22m
+    [2m  - waiting for fonts to load...[22m
+    [2m  - fonts loaded[22m
+
+
+       at fixtures.ts:532
+
+      530 |   name: string
+      531 | ) {
+    > 532 |   await page.screenshot({
+          |              ^
+      533 |     path: `test-results/screenshots/${name}.png`,
+      534 |     fullPage: true,
+      535 |   });
+        at takeScreenshot (/home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/fixtures.ts:532:14)
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/user-journeys.spec.ts:892:11
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/user-journeys-User-Journey-86fb6-oucher-→-verify-in-register-firefox/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/user-journeys-User-Journey-86fb6-oucher-→-verify-in-register-firefox/error-context.md
+
+  52) [firefox] › e2e/user-journeys.spec.ts:967:3 › Cross-Journey Navigation › can navigate between all major sections without errors 
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    Error: page.goto: Test timeout of 30000ms exceeded.
+    Call log:
+    [2m  - navigating to "http://localhost:5197/ledger/transactions", waiting until "load"[22m
+
+
+      991 |
+      992 |     // Ledger Transactions
+    > 993 |     await page.goto('/ledger/transactions');
+          |                ^
+      994 |     await expect(page.getByTestId('ledger-transactions-page')).toBeVisible();
+      995 |
+      996 |     // Accounting
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-148-113958-jiaw/soupfinance-web/e2e/user-journeys.spec.ts:993:16
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/user-journeys-Cross-Journe-d10d2-jor-sections-without-errors-firefox/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/user-journeys-Cross-Journe-d10d2-jor-sections-without-errors-firefox/error-context.md
+
+  52 failed
+    [firefox] › e2e/auth.spec.ts:83:5 › Authentication › Login with valid credentials › successful login redirects to dashboard 
+    [firefox] › e2e/auth.spec.ts:241:5 › Authentication › Logout › logout redirects to login page ──
+    [firefox] › e2e/auth.spec.ts:282:5 › Authentication › Navigation › can navigate from login to register 
+    [firefox] › e2e/bills.spec.ts:565:5 › Bill Management › Bill List Page › shows loading state while fetching bills 
+    [firefox] › e2e/dashboard.spec.ts:40:5 › Dashboard › Dashboard Page Loading › dashboard loads after login 
+    [firefox] › e2e/dashboard.spec.ts:85:5 › Dashboard › Financial Summary Cards › total revenue card displays correct values 
+    [firefox] › e2e/dashboard.spec.ts:99:5 › Dashboard › Financial Summary Cards › outstanding invoices card displays correctly 
+    [firefox] › e2e/dashboard.spec.ts:113:5 › Dashboard › Financial Summary Cards › expenses card displays correctly 
+    [firefox] › e2e/dashboard.spec.ts:127:5 › Dashboard › Financial Summary Cards › net profit card displays correctly 
+    [firefox] › e2e/dashboard.spec.ts:143:5 › Dashboard › Recent Transactions Table › shows recent invoices table with data 
+    [firefox] › e2e/dashboard.spec.ts:157:5 › Dashboard › Recent Transactions Table › displays correct invoice data in table 
+    [firefox] › e2e/dashboard.spec.ts:184:5 › Dashboard › Recent Transactions Table › shows loading state while fetching invoices 
+    [firefox] › e2e/dashboard.spec.ts:220:5 › Dashboard › Recent Transactions Table › shows empty state when no invoices exist 
+    [firefox] › e2e/dashboard.spec.ts:255:5 › Dashboard › Recent Transactions Table › view all invoices link navigates to invoices page 
+    [firefox] › e2e/dashboard.spec.ts:274:5 › Dashboard › Dashboard Responsiveness › KPI cards stack on mobile viewport 
+    [firefox] › e2e/dashboard.spec.ts:288:5 › Dashboard › Dashboard Responsiveness › table is scrollable on small screens 
+    [firefox] › e2e/invoices.spec.ts:105:5 › Invoice Management › Invoice List Page › shows loading state while fetching invoices 
+    [firefox] › e2e/ledger.spec.ts:334:5 › Ledger Management › Chart of Accounts Page › shows loading state while fetching 
+    [firefox] › e2e/ledger.spec.ts:562:5 › Ledger Management › Ledger Transactions Page › shows loading state while fetching 
+    [firefox] › e2e/payments.spec.ts:372:5 › Payment Management › Payment List Page › shows loading state while fetching 
+    [firefox] › e2e/reports.spec.ts:896:3 › Aging Reports › navigates to aging reports page ────────
+    [firefox] › e2e/reports.spec.ts:943:3 › Aging Reports › date filter changes API request ────────
+    [firefox] › e2e/reports.spec.ts:980:3 › Aging Reports › Today button refetches even when date is already today (SOUPFIN-11) 
+    [firefox] › e2e/reports.spec.ts:1022:3 › Aging Reports › date picker allows selecting historical years (SOUPFIN-11) 
+    [firefox] › e2e/reports.spec.ts:1049:3 › Aging Reports › renders both A/R and A/P tables ───────
+    [firefox] › e2e/reports.spec.ts:1084:3 › Aging Reports › displays aging data rows with correct structure 
+    [firefox] › e2e/reports.spec.ts:1113:3 › Aging Reports › shows empty state for A/R when no receivables 
+    [firefox] › e2e/reports.spec.ts:1137:3 › Aging Reports › shows empty state for A/P when no payables 
+    [firefox] › e2e/reports.spec.ts:1161:3 › Aging Reports › shows error state on A/R API failure ──
+    [firefox] › e2e/reports.spec.ts:1185:3 › Aging Reports › export buttons are visible for both A/R and A/P 
+    [firefox] › e2e/reports.spec.ts:1215:3 › Aging Reports › responsive layout on mobile viewport ──
+    [firefox] › e2e/settings.spec.ts:383:5 › Settings - User Management › User List Page › shows loading state while fetching 
+    [firefox] › e2e/soupfin-103-report-catalogue.spec.ts:340:3 › SOUPFIN-103: report catalogue (west of UTC) › A/P Aging opens the shared aging page with its own export 
+    [firefox] › e2e/soupfin-25-vendors-fixes.spec.ts:73:3 › SOUPFIN-25 #2 — Vendors nav visibility by business category › hides the Vendors nav item for SERVICES tenants 
+    [firefox] › e2e/soupfin-25-vendors-fixes.spec.ts:100:3 › SOUPFIN-25 #2 — Vendors nav visibility by business category › shows the Vendors nav item for TRADING tenants and navigation works 
+    [firefox] › e2e/soupfin-33-frontend-fixes.spec.ts:349:3 › SOUPFIN-33 #4 — aging report amounts use the tenant currency › A/P zero rows render GH₵0.00, not $0.00 
+    [firefox] › e2e/soupfin-58-logout-currency.spec.ts:95:3 › SOUPFIN-58 — logout clears the previous tenant currency › a USD tenant never sees the previous GHS tenant currency 
+    [firefox] › e2e/soupfin-58-logout-currency.spec.ts:134:3 › SOUPFIN-58 — logout clears the previous tenant currency › logout removes account-storage and leaves the auth keys cleared 
+    [firefox] › e2e/soupfin-59-negative-amount-sign.spec.ts:147:3 › SOUPFIN-59 — the minus sign leads the currency symbol › a negative KPI renders as -GH₵1,200.00, not GH₵-1,200.00 
+    [firefox] › e2e/soupfin-59-negative-amount-sign.spec.ts:174:3 › SOUPFIN-59 — the minus sign leads the currency symbol › navigating to the dashboard from the side menu shows the same corrected sign 
+    [firefox] › e2e/soupfin-59-negative-amount-sign.spec.ts:197:3 › SOUPFIN-59 — the minus sign leads the currency symbol › a positive figure is unchanged by the fix 
+    [firefox] › e2e/soupfin-60-excel-export.spec.ts:156:3 › SOUPFIN-60: Excel export asks for f=excel and downloads a .xls › Aging Reports: both AR and AP Excel buttons download a .xls 
+    [firefox] › e2e/soupfin-64-local-date-defaults.spec.ts:169:3 › SOUPFIN-64: date defaults follow the local calendar, not UTC › Aging Reports are "as of" the local day 
+    [firefox] › e2e/soupfin-76-mobile-drawer-closes.spec.ts:160:3 › SOUPFIN-76: the mobile drawer closes when a nav link is tapped › the drawer closes on every tap across many navigations in a row 
+    [firefox] › e2e/soupfin-81-need-help-links.spec.ts:164:3 › SOUPFIN-81: "Need Help?" links and the guide logo › sign-in, registration and password pages link to getting started 
+    [firefox] › e2e/user-guide-screenshots.spec.ts:101:3 › user guide: getting started › captures sign-in, registration and password recovery 
+    [firefox] › e2e/user-journeys.spec.ts:337:3 › User Journey: Accounts Receivable › complete flow: login → dashboard → create invoice → view invoice → record payment 
+    [firefox] › e2e/user-journeys.spec.ts:658:3 › User Journey: Financial Reporting › complete flow: dashboard → reports hub → view all report types 
+    [firefox] › e2e/user-journeys.spec.ts:696:3 › User Journey: Financial Reporting › export buttons are visible on all report pages 
+    [firefox] › e2e/user-journeys.spec.ts:757:3 › User Journey: KYC Onboarding › complete flow: registration → company info → directors → documents → status 
+    [firefox] › e2e/user-journeys.spec.ts:868:3 › User Journey: Accounting Workflow › complete flow: transaction register → journal entry → voucher → verify in register 
+    [firefox] › e2e/user-journeys.spec.ts:967:3 › Cross-Journey Navigation › can navigate between all major sections without errors 
+  466 passed (13.5m)
