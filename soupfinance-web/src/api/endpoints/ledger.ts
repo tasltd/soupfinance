@@ -531,9 +531,17 @@ export async function postTransactionGroup(id: string): Promise<LedgerTransactio
 /**
  * Reverse a posted transaction group
  * POST /rest/ledgerTransactionGroup/reverse/:id.json
+ *
+ * Added (SOUPFIN-155): optional reversalDate (yyyy-MM-dd) for the reversing
+ * entry; the backend defaults it to today. The body is sent only when a date
+ * is given. Contract: plans/soupfin-155-journal-entry-post-reverse.md
  */
-export async function reverseTransactionGroup(id: string): Promise<LedgerTransactionGroup> {
-  const response = await apiClient.post<LedgerTransactionGroup>(`/ledgerTransactionGroup/reverse/${id}.json`);
+export async function reverseTransactionGroup(
+  id: string,
+  options?: { reversalDate?: string }
+): Promise<LedgerTransactionGroup> {
+  const body = options?.reversalDate ? { reversalDate: options.reversalDate } : undefined;
+  const response = await apiClient.post<LedgerTransactionGroup>(`/ledgerTransactionGroup/reverse/${id}.json`, body);
   return response.data;
 }
 

@@ -697,7 +697,7 @@ test.describe('Accounting Module', () => {
       await takeScreenshot(page, 'journal-entry-remove-line');
     });
 
-    // Changed: JournalEntryPage cancel navigates to /ledger/transactions
+    // Changed (SOUPFIN-155): JournalEntryPage cancel navigates to the register
     test('cancel button returns to transaction register', async ({ page }) => {
       await mockAccountingApi(page);
 
@@ -706,8 +706,8 @@ test.describe('Accounting Module', () => {
       // Click cancel
       await page.getByTestId('journal-entry-cancel-button').click();
 
-      // Should navigate to ledger transactions (actual cancel behavior)
-      await expect(page).toHaveURL(/\/ledger\/transactions/);
+      // Changed (SOUPFIN-155): Cancel returns to the transaction register
+      await expect(page).toHaveURL(/\/accounting\/transactions$/);
     });
 
     // Changed: JournalEntryPage now loads existing LedgerTransactionGroup data via useQuery
@@ -889,9 +889,10 @@ test.describe('Accounting Module', () => {
       await page.getByTestId('new-journal-entry-button').click();
       await expect(page.getByTestId('journal-entry-page')).toBeVisible();
 
-      // Cancel goes to /ledger/transactions (not back to register)
+      // Changed (SOUPFIN-155): Cancel goes back to the register
       await page.getByTestId('journal-entry-cancel-button').click();
-      await expect(page).toHaveURL(/\/ledger\/transactions/);
+      await expect(page).toHaveURL(/\/accounting\/transactions$/);
+      await expect(page.getByTestId('transaction-register-page')).toBeVisible();
     });
 
     test('can navigate from register to voucher and back', async ({ page }) => {

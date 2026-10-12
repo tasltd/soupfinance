@@ -9,7 +9,7 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { format } from 'date-fns';
@@ -19,12 +19,20 @@ import { DatePicker } from '../../components/forms/DatePicker';
 import { Textarea } from '../../components/forms/Textarea';
 // Added (SOUPFIN-30 #16): currency-aware amount input that rejects letters
 import { MoneyInput } from '../../components/forms/MoneyInput';
-import { createJournalEntry, getTransactionGroup, updateJournalEntry } from '../../api/endpoints/ledger';
+import {
+  createJournalEntry,
+  getTransactionGroup,
+  updateJournalEntry,
+  // Added (SOUPFIN-155): entry lifecycle actions on the entry page itself
+  postTransactionGroup,
+  reverseTransactionGroup,
+  deleteTransactionGroup,
+} from '../../api/endpoints/ledger';
 import { useLedgerAccounts } from '../../hooks/useLedgerAccounts';
 // Added (SOUPFIN-30 #16): tenant-currency formatter for the debit/credit totals.
 import { useFormatCurrency } from '../../stores';
 // Added (SOUPFIN-9): explain disabled module + parse submit errors
-import { ModuleDisabledBanner } from '../../components/feedback';
+import { ModuleDisabledBanner, useToast } from '../../components/feedback';
 import { getApiErrorMessage } from '../../api/errors';
 import type { CreateJournalEntryRequest } from '../../types';
 // Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
@@ -86,15 +94,22 @@ const createEmptyLine = () => ({
  * Features:
  * - Dynamic line items with account selection
  * - Real-time debit/credit balance validation
- * - Save as draft or post immediately
+ * - Save Draft (save only) or Save & Post (save, then post)
  * - Edit mode: loads existing LedgerTransactionGroup when :id param is present
  * - Read-only mode for posted/reversed entries
+ * - Saved entries: Delete (pending), Reverse (posted) - SOUPFIN-155
  */
 export function JournalEntryPage() {
   const navigate = useNavigate();
   const { id: entryId } = useParams<{ id: string }>();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  // Added (SOUPFIN-155): lifecycle actions on a saved entry
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
+  const [actionInProgress, setActionInProgress] = useState<'reverse' | 'delete' | null>(null);
+  const [showReverseDialog, setShowReverseDialog] = useState(false);
+  const [reversalDate, setReversalDate] = useState('');
 
   // Added: Determine if we're in edit mode (entryId present and not 'new')
   const isEditMode = !!entryId && entryId !== 'new';
@@ -108,7 +123,15 @@ export function JournalEntryPage() {
   });
 
   // Added: Determine if entry is read-only (posted or reversed entries cannot be edited)
-  const isReadOnly = isEditMode && !!existingGroup && (existingGroup.status === 'POSTED' || existingGroup.status === 'REVERSED');
+  // Changed (SOUPFIN-155): split by status so the action bar can offer Reverse
+  // on a posted entry and Delete on a pending one. The backend does not send a
+  // status yet (plans/soupfin-155-journal-entry-post-reverse.md); a missing
+  // status means the entry is still pending.
+  const entryStatus = existingGroup?.status?.toUpperCase();
+  const isPosted = isEditMode && !!existingGroup && entryStatus === 'POSTED';
+  const isReversed = isEditMode && !!existingGroup && entryStatus === 'REVERSED';
+  const isReadOnly = isPosted || isReversed;
+  const isSavedPending = isEditMode && !!existingGroup && !isReadOnly;
 
   // Changed (SOUPFIN-9): expose the accounts query error so we can render a
   // ModuleDisabledBanner when the Ledger module is not enabled for the tenant.
@@ -133,7 +156,7 @@ export function JournalEntryPage() {
     control,
     handleSubmit,
     reset,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = useForm<JournalEntryFormData>({
     resolver: zodResolver(journalEntrySchema) as never,
     defaultValues: {
@@ -211,12 +234,25 @@ export function JournalEntryPage() {
     }
   }, [fields.length, remove]);
 
+  // Added (SOUPFIN-155): refresh the register and this entry after any change
+  const refreshEntryQueries = useCallback(async (id?: string) => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['transactions'] }),
+      id ? queryClient.invalidateQueries({ queryKey: ['transaction-group', id] }) : Promise.resolve(),
+    ]);
+  }, [queryClient]);
+
   // Changed: Form submission handler supports both create and update modes
-  const onSubmit = async (data: JournalEntryFormData) => {
+  // Changed (SOUPFIN-155): Save Draft and Save & Post used to be the same
+  // handler, so "Save & Post" left the entry pending. `post` now saves, then
+  // posts the saved entry by the id the save returned.
+  const saveEntry = async (data: JournalEntryFormData, post: boolean) => {
     if (isReadOnly) return; // Prevent submission of posted/reversed entries
 
     setIsSubmitting(true);
     setSubmitError(null);
+
+    let savedId: string | undefined = isEditMode ? entryId : undefined;
 
     try {
       // Added: Transform form data to API request format
@@ -233,29 +269,103 @@ export function JournalEntryPage() {
       };
 
       // Changed: Call update when editing, create when new
+      // Changed (SOUPFIN-155): posting an unchanged saved entry skips the update
       if (isEditMode && entryId) {
-        await updateJournalEntry(entryId, request);
+        if (!post || isDirty) {
+          await updateJournalEntry(entryId, request);
+        }
       } else {
-        await createJournalEntry(request);
+        const saved = await createJournalEntry(request);
+        savedId = saved?.id;
       }
-
-      // Added: Navigate back to ledger transactions after successful save
-      // Changed (SOUPFIN-154): return to the register the entry is listed in
-      navigate('/accounting/transactions');
     } catch (error) {
       // Changed (SOUPFIN-9): use parseApiError so 403 ("module disabled")
       // shows a useful message instead of raw axios "Request failed..." text.
-      setSubmitError(getApiErrorMessage(error));
-    } finally {
+      const message = getApiErrorMessage(error);
+      setSubmitError(message);
+      showToast({ variant: 'error', message });
       setIsSubmitting(false);
+      return;
+    }
+
+    if (!post) {
+      await refreshEntryQueries(savedId);
+      showToast({ variant: 'success', message: 'Journal entry saved as a draft.' });
+      setIsSubmitting(false);
+      // Changed (SOUPFIN-154): return to the register the entry is listed in
+      navigate('/accounting/transactions');
+      return;
+    }
+
+    try {
+      if (!savedId) {
+        throw new Error('The server did not return the saved entry, so it could not be posted.');
+      }
+      await postTransactionGroup(savedId);
+    } catch (error) {
+      // Added (SOUPFIN-155): the save worked but the post did not. Say so,
+      // and keep the user on the saved entry so they can post it again
+      // instead of saving a duplicate.
+      const message = `Journal entry saved as a draft, but posting failed: ${getApiErrorMessage(error)}`;
+      await refreshEntryQueries(savedId);
+      setSubmitError(message);
+      showToast({ variant: 'warning', message, duration: 8000 });
+      setIsSubmitting(false);
+      navigate(savedId ? `/accounting/journal-entry/${savedId}` : '/accounting/transactions');
+      return;
+    }
+
+    await refreshEntryQueries(savedId);
+    showToast({ variant: 'success', message: 'Journal entry saved and posted.' });
+    setIsSubmitting(false);
+    navigate('/accounting/transactions');
+  };
+
+  // Changed (SOUPFIN-155): Save Draft only saves
+  const handleSaveDraft = handleSubmit((data) => saveEntry(data, false));
+
+  // Changed (SOUPFIN-155): Save & Post saves, then posts
+  const handleSaveAndPost = handleSubmit((data) => saveEntry(data, true));
+
+  // Added (SOUPFIN-155): open the reverse confirmation with today's date
+  const openReverseDialog = useCallback(() => {
+    setReversalDate(format(new Date(), 'yyyy-MM-dd'));
+    setShowReverseDialog(true);
+  }, []);
+
+  // Added (SOUPFIN-155): reverse a posted entry from its own page
+  const handleConfirmReverse = async () => {
+    if (!entryId) return;
+    setActionInProgress('reverse');
+    try {
+      await reverseTransactionGroup(entryId, { reversalDate: reversalDate || undefined });
+      setShowReverseDialog(false);
+      setSubmitError(null);
+      await refreshEntryQueries(entryId);
+      showToast({ variant: 'success', message: 'Journal entry reversed.' });
+    } catch (error) {
+      showToast({ variant: 'error', message: getApiErrorMessage(error) });
+    } finally {
+      setActionInProgress(null);
     }
   };
 
-  // Added: Wrapper for save draft - currently same as save, can be extended for draft status
-  const handleSaveDraft = handleSubmit(onSubmit);
-
-  // Added: Wrapper for save and post - currently same as save, can be extended for posted status
-  const handleSaveAndPost = handleSubmit(onSubmit);
+  // Added (SOUPFIN-155): delete a pending entry from its own page
+  const handleDelete = async () => {
+    if (!entryId) return;
+    if (!window.confirm('Delete this journal entry? This cannot be undone.')) return;
+    setActionInProgress('delete');
+    try {
+      await deleteTransactionGroup(entryId);
+      await refreshEntryQueries(entryId);
+      showToast({ variant: 'success', message: 'Journal entry deleted.' });
+      navigate('/accounting/transactions');
+    } catch (error) {
+      showToast({ variant: 'error', message: getApiErrorMessage(error) });
+    } finally {
+      setActionInProgress(null);
+    }
+  };
 
   // Fix (SOUPFIN-30 #16): the totals were hardcoded to USD, so a GHS tenant saw
   // "$0.00" underneath fields prefixed with GH₵. Use the tenant's configured
@@ -284,8 +394,11 @@ export function JournalEntryPage() {
             {!isEditMode ? 'New Journal Entry' : isReadOnly ? 'Journal Entry' : 'Edit Journal Entry'}
           </h1>
           <p className="text-subtle-text">
-            {isReadOnly
-              ? 'This entry has been posted and cannot be modified'
+            {/* Changed (SOUPFIN-155): a posted entry can be reversed, so say how */}
+            {isPosted
+              ? 'This entry has been posted. Reverse it to undo its effect on the ledger.'
+              : isReversed
+                ? 'This entry has been reversed and cannot be modified'
               : isEditMode
                 ? 'Modify this accounting transaction'
                 : 'Record a multi-line accounting transaction'}
@@ -294,15 +407,43 @@ export function JournalEntryPage() {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
+          {/* Changed (SOUPFIN-155): Cancel/Back returns to the register the entry
+              is listed in, the same place a save lands */}
           <button
             type="button"
-            onClick={() => navigate('/ledger/transactions')}
+            onClick={() => navigate('/accounting/transactions')}
             className="h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm hover:bg-primary/5"
             data-testid="journal-entry-cancel-button"
           >
             {isReadOnly ? 'Back' : 'Cancel'}
           </button>
+          {/* Added (SOUPFIN-155): only a pending entry can be deleted */}
+          {isSavedPending && (
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={isSubmitting || actionInProgress !== null}
+              className="h-10 px-4 rounded-lg border border-danger/40 text-danger font-bold text-sm hover:bg-danger/10 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              data-testid="journal-entry-delete-button"
+            >
+              <span className="material-symbols-outlined text-base">delete</span>
+              {actionInProgress === 'delete' ? 'Deleting...' : 'Delete'}
+            </button>
+          )}
+          {/* Added (SOUPFIN-155): a posted entry is undone by reversing it */}
+          {isPosted && (
+            <button
+              type="button"
+              onClick={openReverseDialog}
+              disabled={actionInProgress !== null}
+              className="h-10 px-4 rounded-lg border border-primary text-primary font-bold text-sm hover:bg-primary/10 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              data-testid="journal-entry-reverse-button"
+            >
+              <span className="material-symbols-outlined text-base">undo</span>
+              Reverse
+            </button>
+          )}
           {!isReadOnly && (
             <>
               <button
@@ -324,7 +465,8 @@ export function JournalEntryPage() {
                 {isSubmitting && (
                   <span className="material-symbols-outlined animate-spin text-base">progress_activity</span>
                 )}
-                {isEditMode ? 'Update & Post' : 'Save & Post'}
+                {/* Changed (SOUPFIN-155): an unchanged saved entry is just posted */}
+                {!isEditMode ? 'Save & Post' : isDirty ? 'Update & Post' : 'Post'}
               </button>
             </>
           )}
@@ -349,6 +491,68 @@ export function JournalEntryPage() {
         >
           <span className="material-symbols-outlined text-xl">lock</span>
           This journal entry has been {existingGroup?.status?.toLowerCase()} and cannot be modified.
+          {isPosted && ' Use Reverse to undo it.'}
+        </div>
+      )}
+
+      {/* Added (SOUPFIN-155): confirm before reversing a posted entry */}
+      {showReverseDialog && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          data-testid="journal-entry-reverse-dialog"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="journal-entry-reverse-title"
+        >
+          <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark w-full max-w-md shadow-xl">
+            <div className="px-6 py-4 border-b border-border-light dark:border-border-dark flex justify-between items-center">
+              <h3 id="journal-entry-reverse-title" className="text-lg font-bold text-text-light dark:text-text-dark">
+                Reverse journal entry?
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowReverseDialog(false)}
+                aria-label="Close"
+                className="text-subtle-text hover:text-text-light dark:hover:text-text-dark"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-subtle-text">
+                A reversing entry will be posted with every debit and credit swapped.
+                This entry stays on the books, marked as reversed.
+              </p>
+              <DatePicker
+                label="Reversal date"
+                value={reversalDate}
+                onChange={(e) => setReversalDate(e.target.value)}
+                data-testid="journal-entry-reversal-date-input"
+              />
+            </div>
+            <div className="px-6 py-4 border-t border-border-light dark:border-border-dark flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setShowReverseDialog(false)}
+                className="h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm hover:bg-primary/5"
+                data-testid="journal-entry-reverse-cancel-button"
+              >
+                Keep entry
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmReverse}
+                disabled={actionInProgress === 'reverse'}
+                className="h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                data-testid="journal-entry-reverse-confirm-button"
+              >
+                {actionInProgress === 'reverse' && (
+                  <span className="material-symbols-outlined animate-spin text-base">progress_activity</span>
+                )}
+                Reverse entry
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
