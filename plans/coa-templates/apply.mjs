@@ -166,32 +166,7 @@ export function applyTemplate(store, tenantId, catalogue, body) {
   }
 
   const plan = planApply(store, tenantId, composed, catalogue);
-  if (!dryRun) {
-    store.transaction(tenantId, (tx) => {
-      const categoryIds = new Map(tx.categories().map((c) => [lower(c.name), c.id]));
-      for (const c of plan.categoriesToCreate) {
-        const parentId = c.parentCategory ? categoryIds.get(lower(c.parentCategory)) : null;
-        const saved = tx.insertCategory({ name: c.name, ledgerGroup: c.ledgerGroup, ledgerSubGroup: c.ledgerSubGroup ?? null, parentCategory: parentId });
-        categoryIds.set(lower(c.name), saved.id);
-      }
-      const accountIds = new Map(plan.existingByNumber);
-      for (const a of plan.accountsToCreate) {
-        const saved = tx.insertAccount({
-          number: a.number,
-          name: a.name,
-          ledgerAccountCategory: categoryIds.get(lower(a.ledgerAccountCategory)),
-          parentAccount: a.parentAccount ? accountIds.get(a.parentAccount) ?? null : null,
-          accountType: a.accountType,
-          systemAccount: a.systemAccount,
-          editable: a.editable,
-          deletable: a.deletable,
-          cashFlow: a.cashFlow,
-          archived: false,
-        });
-        accountIds.set(a.number, saved.id);
-      }
-    });
-  }
+  if (!dryRun) store.transaction(tenantId, (tx) => writePlan(tx, tenantId, plan));
 
   const created = plan.accountsToCreate.map((a) => ({
     number: a.number,
@@ -216,6 +191,48 @@ export function applyTemplate(store, tenantId, catalogue, body) {
       categoriesCreated: plan.categoriesToCreate.length,
     },
   };
+}
+
+/**
+ * Write a plan inside an open tenant transaction: categories first, then accounts in
+ * number order, so a parent always exists before its children. Shared by applyTemplate
+ * and the SOUPFIN-146 backfill, which also enables the finance module in the same
+ * transaction.
+ *
+ * Every category carries `account` = the tenant's Account id. The backend's
+ * AccountModuleListenerService skips its brokerage seed when
+ * LedgerAccountCategory.countByAccount(account) > 0, so a category without it can let
+ * that seed run on top of the template.
+ */
+export function writePlan(tx, tenantId, plan) {
+  const categoryIds = new Map(tx.categories().map((c) => [lower(c.name), c.id]));
+  for (const c of plan.categoriesToCreate) {
+    const parentId = c.parentCategory ? categoryIds.get(lower(c.parentCategory)) : null;
+    const saved = tx.insertCategory({
+      name: c.name,
+      ledgerGroup: c.ledgerGroup,
+      ledgerSubGroup: c.ledgerSubGroup ?? null,
+      parentCategory: parentId,
+      account: tenantId,
+    });
+    categoryIds.set(lower(c.name), saved.id);
+  }
+  const accountIds = new Map(plan.existingByNumber);
+  for (const a of plan.accountsToCreate) {
+    const saved = tx.insertAccount({
+      number: a.number,
+      name: a.name,
+      ledgerAccountCategory: categoryIds.get(lower(a.ledgerAccountCategory)),
+      parentAccount: a.parentAccount ? accountIds.get(a.parentAccount) ?? null : null,
+      accountType: a.accountType,
+      systemAccount: a.systemAccount,
+      editable: a.editable,
+      deletable: a.deletable,
+      cashFlow: a.cashFlow,
+      archived: false,
+    });
+    accountIds.set(a.number, saved.id);
+  }
 }
 
 /** Work out what an apply would do, reading only. Archived rows count: name and number are unique per tenant including them. */
