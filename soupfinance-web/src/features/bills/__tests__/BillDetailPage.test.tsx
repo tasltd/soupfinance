@@ -70,6 +70,8 @@ import { getBill, deleteBill, listBillPayments } from '../../../api/endpoints/bi
 // SOUPFIN-44: the Tax Rate column resolves against the real catalogue, and
 // NO_TAX_OPTION is what makes an unresolved entry look like 0%.
 import { listTaxRates, NO_TAX_OPTION } from '../../../api/endpoints/domainData';
+// Added (SOUPFIN-160): Axios-shaped 403/500 errors
+import { moduleDisabled403, roleDenied403, serverError500 } from '../../../test/apiErrorFixtures';
 
 // ============================================================================
 // Test Helpers
@@ -180,8 +182,9 @@ describe('BillDetailPage', () => {
 
       renderBillDetailPage();
 
+      // Changed (SOUPFIN-160): ApiErrorState shows the error's own message
       expect(await screen.findByTestId('bill-detail-error')).toBeInTheDocument();
-      expect(screen.getByText('Failed to load bill')).toBeInTheDocument();
+      expect(screen.getByTestId('bill-detail-error-message')).toHaveTextContent('Network error');
     });
 
     it('displays back to bills link in error state', async () => {
@@ -190,9 +193,9 @@ describe('BillDetailPage', () => {
 
       renderBillDetailPage();
 
-      const errorContainer = await screen.findByTestId('bill-detail-error');
-      // The error state has a "Back to Bills" link inside it
-      expect(within(errorContainer).getByText('Back to Bills')).toBeInTheDocument();
+      await screen.findByTestId('bill-detail-error');
+      // Changed (SOUPFIN-160): the way back is the header link beside the error card
+      expect(screen.getByRole('link', { name: 'Back to Bills' })).toHaveAttribute('href', '/bills');
     });
   });
 
@@ -733,6 +736,47 @@ describe('BillDetailPage', () => {
       expect(await screen.findByTestId('bill-detail-subtotal')).toHaveTextContent('$0.00');
       expect(screen.getByTestId('bill-detail-total')).toHaveTextContent('$0.00');
       expect(screen.getByTestId('bill-detail-balance-due')).toHaveTextContent('$0.00');
+    });
+  });
+
+  // Added (SOUPFIN-160): the error card names the cause and never shows HTTP text
+  describe('module-aware errors (SOUPFIN-160)', () => {
+    it.each([
+      ['a disabled Finance module', () => moduleDisabled403('Finance', '/bill/show/bill-123.json'), 'module_disabled', 'Finance module is not available'],
+      ['a missing role', () => roleDenied403('/bill/show/bill-123.json'), 'forbidden', 'You do not have permission'],
+      ['a server fault', () => serverError500('/bill/show/bill-123.json'), 'server_error', 'Server error'],
+    ])('explains %s', async (_cause, makeError, kind, title) => {
+      vi.mocked(getBill).mockRejectedValue(makeError());
+      vi.mocked(listBillPayments).mockResolvedValue([]);
+      renderBillDetailPage();
+
+      const card = await screen.findByTestId('bill-detail-error');
+      expect(card).toHaveAttribute('data-error-kind', kind);
+      expect(within(card).getByText(title)).toBeInTheDocument();
+      expect(document.body.textContent).not.toMatch(/status code/i);
+    });
+
+    it('offers no Retry when the module is disabled', async () => {
+      vi.mocked(getBill).mockRejectedValue(moduleDisabled403('Finance', '/bill/show/bill-123.json'));
+      vi.mocked(listBillPayments).mockResolvedValue([]);
+      renderBillDetailPage();
+
+      const card = await screen.findByTestId('bill-detail-error');
+      expect(within(card).queryByRole('button', { name: /retry/i })).not.toBeInTheDocument();
+      expect(within(card).getByText(/contact your administrator to enable this module/i)).toBeInTheDocument();
+    });
+
+    it('Retry after a server fault refetches and shows the data', async () => {
+      vi.mocked(getBill).mockRejectedValueOnce(serverError500('/bill/show/bill-123.json'));
+      vi.mocked(listBillPayments).mockResolvedValue([]);
+      renderBillDetailPage();
+
+      const card = await screen.findByTestId('bill-detail-error');
+      vi.mocked(getBill).mockResolvedValue(createMockBill());
+      within(card).getByRole('button', { name: /retry/i }).click();
+
+      await waitFor(() => expect(screen.queryByTestId('bill-detail-error')).not.toBeInTheDocument());
+      expect(vi.mocked(getBill)).toHaveBeenCalledTimes(2);
     });
   });
 });

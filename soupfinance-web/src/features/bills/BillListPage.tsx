@@ -13,10 +13,12 @@ import { listBills } from '../../api/endpoints/bills';
 import { useFormatCurrency } from '../../stores';
 // Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
 import { HelpLink } from '../../components/help';
+// Added (SOUPFIN-160): module-aware error card instead of a generic message
+import { ApiErrorState } from '../../components/feedback';
 
 export function BillListPage() {
   // Added: Fetch bills from API
-  const { data: bills, isLoading, error } = useQuery({
+  const { data: bills, isLoading, error, refetch } = useQuery({
     queryKey: ['bills'],
     queryFn: () => listBills({ max: 20, sort: 'dateCreated', order: 'desc' }),
   });
@@ -50,19 +52,9 @@ export function BillListPage() {
         {isLoading ? (
           <div className="p-8 text-center text-subtle-text" data-testid="bill-list-loading">Loading bills...</div>
         ) : error ? (
-          // Added: Error state when API fails
-          <div className="p-12 text-center" data-testid="bill-list-error">
-            <span className="material-symbols-outlined text-6xl text-danger/50 mb-4">error</span>
-            <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">Failed to load bills</h3>
-            <p className="text-subtle-text mb-4">There was an error loading your bills. Please try again.</p>
-            <button
-              onClick={() => window.location.reload()}
-              className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm"
-            >
-              <span className="material-symbols-outlined text-lg">refresh</span>
-              Retry
-            </button>
-          </div>
+          // Changed (SOUPFIN-160): ApiErrorState tells a disabled Finance module
+          // apart from a missing role or a server fault, and never shows raw HTTP text.
+          <ApiErrorState error={error} onRetry={() => refetch()} testId="bill-list-error" />
         ) : bills?.length ? (
           <div className="overflow-x-auto">
             {/* Changed: Added min-w for proper horizontal scroll on mobile */}

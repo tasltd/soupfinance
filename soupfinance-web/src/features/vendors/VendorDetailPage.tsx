@@ -5,6 +5,8 @@
  */
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+// Added (SOUPFIN-160): module-aware error card for a failed vendor load
+import { ApiErrorState } from '../../components/feedback';
 import { getVendor, deleteVendor } from '../../api';
 import { useState } from 'react';
 // Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
@@ -22,7 +24,7 @@ export function VendorDetailPage() {
   const [deleteState, setDeleteState] = useState<DeleteState>({ isOpen: false });
 
   // Added: Query to fetch vendor data
-  const { data: vendor, isLoading, error } = useQuery({
+  const { data: vendor, isLoading, error, refetch } = useQuery({
     queryKey: ['vendor', id],
     queryFn: () => getVendor(id!),
     enabled: !!id,
@@ -52,17 +54,31 @@ export function VendorDetailPage() {
   if (error || !vendor) {
     return (
       <div className="flex flex-col gap-6" data-testid="vendor-detail-page">
-        <div className="p-12 text-center">
-          <span className="material-symbols-outlined text-6xl text-danger/50 mb-4 block">error</span>
-          <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">Vendor not found</h3>
-          <p className="text-subtle-text mb-4">The vendor you're looking for doesn't exist or has been deleted.</p>
-          <Link
-            to="/vendors"
-            className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm"
-          >
-            Back to Vendors
-          </Link>
-        </div>
+        {/* Changed (SOUPFIN-160): a failed load says why (module disabled, no
+            permission, server fault); "not found" is kept for an empty answer. */}
+        {error ? (
+          <>
+            <ApiErrorState error={error} onRetry={() => refetch()} testId="vendor-detail-error" />
+            <Link
+              to="/vendors"
+              className="self-center inline-flex items-center gap-2 h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm"
+            >
+              Back to Vendors
+            </Link>
+          </>
+        ) : (
+          <div className="p-12 text-center">
+            <span className="material-symbols-outlined text-6xl text-danger/50 mb-4 block">error</span>
+            <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">Vendor not found</h3>
+            <p className="text-subtle-text mb-4">The vendor you're looking for doesn't exist or has been deleted.</p>
+            <Link
+              to="/vendors"
+              className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm"
+            >
+              Back to Vendors
+            </Link>
+          </div>
+        )}
       </div>
     );
   }

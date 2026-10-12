@@ -9,6 +9,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { listVendors, deleteVendor } from '../../api';
 // Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
 import { HelpLink } from '../../components/help';
+// Added (SOUPFIN-160): module-aware error card instead of a generic message
+import { ApiErrorState } from '../../components/feedback';
 
 // Added: Delete confirmation state interface
 interface DeleteState {
@@ -31,7 +33,7 @@ export function VendorListPage() {
   });
 
   // Changed: Added error state handling for API failures
-  const { data: vendors, isLoading, error } = useQuery({
+  const { data: vendors, isLoading, error, refetch } = useQuery({
     queryKey: ['vendors', searchTerm],
     queryFn: () => listVendors({ max: 50, sort: 'name', order: 'asc', search: searchTerm || undefined }),
   });
@@ -115,19 +117,9 @@ export function VendorListPage() {
             Loading vendors...
           </div>
         ) : error ? (
-          // Added: Error state when API fails
-          <div className="p-12 text-center" data-testid="vendor-list-error">
-            <span className="material-symbols-outlined text-6xl text-danger/50 mb-4 block">error</span>
-            <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">Failed to load vendors</h3>
-            <p className="text-subtle-text mb-4">There was an error loading your vendors. Please try again.</p>
-            <button
-              onClick={() => window.location.reload()}
-              className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm"
-            >
-              <span className="material-symbols-outlined text-lg">refresh</span>
-              Retry
-            </button>
-          </div>
+          // Changed (SOUPFIN-160): ApiErrorState tells a disabled Trading module
+          // apart from a missing role or a server fault, and never shows raw HTTP text.
+          <ApiErrorState error={error} onRetry={() => refetch()} testId="vendor-list-error" />
         ) : vendors?.length ? (
           <div className="overflow-x-auto">
             {/* Changed: Added min-w for proper horizontal scroll on mobile */}

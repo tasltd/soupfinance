@@ -19,7 +19,9 @@ import { listTaxRates, listBillServices, DEFAULT_CURRENCIES } from '../../api/en
 import { useFormatCurrency } from '../../stores';
 import { getTodayIsoDate, sanitizeDateInputValue } from '../../utils/date';
 // Added (SOUPFIN-158): recognise a save rejected for a closed period
-import { getPeriodLockError } from '../../api/errors';
+// Changed (SOUPFIN-160): plus module-aware lookup and save errors
+import { getApiErrorMessage, getPeriodLockError, parseApiError } from '../../api/errors';
+import { ApiErrorState, ModuleDisabledBanner } from '../../components/feedback';
 // Added (SOUPFIN-30 #15): create a vendor without leaving this form
 import { AddEntityButton } from '../../components/forms/AddEntityButton';
 import type { BillItem } from '../../types';
@@ -73,13 +75,14 @@ export function BillFormPage() {
   const [formError, setFormError] = useState<string | null>(null);
 
   // Added: Fetch vendors for dropdown
-  const { data: vendors, isLoading: vendorsLoading } = useQuery({
+  const { data: vendors, isLoading: vendorsLoading, error: vendorsError } = useQuery({
     queryKey: ['vendors'],
     queryFn: () => listVendors({ max: 100 }),
   });
 
   // Added (2026-02-01): Fetch tax rates for dropdown
-  const { data: taxRates } = useQuery({
+  // Changed (SOUPFIN-160): keep the error so a disabled module can be explained
+  const { data: taxRates, error: taxRatesError } = useQuery({
     queryKey: ['tax-rates'],
     queryFn: () => listTaxRates(),
   });
@@ -90,8 +93,16 @@ export function BillFormPage() {
     queryFn: () => listBillServices({ max: 100 }),
   });
 
+  // Added (SOUPFIN-160): a lookup the form depends on came back "module not
+  // enabled". The form stays visible, but saving is blocked: the vendor list is
+  // empty, so a submit could only end in "Please select a vendor" or a 403.
+  const moduleDisabledError = [vendorsError, taxRatesError].find(
+    (err) => err && parseApiError(err).kind === 'module_disabled',
+  );
+  const isModuleBlocked = !!moduleDisabledError;
+
   // Added: Fetch bill data when editing
-  const { data: bill, isLoading: billLoading, error: billError } = useQuery({
+  const { data: bill, isLoading: billLoading, error: billError, refetch: refetchBill } = useQuery({
     queryKey: ['bill', id],
     queryFn: () => getBill(id!),
     enabled: isEdit,
@@ -150,7 +161,8 @@ export function BillFormPage() {
         setBillDateError(lock.message);
         return;
       }
-      setFormError(error.message || 'Failed to create bill');
+      // Changed (SOUPFIN-160): never show "Request failed with status code 403"
+      setFormError(getApiErrorMessage(error) || 'Failed to create bill');
     },
   });
 
@@ -169,7 +181,8 @@ export function BillFormPage() {
         setBillDateError(lock.message);
         return;
       }
-      setFormError(error.message || 'Failed to update bill');
+      // Changed (SOUPFIN-160): never show "Request failed with status code 403"
+      setFormError(getApiErrorMessage(error) || 'Failed to update bill');
     },
   });
 
@@ -238,6 +251,9 @@ export function BillFormPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
+
+    // Added (SOUPFIN-160): Enter in a field must not bypass the disabled button
+    if (isModuleBlocked) return;
 
     // Validate
     if (!vendorId) {
@@ -314,20 +330,18 @@ export function BillFormPage() {
   }
 
   // Added: Error state for edit mode
+  // Changed (SOUPFIN-160): ApiErrorState says why the bill could not be loaded
   if (isEdit && billError) {
     return (
       <div className="flex flex-col gap-6" data-testid="bill-form-page">
-        <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-12 text-center" data-testid="bill-form-error">
-          <span className="material-symbols-outlined text-6xl text-danger/50 mb-4">error</span>
-          <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">Failed to load bill</h3>
-          <p className="text-subtle-text mb-4">The bill could not be found or there was an error loading it.</p>
-          <button
-            onClick={() => navigate('/bills')}
-            className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm"
-          >
-            Back to Bills
-          </button>
-        </div>
+        <ApiErrorState error={billError} onRetry={() => refetchBill()} testId="bill-form-error" />
+        <button
+          onClick={() => navigate('/bills')}
+          className="self-center inline-flex items-center gap-2 h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm"
+          data-testid="bill-form-back-button"
+        >
+          Back to Bills
+        </button>
       </div>
     );
   }
@@ -355,14 +369,23 @@ export function BillFormPage() {
           </button>
           <button
             onClick={handleSubmit}
-            disabled={isPending}
-            className="h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90 disabled:opacity-50"
+            disabled={isPending || isModuleBlocked}
+            className="h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
             data-testid="bill-form-save-button"
           >
             {isPending ? 'Saving...' : isEdit ? 'Update Bill' : 'Save Bill'}
           </button>
         </div>
       </div>
+
+      {/* Added (SOUPFIN-160): explain why the vendor or tax lists are empty */}
+      {isModuleBlocked && (
+        <ModuleDisabledBanner
+          error={moduleDisabledError}
+          context="Bills cannot be saved until the module is enabled."
+          testId="bill-form-module-disabled"
+        />
+      )}
 
       {/* Form Error */}
       {formError && (
@@ -414,6 +437,13 @@ export function BillFormPage() {
                   testId="bill-vendor-add-button"
                 />
               </div>
+              {/* Added (SOUPFIN-160): a vendor lookup that failed for any other
+                  reason says so here, not later as "Please select a vendor". */}
+              {vendorsError && !isModuleBlocked && (
+                <p className="mt-1 text-sm text-danger" role="alert" data-testid="bill-vendor-load-error">
+                  {getApiErrorMessage(vendorsError)}
+                </p>
+              )}
             </div>
 
             {/* Changed: Bill Date (backend: billDate, previously misnamed as issueDate) */}
