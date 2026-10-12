@@ -140,5 +140,30 @@
     "directorAdded": "Bestuurder succesvol toegevoegd",
     "directorUpdated": "Bestuurder succesvol bijgewerkt",
     "directorRemoved": "Bestuurder verwijderd"
+  },
+  "industry": {
+    "label": "Branche",
+    "optional": "(optioneel)",
+    "placeholder": "Kies uw branche",
+    "overlayHint": "Uw rekeningschema krijgt extra rekeningen voor deze branche.",
+    "noOverlayHint": "Uw rekeningschema gebruikt de standaardsjabloon voor uw bedrijfstype.",
+    "options": {
+      "agriculture": "Landbouw",
+      "construction": "Bouw en vastgoed",
+      "education": "Onderwijs en training",
+      "energy": "Energie en nutsbedrijven",
+      "financial-services": "Financiële dienstverlening",
+      "healthcare": "Zorg en farmacie",
+      "hospitality": "Horeca en toerisme",
+      "manufacturing": "Productie",
+      "mining": "Mijnbouw en grondstoffen",
+      "non-profit": "Non-profit",
+      "professional-services": "Zakelijke dienstverlening",
+      "retail": "Detail- en groothandel",
+      "saas": "Software, SaaS en IT",
+      "telecommunications": "Telecommunicatie",
+      "transportation": "Transport en logistiek",
+      "other": "Overig"
+    }
   }
 }

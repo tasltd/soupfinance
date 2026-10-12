@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SOUPFIN-151 — Account.industry as a first-class field (backend plan)</title>
+<script type="application/json" id="plan-index">
+{
+  "title": "SOUPFIN-151 — Account.industry as a first-class field",
+  "revision": "1",
+  "goal": "A tenant's industry is stored on Account.industry as one of 16 fixed codes, accepted on /account/register.json and /account/update, returned by /account/show, and passed to the chart-of-accounts composer as the industry overlay when one applies to the tenant's business type.",
+  "stories": [
+    {"id": "P1", "title": "Frontend: industry codes, Industry select on registration and Company Information, payload, preselect helper (soupfinance-web)", "status": "done"},
+    {"id": "P2", "title": "Backend: Account.industry String column (nullable, inList of 16 codes) plus migration", "status": "todo"},
+    {"id": "P3", "title": "Backend: AccountRegistrationCommand.industry, read in AccountController.register, saved in AccountRegistrationService.register", "status": "todo"},
+    {"id": "P4", "title": "Backend: render industry in _account.gson; accept it on /account/update", "status": "todo"},
+    {"id": "P5", "title": "Backend: pass industry to CoaTemplateService.compose at registration when the overlay applies (SOUPFIN-143/144)", "status": "todo"},
+    {"id": "P6", "title": "Backend: AccountRegistrationServiceSpec and AccountControllerFunctionalSpec cases for industry", "status": "todo"},
+    {"id": "P7", "title": "Frontend: COA template picker preselects industryOverlayFor(account.industry, businessLicenceCategory) (SOUPFIN-147)", "status": "todo"}
+  ],
+  "screens": ["registration (Industry select under Business type)", "onboarding Company Information (Industry select in Business Details)"],
+  "dependsOn": ["SOUPFIN-143 (CoaTemplateService.compose, overlay JSON)", "SOUPFIN-145 (overlay keys and overlay-not-applicable)"],
+  "followUps": ["SOUPFIN-147", "SOUPFIN-240"]
+}
+</script>
+<style>
+  :root { --primary:#f24a0d; --text:#181311; --sub:#8a6b60; --border:#e6dedb; --bg:#f8f6f5; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:15px/1.55 Manrope, "Noto Sans", system-ui, sans-serif; color:var(--text); background:var(--bg); }
+  main { max-width: 980px; margin: 0 auto; padding: 32px 24px 64px; }
+  h1 { font-size: 30px; font-weight: 800; letter-spacing:-0.02em; margin: 0 0 6px; }
+  h2 { font-size: 21px; margin: 36px 0 10px; padding-top: 8px; border-top: 1px solid var(--border); }
+  p.lead { color: var(--sub); margin: 0 0 18px; }
+  .card { background:#fff; border:1px solid var(--border); border-radius:12px; padding:16px 20px; margin: 14px 0; }
+  .goal { border-left: 4px solid var(--primary); }
+  .warn { border-left: 4px solid #d97706; }
+  table { width:100%; border-collapse: collapse; background:#fff; border:1px solid var(--border); border-radius:12px; overflow:hidden; margin: 10px 0; font-size: 14px; }
+  th { text-align:left; background:#f5f1f0; color:var(--sub); font-size:12px; text-transform:uppercase; letter-spacing:.04em; padding:8px 12px; }
+  td { padding:8px 12px; border-top:1px solid var(--border); vertical-align: top; overflow-wrap: anywhere; }
+  code { font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; background:#f5f1f0; padding:1px 5px; border-radius:4px; }
+  pre { background:#1f1715; color:#f3ebe8; padding:14px 16px; border-radius:10px; overflow:auto; font: 12.5px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; }
+  pre code { background:none; padding:0; color:inherit; }
+  .pill { display:inline-block; padding:1px 9px; border-radius:999px; font-size:12px; font-weight:700; }
+  .done { background:#dcfce7; color:#166534; } .todo { background:#fef3c7; color:#92400e; }
+  figure { margin: 14px 0; } figure img { max-width: 100%; border:1px solid var(--border); border-radius: 10px; }
+  figcaption { color: var(--sub); font-size: 13px; }
+  li { margin: 4px 0; }
+</style>
+</head>
+<body>
+<main>
+<h1>SOUPFIN-151 — Account.industry as a first-class field</h1>
+<p class="lead">Backend plan for soupmarkets-web, branch <code>authentication-base-on-multi-tenancy-descriminator</code>. Written 2026-10-12 from the SoupFinance repository, which may not change backend code (<code>.claude/rules/backend-changes-workflow.md</code>). The frontend half (P1) ships with this plan.</p>
+
+<div class="card goal"><b>Goal.</b> A tenant's industry is stored on <code>Account.industry</code> as one of 16 fixed codes. Registration and account update accept it, account show returns it, and registration passes it to the chart-of-accounts composer whenever an overlay applies to the tenant's business type.</div>
+
+<h2>1. What was wrong</h2>
+<ul>
+  <li>Registration never sent an industry. <code>AccountRegistrationCommand</code> has no such field, and <code>AccountController.register</code> builds the command field by field, so an extra key in the JSON is ignored.</li>
+  <li>The onboarding Company Information page put the industry label inside a JSON string called <code>metadata</code> on <code>PUT /rest/corporate/update</code>. <code>Corporate</code> has no <code>metadata</code> property, so the value was dropped silently.</li>
+  <li><code>Corporate.industry</code> exists, but it is a <code>ClientIndustry</code> reference: a per-tenant lookup table for classifying KYC clients. A new tenant has no rows in it, and its names are free text, so it cannot pick a COA overlay. This plan leaves it alone.</li>
+</ul>
+
+<h2>2. Parts</h2>
+<table>
+<tr><th>Part</th><th>What</th><th>Status</th></tr>
+<tr><td>P1</td><td>Frontend: codes in <code>soupfinance-web/src/utils/industry.ts</code>, the shared <code>IndustrySelect</code>, <code>industry</code> in the register payload, Company Information writes <code>Account.industry</code>, <code>industryOverlayFor()</code> for the picker</td><td><span class="pill done">done</span></td></tr>
+<tr><td>P2</td><td><code>Account.industry</code> column and migration</td><td><span class="pill todo">todo</span></td></tr>
+<tr><td>P3</td><td>Registration command, controller and service</td><td><span class="pill todo">todo</span></td></tr>
+<tr><td>P4</td><td>Show and update</td><td><span class="pill todo">todo</span></td></tr>
+<tr><td>P5</td><td>Industry overlay at registration</td><td><span class="pill todo">todo</span></td></tr>
+<tr><td>P6</td><td>Specs</td><td><span class="pill todo">todo</span></td></tr>
+<tr><td>P7</td><td>Template picker preselects the overlay (SOUPFIN-147)</td><td><span class="pill todo">todo</span></td></tr>
+</table>
+
+<h2>3. The codes</h2>
+<p>Lower-case, hyphenated. Where a COA overlay exists, the code <b>is</b> the overlay key in <code>plans/coa-templates/industry/*.json</code>, so no mapping table can drift. A frontend unit test reads those JSON files and fails if the two disagree.</p>
+<table>
+<tr><th>Code</th><th>English label</th><th>COA overlay applies to</th></tr>
+<tr><td><code>agriculture</code></td><td>Agriculture and farming</td><td>none</td></tr>
+<tr><td><code>construction</code></td><td>Construction and real estate</td><td>SERVICES, TRADING</td></tr>
+<tr><td><code>education</code></td><td>Education and training</td><td>none</td></tr>
+<tr><td><code>energy</code></td><td>Energy and utilities</td><td>none</td></tr>
+<tr><td><code>financial-services</code></td><td>Financial services</td><td>none</td></tr>
+<tr><td><code>healthcare</code></td><td>Healthcare and pharmaceuticals</td><td>none</td></tr>
+<tr><td><code>hospitality</code></td><td>Hospitality and tourism</td><td>SERVICES, TRADING</td></tr>
+<tr><td><code>manufacturing</code></td><td>Manufacturing</td><td>none</td></tr>
+<tr><td><code>mining</code></td><td>Mining and natural resources</td><td>none</td></tr>
+<tr><td><code>non-profit</code></td><td>Non-profit</td><td>SERVICES</td></tr>
+<tr><td><code>professional-services</code></td><td>Professional services</td><td>SERVICES</td></tr>
+<tr><td><code>retail</code></td><td>Retail and wholesale</td><td>TRADING</td></tr>
+<tr><td><code>saas</code></td><td>Software, SaaS and IT</td><td>SERVICES</td></tr>
+<tr><td><code>telecommunications</code></td><td>Telecommunications</td><td>none</td></tr>
+<tr><td><code>transportation</code></td><td>Transport and logistics</td><td>none</td></tr>
+<tr><td><code>other</code></td><td>Other</td><td>none</td></tr>
+</table>
+
+<h2>4. Backend changes</h2>
+<h3>P2 — Account.industry</h3>
+<pre><code>// grails-app/domain/soupbroker/Account.groovy
+/** Industry code (SOUPFIN-151). Picks the COA industry overlay when one applies. */
+String industry
+
+static final List&lt;String&gt; INDUSTRY_CODES = [
+    'agriculture', 'construction', 'education', 'energy', 'financial-services', 'healthcare',
+    'hospitality', 'manufacturing', 'mining', 'non-profit', 'professional-services', 'retail',
+    'saas', 'telecommunications', 'transportation', 'other'].asImmutable()
+
+// constraints
+industry nullable: true, inList: INDUSTRY_CODES</code></pre>
+<p>Migration in <code>lxc/migrations/</code>: <code>ALTER TABLE account ADD COLUMN industry VARCHAR(32) NULL;</code>. No backfill: existing tenants stay <code>NULL</code>, which means "no overlay".</p>
+
+<h3>P3 — Registration</h3>
+<ul>
+  <li><code>AccountRegistrationCommand</code>: add <code>String industry</code> with <code>industry nullable: true, inList: Account.INDUSTRY_CODES</code>. An unknown code then returns the usual 422 with <code>errors.industry</code>, which <code>RegistrationPage</code> already renders per field.</li>
+  <li><code>AccountController.register</code>: add <code>industry: jsonData.industry</code> to the command it builds.</li>
+  <li><code>AccountRegistrationService.register</code>: set <code>industry: cmd.industry</code> on the new <code>Account</code>.</li>
+</ul>
+<div class="card warn"><b>Found while tracing this.</b> The same controller also ignores <code>country</code>, which the frontend has sent since registration gained the Country select. <code>Account.countryOfOrigin</code> stays empty, so the Ghana tax overlay cannot be chosen at registration either. Filed as SOUPFIN-240.</div>
+
+<h3>P4 — Show and update</h3>
+<ul>
+  <li><code>_account.gson</code> backfills keys the generic template drops when null. Add <code>industry</code> to that list, so <code>/account/show/{id}.json</code> always carries the key.</li>
+  <li><code>AccountController.update</code> binds the domain from the request, so the new property binds once it exists. The frontend sends <code>PUT /account/update/{id}.json</code> with body <code>{"id": "account-001", "industry": "saas"}</code>, after reading CSRF from <code>/account/edit/{id}.json</code>.</li>
+</ul>
+
+<h3>P5 — Overlay at registration</h3>
+<p>Where registration seeds the chart (SOUPFIN-144), pass the overlay only when it applies, mirroring <code>industryOverlayFor()</code> on the frontend:</p>
+<pre><code>String overlay = coaTemplateService.industryAppliesTo(account.industry, account.businessLicenceCategory) ?
+    account.industry : null
+coaTemplateService.compose(account.businessLicenceCategory, country, overlay)</code></pre>
+<p>An industry with no overlay, or one that does not fit the business type (retail on SERVICES), seeds the base chart. Registration must not fail on it: the SOUPFIN-145 <code>overlay-not-applicable</code> error is for <code>applyTemplate</code>, where the user picked the overlay on purpose.</p>
+
+<h3>P6 — Specs</h3>
+<table>
+<tr><th>Case</th><th>Expected</th></tr>
+<tr><td>Register with <code>industry: "retail"</code>, TRADING</td><td>200; <code>Account.industry == 'retail'</code>; chart includes the retail accounts (1030 Till Floats)</td></tr>
+<tr><td>Register with <code>industry: "retail"</code>, SERVICES</td><td>200; industry stored; base SERVICES chart, no 1030</td></tr>
+<tr><td>Register with <code>industry: "agriculture"</code></td><td>200; industry stored; base chart</td></tr>
+<tr><td>Register with no <code>industry</code> key</td><td>200; <code>industry</code> is null</td></tr>
+<tr><td>Register with <code>industry: ""</code> or <code>"Retail &amp; Wholesale"</code></td><td>422, <code>errors.industry</code>; no Account row created</td></tr>
+<tr><td>Register with a 10,000-character <code>industry</code></td><td>422, <code>errors.industry</code>; no truncation, no 500</td></tr>
+<tr><td><code>GET /account/show</code> on a tenant with null industry</td><td>Body has <code>"industry": null</code></td></tr>
+<tr><td><code>PUT /account/update</code> with <code>industry: "saas"</code></td><td>200; a second show returns <code>saas</code></td></tr>
+</table>
+
+<h2>5. Frontend (done, P1)</h2>
+<figure>
+  <img src="../soupfinance-web/e2e/playwright/screenshots/soupfin-151/registration-retail-on-trading-filled.png" alt="Registration form with Trading selected and Industry set to Retail and wholesale; the hint says the chart of accounts will include extra accounts for this industry.">
+  <figcaption>Registration: optional Industry under Business type. The hint tracks the business type.</figcaption>
+</figure>
+<figure>
+  <img src="../soupfinance-web/e2e/playwright/screenshots/soupfin-151/company-info-preselected-saas.png" alt="Company Information page with the Industry select preselected to Software, SaaS and IT.">
+  <figcaption>Company Information: the industry saved on the Account is preselected; a change is written to the Account before the corporate update.</figcaption>
+</figure>
+<ul>
+  <li>Registration omits <code>industry</code> when none is chosen, so the backend never sees <code>""</code>.</li>
+  <li>Company Information writes only when the industry changed. It never sends <code>industry</code> to <code>/rest/corporate/update</code>, because that would try to bind a <code>ClientIndustry</code> reference.</li>
+  <li>Until P2 to P4 ship, the backend ignores the field: registration works, and <code>/account/update</code> answers 200 without storing it.</li>
+</ul>
+
+<h2>6. Template picker (P7, SOUPFIN-147)</h2>
+<p>The picker should call <code>industryOverlayFor(account.industry, account.businessLicenceCategory)</code> from <code>src/utils/industry.ts</code> and preselect the result. It returns <code>null</code> when no overlay applies, in which case the picker preselects none.</p>
+
+<h2>7. Related</h2>
+<ul>
+  <li>Registration drops <code>country</code> (section 4, P3 note): filed as SOUPFIN-240.</li>
+  <li><code>plans/soupfin-146-coa-backfill.html</code> skips the industry overlay because no field existed. Once P2 ships, a tenant that sets its industry later can add the overlay through SOUPFIN-145 <code>applyTemplate</code>.</li>
+</ul>
+</main>
+</body>
+</html>

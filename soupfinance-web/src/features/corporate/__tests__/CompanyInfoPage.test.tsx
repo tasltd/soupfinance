@@ -10,6 +10,9 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { CompanyInfoPage } from '../CompanyInfoPage'
+import { INDUSTRY_CODES } from '../../../utils/industry'
+// Added (SOUPFIN-151): the industry select renders translated labels
+import '../../../i18n'
 
 // Mock react-router-dom's useNavigate and useSearchParams
 const mockNavigate = vi.fn()
@@ -31,6 +34,20 @@ vi.mock('../../../api/endpoints/corporate', () => ({
 }))
 
 import { getCorporate, updateCorporate } from '../../../api/endpoints/corporate'
+
+// Added (SOUPFIN-151): industry is read from and written to the tenant Account
+vi.mock('../../../api/endpoints/settings', () => ({
+  accountSettingsApi: { get: vi.fn(), update: vi.fn() },
+}))
+
+import { accountSettingsApi } from '../../../api/endpoints/settings'
+
+const mockAccount = {
+  id: 'account-001',
+  name: 'Test Company Inc',
+  businessLicenceCategory: 'SERVICES' as const,
+  industry: null as string | null,
+}
 
 // Helper to create a fresh QueryClient for each test
 function createTestQueryClient() {
@@ -96,6 +113,8 @@ describe('CompanyInfoPage', () => {
     // Default: return mock corporate data
     vi.mocked(getCorporate).mockResolvedValue(mockCorporate)
     vi.mocked(updateCorporate).mockResolvedValue(mockCorporate)
+    vi.mocked(accountSettingsApi.get).mockResolvedValue({ ...mockAccount })
+    vi.mocked(accountSettingsApi.update).mockResolvedValue({ ...mockAccount })
   })
 
   describe('rendering', () => {
@@ -203,12 +222,12 @@ describe('CompanyInfoPage', () => {
       })
     })
 
-    it('renders industry classification dropdown', async () => {
+    it('renders industry dropdown', async () => {
       renderCompanyInfoPage()
 
       await waitFor(() => {
-        expect(screen.getByText('Industry Classification')).toBeInTheDocument()
-        expect(screen.getByText('Select industry...')).toBeInTheDocument()
+        expect(screen.getByRole('combobox', { name: /^industry/i })).toBeInTheDocument()
+        expect(screen.getByText('Select your industry')).toBeInTheDocument()
       })
     })
 
@@ -272,13 +291,14 @@ describe('CompanyInfoPage', () => {
       renderCompanyInfoPage()
 
       await waitFor(() => {
-        expect(screen.getByText('Select industry...')).toBeInTheDocument()
+        expect(screen.getByText('Select your industry')).toBeInTheDocument()
       })
 
-      const industrySelect = screen.getByRole('combobox', { name: /industry classification/i })
-      await user.selectOptions(industrySelect, 'Financial Services')
+      const industrySelect = screen.getByRole('combobox', { name: /^industry/i })
+      await user.selectOptions(industrySelect, 'Financial services')
 
-      expect(industrySelect).toHaveValue('Financial Services')
+      // Changed (SOUPFIN-151): the value is the industry code, not the label
+      expect(industrySelect).toHaveValue('financial-services')
     })
 
     it('selects annual revenue from dropdown', async () => {
@@ -575,14 +595,156 @@ describe('CompanyInfoPage', () => {
       renderCompanyInfoPage()
 
       await waitFor(() => {
-        expect(screen.getByText('Select industry...')).toBeInTheDocument()
+        expect(screen.getByText('Select your industry')).toBeInTheDocument()
       })
 
-      // Check some industry options exist
-      const industrySelect = screen.getByRole('combobox', { name: /industry classification/i })
-      expect(industrySelect).toContainHTML('Financial Services')
-      expect(industrySelect).toContainHTML('Information Technology')
-      expect(industrySelect).toContainHTML('Healthcare & Pharmaceuticals')
+      // Changed (SOUPFIN-151): one option per industry code, plus the placeholder
+      const industrySelect = screen.getByRole('combobox', { name: /^industry/i })
+      const options = Array.from(industrySelect.querySelectorAll('option'))
+      expect(options.map((o) => o.value)).toEqual(['', ...INDUSTRY_CODES])
+      expect(industrySelect).toContainHTML('Financial services')
+      expect(industrySelect).toContainHTML('Software, SaaS and IT')
+      expect(industrySelect).toContainHTML('Healthcare and pharmaceuticals')
+    })
+  })
+
+  // Added (SOUPFIN-151): industry is a first-class field on the tenant Account
+  describe('industry saved on the Account', () => {
+    // Wait for the corporate form and for the Account query to settle
+    async function formReady() {
+      await screen.findByText('Save & Continue')
+      await waitFor(() => expect(accountSettingsApi.get).toHaveBeenCalled())
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0))
+      })
+    }
+
+    async function submit(user: ReturnType<typeof userEvent.setup>) {
+      await user.click(screen.getByText('Save & Continue'))
+      await waitFor(() => {
+        expect(mockNavigate).toHaveBeenCalledWith('/onboarding/directors?id=corp-123')
+      })
+    }
+
+    it('preselects the industry chosen at registration', async () => {
+      vi.mocked(accountSettingsApi.get).mockResolvedValue({ ...mockAccount, industry: 'saas' })
+      renderCompanyInfoPage()
+
+      await waitFor(() => {
+        expect(screen.getByRole('combobox', { name: /^industry/i })).toHaveValue('saas')
+      })
+      // saas has a SERVICES overlay, so the hint promises the extra accounts
+      expect(screen.getByTestId('company-info-industry-hint')).toHaveTextContent(
+        'Your chart of accounts will include extra accounts for this industry.'
+      )
+    })
+
+    it('ignores a saved value that is not an industry code', async () => {
+      // A legacy label from the old free-text list must not leak into the select
+      vi.mocked(accountSettingsApi.get).mockResolvedValue({ ...mockAccount, industry: 'Retail & Wholesale' })
+      renderCompanyInfoPage()
+
+      await formReady()
+      expect(screen.getByRole('combobox', { name: /^industry/i })).toHaveValue('')
+    })
+
+    it('writes a changed industry to the Account before updating the corporate', async () => {
+      const user = userEvent.setup()
+      const calls: string[] = []
+      vi.mocked(accountSettingsApi.update).mockImplementation(async (data) => {
+        calls.push('account')
+        return { ...mockAccount, ...data }
+      })
+      vi.mocked(updateCorporate).mockImplementation(async () => {
+        calls.push('corporate')
+        return mockCorporate
+      })
+      renderCompanyInfoPage()
+
+      await formReady()
+      const select = screen.getByRole('combobox', { name: /^industry/i })
+      await user.selectOptions(select, 'professional-services')
+      expect(screen.getByTestId('company-info-industry-hint')).toHaveTextContent(
+        'Your chart of accounts will include extra accounts for this industry.'
+      )
+      await submit(user)
+
+      expect(accountSettingsApi.update).toHaveBeenCalledTimes(1)
+      expect(accountSettingsApi.update).toHaveBeenCalledWith({
+        id: 'account-001',
+        industry: 'professional-services',
+      })
+      expect(calls).toEqual(['account', 'corporate'])
+      const corporatePayload = vi.mocked(updateCorporate).mock.calls[0][1] as { metadata: string }
+      expect(JSON.parse(corporatePayload.metadata).industry).toBe('professional-services')
+    })
+
+    it('says no overlay applies when the industry has none for the business type', async () => {
+      const user = userEvent.setup()
+      renderCompanyInfoPage()
+
+      await formReady()
+      // retail is a TRADING-only overlay; this tenant is SERVICES
+      await user.selectOptions(screen.getByRole('combobox', { name: /^industry/i }), 'retail')
+      expect(screen.getByTestId('company-info-industry-hint')).toHaveTextContent(
+        'Your chart of accounts uses the standard template for your business type.'
+      )
+    })
+
+    it('does not rewrite the Account when the industry is unchanged', async () => {
+      const user = userEvent.setup()
+      vi.mocked(accountSettingsApi.get).mockResolvedValue({ ...mockAccount, industry: 'saas' })
+      renderCompanyInfoPage()
+
+      await waitFor(() => {
+        expect(screen.getByRole('combobox', { name: /^industry/i })).toHaveValue('saas')
+      })
+      await submit(user)
+
+      expect(accountSettingsApi.update).not.toHaveBeenCalled()
+      expect(updateCorporate).toHaveBeenCalledTimes(1)
+    })
+
+    it('does not write to the Account when no industry is chosen', async () => {
+      const user = userEvent.setup()
+      renderCompanyInfoPage()
+
+      await formReady()
+      await submit(user)
+
+      expect(accountSettingsApi.update).not.toHaveBeenCalled()
+    })
+
+    it('still saves the corporate when the Account cannot be loaded', async () => {
+      const user = userEvent.setup()
+      vi.mocked(accountSettingsApi.get).mockRejectedValue(new Error('Network error'))
+      renderCompanyInfoPage()
+
+      await formReady()
+      await user.selectOptions(screen.getByRole('combobox', { name: /^industry/i }), 'retail')
+      // No business type is known, so no overlay hint is shown
+      expect(screen.queryByTestId('company-info-industry-hint')).not.toBeInTheDocument()
+      await submit(user)
+
+      expect(accountSettingsApi.update).not.toHaveBeenCalled()
+      expect(updateCorporate).toHaveBeenCalledTimes(1)
+    })
+
+    it('does not move on when the Account write fails', async () => {
+      const user = userEvent.setup()
+      vi.mocked(accountSettingsApi.update).mockRejectedValue(new Error('403'))
+      renderCompanyInfoPage()
+
+      await formReady()
+      await user.selectOptions(screen.getByRole('combobox', { name: /^industry/i }), 'retail')
+      await user.click(screen.getByText('Save & Continue'))
+
+      await waitFor(() => expect(accountSettingsApi.update).toHaveBeenCalled())
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 50))
+      })
+      expect(updateCorporate).not.toHaveBeenCalled()
+      expect(mockNavigate).not.toHaveBeenCalledWith('/onboarding/directors?id=corp-123')
     })
   })
 

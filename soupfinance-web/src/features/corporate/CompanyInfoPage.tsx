@@ -7,27 +7,18 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getCorporate, updateCorporate } from '../../api/endpoints/corporate';
+// Added (SOUPFIN-151): industry is stored on the tenant Account, not in corporate metadata
+import { accountSettingsApi } from '../../api/endpoints/settings';
+import { useAuthStore } from '../../stores';
+import { isIndustryCode } from '../../utils/industry';
+import type { IndustryCode } from '../../utils/industry';
+import type { BusinessType } from '../../api/endpoints/registration';
+import { IndustrySelect } from './IndustrySelect';
 // Added (SOUPFIN-84): "Need Help?" link to this step's part of the user guide
 import { HelpLink } from '../../components/help';
 
-// Added: Industry classification options
-const INDUSTRY_OPTIONS = [
-  'Agriculture & Farming',
-  'Construction & Real Estate',
-  'Education & Training',
-  'Energy & Utilities',
-  'Financial Services',
-  'Healthcare & Pharmaceuticals',
-  'Hospitality & Tourism',
-  'Information Technology',
-  'Manufacturing',
-  'Mining & Natural Resources',
-  'Professional Services',
-  'Retail & Wholesale',
-  'Transportation & Logistics',
-  'Telecommunications',
-  'Other',
-];
+// Removed (SOUPFIN-151): the local INDUSTRY_OPTIONS label list. Industry is now a
+// code from src/utils/industry.ts, rendered by the shared IndustrySelect.
 
 // Added: Annual revenue range options
 const REVENUE_RANGES = [
@@ -72,7 +63,7 @@ export function CompanyInfoPage() {
     postalCountry: '',
     sameAsPhysical: false,
     // Business Details
-    industry: '',
+    industry: '' as IndustryCode | '',
     annualRevenue: '',
     employeeCount: '',
     website: '',
@@ -85,6 +76,26 @@ export function CompanyInfoPage() {
     queryFn: () => getCorporate(corporateId!),
     enabled: !!corporateId,
   });
+
+  // Added (SOUPFIN-151): the tenant Account holds industry (chosen at registration)
+  // and the business type that decides which COA overlays apply. Not blocking:
+  // the form still renders and saves the corporate when this fails.
+  const tenantId = useAuthStore((state) => state.user?.tenantId);
+  const { data: account } = useQuery({
+    queryKey: ['accountSettings', tenantId],
+    queryFn: () => accountSettingsApi.get(),
+    retry: false,
+  });
+  const accountBusinessType: BusinessType | undefined =
+    account?.businessLicenceCategory === 'TRADING' || account?.businessLicenceCategory === 'SERVICES'
+      ? account.businessLicenceCategory
+      : undefined;
+
+  // Added (SOUPFIN-151): preselect the industry saved on the Account until the user
+  // picks one here. Picking the empty option falls back to the saved value, since
+  // Account.industry is only ever set, never cleared, from this page.
+  const savedIndustry: IndustryCode | '' = isIndustryCode(account?.industry) ? account.industry : '';
+  const industry: IndustryCode | '' = formData.industry || savedIndustry;
 
   // Added: Populate form with existing data
   /* eslint-disable-next-line -- Syncing fetched data to form state is a valid use case */
@@ -99,9 +110,17 @@ export function CompanyInfoPage() {
   }, [corporate]);
 
   // Added: Update mutation
+  // Changed (SOUPFIN-151): first writes a changed industry to Account.industry, the
+  // first-class field the COA template picker reads, then updates the corporate.
   const updateMutation = useMutation({
-    mutationFn: (data: Record<string, unknown>) => updateCorporate(corporateId!, data),
+    mutationFn: async (data: Record<string, unknown>) => {
+      if (account?.id && industry && industry !== account.industry) {
+        await accountSettingsApi.update({ id: account.id, industry });
+      }
+      return updateCorporate(corporateId!, data);
+    },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['accountSettings'] });
       queryClient.invalidateQueries({ queryKey: ['corporate', corporateId] });
       navigate(`/onboarding/directors?id=${corporateId}`);
     },
@@ -160,8 +179,10 @@ export function CompanyInfoPage() {
     updateMutation.mutate({
       address,
       // Extended fields stored as JSON metadata
+      // Changed (SOUPFIN-151): industry also goes to Account.industry (see mutationFn);
+      // kept here so the metadata blob stays complete for any reader of it.
       metadata: JSON.stringify({
-        industry: formData.industry,
+        industry,
         annualRevenue: formData.annualRevenue,
         employeeCount: formData.employeeCount,
         website: formData.website,
@@ -447,24 +468,13 @@ export function CompanyInfoPage() {
           </div>
           <div className="p-6 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <label className="flex flex-col gap-2">
-                <span className="text-sm font-medium text-text-light dark:text-text-dark">
-                  Industry Classification
-                </span>
-                <select
-                  name="industry"
-                  value={formData.industry}
-                  onChange={handleChange}
-                  className="h-12 px-4 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/20"
-                >
-                  <option value="">Select industry...</option>
-                  {INDUSTRY_OPTIONS.map((industry) => (
-                    <option key={industry} value={industry}>
-                      {industry}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              {/* Changed (SOUPFIN-151): shared industry codes, saved to Account.industry */}
+              <IndustrySelect
+                value={industry}
+                onChange={(next) => setFormData((prev) => ({ ...prev, industry: next }))}
+                businessType={accountBusinessType}
+                testId="company-info-industry"
+              />
 
               <label className="flex flex-col gap-2">
                 <span className="text-sm font-medium text-text-light dark:text-text-dark">

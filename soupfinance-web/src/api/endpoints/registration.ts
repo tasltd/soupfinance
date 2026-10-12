@@ -23,6 +23,7 @@
  * - POST /account/resetPassword.json - Reset password with token
  */
 import axios from 'axios';
+import type { IndustryCode } from '../../utils/industry';
 
 // Axios instance for /account/ endpoints (public, unauthenticated)
 // Uses empty baseURL so requests go through the proxy which injects Api-Authorization
@@ -70,6 +71,12 @@ export interface TenantRegistration {
   country?: string;
   /** Base currency for the tenant (auto-set from country, editable in settings) */
   currency?: string;
+  /**
+   * Added (SOUPFIN-151): industry code, stored on Account.industry. Optional;
+   * also selects the COA industry overlay when one applies to the business type.
+   * Empty string means "not chosen" and is dropped from the request body.
+   */
+  industry?: IndustryCode | '';
   /**
    * Admin password.
    * Sent unconditionally; backend rejects when `requireEmailConfirmation = true`
@@ -172,9 +179,13 @@ export interface ConfirmationResponse {
  * ```
  */
 export async function registerTenant(data: TenantRegistration): Promise<RegistrationResponse> {
+  // Added (SOUPFIN-151): an unchosen industry is omitted rather than sent as '',
+  // which the backend's inList constraint would reject.
+  const { industry, ...rest } = data;
+  const body = industry ? { ...rest, industry } : rest;
   const response = await accountApiClient.post<RegistrationResponse>(
     '/account/register.json',
-    data
+    body
   );
 
   return response.data;

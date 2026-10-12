@@ -140,5 +140,30 @@
     "directorAdded": "Director added successfully",
     "directorUpdated": "Director updated successfully",
     "directorRemoved": "Director removed"
+  },
+  "industry": {
+    "label": "Industry",
+    "optional": "(optional)",
+    "placeholder": "Select your industry",
+    "overlayHint": "Your chart of accounts will include extra accounts for this industry.",
+    "noOverlayHint": "Your chart of accounts uses the standard template for your business type.",
+    "options": {
+      "agriculture": "Agriculture and farming",
+      "construction": "Construction and real estate",
+      "education": "Education and training",
+      "energy": "Energy and utilities",
+      "financial-services": "Financial services",
+      "healthcare": "Healthcare and pharmaceuticals",
+      "hospitality": "Hospitality and tourism",
+      "manufacturing": "Manufacturing",
+      "mining": "Mining and natural resources",
+      "non-profit": "Non-profit",
+      "professional-services": "Professional services",
+      "retail": "Retail and wholesale",
+      "saas": "Software, SaaS and IT",
+      "telecommunications": "Telecommunications",
+      "transportation": "Transport and logistics",
+      "other": "Other"
+    }
   }
 }

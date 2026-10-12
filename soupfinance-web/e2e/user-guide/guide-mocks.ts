@@ -554,6 +554,9 @@ export async function installGuideMocks(page: Page) {
   );
   await page.route('**/rest/user/current.json*', fulfil(guideUser));
   await page.route('**/account/show/*.json*', fulfil(accountSettings));
+  // Added (SOUPFIN-151): Company Information saves a changed industry to the Account
+  await page.route('**/account/edit/*.json*', fulfil({ ...accountSettings, SYNCHRONIZER_TOKEN: 'guide-csrf', SYNCHRONIZER_URI: '/account/update' }));
+  await page.route('**/account/update/*.json*', fulfil(accountSettings));
 
   // --- reference data -------------------------------------------------------
   await page.route('**/rest/paymentMethod/index.json*', fulfil(paymentMethods));

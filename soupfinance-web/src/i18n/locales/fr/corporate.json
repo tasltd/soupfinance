@@ -140,5 +140,30 @@
     "directorAdded": "Dirigeant ajouté avec succès",
     "directorUpdated": "Dirigeant mis à jour avec succès",
     "directorRemoved": "Dirigeant supprimé"
+  },
+  "industry": {
+    "label": "Secteur d'activité",
+    "optional": "(facultatif)",
+    "placeholder": "Sélectionnez votre secteur",
+    "overlayHint": "Votre plan comptable inclura des comptes supplémentaires propres à ce secteur.",
+    "noOverlayHint": "Votre plan comptable utilise le modèle standard de votre type d'activité.",
+    "options": {
+      "agriculture": "Agriculture et élevage",
+      "construction": "Construction et immobilier",
+      "education": "Éducation et formation",
+      "energy": "Énergie et services publics",
+      "financial-services": "Services financiers",
+      "healthcare": "Santé et pharmacie",
+      "hospitality": "Hôtellerie et tourisme",
+      "manufacturing": "Industrie manufacturière",
+      "mining": "Mines et ressources naturelles",
+      "non-profit": "Organisation à but non lucratif",
+      "professional-services": "Services professionnels",
+      "retail": "Commerce de détail et de gros",
+      "saas": "Logiciels, SaaS et informatique",
+      "telecommunications": "Télécommunications",
+      "transportation": "Transport et logistique",
+      "other": "Autre"
+    }
   }
 }

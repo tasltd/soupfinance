@@ -871,6 +871,31 @@ export async function mockCorporateApi(
       body: JSON.stringify([]),
     });
   });
+
+  // Added (SOUPFIN-151): Company Information writes a changed industry to the
+  // tenant Account (CSRF from edit, then update) before updating the corporate.
+  // mockTokenValidationApi already serves /account/show for the same account.
+  await page.route('**/account/edit/*.json*', (route) => {
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: 'account-001',
+        name: 'Test Company',
+        SYNCHRONIZER_TOKEN: 'mock-csrf-token',
+        SYNCHRONIZER_URI: '/account/update',
+      }),
+    });
+  });
+
+  await page.route('**/account/update/*.json*', (route) => {
+    const body = (route.request().postDataJSON() ?? {}) as Record<string, unknown>;
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ id: 'account-001', name: 'Test Company', ...body }),
+    });
+  });
 }
 
 /**

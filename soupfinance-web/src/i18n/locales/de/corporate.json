@@ -140,5 +140,30 @@
     "directorAdded": "Geschäftsführer erfolgreich hinzugefügt",
     "directorUpdated": "Geschäftsführer erfolgreich aktualisiert",
     "directorRemoved": "Geschäftsführer entfernt"
+  },
+  "industry": {
+    "label": "Branche",
+    "optional": "(optional)",
+    "placeholder": "Wählen Sie Ihre Branche",
+    "overlayHint": "Ihr Kontenplan erhält zusätzliche Konten für diese Branche.",
+    "noOverlayHint": "Ihr Kontenplan verwendet die Standardvorlage für Ihren Geschäftstyp.",
+    "options": {
+      "agriculture": "Landwirtschaft",
+      "construction": "Bau und Immobilien",
+      "education": "Bildung und Schulung",
+      "energy": "Energie und Versorgung",
+      "financial-services": "Finanzdienstleistungen",
+      "healthcare": "Gesundheitswesen und Pharma",
+      "hospitality": "Gastgewerbe und Tourismus",
+      "manufacturing": "Fertigung",
+      "mining": "Bergbau und Rohstoffe",
+      "non-profit": "Gemeinnützige Organisation",
+      "professional-services": "Freiberufliche Dienstleistungen",
+      "retail": "Einzel- und Großhandel",
+      "saas": "Software, SaaS und IT",
+      "telecommunications": "Telekommunikation",
+      "transportation": "Transport und Logistik",
+      "other": "Sonstige"
+    }
   }
 }

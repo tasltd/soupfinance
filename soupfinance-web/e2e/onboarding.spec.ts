@@ -103,12 +103,12 @@ test.describe('Corporate Onboarding Flow', () => {
       const industrySelect = page.locator('select[name="industry"]');
       await expect(industrySelect).toBeVisible();
 
-      // Added: Verify some key industry options
+      // Changed (SOUPFIN-151): labels come from the corporate i18n namespace
       const options = await industrySelect.locator('option').allTextContents();
-      expect(options).toContain('Financial Services');
-      expect(options).toContain('Information Technology');
+      expect(options).toContain('Financial services');
+      expect(options).toContain('Software, SaaS and IT');
       expect(options).toContain('Manufacturing');
-      expect(options).toContain('Healthcare & Pharmaceuticals');
+      expect(options).toContain('Healthcare and pharmaceuticals');
     });
 
     test('can fill and submit company info', async ({ page }) => {
@@ -132,7 +132,7 @@ test.describe('Corporate Onboarding Flow', () => {
       await page.locator('input[name="physicalCountry"]').fill('United States');
 
       // Added: Select business details
-      await page.locator('select[name="industry"]').selectOption('Information Technology');
+      await page.locator('select[name="industry"]').selectOption('saas');
       await page.locator('select[name="annualRevenue"]').selectOption('1M_5M');
       await page.locator('select[name="employeeCount"]').selectOption('51_200');
 

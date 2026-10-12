@@ -124,6 +124,47 @@ describe('Registration API', () => {
       expect(result.success).toBe(true);
     });
 
+    // Added (SOUPFIN-151): industry is a first-class registration field
+    async function postedBody(registration: TenantRegistration) {
+      const mockPost = vi.fn().mockResolvedValue({ data: { success: true, message: 'ok' } });
+      (axios.create as ReturnType<typeof vi.fn>).mockReturnValue({
+        interceptors: { request: { use: vi.fn() }, response: { use: vi.fn() } },
+        post: mockPost,
+        get: vi.fn(),
+      });
+      vi.resetModules();
+      const { registerTenant: freshRegister } = await import('../registration');
+      const result = await freshRegister(registration);
+      expect(result.success).toBe(true);
+      expect(mockPost).toHaveBeenCalledTimes(1);
+      expect(mockPost.mock.calls[0][0]).toBe('/account/register.json');
+      return mockPost.mock.calls[0][1] as Record<string, unknown>;
+    }
+
+    const baseRegistration: TenantRegistration = {
+      companyName: 'Accra Retail Ltd',
+      businessType: 'TRADING',
+      adminFirstName: 'Ama',
+      adminLastName: 'Mensah',
+      email: 'ama@accraretail.com',
+      country: 'GH',
+      currency: 'GHS',
+    };
+
+    it('sends industry in the JSON body when one is chosen (SOUPFIN-151)', async () => {
+      const body = await postedBody({ ...baseRegistration, industry: 'retail' });
+      expect(body).toEqual({ ...baseRegistration, industry: 'retail' });
+    });
+
+    it('omits industry when it is empty or unset (SOUPFIN-151)', async () => {
+      const empty = await postedBody({ ...baseRegistration, industry: '' });
+      expect(empty).not.toHaveProperty('industry');
+      expect(empty).toEqual(baseRegistration);
+
+      const unset = await postedBody(baseRegistration);
+      expect(unset).not.toHaveProperty('industry');
+    });
+
     it('includes password in JSON body when provided (single-step registration)', async () => {
       // Added (2026-05-22): Single-step registration flow per
       // plans/soupfinance-disable-email-confirmation.md

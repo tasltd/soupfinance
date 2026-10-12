@@ -218,6 +218,10 @@ export interface AccountSettings {
   currency?: string;
   countryOfOrigin?: string;
   businessLicenceCategory?: BusinessLicenceCategory;
+  // Added (SOUPFIN-151): industry code (src/utils/industry.ts INDUSTRY_CODES), set at
+  // registration or on the onboarding Company Information step. Picks the COA overlay.
+  // Null until the backend field ships (plans/soupfin-151-industry-field-backend.md).
+  industry?: string | null;
   designation?: string;
   address?: string;
   location?: string;

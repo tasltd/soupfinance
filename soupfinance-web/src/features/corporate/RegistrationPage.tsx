@@ -19,6 +19,8 @@
  * - Admin name (first name, last name)
  * - Admin email
  * - Password + confirm password
+ *
+ * Optional: industry (SOUPFIN-151), which also picks the COA industry overlay.
  */
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -27,6 +29,8 @@ import { registerTenant } from '../../api/endpoints/registration';
 // Added (SOUPFIN-29): friendly fallback message instead of raw "Request failed with status code 400"
 import { getApiErrorMessage } from '../../api/errors';
 import type { TenantRegistration, BusinessType } from '../../api/endpoints/registration';
+// Added (SOUPFIN-151): industry is a first-class registration field
+import { IndustrySelect } from './IndustrySelect';
 // Changed: Import shared country/currency data from domainData (single source of truth)
 import {
   DEFAULT_COUNTRIES,
@@ -59,6 +63,7 @@ export function RegistrationPage() {
     email: '',
     country: '',
     currency: '',
+    industry: '',
     password: '',
   });
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -408,6 +413,14 @@ export function RegistrationPage() {
             </span>
           )}
         </label>
+
+        {/* Added (SOUPFIN-151): optional industry, sent as `industry` and used to pick the COA overlay */}
+        <IndustrySelect
+          value={formData.industry ?? ''}
+          onChange={(industry) => setFormData((prev) => ({ ...prev, industry }))}
+          businessType={formData.businessType}
+          testId="registration-industry"
+        />
 
         {/* Changed: Country selection - determines default currency (editable later in settings) */}
         <label className="flex flex-col gap-2">
