@@ -394,7 +394,13 @@ export async function createVoucher(data: CreateVoucherRequest): Promise<Voucher
  */
 export async function updateVoucher(id: string, data: Partial<CreateVoucherRequest>): Promise<Voucher> {
   // Build JSON body with nested objects for foreign keys
-  const { clientId, vendorId, cashAccountId, expenseAccountId, ...rest } = data;
+  // Fix (SOUPFIN-154): the voucher edit form now saves through here, so map
+  // every FK the create path maps. staffId, incomeAccountId and
+  // paymentMethodId used to be sent as flat strings, which Grails ignores.
+  const {
+    clientId, vendorId, staffId, cashAccountId, expenseAccountId, incomeAccountId, paymentMethodId,
+    ...rest
+  } = data;
   const body: Record<string, unknown> = {
     id,
     ...rest,
@@ -403,8 +409,11 @@ export async function updateVoucher(id: string, data: Partial<CreateVoucherReque
   // FK references as nested objects for JSON binding
   if (clientId) body.client = { id: clientId };
   if (vendorId) body.vendor = { id: vendorId };
+  if (staffId) body.staff = { id: staffId };
   if (cashAccountId) body.cashAccount = { id: cashAccountId };
   if (expenseAccountId) body.expenseAccount = { id: expenseAccountId };
+  if (incomeAccountId) body.incomeAccount = { id: incomeAccountId };
+  if (paymentMethodId) body.paymentMethod = { id: paymentMethodId };
 
   const response = await apiClient.put<Voucher>(
     `/voucher/update/${id}.json`,

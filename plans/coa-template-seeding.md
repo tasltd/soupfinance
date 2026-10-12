@@ -1,9 +1,25 @@
 # Chart of Accounts Templates & Tenant Seeding
 
 **Date**: 2026-10-06
-**Status**: PLANNED (TASCIM module "COA Templates & Tenant Seeding")
+**Status**: PLANNED (TASCIM module "COA Templates & Tenant Seeding"). Template data and reference checks are committed here; none of the backend work is built yet. See "Current status" below.
 **Problem**: Every new tenant opens Ledger → Chart of Accounts and sees "No accounts found — Your chart of accounts is empty."
 We already capture the company profile (business type, country, currency, industry), so the tenant should start with a COA built from its business template.
+
+### Current status (2026-10-12)
+
+This is the one place to read the COA seeding status. Other plans and the PRD link here instead of restating it (SOUPFIN-153).
+
+| Piece | Status | Evidence |
+|-------|--------|----------|
+| COA seeding at registration | **Partial.** A hard-coded TRADING or SERVICES chart is seeded, but it has the wrong shape (cause 1 below) | soupmarkets-web branch `authentication-base-on-multi-tenancy-descriminator`: `AccountRegistrationService.groovy:179` calls `createDefaultChartOfAccounts` (`:593`) |
+| Seeding existing tenants | **Partial.** Admin-only `POST /account/seedChartOfAccounts.json` and `/account/seedAllChartOfAccounts.json` reuse the same hard-coded chart, and skip any tenant that already has categories | same branch: `AccountController.groovy:531,556`, `AccountRegistrationService.groovy:653-703` |
+| Template data (SERVICES, TRADING, Ghana overlay, industries) — SOUPFIN-143 | **Data done, backend not built** | `plans/coa-templates/`; `node --test plans/coa-templates/coa-templates.test.mjs`. No `CoaTemplate` class exists in soupmarkets-web |
+| Template seeding inside `/account/register.json` — SOUPFIN-144 | Not started | — |
+| `applyTemplate` and `coaTemplate/index` endpoints — SOUPFIN-145 | **Contract done, backend not built** | `plans/soupfin-145-apply-template-endpoints.html`, `plans/coa-templates/apply.test.mjs` |
+| Backfill for tenants with an empty COA — SOUPFIN-146 | **Rules done, backend not built** | `plans/soupfin-146-coa-backfill.html`, `plans/coa-templates/backfill.test.mjs` |
+| Frontend: empty-state CTA and template picker — SOUPFIN-147 | Not started | — |
+| Frontend: blank render fallback — SOUPFIN-148 | In review | — |
+| Frontend: tell a module 403 from a role 403 — SOUPFIN-150 | In review | `api/errors.ts` |
 
 ---
 
@@ -24,7 +40,7 @@ We already capture the company profile (business type, country, currency, indust
 | 4 | **System accounts missing.** *(Corrected 2026-10-10, SOUPFIN-143.)* `LedgerAccountType` does **not** exist in the backend; the snippet in `soupmarkets-multi-invoice-payment.md` was never built. Posting finds A/R and A/P through `Account.defaultReceivableAccount`/`defaultPayableAccount`, then through categories named `OTHER ASSETS` / `OTHER LIABILITIES`. Service descriptions and tax entries look up other category names. SOUPFIN-143 introduces the enum and wires the FKs. | Backend | `Account.groovy:559-737`, `ServiceDescription.groovy:24-60`, `TaxEntry.groovy:35-55`; plan `plans/soupfin-143-coa-template-seed-data.html` |
 | 5 | **Frontend display gaps** (minor). (a) If accounts come back but none derives to a group in `GROUP_ORDER`, the page renders blank with no empty state. (b) A 403 caused by a missing role is labelled "Ledger module not available". (c) The empty state offers no way forward (no "Set up chart of accounts" CTA). | Frontend | `features/ledger/ChartOfAccountsPage.tsx:98-108`, `api/endpoints/ledger.ts:45-58`, `api/errors.ts:40-46,143-147` |
 
-**Conclusion**: this is mainly a backend gap. The COA template exists only on paper, in `plans/soupfinance-tenant-architecture-refactor.md:243-330` and `prd/features/ledger.md:92-115`. The frontend needs a template picker, a "set up COA" path for tenants that already exist, and better empty and error states.
+**Conclusion**: this is mainly a backend gap. The COA template exists only on paper, in `plans/soupfinance-tenant-architecture-refactor.md:243-332` and `prd/features/ledger.md:92-117`. The frontend needs a template picker, a "set up COA" path for tenants that already exist, and better empty and error states.
 
 ---
 
@@ -42,7 +58,7 @@ Each template account has a code, name, category, ledger group, parent code, `Le
 
 **System accounts every template must include**: Cash/Bank, Accounts Receivable, Accounts Payable, Tax Payable (per country), Undeposited Funds, Retained Earnings, Opening Balance Equity, Sales/Service Income, Discounts Given, FX Gain/Loss, Rounding. TRADING adds Inventory Asset and Cost of Goods Sold.
 
-The base account trees are already written in `plans/soupfinance-tenant-architecture-refactor.md:277-330` (codes 1000-6999). Reuse them.
+The base account trees are already written in `plans/soupfinance-tenant-architecture-refactor.md:279-332` (codes 1000-6999). Reuse them.
 
 ### 2.2 Seeding points
 
@@ -80,7 +96,7 @@ The base account trees are already written in `plans/soupfinance-tenant-architec
 | 8 | Frontend: tell a module-disabled 403 apart from a missing-role 403 on ledger endpoints | Frontend | Medium |
 | 9 | Registration + onboarding: capture industry as a first-class field and send it to the backend | Frontend+Backend | Medium |
 | 10 | Tests: unit tests (template picker, grouping fallback), mock E2E (empty → apply → populated), LXC integration test (a new registration has a COA with A/R and A/P) | Test | High |
-| 11 | Docs: correct `plans/soupfinance-tenant-architecture-refactor.md` (line 30 contradicts lines 430-431) and the PRD ledger section | Docs | Low |
+| 11 | Docs: correct `plans/soupfinance-tenant-architecture-refactor.md` (line 30 contradicted lines 430-431) and the PRD ledger section — done in SOUPFIN-153; those docs now link to the status table above | Docs | Low |
 
 ## 4. Acceptance criteria (overall)
 

@@ -240,7 +240,8 @@ export function JournalEntryPage() {
       }
 
       // Added: Navigate back to ledger transactions after successful save
-      navigate('/ledger/transactions');
+      // Changed (SOUPFIN-154): return to the register the entry is listed in
+      navigate('/accounting/transactions');
     } catch (error) {
       // Changed (SOUPFIN-9): use parseApiError so 403 ("module disabled")
       // shows a useful message instead of raw axios "Request failed..." text.
@@ -279,7 +280,8 @@ export function JournalEntryPage() {
             className="text-3xl font-black tracking-tight text-text-light dark:text-text-dark"
             data-testid="journal-entry-heading"
           >
-            {isEditMode ? 'Edit Journal Entry' : 'New Journal Entry'}
+            {/* Changed (SOUPFIN-154): a posted entry opened from View is not being edited */}
+            {!isEditMode ? 'New Journal Entry' : isReadOnly ? 'Journal Entry' : 'Edit Journal Entry'}
           </h1>
           <p className="text-subtle-text">
             {isReadOnly

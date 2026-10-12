@@ -137,6 +137,8 @@ const normalized = normalizeClientAccountResponse(response.data);
 
 The SoupFinance tenant runs a **SERVICES license category**, so several backend modules (Ledger, Accounting, Voucher, PaymentMethod) are **not enabled** and their endpoints return **403** — the same status the backend uses for "this user lacks the role". The frontend distinguishes the two so users see "ask your admin to enable Ledger" instead of `Request failed with status code 403`.
 
+**The body decides, not the URL (SOUPFIN-150).** A role failure (Spring Security, body `{"error":"Forbidden","status":403,"path":…}`) and a disabled module (module interceptor, body `{"error":"Finance module is not enabled for this tenant"}`) both return 403 on the same URL. `classifyForbiddenBody()` in `api/errors.ts` tells them apart; the URL list only decides when the body is empty. Mock the module gate with the interceptor's real body, never `{ error: 'Forbidden' }`. Backend `code` field plan: `plans/soupfin-150-forbidden-cause-code.md`.
+
 **Three overlapping error helpers exist.** They are not interchangeable — match the one already used by the feature you are editing, and prefer `api/errors.ts` for new code:
 
 | Module | Exports | Used by |
@@ -224,7 +226,7 @@ All domain types mirror soupmarkets-web Grails domain classes:
 - `PublicRoute`: Redirects to dashboard if already authenticated, waits for initialization
 - Routes follow REST conventions: `/invoices`, `/invoices/new`, `/invoices/:id`, `/invoices/:id/edit` — same shape for `/bills`, `/vendors`, `/clients`
 - **Ledger and Accounting are separate route trees** (a frequent source of wrong E2E URLs): `/ledger/accounts` (Chart of Accounts) and `/ledger/transactions` vs `/accounting/transactions` (Transaction Register). There is no bare `/ledger` or `/accounting` route
-- Accounting routes use type-based URLs: `/accounting/voucher/payment`, `/accounting/voucher/receipt`, `/accounting/journal-entry/:id`
+- Accounting routes (SOUPFIN-154): new vouchers at `/accounting/voucher/payment` and `/accounting/voucher/receipt`; an existing voucher at `/accounting/vouchers/:id` (read-only) and `/accounting/vouchers/:id/edit`; journal entries at `/accounting/journal-entry/:id` and `/accounting/journal-entry/:id/edit`. There is no voucher list page: `/accounting/vouchers` redirects to `/accounting/transactions`, and voucher/JE saves return there
 - Reports: `/reports/pnl` (NOT `/reports/profit-loss`), `/reports/balance-sheet`, `/reports/cash-flow`, `/reports/aging` (single page for AR+AP, NOT `/reports/ar-aging`), `/reports/trial-balance`, `/reports/scheduled`
 - Settings are nested children of `/settings`: `account` (NOT `/settings/company` or `/settings/profile`), `users`, `bank-accounts`
 - Unmatched paths (`*`) redirect to `/dashboard` — a typo'd route silently lands on the dashboard rather than 404ing

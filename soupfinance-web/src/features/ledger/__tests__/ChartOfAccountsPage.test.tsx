@@ -9,7 +9,7 @@
  * 3. The empty state explains where a chart comes from and offers a refresh.
  *    SOUPFIN-147: it now leads with a "Set up your chart of accounts" call to
  *    action that opens the template picker.
- * 4. A role denial on the ledger renders as "access restricted", not
+ * 4. A role denial on the ledger renders as "You do not have permission", not
  *    "module not available" (SOUPFIN-150).
  */
 import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
@@ -205,7 +205,8 @@ describe('ChartOfAccountsPage (SOUPFIN-142)', () => {
     expect(applyCoaTemplate).toHaveBeenLastCalledWith({ template: 'services', overlays: [], dryRun: false });
   });
 
-  it('labels a role denial as access restricted, not module unavailable', async () => {
+  // Changed (SOUPFIN-150 on main): a role denial reads "You do not have permission"
+  it('labels a role denial as a permission problem, not module unavailable', async () => {
     vi.mocked(listAllLedgerAccounts).mockRejectedValue(
       axios403('/ledgerAccount/index.json', { error: 'Forbidden' })
     );
@@ -213,8 +214,8 @@ describe('ChartOfAccountsPage (SOUPFIN-142)', () => {
 
     const card = await screen.findByTestId('coa-error');
     expect(card).toHaveAttribute('data-error-kind', 'forbidden');
-    expect(card).toHaveTextContent('Ledger access restricted');
-    expect(card).toHaveTextContent('Your role does not include access to the Ledger.');
+    expect(card).toHaveTextContent('You do not have permission');
+    expect(card).toHaveTextContent('Your account does not have permission to use Ledger.');
     expect(card).not.toHaveTextContent('module is not available');
   });
 

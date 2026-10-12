@@ -8,6 +8,10 @@
  * The Grails backend returns 403 when a module is disabled for a tenant (Ledger,
  * Accounting, Voucher, PaymentMethod). This module recognises those endpoints and
  * surfaces a "module not enabled" message that points at the admin instead of a stack trace.
+ *
+ * Changed (SOUPFIN-150): the same 403 status also comes from Spring Security when the
+ * user lacks a role (e.g. ROLE_LEDGER_ACCOUNT). The two are told apart by the BODY,
+ * not the URL — see classifyForbiddenBody().
  */
 import type { AxiosError } from 'axios';
 
@@ -59,6 +63,75 @@ function moduleForUrl(url: string | undefined): string | null {
 }
 
 /**
+ * Why a 403 happened, as far as the response body says (SOUPFIN-150).
+ *  - module_disabled: a module gating interceptor (Finance/Trading/Cis/Souplify)
+ *    rejected the controller because the tenant lacks that module.
+ *  - role_denied: Spring Security rejected the request because the user lacks a role.
+ *  - unknown: the body carries no signal (empty, `{}`, an HTML page); the caller
+ *    falls back to the URL.
+ */
+export type ForbiddenCause = 'module_disabled' | 'role_denied' | 'unknown';
+
+export interface ForbiddenClassification {
+  cause: ForbiddenCause;
+  /** Module name the backend reported, e.g. "Finance" (module_disabled only). */
+  backendModule?: string;
+}
+
+// The module interceptors render `{"error": "<Name> module is not enabled for this tenant"}`
+// (soupmarkets-web FinanceModuleInterceptor and siblings). Plain text for non-JSON requests.
+const MODULE_NOT_ENABLED = /^\s*(.+?)\s+module is not enabled\b/i;
+
+// Spring Security answers a role failure with response.sendError(403), which Spring Boot
+// renders as `{"timestamp":…,"status":403,"error":"Forbidden","path":"/rest/…"}`
+// (verified against the LXC backend, 2026-10-12). Some setups add `message: "Access Denied"`.
+const SPRING_DENIAL_TEXT = /^(forbidden|access denied|access is denied)$/i;
+
+/**
+ * Read the cause of a 403 from its response body. The body is the only reliable
+ * signal: the module gate and the role check both answer 403 on the same URLs.
+ *
+ * The backend plan in plans/soupfin-150-forbidden-cause-code.md adds an explicit
+ * `code` field; it is honoured here first so the text match becomes the fallback
+ * the day that ships.
+ */
+export function classifyForbiddenBody(data: unknown): ForbiddenClassification {
+  if (data == null) return { cause: 'unknown' };
+
+  const texts: string[] = [];
+  if (typeof data === 'string') {
+    texts.push(data);
+  } else if (typeof data === 'object') {
+    const obj = data as Record<string, unknown>;
+    const code = typeof obj.code === 'string' ? obj.code.toUpperCase() : '';
+    if (code === 'MODULE_DISABLED') {
+      const module = typeof obj.module === 'string' && obj.module ? obj.module : undefined;
+      return { cause: 'module_disabled', backendModule: module ? capitalise(module) : undefined };
+    }
+    if (code === 'ROLE_DENIED' || code === 'ACCESS_DENIED') return { cause: 'role_denied' };
+    for (const key of ['error', 'message', 'errorMessage', 'detail']) {
+      if (typeof obj[key] === 'string') texts.push(obj[key] as string);
+    }
+  } else {
+    return { cause: 'unknown' };
+  }
+
+  for (const text of texts) {
+    const match = MODULE_NOT_ENABLED.exec(text);
+    if (match) return { cause: 'module_disabled', backendModule: match[1] };
+  }
+  if (texts.some((text) => SPRING_DENIAL_TEXT.test(text.trim()))) {
+    return { cause: 'role_denied' };
+  }
+  return { cause: 'unknown' };
+}
+
+/** "FINANCE" → "Finance"; leaves mixed-case names such as "CIS/Funds" alone. */
+function capitalise(name: string): string {
+  return name === name.toUpperCase() ? name.charAt(0) + name.slice(1).toLowerCase() : name;
+}
+
+/**
  * Extract a server-provided message from a Grails error payload, if any.
  * Backend may return `{ error: "..." }`, `{ message: "..." }`, or a plain string.
  */
@@ -92,22 +165,12 @@ const GENERIC_AUTH_FAILURE_PHRASES = [
   'authentication error',
   'access denied',
   'access_denied',
-  'access is denied', // Added (SOUPFIN-150): Spring Security AccessDeniedException default
   'invalid_grant',
   'invalid_request',
   'invalid token',
   'no message available',
   'forbidden',
 ];
-
-/**
- * Added (SOUPFIN-150): does a 403 body say the tenant's module is switched off?
- * Matches the module interceptors ("Finance module is not enabled for this tenant")
- * and the licence wording ("Module not enabled for this license category").
- */
-function isModuleDisabledMessage(message: string): boolean {
-  return /\bnot enabled\b/i.test(message) || /\bmodule\b.*\b(disabled|not available|unavailable)\b/i.test(message);
-}
 
 /** True when a server message is a generic auth-failure code rather than a helpful sentence. */
 function isGenericAuthFailure(message: string): boolean {
@@ -120,8 +183,7 @@ function isGenericAuthFailure(message: string): boolean {
  * with a human-readable title and message.
  *
  * Tests must cover: 403 on ledger URL → module_disabled, 403 on ledger URL with a
- * role-denial body → forbidden (SOUPFIN-150), 403 on other URL → forbidden,
- * 500 → server_error, network failure → network, unknown → unknown.
+ * Spring Security body → forbidden (SOUPFIN-150), 403 on other URL → forbidden, 500 → server_error, network failure → network, unknown → unknown.
  */
 export function parseApiError(error: unknown): ParsedApiError {
   // AxiosError path — preferred because we have status + url.
@@ -154,31 +216,33 @@ export function parseApiError(error: unknown): ParsedApiError {
     }
 
     if (status === 403) {
-      const moduleName = moduleForUrl(url);
-      // Fix (SOUPFIN-150): a 403 on a gated URL is "module disabled" only when the
-      // body says so (FinanceModuleInterceptor renders "Finance module is not enabled
-      // for this tenant"). Spring Security's role denial on the same URL returns
-      // "Forbidden" / "Access Denied" — that is a missing role, not a missing module.
-      // An empty body stays module_disabled: it carries no evidence either way.
-      if (moduleName && serverMessage && !isModuleDisabledMessage(serverMessage)) {
+      // Changed (SOUPFIN-150): the body decides first. The URL only decides when
+      // the body says nothing — a ledger URL no longer implies "module disabled".
+      const urlModule = moduleForUrl(url);
+      const { cause, backendModule } = classifyForbiddenBody(axErr.response.data);
+      if (cause === 'module_disabled' || (cause === 'unknown' && urlModule)) {
+        const moduleName = urlModule ?? backendModule;
         return {
-          kind: 'forbidden',
-          title: `${moduleName} access restricted`,
-          message: isGenericAuthFailure(serverMessage)
-            ? `Your role does not include access to the ${moduleName}.`
-            : serverMessage,
-          actionHint: `Ask an administrator to add ${moduleName} access to your role.`,
+          kind: 'module_disabled',
+          title: moduleName ? `${moduleName} module is not available` : 'Module is not available',
+          message: moduleName
+            ? `Your account does not have access to the ${moduleName} module yet. ` +
+              `This feature requires the ${moduleName} module to be enabled for your tenant.`
+            : 'This feature requires a module that is not enabled for your tenant.',
+          actionHint: 'Contact your administrator to enable this module for your organisation.',
           status,
         };
       }
-      if (moduleName) {
+      // Changed (SOUPFIN-150): a role denial gets the "ask your admin" copy. Spring's
+      // own text ("Forbidden", "Access Denied") is jargon and is never shown.
+      if (cause === 'role_denied') {
         return {
-          kind: 'module_disabled',
-          title: `${moduleName} module is not available`,
-          message:
-            `Your account does not have access to the ${moduleName} module yet. ` +
-            `This feature requires the ${moduleName} module to be enabled for your tenant.`,
-          actionHint: 'Contact your administrator to enable this module for your organisation.',
+          kind: 'forbidden',
+          title: 'You do not have permission',
+          message: urlModule
+            ? `Your account does not have permission to use ${urlModule}.`
+            : 'Your account does not have permission to perform this action.',
+          actionHint: 'Ask your administrator to give your account access.',
           status,
         };
       }
@@ -186,7 +250,7 @@ export function parseApiError(error: unknown): ParsedApiError {
         kind: 'forbidden',
         title: 'You do not have permission',
         message:
-          serverMessage ||
+          (serverMessage && !isGenericAuthFailure(serverMessage) ? serverMessage : null) ||
           'Your account does not have permission to perform this action.',
         actionHint: 'If you believe this is a mistake, contact your administrator.',
         status,

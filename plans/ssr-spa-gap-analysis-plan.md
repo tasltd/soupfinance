@@ -796,7 +796,7 @@ Each process below documents the complete user journey, every data input, all FK
 | `security` | FK | no | `Security` | **N/A** (trading) |
 
 **FK Domain Dependencies**:
-1. `LedgerAccountCategory` → categories must exist (auto-seeded on registration)
+1. `LedgerAccountCategory` → categories must exist. Registration seeds a hard-coded set (9 categories for SERVICES) on the multi-tenancy branch; tenants created earlier have none unless an admin runs `/account/seedChartOfAccounts`. The template-based seeding is planned, not built — see [`coa-template-seeding.md`](coa-template-seeding.md) (corrected 2026-10-12, SOUPFIN-153)
 2. `LedgerAccount` (self-ref) → parent account for hierarchy
 
 **Design Reference**: `general-ledger-entries`, `gl-transactions-base-page`
@@ -1215,7 +1215,7 @@ For a new user setting up the system, modules must be created in this order:
 ```
 1. Account Settings (UP-13)     ← company info, default currency
 2. Financial Year (UP-16)       ← accounting periods
-3. Ledger Account Category (UP-19) ← auto-seeded, but customizable
+3. Ledger Account Category (UP-19) ← seeded at registration (hard-coded, see coa-template-seeding.md), but customizable
 4. Chart of Accounts (UP-08)    ← accounts within categories
 5. Bank Details (UP-14)         ← links to ledger accounts
 6. Tax Entry (UP-17)            ← tax rates

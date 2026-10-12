@@ -246,3 +246,59 @@ describe('ledger account transform (SOUPFIN-30)', () => {
     });
   });
 });
+
+// Added (SOUPFIN-154): the voucher edit form saves through updateVoucher, so it
+// must send every FK as a nested object the way createVoucher does.
+describe('updateVoucher FK binding (SOUPFIN-154)', () => {
+  let mockPut: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockPut = vi.fn().mockResolvedValue({ data: { id: 'v1' } });
+    (axios.create as ReturnType<typeof vi.fn>).mockReturnValue({
+      interceptors: { request: { use: vi.fn() }, response: { use: vi.fn() } },
+      get: vi.fn(),
+      post: vi.fn(),
+      put: mockPut,
+      delete: vi.fn(),
+    });
+  });
+
+  it('sends staff, income account and payment method as nested FKs', async () => {
+    vi.resetModules();
+    const { updateVoucher } = await import('../ledger');
+    await updateVoucher('v1', {
+      voucherType: 'RECEIPT',
+      voucherTo: 'STAFF',
+      amount: 1250,
+      notes: 'Refund',
+      staffId: 's1',
+      cashAccountId: 'acc-cash',
+      incomeAccountId: 'acc-income',
+      paymentMethodId: 'pm-1',
+    });
+
+    const [url, body] = mockPut.mock.calls[0];
+    expect(url).toBe('/voucher/update/v1.json');
+    expect(body).toEqual({
+      id: 'v1',
+      voucherType: 'RECEIPT',
+      voucherTo: 'STAFF',
+      amount: 1250,
+      notes: 'Refund',
+      staff: { id: 's1' },
+      cashAccount: { id: 'acc-cash' },
+      incomeAccount: { id: 'acc-income' },
+      paymentMethod: { id: 'pm-1' },
+    });
+    // No flat *Id keys leak through: Grails would ignore them silently.
+    expect(Object.keys(body).filter((k) => k.endsWith('Id'))).toEqual([]);
+  });
+
+  it('omits FKs that were not given', async () => {
+    vi.resetModules();
+    const { updateVoucher } = await import('../ledger');
+    await updateVoucher('v2', { notes: 'Only the description changed' });
+    expect(mockPut.mock.calls[0][1]).toEqual({ id: 'v2', notes: 'Only the description changed' });
+  });
+});

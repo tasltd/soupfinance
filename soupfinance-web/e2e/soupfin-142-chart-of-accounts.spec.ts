@@ -211,7 +211,7 @@ test.describe('SOUPFIN-142: Chart of Accounts shows the seeded chart', () => {
     await shot(page, 'coa-after-refresh');
   });
 
-  test('a role denial reads "access restricted", the module 403 still reads "not available"', async ({ page }) => {
+  test('a role denial reads "no permission", the module 403 still reads "not available"', async ({ page }) => {
     let body: unknown = { error: 'Forbidden' };
     await page.route('**/rest/ledgerAccount/index.json*', (route) =>
       route.fulfill({ status: 403, contentType: 'application/json', body: JSON.stringify(body) })
@@ -220,9 +220,10 @@ test.describe('SOUPFIN-142: Chart of Accounts shows the seeded chart', () => {
 
     const card = page.getByTestId('coa-error');
     await expect(card).toHaveAttribute('data-error-kind', 'forbidden');
-    await expect(page.getByTestId('coa-error-title')).toHaveText('Ledger access restricted');
-    await expect(card).toContainText('Your role does not include access to the Ledger.');
-    await expect(card).toContainText('Ask an administrator to add Ledger access to your role.');
+    // Changed (SOUPFIN-150 on main): the role-denial wording
+    await expect(page.getByTestId('coa-error-title')).toHaveText('You do not have permission');
+    await expect(card).toContainText('Your account does not have permission to use Ledger.');
+    await expect(card).toContainText('Ask your administrator to give your account access.');
     await shot(page, 'coa-403-missing-role');
 
     // The interceptor's own wording is still a module problem
