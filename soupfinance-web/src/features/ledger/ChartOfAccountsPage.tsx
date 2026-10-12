@@ -7,7 +7,7 @@
  * Added: Loading, error, and empty states
  * Added: data-testid attributes for E2E testing
  */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { listLedgerAccounts } from '../../api/endpoints/ledger';
 import { useFormatCurrency } from '../../stores';
@@ -15,25 +15,37 @@ import { ApiErrorState } from '../../components/feedback';
 import type { LedgerAccount, LedgerGroup } from '../../types';
 // Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
 import { HelpLink } from '../../components/help';
+import { logger } from '../../utils/logger';
+
+// Fix (SOUPFIN-148): Accounts whose category maps to no known ledger group are
+// listed here instead of being dropped, so the page is never blank.
+type CoaGroupKey = LedgerGroup | 'UNCATEGORISED';
 
 // Added: Group configuration with colors and icons
-const GROUP_CONFIG: Record<LedgerGroup, { label: string; icon: string; colorClass: string }> = {
+const GROUP_CONFIG: Record<CoaGroupKey, { label: string; icon: string; colorClass: string }> = {
   ASSET: { label: 'Assets', icon: 'account_balance', colorClass: 'text-info bg-info/10' },
   LIABILITY: { label: 'Liabilities', icon: 'credit_card', colorClass: 'text-danger bg-danger/10' },
   EQUITY: { label: 'Equity', icon: 'balance', colorClass: 'text-purple-600 dark:text-purple-400 bg-purple-100 dark:bg-purple-900/30' },
   INCOME: { label: 'Income', icon: 'trending_up', colorClass: 'text-success bg-success/10' },
   REVENUE: { label: 'Revenue', icon: 'trending_up', colorClass: 'text-success bg-success/10' },
   EXPENSE: { label: 'Expenses', icon: 'trending_down', colorClass: 'text-warning bg-warning/10' },
+  UNCATEGORISED: { label: 'Uncategorised', icon: 'help', colorClass: 'text-subtle-text bg-subtle-text/10' },
 };
 
 // Added: Order for displaying groups
-const GROUP_ORDER: LedgerGroup[] = ['ASSET', 'LIABILITY', 'EQUITY', 'INCOME', 'REVENUE', 'EXPENSE'];
+const GROUP_ORDER: CoaGroupKey[] = ['ASSET', 'LIABILITY', 'EQUITY', 'INCOME', 'REVENUE', 'EXPENSE', 'UNCATEGORISED'];
+
+// Fix (SOUPFIN-148): Section an account belongs in; anything unrecognised is Uncategorised.
+function coaGroupOf(account: LedgerAccount): CoaGroupKey {
+  const group = account.ledgerGroup as CoaGroupKey | undefined;
+  return group && group !== 'UNCATEGORISED' && Object.prototype.hasOwnProperty.call(GROUP_CONFIG, group) ? group : 'UNCATEGORISED';
+}
 
 export function ChartOfAccountsPage() {
   const formatCurrency = useFormatCurrency();
 
   // Added: Track expanded groups
-  const [expandedGroups, setExpandedGroups] = useState<Set<LedgerGroup>>(new Set(GROUP_ORDER));
+  const [expandedGroups, setExpandedGroups] = useState<Set<CoaGroupKey>>(new Set(GROUP_ORDER));
 
   // Added: Fetch accounts from API
   // NOTE: do not retry on 403 (module-disabled is permanent until admin enables it)
@@ -49,17 +61,32 @@ export function ChartOfAccountsPage() {
 
   // Added: Group accounts by ledgerGroup
   // Changed: Use Partial type for groupedAccounts to handle potentially missing groups
-  const groupedAccounts: Partial<Record<LedgerGroup, LedgerAccount[]>> = accounts?.reduce((acc, account) => {
-    const group = account.ledgerGroup;
+  // Fix (SOUPFIN-148): Unknown groups go to UNCATEGORISED instead of a key no section renders
+  const groupedAccounts: Partial<Record<CoaGroupKey, LedgerAccount[]>> = accounts?.reduce((acc, account) => {
+    const group = coaGroupOf(account);
     if (!acc[group]) {
       acc[group] = [];
     }
     acc[group].push(account);
     return acc;
-  }, {} as Record<LedgerGroup, LedgerAccount[]>) ?? {};
+  }, {} as Partial<Record<CoaGroupKey, LedgerAccount[]>>) ?? {};
+
+  // Fix (SOUPFIN-148): Report each category string we could not map, once per data load,
+  // so a new backend group shows up in the logs rather than as a silently odd page.
+  useEffect(() => {
+    const unknown = new Set<string>();
+    accounts?.forEach((account) => {
+      if (coaGroupOf(account) !== 'UNCATEGORISED') return;
+      const serialised = (account.ledgerAccountCategory as { serialised?: string } | undefined)?.serialised;
+      unknown.add(serialised || '(no category)');
+    });
+    if (unknown.size > 0) {
+      logger.warn('Chart of Accounts: unknown ledger account categories', JSON.stringify(Array.from(unknown)));
+    }
+  }, [accounts]);
 
   // Added: Toggle group expansion
-  const toggleGroup = (group: LedgerGroup) => {
+  const toggleGroup = (group: CoaGroupKey) => {
     setExpandedGroups(prev => {
       const next = new Set(prev);
       if (next.has(group)) {

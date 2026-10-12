@@ -32,25 +32,58 @@ import type {
 // from the category's serialised string.
 const KNOWN_LEDGER_GROUPS: LedgerGroup[] = ['ASSET', 'LIABILITY', 'EQUITY', 'INCOME', 'EXPENSE', 'REVENUE'];
 
+// Fix (SOUPFIN-148): Backend LedgerGroup/LedgerSubGroup tokens mapped to the
+// group the frontend shows. The backend enum also has SHARES and DIVIDENDS, both
+// with PARENT = EQUITY, so they belong in Equity rather than nowhere.
+const BACKEND_GROUP_TOKENS: Record<string, LedgerGroup> = {
+  ASSET: 'ASSET',
+  LIABILITY: 'LIABILITY',
+  EQUITY: 'EQUITY',
+  INCOME: 'INCOME',
+  REVENUE: 'REVENUE',
+  EXPENSE: 'EXPENSE',
+  SHARES: 'EQUITY',
+  DIVIDENDS: 'EQUITY',
+};
+
+// Fix (SOUPFIN-148): Subgroups that the backend nests under EQUITY but that the
+// Chart of Accounts lists in their own section (LedgerSubGroup INCOME/EXPENSE).
+const EQUITY_NESTED_SUBGROUPS: Record<string, LedgerGroup> = {
+  INCOME: 'INCOME',
+  EXPENSE: 'EXPENSE',
+};
+
 /**
  * Fix (SOUPFIN-30 #8): Derive the LedgerGroup from a raw ledger account.
  *
  * The backend does NOT send a top-level `ledgerGroup`. It sends
  * `ledgerAccountCategory` as a Grails FK reference whose `serialised` string is
- * produced by LedgerAccountCategory.toString() and always *ends* with the group
- * enum, e.g. "Short-term Liabilities < LIABILITY". We read the last segment
- * after the final ` < ` and match it against the known groups (falling back to
- * a whole-string scan for safety).
+ * produced by LedgerAccountCategory.toString():
+ *   "Name[ < Parent][ < LedgerSubGroup][ < LedgerGroupType] < LedgerGroup"
+ * e.g. "Short-term Liabilities < LIABILITY" or
+ *      "Revenue < INCOME < RETAINED_EARNINGS < EQUITY".
+ *
+ * Fix (SOUPFIN-148): The last segment is the LedgerGroup. When it is EQUITY, an
+ * INCOME or EXPENSE subgroup token wins, because the backend only allows a
+ * subgroup under EQUITY and the page shows income and expense on their own.
+ * SHARES and DIVIDENDS map to EQUITY. Subgroup tokens are matched exactly
+ * (enum names are upper case) so a parent category named "Income" is not read
+ * as one.
  */
 export function deriveLedgerGroup(raw: Partial<LedgerAccount>): LedgerGroup | undefined {
   // Prefer an already-present group (e.g. mock data / future backend field).
-  if (raw.ledgerGroup && KNOWN_LEDGER_GROUPS.includes(raw.ledgerGroup)) {
-    return raw.ledgerGroup;
-  }
+  const direct = raw.ledgerGroup ? BACKEND_GROUP_TOKENS[String(raw.ledgerGroup).toUpperCase()] : undefined;
+  if (direct) return direct;
   const serialised = (raw.ledgerAccountCategory as { serialised?: string } | undefined)?.serialised || '';
   if (!serialised) return undefined;
-  const lastSegment = serialised.split('<').pop()?.trim().toUpperCase() || '';
-  const exact = KNOWN_LEDGER_GROUPS.find((g) => g === lastSegment);
+  const segments = serialised.split('<').map((segment) => segment.trim());
+  const lastSegment = segments[segments.length - 1]?.toUpperCase() || '';
+  const exact = BACKEND_GROUP_TOKENS[lastSegment];
+  if (exact === 'EQUITY' && segments.length > 2) {
+    // Segment 0 is the category name; the subgroup sits between it and the group.
+    const nested = segments.slice(1, -1).map((segment) => EQUITY_NESTED_SUBGROUPS[segment]).find(Boolean);
+    if (nested) return nested;
+  }
   if (exact) return exact;
   // Fallback: scan the whole serialised string for any known group token.
   const upper = serialised.toUpperCase();

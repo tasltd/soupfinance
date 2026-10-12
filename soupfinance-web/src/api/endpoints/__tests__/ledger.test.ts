@@ -61,6 +61,28 @@ describe('ledger account transform (SOUPFIN-30)', () => {
       expect(deriveLedgerGroup(rawAccount({ ledgerAccountCategory: { serialised: 'Cost of Sales < EXPENSE' } }))).toBe('EXPENSE');
     });
 
+    // Added (SOUPFIN-148): backend groups SHARES/DIVIDENDS and EQUITY-nested subgroups
+    it('maps SHARES and DIVIDENDS to EQUITY', async () => {
+      vi.resetModules();
+      const { deriveLedgerGroup } = await import('../ledger');
+      expect(deriveLedgerGroup(rawAccount({ ledgerAccountCategory: { serialised: 'Share Capital < SHARES' } }))).toBe('EQUITY');
+      expect(deriveLedgerGroup(rawAccount({ ledgerAccountCategory: { serialised: 'Dividends Paid < DIVIDENDS' } }))).toBe('EQUITY');
+      expect(deriveLedgerGroup(rawAccount({ ledgerAccountCategory: { serialised: 'Premium < SHARES < EQUITY' } }))).toBe('EQUITY');
+      expect(deriveLedgerGroup({ ledgerGroup: 'SHARES' } as unknown as LedgerAccount)).toBe('EQUITY');
+    });
+
+    it('reads an INCOME or EXPENSE subgroup nested under EQUITY', async () => {
+      vi.resetModules();
+      const { deriveLedgerGroup } = await import('../ledger');
+      expect(deriveLedgerGroup(rawAccount({ ledgerAccountCategory: { serialised: 'Revenue < INCOME < RETAINED_EARNINGS < EQUITY' } }))).toBe('INCOME');
+      expect(deriveLedgerGroup(rawAccount({ ledgerAccountCategory: { serialised: 'Operating Costs < EXPENSE < RETAINED_EARNINGS < EQUITY' } }))).toBe('EXPENSE');
+      expect(deriveLedgerGroup(rawAccount({ ledgerAccountCategory: { serialised: 'Retained Earnings < RETAINED_EARNINGS < EQUITY' } }))).toBe('EQUITY');
+      // A parent category *named* "Income" is not a subgroup token.
+      expect(deriveLedgerGroup(rawAccount({ ledgerAccountCategory: { serialised: 'Reserves < Income < EQUITY' } }))).toBe('EQUITY');
+      // A subgroup only counts under EQUITY; the trailing group stays authoritative.
+      expect(deriveLedgerGroup(rawAccount({ ledgerAccountCategory: { serialised: 'Deferred < INCOME < LIABILITY' } }))).toBe('LIABILITY');
+    });
+
     it('prefers an already-present valid ledgerGroup', async () => {
       vi.resetModules();
       const { deriveLedgerGroup } = await import('../ledger');
