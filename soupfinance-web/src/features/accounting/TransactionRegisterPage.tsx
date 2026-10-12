@@ -8,7 +8,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 // Added: Import useTransactions hook for API data fetching
-import { useTransactions, type UnifiedTransaction } from '../../hooks/useTransactions';
+import { useTransactions, TRANSACTION_TYPE_LABELS, type UnifiedTransaction } from '../../hooks/useTransactions';
 // Added: API imports for transaction actions
 // Changed: Removed unused imports (postLedgerTransaction, reverseLedgerTransaction, deleteLedgerTransaction)
 // These single-transaction methods are not used - we use group/voucher actions instead
@@ -38,7 +38,8 @@ import { HelpLink } from '../../components/help';
 // =============================================================================
 
 // Added: Transaction type for filtering (maps to source entity type)
-type TransactionType = 'JOURNAL_ENTRY' | 'PAYMENT' | 'RECEIPT' | 'ALL';
+// Changed (SOUPFIN-157): plus the contra and journal voucher types
+type TransactionType = UnifiedTransaction['type'] | 'ALL';
 
 // Added: Status filter options
 type TransactionStatus = 'ALL' | 'DRAFT' | 'PENDING' | 'POSTED' | 'REVERSED';
@@ -614,9 +615,10 @@ export function TransactionRegisterPage() {
                 data-testid="filter-type"
               >
                 <option value="ALL">All Types</option>
-                <option value="JOURNAL_ENTRY">Journal Entry</option>
-                <option value="PAYMENT">Payment</option>
-                <option value="RECEIPT">Receipt</option>
+                {/* Changed (SOUPFIN-157): one option per type, incl. contra and journal vouchers */}
+                {(Object.keys(TRANSACTION_TYPE_LABELS) as UnifiedTransaction['type'][]).map((type) => (
+                  <option key={type} value={type}>{TRANSACTION_TYPE_LABELS[type]}</option>
+                ))}
               </select>
             </div>
 
@@ -823,6 +825,13 @@ export function TransactionRegisterPage() {
                           >
                             {tx.transactionId}
                           </button>
+                          {/* Added (SOUPFIN-157): which kind of transaction the row is */}
+                          <span
+                            className="block text-xs text-subtle-text dark:text-subtle-text-dark"
+                            data-testid={`transaction-type-${tx.id}`}
+                          >
+                            {TRANSACTION_TYPE_LABELS[tx.type] ?? tx.type}
+                          </span>
                         </td>
                         {/* Added: Description column */}
                         <td
@@ -1063,9 +1072,10 @@ export function TransactionRegisterPage() {
                 data-testid="panel-filter-type"
               >
                 <option value="ALL">All Types</option>
-                <option value="JOURNAL_ENTRY">Journal Entry</option>
-                <option value="PAYMENT">Payment</option>
-                <option value="RECEIPT">Receipt</option>
+                {/* Changed (SOUPFIN-157): one option per type, incl. contra and journal vouchers */}
+                {(Object.keys(TRANSACTION_TYPE_LABELS) as UnifiedTransaction['type'][]).map((type) => (
+                  <option key={type} value={type}>{TRANSACTION_TYPE_LABELS[type]}</option>
+                ))}
               </select>
             </div>
 

@@ -359,8 +359,11 @@ export type JournalEntryType = 'DOUBLE_ENTRY' | 'SINGLE_ENTRY';
 // Added: Transaction direction for SINGLE_ENTRY mode
 export type LedgerState = 'DEBIT' | 'CREDIT';
 
-// Added: Voucher types for payment/receipt classification
-export type VoucherType = 'PAYMENT' | 'DEPOSIT' | 'RECEIPT';
+// Changed (SOUPFIN-157): the four accounting voucher types. PAYMENT = money out,
+// RECEIPT = money in, CONTRA = transfer between own bank/cash accounts,
+// JOURNAL = non-cash adjustment. The backend's legacy DEPOSIT is read as
+// RECEIPT (see normalizeVoucherType in features/accounting/voucherTypes.ts).
+export type VoucherType = 'PAYMENT' | 'RECEIPT' | 'CONTRA' | 'JOURNAL';
 
 // Added: Voucher beneficiary types
 export type VoucherTo = 'CLIENT' | 'VENDOR' | 'STAFF' | 'OTHER';
@@ -455,14 +458,16 @@ export interface Voucher extends BaseEntity {
   currency?: string; // Added: Transaction currency
   exchangeRate?: number; // Added: Exchange rate
 
-  // Bank/cash account for the payment/receipt
-  // Changed: Added code for account lookups in transaction register
-  cashAccount?: { id: string; name?: string; code?: string };
+  // Added (SOUPFIN-157): the backend's own names for the two sides of the
+  // entry, delegated from the underlying LedgerTransaction
+  debitLedgerAccount?: { id: string; name?: string; code?: string };
+  creditLedgerAccount?: { id: string; name?: string; code?: string };
 
-  // Expense/income account
-  // Changed: Added code for account lookups in transaction register
+  // Legacy flattened names, still used by older mocks. The backend has no
+  // such fields; read them only as a fallback for debit/credit.
+  cashAccount?: { id: string; name?: string; code?: string };
   expenseAccount?: { id: string; name?: string; code?: string };
-  incomeAccount?: { id: string; name?: string; code?: string }; // Added: For receipt vouchers
+  incomeAccount?: { id: string; name?: string; code?: string };
 
   // Underlying ledger transaction (shares same ID)
   ledgerTransaction?: LedgerTransaction;
@@ -507,9 +512,11 @@ export interface CreateVoucherRequest {
   clientId?: string;
   vendorId?: string;
   staffId?: string;
-  cashAccountId: string; // Bank or cash account
-  expenseAccountId?: string; // For payment vouchers
-  incomeAccountId?: string; // For receipt vouchers
+  // Changed (SOUPFIN-157): send the two sides of the entry by their backend
+  // names. cashAccount/expenseAccount/incomeAccount do not exist on the
+  // Voucher domain, so the backend silently dropped them.
+  debitAccountId: string;
+  creditAccountId: string;
   // Changed: PaymentMethod is a domain class FK, send ID for binding
   paymentMethodId?: string;
   currency?: string; // Added: Transaction currency

@@ -230,6 +230,8 @@ export const voucherSchema = baseEntitySchema.extend({
   amount: z.number(),
   description: z.string(),
   reference: optionalString,
+  debitLedgerAccount: fkWithCodeSchema.optional().nullable(),
+  creditLedgerAccount: fkWithCodeSchema.optional().nullable(),
   cashAccount: fkWithCodeSchema.optional().nullable(),
   expenseAccount: fkWithCodeSchema.optional().nullable(),
   incomeAccount: fkWithCodeSchema.optional().nullable(),

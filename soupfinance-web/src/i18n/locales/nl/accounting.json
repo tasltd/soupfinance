@@ -45,7 +45,7 @@
       "payment": "Betaalbon",
       "receipt": "Ontvangstbon",
       "journal": "Journaalbon",
-      "contra": "Tegenbon",
+      "contra": "Overboekingsbon",
       "debitNote": "Debetnota",
       "creditNote": "Creditnota"
     },
@@ -85,7 +85,9 @@
       "payment": "Betaling",
       "receipt": "Ontvangst",
       "journal": "Journaalpost",
-      "adjustment": "Correctie"
+      "adjustment": "Correctie",
+      "contra": "Overboeking",
+      "journalVoucher": "Journaalbon"
     }
   },
   "messages": {

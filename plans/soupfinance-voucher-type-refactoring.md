@@ -1,7 +1,7 @@
 # SoupFinance SPA — Voucher Type Refactoring Plan
 
 **Created**: 2026-02-07
-**Status**: Ready for implementation
+**Status**: Implemented (SOUPFIN-157, 2026-10-12)
 **Executor**: Separate Claude session with soupfinance-web context
 **Prerequisite**: Backend restructuring plan must be executed FIRST (see `soupmarkets-voucher-type-restructuring.md`)
 

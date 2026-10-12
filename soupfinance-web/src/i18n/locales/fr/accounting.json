@@ -45,7 +45,7 @@
       "payment": "Bon de paiement",
       "receipt": "Bon de réception",
       "journal": "Bon de journal",
-      "contra": "Bon de contre-passation",
+      "contra": "Bon de virement interne",
       "debitNote": "Note de débit",
       "creditNote": "Note de crédit"
     },
@@ -85,7 +85,9 @@
       "payment": "Paiement",
       "receipt": "Encaissement",
       "journal": "Écriture comptable",
-      "adjustment": "Ajustement"
+      "adjustment": "Ajustement",
+      "contra": "Virement interne",
+      "journalVoucher": "Bon de journal"
     }
   },
   "messages": {

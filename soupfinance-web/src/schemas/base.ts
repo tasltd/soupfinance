@@ -81,7 +81,9 @@ export const ledgerGroupSchema = z.enum([
 
 export const ledgerStateSchema = z.enum(['DEBIT', 'CREDIT']);
 
-export const voucherTypeSchema = z.enum(['PAYMENT', 'DEPOSIT', 'RECEIPT']);
+// Changed (SOUPFIN-157): four voucher types; DEPOSIT stays accepted because
+// vouchers saved before the backend normalised it to RECEIPT still carry it.
+export const voucherTypeSchema = z.enum(['PAYMENT', 'RECEIPT', 'CONTRA', 'JOURNAL', 'DEPOSIT']);
 
 export const voucherToSchema = z.enum(['CLIENT', 'VENDOR', 'STAFF', 'OTHER']);
 

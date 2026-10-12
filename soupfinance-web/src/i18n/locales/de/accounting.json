@@ -45,7 +45,7 @@
       "payment": "Zahlungsbeleg",
       "receipt": "Eingangsbeleg",
       "journal": "Buchungsbeleg",
-      "contra": "Gegenbeleg",
+      "contra": "Umbuchungsbeleg",
       "debitNote": "Lastschrift",
       "creditNote": "Gutschrift"
     },
@@ -85,7 +85,9 @@
       "payment": "Zahlung",
       "receipt": "Eingang",
       "journal": "Buchungssatz",
-      "adjustment": "Anpassung"
+      "adjustment": "Anpassung",
+      "contra": "Umbuchung",
+      "journalVoucher": "Buchungsbeleg"
     }
   },
   "messages": {

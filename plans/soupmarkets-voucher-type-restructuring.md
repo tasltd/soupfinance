@@ -1,7 +1,7 @@
 # Soupmarkets-Web Backend — Voucher Type Restructuring Plan
 
 **Created**: 2026-02-07
-**Status**: Ready for implementation
+**Status**: Implemented in soupmarkets-web `aef43910a5` (2026-02-07, branch `authentication-base-on-multi-tenancy-descriminator`); verified 2026-10-12 for SOUPFIN-157
 **Executor**: Separate Claude session with soupmarkets-web context
 **Consumers**: SSR admin app, SoupFinance SPA, other SPA clients
 

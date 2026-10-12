@@ -8,7 +8,9 @@
  */
 import { useQuery } from '@tanstack/react-query';
 import { listTransactionGroups, listVouchers } from '../api/endpoints/ledger';
-import type { LedgerTransactionGroup, Voucher } from '../types';
+import type { LedgerTransactionGroup, Voucher, VoucherType } from '../types';
+// Added (SOUPFIN-157): DEPOSIT → RECEIPT normalisation for voucher rows
+import { normalizeVoucherType } from '../features/accounting/voucherTypes';
 
 // Added: Unified transaction type for display in Transaction Register
 export interface UnifiedTransaction {
@@ -21,9 +23,28 @@ export interface UnifiedTransaction {
   debitAmount: number;
   creditAmount: number;
   status: 'DRAFT' | 'PENDING' | 'POSTED' | 'REVERSED';
-  type: 'JOURNAL_ENTRY' | 'PAYMENT' | 'RECEIPT';
+  // Changed (SOUPFIN-157): JOURNAL_ENTRY is a multi-line journal entry;
+  // the other four are voucher types (JOURNAL is a journal voucher)
+  type: 'JOURNAL_ENTRY' | VoucherType;
   sourceId: string;
 }
+
+// Added (SOUPFIN-157): register labels for each transaction type
+export const TRANSACTION_TYPE_LABELS: Record<UnifiedTransaction['type'], string> = {
+  JOURNAL_ENTRY: 'Journal Entry',
+  PAYMENT: 'Payment',
+  RECEIPT: 'Receipt',
+  CONTRA: 'Contra',
+  JOURNAL: 'Journal Voucher',
+};
+
+// Added (SOUPFIN-157): voucher number prefix when the backend sends none
+const VOUCHER_PREFIX: Record<VoucherType, string> = {
+  PAYMENT: 'PV',
+  RECEIPT: 'RV',
+  CONTRA: 'CV',
+  JOURNAL: 'JV',
+};
 
 // Added: Mock transactions for development when API is unavailable
 const MOCK_TRANSACTIONS: UnifiedTransaction[] = [
@@ -207,11 +228,23 @@ function transformTransactionGroup(group: LedgerTransactionGroup): UnifiedTransa
 /**
  * Transform a Voucher to UnifiedTransaction entries
  * Creates debit and credit entries for the voucher
+ *
+ * Changed (SOUPFIN-157): every voucher type debits one account and credits
+ * another. The backend sends them as debitLedgerAccount/creditLedgerAccount,
+ * at the top level or under ledgerTransaction; the legacy flattened names
+ * (cashAccount, expenseAccount, incomeAccount) are read only as a fallback.
+ * Before this, real vouchers from the backend produced no rows at all.
  */
-function transformVoucher(voucher: Voucher): UnifiedTransaction[] {
-  // Added: Map voucher type to transaction type
-  const txType: UnifiedTransaction['type'] =
-    voucher.voucherType === 'RECEIPT' ? 'RECEIPT' : 'PAYMENT';
+type AccountRef = { id?: string; code?: string; name?: string } | null | undefined;
+
+export function transformVoucher(voucher: Voucher): UnifiedTransaction[] {
+  const lt = (voucher.ledgerTransaction ?? {}) as Partial<Voucher['ledgerTransaction']> & {
+    notes?: string;
+  };
+  const loose = voucher as Voucher & { transactionDate?: string; notes?: string };
+
+  // Added: Map voucher type to transaction type (legacy DEPOSIT reads as RECEIPT)
+  const txType: VoucherType = normalizeVoucherType(voucher.voucherType) ?? 'PAYMENT';
 
   // Added: Map status
   const mapStatus = (status?: string): UnifiedTransaction['status'] => {
@@ -231,58 +264,38 @@ function transformVoucher(voucher: Voucher): UnifiedTransaction[] {
   };
 
   // Added: Generate transaction ID prefix based on type
-  const prefix = voucher.voucherType === 'RECEIPT' ? 'RV' : 'PV';
-  const txId = voucher.voucherNumber || `${prefix}-${voucher.id?.slice(0, 5).toUpperCase() || '00000'}`;
+  const txId = voucher.voucherNumber || `${VOUCHER_PREFIX[txType]}-${voucher.id?.slice(0, 5).toUpperCase() || '00000'}`;
+
+  const isPayment = txType === 'PAYMENT';
+  const debitAccount: AccountRef = voucher.debitLedgerAccount ?? lt?.debitLedgerAccount
+    ?? (isPayment ? voucher.expenseAccount : voucher.cashAccount);
+  const creditAccount: AccountRef = voucher.creditLedgerAccount ?? lt?.creditLedgerAccount
+    ?? (isPayment ? voucher.cashAccount : voucher.incomeAccount);
+
+  const amount = Number(voucher.amount ?? lt?.amount ?? 0) || 0;
+  const date = voucher.voucherDate || loose.transactionDate || lt?.transactionDate || '';
+  const description = voucher.description || loose.notes || lt?.notes || lt?.description || '';
+  const status = mapStatus(voucher.status);
 
   const entries: UnifiedTransaction[] = [];
-
-  // Added: Cash/Bank account entry
-  if (voucher.cashAccount) {
+  const addEntry = (side: 'debit' | 'credit', account: AccountRef) => {
+    if (!account) return;
     entries.push({
-      id: `${voucher.id}-cash`,
-      date: voucher.voucherDate || '',
+      id: `${voucher.id}-${side}`,
+      date,
       transactionId: txId,
-      description: voucher.description || '',
-      accountCode: voucher.cashAccount.code || '',
-      accountName: voucher.cashAccount.name || '',
-      debitAmount: voucher.voucherType === 'RECEIPT' ? (voucher.amount || 0) : 0,
-      creditAmount: voucher.voucherType === 'PAYMENT' ? (voucher.amount || 0) : 0,
-      status: mapStatus(voucher.status),
+      description,
+      accountCode: account.code || '',
+      accountName: account.name || '',
+      debitAmount: side === 'debit' ? amount : 0,
+      creditAmount: side === 'credit' ? amount : 0,
+      status,
       type: txType,
       sourceId: voucher.id || '',
     });
-  }
-
-  // Added: Expense/Income account entry
-  if (voucher.voucherType === 'PAYMENT' && voucher.expenseAccount) {
-    entries.push({
-      id: `${voucher.id}-expense`,
-      date: voucher.voucherDate || '',
-      transactionId: txId,
-      description: voucher.description || '',
-      accountCode: voucher.expenseAccount.code || '',
-      accountName: voucher.expenseAccount.name || '',
-      debitAmount: voucher.amount || 0,
-      creditAmount: 0,
-      status: mapStatus(voucher.status),
-      type: txType,
-      sourceId: voucher.id || '',
-    });
-  } else if (voucher.voucherType === 'RECEIPT' && voucher.incomeAccount) {
-    entries.push({
-      id: `${voucher.id}-income`,
-      date: voucher.voucherDate || '',
-      transactionId: txId,
-      description: voucher.description || '',
-      accountCode: voucher.incomeAccount.code || '',
-      accountName: voucher.incomeAccount.name || '',
-      debitAmount: 0,
-      creditAmount: voucher.amount || 0,
-      status: mapStatus(voucher.status),
-      type: txType,
-      sourceId: voucher.id || '',
-    });
-  }
+  };
+  addEntry('debit', debitAccount);
+  addEntry('credit', creditAccount);
 
   return entries;
 }

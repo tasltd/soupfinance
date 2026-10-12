@@ -1,5 +1,5 @@
 /**
- * Unit tests for voucherToFormValues (SOUPFIN-154).
+ * Unit tests for voucherToFormValues (SOUPFIN-154, SOUPFIN-157).
  *
  * The voucher view/edit page fills its form from /rest/voucher/show/:id.json.
  * The backend renders the money fields under `ledgerTransaction` with
@@ -36,9 +36,9 @@ describe('voucherToFormValues (SOUPFIN-154)', () => {
       reference: 'REF-9',
       amount: 450,
       vendorId: 'vendor-001',
-      cashAccountId: 'acc-cash',
-      expenseAccountId: 'acc-expense',
-      incomeAccountId: '',
+      // A payment debits the expense and credits the bank.
+      debitAccountId: 'acc-expense',
+      creditAccountId: 'acc-cash',
       paymentMethod: 'pm-bank',
     });
   });
@@ -62,9 +62,8 @@ describe('voucherToFormValues (SOUPFIN-154)', () => {
     expect(values.notes).toBe('Travel refund');
     expect(values.amount).toBe(120.5);
     expect(values.staffId).toBe('agent-1');
-    expect(values.cashAccountId).toBe('acc-bank');
-    expect(values.expenseAccountId).toBe('acc-travel');
-    expect(values.incomeAccountId).toBe('');
+    expect(values.debitAccountId).toBe('acc-travel');
+    expect(values.creditAccountId).toBe('acc-bank');
   });
 
   it('reads the backend shape: a receipt debits the bank and credits the income', () => {
@@ -79,9 +78,8 @@ describe('voucherToFormValues (SOUPFIN-154)', () => {
     }));
 
     expect(values.clientId).toBe('as-1');
-    expect(values.cashAccountId).toBe('acc-bank');
-    expect(values.incomeAccountId).toBe('acc-fees');
-    expect(values.expenseAccountId).toBe('');
+    expect(values.debitAccountId).toBe('acc-bank');
+    expect(values.creditAccountId).toBe('acc-fees');
   });
 
   it('falls back to safe defaults when the voucher is nearly empty', () => {
@@ -99,17 +97,36 @@ describe('voucherToFormValues (SOUPFIN-154)', () => {
       clientId: '',
       vendorId: '',
       staffId: '',
-      cashAccountId: '',
-      expenseAccountId: '',
-      incomeAccountId: '',
+      debitAccountId: '',
+      creditAccountId: '',
       amount: 0,
     });
   });
 
-  it('defaults the party to CLIENT for a receipt with an unknown voucherTo', () => {
+  // Changed (SOUPFIN-157): DEPOSIT is the legacy name for RECEIPT
+  it('opens a legacy DEPOSIT as a RECEIPT, defaulting the party to CLIENT', () => {
     const values = voucherToFormValues(asVoucher({ voucherType: 'DEPOSIT', voucherTo: 'SOMEONE' }));
-    expect(values.voucherType).toBe('DEPOSIT');
+    expect(values.voucherType).toBe('RECEIPT');
     expect(values.voucherTo).toBe('CLIENT');
+  });
+
+  // Added (SOUPFIN-157): contra and journal vouchers keep both sides as saved
+  it.each(['CONTRA', 'JOURNAL'])('reads a %s voucher\'s two sides from the backend shape', (voucherType) => {
+    const values = voucherToFormValues(asVoucher({
+      voucherType,
+      ledgerTransaction: {
+        debitLedgerAccount: { id: 'acc-savings' },
+        creditLedgerAccount: { id: 'acc-current' },
+      },
+    }));
+    expect(values.voucherType).toBe(voucherType);
+    expect(values.voucherTo).toBe('OTHER');
+    expect(values.debitAccountId).toBe('acc-savings');
+    expect(values.creditAccountId).toBe('acc-current');
+  });
+
+  it('falls back to PAYMENT for an unknown voucher type', () => {
+    expect(voucherToFormValues(asVoucher({ voucherType: 'TRANSFER' })).voucherType).toBe('PAYMENT');
   });
 
   it('keeps a large amount, long notes and the beneficiaryInfo name intact', () => {

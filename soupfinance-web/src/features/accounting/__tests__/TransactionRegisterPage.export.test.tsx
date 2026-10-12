@@ -19,7 +19,9 @@ import { TransactionRegisterPage } from '../TransactionRegisterPage';
 import { useTransactions, type UnifiedTransaction } from '../../../hooks/useTransactions';
 
 // Mock the data hook so we control success / empty / error states.
-vi.mock('../../../hooks/useTransactions', () => ({
+// Changed (SOUPFIN-157): keep the real type labels the page renders
+vi.mock('../../../hooks/useTransactions', async (importOriginal) => ({
+  TRANSACTION_TYPE_LABELS: (await importOriginal<typeof import('../../../hooks/useTransactions')>()).TRANSACTION_TYPE_LABELS,
   useTransactions: vi.fn(),
 }));
 

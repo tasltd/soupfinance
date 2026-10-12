@@ -328,7 +328,8 @@ test.describe('Ledger Integration Tests', () => {
         return;
       }
 
-      const types = ['PAYMENT', 'RECEIPT', 'DEPOSIT'];
+      // Changed (SOUPFIN-157): the four voucher types
+      const types = ['PAYMENT', 'RECEIPT', 'CONTRA', 'JOURNAL'];
 
       for (const type of types) {
         const response = await page.request.get(

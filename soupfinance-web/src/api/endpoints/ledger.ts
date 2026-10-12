@@ -278,7 +278,7 @@ export async function getLedgerTrialBalance(asOf?: string): Promise<{
 }
 
 // =============================================================================
-// Added: Vouchers (Payment/Receipt/Deposit)
+// Added: Vouchers (Payment/Receipt/Contra/Journal)
 // =============================================================================
 
 /**
@@ -306,7 +306,7 @@ export async function getVoucher(id: string): Promise<Voucher> {
 }
 
 /**
- * Create new voucher (payment, receipt, or deposit)
+ * Create new voucher (payment, receipt, contra or journal)
  * POST /rest/voucher/save.json
  *
  * Note: Voucher and underlying LedgerTransaction share the same ID.
@@ -334,9 +334,12 @@ export async function createVoucher(data: CreateVoucherRequest): Promise<Voucher
   if (data.clientId) body.client = { id: data.clientId };
   if (data.vendorId) body.vendor = { id: data.vendorId };
   if (data.staffId) body.staff = { id: data.staffId };
-  if (data.cashAccountId) body.cashAccount = { id: data.cashAccountId };
-  if (data.expenseAccountId) body.expenseAccount = { id: data.expenseAccountId };
-  if (data.incomeAccountId) body.incomeAccount = { id: data.incomeAccountId };
+  // Fix (SOUPFIN-157): the Voucher delegates its entry to a LedgerTransaction,
+  // whose sides are debitLedgerAccount and creditLedgerAccount. The old
+  // cashAccount/expenseAccount/incomeAccount keys matched no backend field and
+  // were dropped, so a saved voucher carried no accounts at all.
+  if (data.debitAccountId) body.debitLedgerAccount = { id: data.debitAccountId };
+  if (data.creditAccountId) body.creditLedgerAccount = { id: data.creditAccountId };
   // Added: PaymentMethod is a domain class FK (delegated to LedgerTransaction)
   if (data.paymentMethodId) body.paymentMethod = { id: data.paymentMethodId };
 
@@ -360,7 +363,7 @@ export async function updateVoucher(id: string, data: Partial<CreateVoucherReque
   // every FK the create path maps. staffId, incomeAccountId and
   // paymentMethodId used to be sent as flat strings, which Grails ignores.
   const {
-    clientId, vendorId, staffId, cashAccountId, expenseAccountId, incomeAccountId, paymentMethodId,
+    clientId, vendorId, staffId, debitAccountId, creditAccountId, paymentMethodId,
     ...rest
   } = data;
   const body: Record<string, unknown> = {
@@ -372,9 +375,9 @@ export async function updateVoucher(id: string, data: Partial<CreateVoucherReque
   if (clientId) body.client = { id: clientId };
   if (vendorId) body.vendor = { id: vendorId };
   if (staffId) body.staff = { id: staffId };
-  if (cashAccountId) body.cashAccount = { id: cashAccountId };
-  if (expenseAccountId) body.expenseAccount = { id: expenseAccountId };
-  if (incomeAccountId) body.incomeAccount = { id: incomeAccountId };
+  // Fix (SOUPFIN-157): same backend names as createVoucher
+  if (debitAccountId) body.debitLedgerAccount = { id: debitAccountId };
+  if (creditAccountId) body.creditLedgerAccount = { id: creditAccountId };
   if (paymentMethodId) body.paymentMethod = { id: paymentMethodId };
 
   const response = await apiClient.put<Voucher>(

@@ -115,7 +115,7 @@
       <tr><td><a href="#bills">Bills</a></td><td>Bills you receive and still have to pay.</td></tr>
       <tr><td><a href="#payments">Payments</a></td><td>Money in and money out, matched to an invoice or a bill.</td></tr>
       <tr><td><a href="#ledger">Ledger</a></td><td>Your chart of accounts and every posting made against it.</td></tr>
-      <tr><td><a href="#accounting">Accounting</a></td><td>Journal entries, payment vouchers and receipt vouchers.</td></tr>
+      <tr><td><a href="#accounting">Accounting</a></td><td>Journal entries, and payment, receipt, contra and journal vouchers.</td></tr>
       <tr><td><a href="#reports">Reports</a></td><td>Profit and loss, balance sheet, cash flow, aging and trial balance.</td></tr>
       <tr><td><a href="#settings">Settings</a></td><td>Your team, your bank accounts and your company profile.</td></tr>
     </tbody>
@@ -808,16 +808,18 @@
 
   <h3 id="vouchers">Vouchers</h3>
 
-  <p>A voucher records money leaving or entering the business outside the invoice and bill cycle.</p>
+  <p>A voucher records one entry outside the invoice and bill cycle. Each voucher debits one account
+  and credits another for the same amount.</p>
 
   <table>
     <thead>
-      <tr><th>Voucher</th><th>Use it for</th></tr>
+      <tr><th>Voucher</th><th>Use it for</th><th>Debit</th><th>Credit</th></tr>
     </thead>
     <tbody>
-      <tr><td>Payment voucher</td><td>Money you paid out, such as petty cash or a refund.</td></tr>
-      <tr><td>Receipt voucher</td><td>Money you took in that no invoice covers.</td></tr>
-      <tr><td>Deposit voucher</td><td>Money moved into a bank account.</td></tr>
+      <tr><td>Payment voucher</td><td>Money you paid out, such as petty cash or a refund.</td><td>An expense account</td><td>A bank or cash account</td></tr>
+      <tr><td>Receipt voucher</td><td>Money you took in that no invoice covers.</td><td>A bank or cash account</td><td>An income account</td></tr>
+      <tr><td>Contra voucher</td><td>Money moved between your own bank and cash accounts.</td><td>The account receiving it</td><td>The account it leaves</td></tr>
+      <tr><td>Journal voucher</td><td>A non-cash adjustment, such as depreciation or an accrual.</td><td>Any account</td><td>Any account</td></tr>
     </tbody>
   </table>
 
@@ -827,16 +829,19 @@
   </figure>
 
   <ol class="steps">
-    <li>Open <span class="ui">Accounting</span>, then <span class="ui">Payment Voucher</span> or
-    <span class="ui">Receipt Voucher</span>.</li>
-    <li>Confirm the <strong>voucher type</strong> at the top. You can switch between the three
-    types here.</li>
+    <li>Open <span class="ui">Accounting</span>, then <span class="ui">Payment Voucher</span>,
+    <span class="ui">Receipt Voucher</span>, <span class="ui">Contra Voucher</span> or
+    <span class="ui">Journal Voucher</span>.</li>
+    <li>Confirm the <strong>voucher type</strong> at the top. You can switch between the four
+    types here. Switching clears the accounts, because each type allows different ones.</li>
     <li>Set the <strong>transaction date</strong> and add a <strong>reference number</strong>.</li>
     <li>Choose the <strong>payment method</strong>.</li>
     <li>Describe the purpose in <strong>notes</strong>. This field is required.</li>
-    <li>Choose the <strong>beneficiary type</strong>, then name the client, vendor or staff member.</li>
-    <li>Select the <strong>bank or cash account</strong> the money moves through, and the
-    <strong>expense account</strong> to charge it to.</li>
+    <li>Choose the <strong>beneficiary type</strong>, then name the client, vendor or staff member.
+    A contra voucher skips this step: the money stays inside the business.</li>
+    <li>Select the account to <strong>debit</strong> and the account to <strong>credit</strong>.
+    Each list shows only the accounts the voucher type allows, as in the table above. The two
+    accounts must differ.</li>
     <li>Enter the <strong>amount</strong>.</li>
     <li>Read the <strong>transaction summary</strong> at the foot. It previews the exact journal
     entry the voucher will create.</li>
@@ -847,6 +852,16 @@
   <figure>
     <img src="images/voucher-receipt.jpg" alt="The new receipt voucher form, laid out like the payment voucher but for money received." width="1440" height="2021">
     <figcaption>The receipt voucher form follows the same layout.</figcaption>
+  </figure>
+
+  <figure>
+    <img src="images/voucher-contra.jpg" alt="The new contra voucher form, with transfer-to and transfer-from bank or cash accounts and no beneficiary section." width="1440" height="1644">
+    <figcaption>A contra voucher moves money between two of your own bank or cash accounts.</figcaption>
+  </figure>
+
+  <figure>
+    <img src="images/voucher-journal.jpg" alt="The new journal voucher form, where the debit and credit lists offer every account." width="1440" height="1995">
+    <figcaption>A journal voucher can debit and credit any two accounts.</figcaption>
   </figure>
 </section>
 

@@ -741,7 +741,10 @@ test.describe('Accounting Module', () => {
       await expect(page.getByTestId('voucher-type-tabs')).toBeVisible();
       await expect(page.getByTestId('voucher-type-payment')).toBeVisible();
       await expect(page.getByTestId('voucher-type-receipt')).toBeVisible();
-      await expect(page.getByTestId('voucher-type-deposit')).toBeVisible();
+      // Changed (SOUPFIN-157): contra and journal replace deposit
+      await expect(page.getByTestId('voucher-type-contra')).toBeVisible();
+      await expect(page.getByTestId('voucher-type-journal')).toBeVisible();
+      await expect(page.getByTestId('voucher-type-deposit')).toHaveCount(0);
 
       await takeScreenshot(page, 'voucher-form-new');
     });
@@ -760,8 +763,10 @@ test.describe('Accounting Module', () => {
       await expect(page.getByTestId('voucher-reference-input')).toBeVisible();
       // Fix: Component uses voucher-notes-input (not voucher-description-input)
       await expect(page.getByTestId('voucher-notes-input')).toBeVisible();
-      await expect(page.getByTestId('voucher-cash-account-select')).toBeVisible();
-      await expect(page.getByTestId('voucher-expense-account-select')).toBeVisible();
+      // Changed (SOUPFIN-157): one selector per side of the entry
+      await expect(page.getByTestId('voucher-debit-account-select')).toBeVisible();
+      await expect(page.getByTestId('voucher-credit-account-select')).toBeVisible();
+      await expect(page.getByText('Expense Account', { exact: true })).toBeVisible();
       await expect(page.getByTestId('voucher-amount-input')).toBeVisible();
 
       await takeScreenshot(page, 'voucher-form-payment');
@@ -777,11 +782,14 @@ test.describe('Accounting Module', () => {
       // Select receipt type
       await page.getByTestId('voucher-type-receipt').click();
 
-      // Verify receipt-specific fields (income account for receipts)
-      await expect(page.getByTestId('voucher-income-account-select')).toBeVisible();
+      // Verify receipt-specific fields (income account on the credit side)
+      await expect(page.getByTestId('voucher-credit-account-select')).toBeVisible();
+      await expect(page.getByText('Income Account', { exact: true })).toBeVisible();
 
-      // Select CLIENT as beneficiary type to show client input
-      await page.getByLabel('Client').check();
+      // Select CLIENT as beneficiary type to show client input.
+      // Changed (SOUPFIN-157): picking Receipt already defaults the payer to
+      // Client, so the "Client (Payer)" input is up too; match the radio exactly.
+      await page.getByLabel('Client', { exact: true }).check();
 
       // Now client input should be visible
       await expect(page.getByTestId('voucher-client-input')).toBeVisible();
@@ -789,18 +797,20 @@ test.describe('Accounting Module', () => {
       await takeScreenshot(page, 'voucher-form-receipt');
     });
 
-    test('deposit voucher shows correct fields', async ({ page }) => {
+    // Changed (SOUPFIN-157): deposit is gone; a contra moves money between
+    // the tenant's own bank and cash accounts and has no outside party
+    test('contra voucher shows correct fields', async ({ page }) => {
       await mockAccountingApi(page);
 
       await page.goto('/accounting/vouchers/new');
 
-      // Select deposit type
-      await page.getByTestId('voucher-type-deposit').click();
+      await page.getByTestId('voucher-type-contra').click();
 
-      // Verify deposit-specific fields
-      await expect(page.getByTestId('voucher-cash-account-select')).toBeVisible();
+      await expect(page.getByText('Transfer To (Bank/Cash)', { exact: true })).toBeVisible();
+      await expect(page.getByText('Transfer From (Bank/Cash)', { exact: true })).toBeVisible();
+      await expect(page.getByTestId('voucher-beneficiary-section')).toHaveCount(0);
 
-      await takeScreenshot(page, 'voucher-form-deposit');
+      await takeScreenshot(page, 'voucher-form-contra');
     });
 
     test('shows amount preview', async ({ page }) => {
@@ -960,16 +970,17 @@ test.describe('Accounting Module', () => {
     });
 
     test('View on a voucher opens it read-only with its values', async ({ page }) => {
-      await openRowAction(page, 'voucher-002-cash', 'View');
+      // Changed (SOUPFIN-157): rows are keyed by entry side; a receipt debits the bank
+      await openRowAction(page, 'voucher-002-debit', 'View');
 
       await expect(page).toHaveURL(/\/accounting\/vouchers\/voucher-002$/);
       await expect(page.getByTestId('voucher-form-heading')).toHaveText('Receipt Voucher');
       await expect(page.getByTestId('voucher-notes-input')).toHaveValue('Client payment received');
-      await expect(page.getByTestId('voucher-cash-account-select')).toHaveValue('acc-cash');
-      await expect(page.getByTestId('voucher-income-account-select')).toHaveValue('acc-revenue');
+      await expect(page.getByTestId('voucher-debit-account-select')).toHaveValue('acc-cash');
+      await expect(page.getByTestId('voucher-credit-account-select')).toHaveValue('acc-revenue');
       // The fieldset disables every control inside it.
       await expect(page.getByTestId('voucher-notes-input')).toBeDisabled();
-      await expect(page.getByTestId('voucher-cash-account-select')).toBeDisabled();
+      await expect(page.getByTestId('voucher-debit-account-select')).toBeDisabled();
       await expect(page.getByTestId('voucher-type-receipt')).toBeDisabled();
       await expect(page.getByTestId('voucher-form-save-draft-button')).toHaveCount(0);
       await shot(page, '04-voucher-view');
@@ -993,13 +1004,14 @@ test.describe('Accounting Module', () => {
         });
       });
 
-      await openRowAction(page, 'voucher-001-cash', 'Edit');
+      // Changed (SOUPFIN-157): a payment credits the bank
+      await openRowAction(page, 'voucher-001-credit', 'Edit');
 
       await expect(page).toHaveURL(/\/accounting\/vouchers\/voucher-001\/edit$/);
       await expect(page.getByTestId('voucher-form-heading')).toHaveText('Edit Payment Voucher');
       const notes = page.getByTestId('voucher-notes-input');
       await expect(notes).toHaveValue('Office supplies payment');
-      await expect(page.getByTestId('voucher-expense-account-select')).toHaveValue('acc-expense');
+      await expect(page.getByTestId('voucher-debit-account-select')).toHaveValue('acc-expense');
       await shot(page, '05-voucher-edit');
 
       await notes.fill('Office supplies, corrected');
@@ -1013,8 +1025,9 @@ test.describe('Accounting Module', () => {
         voucherType: 'PAYMENT',
         notes: 'Office supplies, corrected',
         amount: 450,
-        cashAccount: { id: 'acc-cash' },
-        expenseAccount: { id: 'acc-expense' },
+        // Changed (SOUPFIN-157): the backend's names for the two sides
+        debitLedgerAccount: { id: 'acc-expense' },
+        creditLedgerAccount: { id: 'acc-cash' },
       });
       await shot(page, '06-voucher-saved-back-in-register');
     });

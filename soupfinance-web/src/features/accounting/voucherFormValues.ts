@@ -9,8 +9,13 @@
  * E2E mocks use flattened names instead (voucherDate, description,
  * cashAccount, expenseAccount, incomeAccount). This reads both, top level
  * first, so a voucher opens filled in whichever shape arrives.
+ *
+ * Changed (SOUPFIN-157): the form edits the two sides of the entry directly
+ * (debitAccountId, creditAccountId) for all four voucher types. A legacy
+ * DEPOSIT voucher opens as a RECEIPT.
  */
 import type { Voucher, VoucherTo, VoucherType } from '../../types';
+import { normalizeVoucherType, VOUCHER_TYPE_RULES } from './voucherTypes';
 
 export interface VoucherFormValues {
   voucherType: VoucherType;
@@ -25,16 +30,14 @@ export interface VoucherFormValues {
   clientId: string;
   vendorId: string;
   staffId: string;
-  cashAccountId: string;
-  expenseAccountId: string;
-  incomeAccountId: string;
+  debitAccountId: string;
+  creditAccountId: string;
   amount: number;
 }
 
 type Ref = { id?: string; code?: string } | string | null | undefined;
 type Loose = Record<string, unknown>;
 
-const VOUCHER_TYPES: VoucherType[] = ['PAYMENT', 'RECEIPT', 'DEPOSIT'];
 const VOUCHER_TOS: VoucherTo[] = ['CLIENT', 'VENDOR', 'STAFF', 'OTHER'];
 
 function refId(ref: unknown): string {
@@ -56,21 +59,20 @@ export function voucherToFormValues(voucher: Voucher): VoucherFormValues {
   const lt = (v.ledgerTransaction ?? {}) as Loose;
   const pick = (...keys: string[]) => firstDefined(...keys.map((k) => v[k]), ...keys.map((k) => lt[k]));
 
-  const voucherType = VOUCHER_TYPES.includes(v.voucherType as VoucherType)
-    ? (v.voucherType as VoucherType)
-    : 'PAYMENT';
+  const voucherType = normalizeVoucherType(v.voucherType) ?? 'PAYMENT';
   const voucherTo = VOUCHER_TOS.includes(v.voucherTo as VoucherTo)
     ? (v.voucherTo as VoucherTo)
-    : voucherType === 'PAYMENT' ? 'VENDOR' : 'CLIENT';
+    : VOUCHER_TYPE_RULES[voucherType].defaultVoucherTo;
 
-  // A payment debits the expense and credits the bank; a receipt or deposit
-  // debits the bank and credits the income account.
-  const debit = refId(pick('debitLedgerAccount'));
-  const credit = refId(pick('creditLedgerAccount'));
+  // The backend names the sides debitLedgerAccount/creditLedgerAccount. The
+  // legacy mock names map by role: a payment debits the expense and credits
+  // the bank; a receipt debits the bank and credits the income account.
   const isPayment = voucherType === 'PAYMENT';
-  const cashAccountId = refId(pick('cashAccount')) || (isPayment ? credit : debit);
-  const expenseAccountId = isPayment ? (refId(pick('expenseAccount')) || debit) : '';
-  const incomeAccountId = isPayment ? '' : (refId(pick('incomeAccount')) || credit);
+  const cash = refId(pick('cashAccount'));
+  const debitAccountId = refId(pick('debitLedgerAccount'))
+    || (isPayment ? refId(pick('expenseAccount')) : cash);
+  const creditAccountId = refId(pick('creditLedgerAccount'))
+    || (isPayment ? cash : refId(pick('incomeAccount')));
 
   // Keep only the calendar date: the date input takes yyyy-MM-dd, and slicing
   // the string avoids a timezone shift that Date parsing would introduce.
@@ -93,9 +95,8 @@ export function voucherToFormValues(voucher: Voucher): VoucherFormValues {
     clientId: refId(pick('client', 'accountServices')),
     vendorId: refId(pick('vendor')),
     staffId: refId(pick('staff')),
-    cashAccountId,
-    expenseAccountId,
-    incomeAccountId,
+    debitAccountId,
+    creditAccountId,
     amount: Number.isFinite(amount) ? amount : 0,
   };
 }

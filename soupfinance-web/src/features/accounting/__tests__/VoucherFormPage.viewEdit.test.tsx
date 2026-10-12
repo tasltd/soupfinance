@@ -112,8 +112,9 @@ describe('VoucherFormPage — existing voucher (SOUPFIN-154)', () => {
     const notes = screen.getByTestId('voucher-notes-input');
     await waitFor(() => expect(notes).toHaveValue('Office supplies payment'));
     expect(screen.getByTestId('voucher-form-fields')).toBeDisabled();
-    expect(screen.getByTestId('voucher-cash-account-select')).toHaveValue('acc-cash');
-    expect(screen.getByTestId('voucher-expense-account-select')).toHaveValue('acc-expense');
+    // A payment debits the expense and credits the bank (SOUPFIN-157)
+    expect(screen.getByTestId('voucher-debit-account-select')).toHaveValue('acc-expense');
+    expect(screen.getByTestId('voucher-credit-account-select')).toHaveValue('acc-cash');
     expect(screen.getByTestId('voucher-vendor-input')).toHaveValue('vendor-001');
 
     // No save buttons in view mode; an editable voucher offers Edit instead.
@@ -151,8 +152,8 @@ describe('VoucherFormPage — existing voucher (SOUPFIN-154)', () => {
       notes: 'Office supplies, corrected',
       amount: 450,
       vendorId: 'vendor-001',
-      cashAccountId: 'acc-cash',
-      expenseAccountId: 'acc-expense',
+      debitAccountId: 'acc-expense',
+      creditAccountId: 'acc-cash',
     });
     expect(mockedCreateVoucher).not.toHaveBeenCalled();
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/accounting/transactions'));
@@ -165,7 +166,8 @@ describe('VoucherFormPage — existing voucher (SOUPFIN-154)', () => {
     expect(await screen.findByTestId('voucher-form-heading')).toHaveTextContent(/^Receipt Voucher$/);
     expect(screen.getByTestId('voucher-form-readonly-banner')).toHaveTextContent('posted');
     expect(screen.getByTestId('voucher-form-fields')).toBeDisabled();
-    await waitFor(() => expect(screen.getByTestId('voucher-income-account-select')).toHaveValue('acc-revenue'));
+    await waitFor(() => expect(screen.getByTestId('voucher-credit-account-select')).toHaveValue('acc-revenue'));
+    expect(screen.getByTestId('voucher-debit-account-select')).toHaveValue('acc-cash');
     expect(screen.queryByTestId('voucher-form-edit-button')).not.toBeInTheDocument();
     expect(screen.queryByTestId('voucher-form-save-draft-button')).not.toBeInTheDocument();
   });

@@ -85,7 +85,9 @@
       "payment": "Payment",
       "receipt": "Receipt",
       "journal": "Journal Entry",
-      "adjustment": "Adjustment"
+      "adjustment": "Adjustment",
+      "contra": "Contra",
+      "journalVoucher": "Journal Voucher"
     }
   },
   "messages": {

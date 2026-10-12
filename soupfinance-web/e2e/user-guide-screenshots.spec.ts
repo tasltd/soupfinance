@@ -354,7 +354,7 @@ test.describe('user guide: ledger', () => {
 // ===========================================================================
 
 test.describe('user guide: accounting', () => {
-  test('captures the transaction register, journal entry and both vouchers', async ({ page }) => {
+  test('captures the transaction register, journal entry and all four vouchers', async ({ page }) => {
     await startAtDashboard(page);
 
     await navigate(page, '/accounting/transactions', '/accounting/transactions');
@@ -373,6 +373,15 @@ test.describe('user guide: accounting', () => {
     await navigate(page, '/accounting/voucher/receipt', '/accounting/voucher/receipt');
     await expect(page.getByTestId('voucher-form-page')).toBeVisible();
     await shoot(page, 'voucher-receipt');
+
+    // Added (SOUPFIN-157): contra and journal vouchers
+    await navigate(page, '/accounting/voucher/contra', '/accounting/voucher/contra');
+    await expect(page.getByTestId('voucher-form-heading')).toHaveText('New Contra Voucher');
+    await shoot(page, 'voucher-contra');
+
+    await navigate(page, '/accounting/voucher/journal', '/accounting/voucher/journal');
+    await expect(page.getByTestId('voucher-form-heading')).toHaveText('New Journal Voucher');
+    await shoot(page, 'voucher-journal');
   });
 });
 

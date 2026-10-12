@@ -48,6 +48,9 @@ const navItems: NavItem[] = [
       { label: 'Journal Entry', path: '/accounting/journal-entry' },
       { label: 'Payment Voucher', path: '/accounting/voucher/payment' },
       { label: 'Receipt Voucher', path: '/accounting/voucher/receipt' },
+      // Added (SOUPFIN-157): transfers between own accounts, and non-cash adjustments
+      { label: 'Contra Voucher', path: '/accounting/voucher/contra' },
+      { label: 'Journal Voucher', path: '/accounting/voucher/journal' },
     ],
   },
   {

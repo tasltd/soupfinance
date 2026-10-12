@@ -1,18 +1,19 @@
 /**
  * Voucher Form Page
- * Form for creating payment vouchers (money out) and receipt vouchers (money in)
+ * Form for creating and editing vouchers.
  * Reference: soupfinance-designs/payment-entry-form/, design-system.md
  *
- * Voucher Types:
+ * Voucher Types (Changed SOUPFIN-157, rules in ./voucherTypes.ts):
  * - PAYMENT: Money paid out (Debit: Expense account, Credit: Bank/Cash account)
  * - RECEIPT: Money received (Debit: Bank/Cash account, Credit: Income account)
- * - DEPOSIT: Same as RECEIPT but different label
+ * - CONTRA: Transfer between own accounts (Debit and Credit: Bank/Cash accounts)
+ * - JOURNAL: Non-cash adjustment (Debit and Credit: any account)
  *
  * Changed: Now fetches ledger accounts from API via useLedgerAccounts hook
  */
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useNavigate, useSearchParams, useLocation, useParams, Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema';
@@ -26,7 +27,7 @@ import { Radio, type RadioOption } from '../../components/forms/Radio';
 import { MoneyInput } from '../../components/forms/MoneyInput';
 // Added (SOUPFIN-30 #16): tenant-currency formatter for displayed amounts.
 import { useFormatCurrency } from '../../stores';
-import { createVoucher, getVoucher, updateVoucher, ledgerGroupMatches } from '../../api/endpoints/ledger';
+import { createVoucher, getVoucher, updateVoucher } from '../../api/endpoints/ledger';
 // Added (SOUPFIN-154): prefill the form when opening an existing voucher
 import { voucherToFormValues } from './voucherFormValues';
 import { useLedgerAccounts } from '../../hooks/useLedgerAccounts';
@@ -36,6 +37,14 @@ import { DEFAULT_CURRENCIES } from '../../api/endpoints/domainData';
 import { ModuleDisabledBanner } from '../../components/feedback';
 import { getApiErrorMessage } from '../../api/errors';
 import type { CreateVoucherRequest, VoucherType, VoucherTo } from '../../types';
+// Added (SOUPFIN-157): per-type account rules
+import {
+  VOUCHER_TYPES,
+  VOUCHER_TYPE_RULES,
+  normalizeVoucherType,
+  filterAccountsForSide,
+  isAccountAllowed,
+} from './voucherTypes';
 // Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
 import { HelpLink } from '../../components/help';
 
@@ -43,7 +52,8 @@ import { HelpLink } from '../../components/help';
 // Changed: Renamed voucherDate→transactionDate, description→notes to match backend domain
 // Note: Zod 4 uses 'message' instead of 'required_error' for enum validation
 const voucherFormSchema = z.object({
-  voucherType: z.enum(['PAYMENT', 'RECEIPT', 'DEPOSIT'], {
+  // Changed (SOUPFIN-157): four voucher types; DEPOSIT is gone
+  voucherType: z.enum(['PAYMENT', 'RECEIPT', 'CONTRA', 'JOURNAL'], {
     message: 'Voucher type is required',
   }),
   transactionDate: z.string().min(1, 'Date is required'),
@@ -59,39 +69,38 @@ const voucherFormSchema = z.object({
   clientId: z.string().optional(),
   vendorId: z.string().optional(),
   staffId: z.string().optional(),
-  cashAccountId: z.string().min(1, 'Bank/Cash account is required'),
-  expenseAccountId: z.string().optional(),
-  incomeAccountId: z.string().optional(),
+  // Changed (SOUPFIN-157): the two sides of the entry, named as the backend
+  // names them, replace the role-based cash/expense/income accounts
+  debitAccountId: z.string().min(1, 'Debit account is required'),
+  creditAccountId: z.string().min(1, 'Credit account is required'),
   amount: z.number().min(0.01, 'Amount must be greater than 0'),
 }).refine(
-  // Added: Validate expense account required for payment vouchers
-  (data) => {
-    if (data.voucherType === 'PAYMENT') {
-      return data.expenseAccountId && data.expenseAccountId.length > 0;
-    }
-    return true;
-  },
-  { message: 'Expense account is required for payment vouchers', path: ['expenseAccountId'] }
-).refine(
-  // Added: Validate income account required for receipt/deposit vouchers
-  (data) => {
-    if (data.voucherType === 'RECEIPT' || data.voucherType === 'DEPOSIT') {
-      return data.incomeAccountId && data.incomeAccountId.length > 0;
-    }
-    return true;
-  },
-  { message: 'Income account is required for receipt vouchers', path: ['incomeAccountId'] }
+  (data) => !data.debitAccountId || data.debitAccountId !== data.creditAccountId,
+  { message: 'Debit and credit accounts must be different', path: ['creditAccountId'] }
 );
 
 // Added: Type inference from schema
 type VoucherFormData = z.infer<typeof voucherFormSchema>;
 
-// Added: Voucher type options for tab selection
-const VOUCHER_TYPE_OPTIONS: RadioOption[] = [
-  { value: 'PAYMENT', label: 'Payment Voucher' },
-  { value: 'RECEIPT', label: 'Receipt Voucher' },
-  { value: 'DEPOSIT', label: 'Deposit Voucher' },
-];
+// Changed (SOUPFIN-157): one tab per voucher type, labelled from the rules
+const VOUCHER_TYPE_OPTIONS: RadioOption[] = VOUCHER_TYPES.map((type) => ({
+  value: type,
+  label: VOUCHER_TYPE_RULES[type].label,
+}));
+
+// Added (SOUPFIN-157): dropdown option for a ledger account
+const toOption = (account: { id: string; code: string; name: string }): SelectOption => ({
+  value: account.id,
+  label: `${account.code} - ${account.name}`,
+});
+
+// Added (SOUPFIN-157): subtitle shown under a new voucher's title
+const VOUCHER_SUBTITLES: Record<VoucherType, string> = {
+  PAYMENT: 'Record a payment made to a beneficiary',
+  RECEIPT: 'Record money received from a payer',
+  CONTRA: 'Move money between your own bank and cash accounts',
+  JOURNAL: 'Record a non-cash adjustment between any two accounts',
+};
 
 // Added: Beneficiary/Payer type options
 const BENEFICIARY_TYPE_OPTIONS: RadioOption[] = [
@@ -102,9 +111,9 @@ const BENEFICIARY_TYPE_OPTIONS: RadioOption[] = [
 ];
 
 /**
- * VoucherFormPage - Form for creating payment/receipt/deposit vouchers
+ * VoucherFormPage - Form for creating payment, receipt, contra and journal vouchers
  * Features:
- * - Dynamic form based on voucher type (payment vs receipt)
+ * - Dynamic form based on voucher type
  * - Beneficiary/payer type selection with conditional fields
  * - Account selection filtered by ledger group
  * - Save as draft or approve & post
@@ -112,6 +121,7 @@ const BENEFICIARY_TYPE_OPTIONS: RadioOption[] = [
 export function VoucherFormPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -151,26 +161,22 @@ export function VoucherFormPage() {
 
   // Changed: Get initial voucher type from URL path or query param
   // Supports both /accounting/voucher/payment and /accounting/voucher?type=payment
+  // Changed (SOUPFIN-157): recognise all four types, and read a legacy
+  // /voucher/deposit link as a receipt
   const getInitialVoucherType = (): VoucherType => {
     // First check URL path (e.g., /accounting/voucher/payment)
     const pathParts = location.pathname.split('/');
-    const lastPart = pathParts[pathParts.length - 1]?.toUpperCase();
-    if (['PAYMENT', 'RECEIPT', 'DEPOSIT'].includes(lastPart)) {
-      return lastPart as VoucherType;
-    }
+    const fromPath = normalizeVoucherType(pathParts[pathParts.length - 1]);
+    if (fromPath) return fromPath;
     // Fallback to query param (e.g., ?type=payment)
-    const typeParam = searchParams.get('type')?.toUpperCase();
-    if (typeParam && ['PAYMENT', 'RECEIPT', 'DEPOSIT'].includes(typeParam)) {
-      return typeParam as VoucherType;
-    }
-    return 'PAYMENT';
+    return normalizeVoucherType(searchParams.get('type')) ?? 'PAYMENT';
   };
   const initialVoucherType = getInitialVoucherType();
 
   // Changed: Set default voucherTo based on voucher type
-  // PAYMENT vouchers are typically paid TO vendors
-  // RECEIPT/DEPOSIT vouchers are typically received FROM clients
-  const initialVoucherTo: VoucherTo = initialVoucherType === 'PAYMENT' ? 'VENDOR' : 'CLIENT';
+  // PAYMENT vouchers are typically paid TO vendors, RECEIPT vouchers received
+  // FROM clients; CONTRA and JOURNAL have no outside party by default
+  const initialVoucherTo: VoucherTo = VOUCHER_TYPE_RULES[initialVoucherType].defaultVoucherTo;
 
   // Added: Initialize form with react-hook-form and Zod validation
   const {
@@ -179,6 +185,7 @@ export function VoucherFormPage() {
     handleSubmit,
     watch,
     setValue,
+    setError,
     reset,
     formState: { errors },
   } = useForm<VoucherFormData>({
@@ -196,9 +203,8 @@ export function VoucherFormPage() {
       clientId: '',
       vendorId: '',
       staffId: '',
-      cashAccountId: '',
-      expenseAccountId: '',
-      incomeAccountId: '',
+      debitAccountId: '',
+      creditAccountId: '',
       amount: 0,
     },
   });
@@ -215,28 +221,19 @@ export function VoucherFormPage() {
   const watchedVoucherTo = watch('voucherTo');
 
   // Added: Determine if this is a payment (money out) or receipt (money in) type
+  // Changed (SOUPFIN-157): the type's rules drive labels, filters and sections
+  const typeRule = VOUCHER_TYPE_RULES[watchedVoucherType] ?? VOUCHER_TYPE_RULES.PAYMENT;
   const isPaymentType = watchedVoucherType === 'PAYMENT';
-  const isReceiptType = watchedVoucherType === 'RECEIPT' || watchedVoucherType === 'DEPOSIT';
 
   // Added: Dynamic page title based on voucher type
   // Changed (SOUPFIN-154): an existing voucher is titled by its type, with
   // "Edit" in front when it is open for editing.
   const pageTitle = useMemo(() => {
     if (isExisting) {
-      const typeLabel = VOUCHER_TYPE_OPTIONS.find((o) => o.value === watchedVoucherType)?.label ?? 'Voucher';
-      return isReadOnly ? typeLabel : `Edit ${typeLabel}`;
+      return isReadOnly ? typeRule.label : `Edit ${typeRule.label}`;
     }
-    switch (watchedVoucherType) {
-      case 'PAYMENT':
-        return 'New Payment Voucher';
-      case 'RECEIPT':
-        return 'New Receipt Voucher';
-      case 'DEPOSIT':
-        return 'New Deposit Voucher';
-      default:
-        return 'New Voucher';
-    }
-  }, [watchedVoucherType, isExisting, isReadOnly]);
+    return `New ${typeRule.label}`;
+  }, [typeRule, isExisting, isReadOnly]);
 
   // Added: Dynamic subtitle based on voucher type
   const pageSubtitle = useMemo(() => {
@@ -245,53 +242,19 @@ export function VoucherFormPage() {
       const status = existingVoucher?.status;
       return [number, status].filter(Boolean).join(' · ') || 'Voucher details';
     }
-    switch (watchedVoucherType) {
-      case 'PAYMENT':
-        return 'Record a payment made to a beneficiary';
-      case 'RECEIPT':
-        return 'Record money received from a payer';
-      case 'DEPOSIT':
-        return 'Record a deposit into an account';
-      default:
-        return 'Create a financial voucher';
-    }
+    return VOUCHER_SUBTITLES[watchedVoucherType] ?? 'Create a financial voucher';
   }, [watchedVoucherType, isExisting, existingVoucher]);
 
-  // Changed: Filter accounts by ledger group for bank/cash selection (ASSET accounts)
-  const cashAccountOptions: SelectOption[] = useMemo(() =>
-    (accounts || [])
-      .filter((account) => ledgerGroupMatches(account.ledgerGroup, 'ASSET'))
-      .map((account) => ({
-        value: account.id,
-        label: `${account.code} - ${account.name}`,
-      })),
-    [accounts]
+  // Changed (SOUPFIN-157): one dropdown per side of the entry, each filtered
+  // to the ledger groups the voucher type allows on that side (CONTRA:
+  // ASSET to ASSET, JOURNAL: any to any). See voucherTypes.ts.
+  const debitAccountOptions: SelectOption[] = useMemo(
+    () => filterAccountsForSide(accounts, watchedVoucherType, 'debit').map(toOption),
+    [accounts, watchedVoucherType]
   );
-
-  // Changed: Filter accounts by ledger group for expense selection
-  const expenseAccountOptions: SelectOption[] = useMemo(() =>
-    (accounts || [])
-      .filter((account) => ledgerGroupMatches(account.ledgerGroup, 'EXPENSE'))
-      .map((account) => ({
-        value: account.id,
-        label: `${account.code} - ${account.name}`,
-      })),
-    [accounts]
-  );
-
-  // Changed: Filter accounts by ledger group for income selection.
-  // Fix (SOUPFIN-30 #8): ledgerGroupMatches treats INCOME and REVENUE as
-  // equivalent — the backend derives the group from the account category's
-  // serialised string, which may end in "< REVENUE" rather than "< INCOME".
-  // Filtering on INCOME alone left the receipt voucher's income dropdown empty.
-  const incomeAccountOptions: SelectOption[] = useMemo(() =>
-    (accounts || [])
-      .filter((account) => ledgerGroupMatches(account.ledgerGroup, 'INCOME'))
-      .map((account) => ({
-        value: account.id,
-        label: `${account.code} - ${account.name}`,
-      })),
-    [accounts]
+  const creditAccountOptions: SelectOption[] = useMemo(
+    () => filterAccountsForSide(accounts, watchedVoucherType, 'credit').map(toOption),
+    [accounts, watchedVoucherType]
   );
 
   // Added: Payment method options from backend domain records
@@ -306,13 +269,17 @@ export function VoucherFormPage() {
   // Added: Clear conditional fields when voucher type changes
   // Changed (SOUPFIN-154): run from the user's click rather than an effect, so
   // filling the form from a loaded voucher does not wipe its accounts.
+  // Changed (SOUPFIN-157): a new type allows different accounts on each side,
+  // so clear both and reset the party to the type's default.
   const handleVoucherTypeChange = useCallback((nextType: VoucherType) => {
-    if (nextType === 'PAYMENT') {
-      setValue('incomeAccountId', '');
-    } else {
-      setValue('expenseAccountId', '');
-    }
-  }, [setValue]);
+    if (nextType === watchedVoucherType) return;
+    setValue('debitAccountId', '');
+    setValue('creditAccountId', '');
+    setValue('voucherTo', VOUCHER_TYPE_RULES[nextType].defaultVoucherTo);
+    setValue('clientId', '');
+    setValue('vendorId', '');
+    setValue('staffId', '');
+  }, [setValue, watchedVoucherType]);
 
   // Added: Clear party-specific fields when beneficiary type changes
   // Changed (SOUPFIN-154): from the user's change only, for the same reason.
@@ -327,6 +294,23 @@ export function VoucherFormPage() {
 
   // Added: Form submission handler
   const onSubmit = useCallback(async (data: VoucherFormData) => {
+    // Added (SOUPFIN-157): the dropdowns only offer allowed accounts, but an
+    // opened voucher can carry one from before the rules; refuse it here
+    // rather than let the backend reject the save.
+    const rule = VOUCHER_TYPE_RULES[data.voucherType];
+    const byId = new Map((accounts || []).map((a) => [a.id, a]));
+    let sidesValid = true;
+    (['debit', 'credit'] as const).forEach((side) => {
+      const account = byId.get(side === 'debit' ? data.debitAccountId : data.creditAccountId);
+      if (account && !isAccountAllowed(account, data.voucherType, side)) {
+        sidesValid = false;
+        setError(side === 'debit' ? 'debitAccountId' : 'creditAccountId', {
+          message: `${rule.label} cannot use ${account.code} - ${account.name} as its ${rule[side].label}`,
+        });
+      }
+    });
+    if (!sidesValid) return;
+
     setIsSubmitting(true);
     setSubmitError(null);
 
@@ -334,18 +318,19 @@ export function VoucherFormPage() {
       // Changed: Transform form data to API request format with correct backend field names
       const request: CreateVoucherRequest = {
         voucherType: data.voucherType as VoucherType,
-        voucherTo: data.voucherTo as VoucherTo,
+        // A contra is between the tenant's own accounts, so it has no party
+        voucherTo: (rule.hasBeneficiary ? data.voucherTo : 'OTHER') as VoucherTo,
         transactionDate: data.transactionDate,
         amount: data.amount,
         notes: data.notes,
         reference: data.reference,
-        beneficiaryName: data.beneficiaryName,
-        clientId: data.clientId || undefined,
-        vendorId: data.vendorId || undefined,
-        staffId: data.staffId || undefined,
-        cashAccountId: data.cashAccountId,
-        expenseAccountId: data.expenseAccountId || undefined,
-        incomeAccountId: data.incomeAccountId || undefined,
+        beneficiaryName: rule.hasBeneficiary ? data.beneficiaryName : undefined,
+        clientId: (rule.hasBeneficiary && data.clientId) || undefined,
+        vendorId: (rule.hasBeneficiary && data.vendorId) || undefined,
+        staffId: (rule.hasBeneficiary && data.staffId) || undefined,
+        // Changed (SOUPFIN-157): the entry's two sides
+        debitAccountId: data.debitAccountId,
+        creditAccountId: data.creditAccountId,
         // Changed: Send paymentMethod as FK ID (domain class, not string)
         ...(data.paymentMethod && { paymentMethodId: data.paymentMethod }),
         ...(data.currency && { currency: data.currency }),
@@ -359,6 +344,13 @@ export function VoucherFormPage() {
         await createVoucher(request);
       }
 
+      // Fix (SOUPFIN-157): the register caches its list for two minutes, so
+      // without this a voucher saved from it did not appear on return.
+      await queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      if (isExisting && voucherId) {
+        await queryClient.invalidateQueries({ queryKey: ['voucher', voucherId] });
+      }
+
       // Changed (SOUPFIN-154): vouchers are listed in the Transaction Register;
       // /accounting/vouchers used to render a fresh blank form here.
       navigate('/accounting/transactions');
@@ -369,7 +361,7 @@ export function VoucherFormPage() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [navigate, isExisting, voucherId]);
+  }, [navigate, isExisting, voucherId, accounts, setError, queryClient]);
 
   // Added: Wrapper for save draft action - explicitly typed for TypeScript
   const handleSaveDraft = handleSubmit(onSubmit);
@@ -383,7 +375,29 @@ export function VoucherFormPage() {
   const formatCurrency = useFormatCurrency();
 
   // Added: Get dynamic label for beneficiary/payer based on voucher type
-  const beneficiaryLabel = isPaymentType ? 'Beneficiary' : 'Payer';
+  // Changed (SOUPFIN-157): a journal voucher's party is neither payee nor payer
+  const beneficiaryLabel = isPaymentType ? 'Beneficiary' : watchedVoucherType === 'RECEIPT' ? 'Payer' : 'Party';
+
+  // Added (SOUPFIN-157): how the amount moves, for the preview card
+  const amountFlow = {
+    PAYMENT: { label: 'Money Out', icon: 'arrow_upward', tone: 'danger' },
+    RECEIPT: { label: 'Money In', icon: 'arrow_downward', tone: 'success' },
+    CONTRA: { label: 'Transfer', icon: 'swap_horiz', tone: 'info' },
+    JOURNAL: { label: 'Adjustment', icon: 'edit_note', tone: 'warning' },
+  }[watchedVoucherType] ?? { label: 'Money Out', icon: 'arrow_upward', tone: 'danger' };
+  // Literal class names so Tailwind generates them
+  const toneClasses = {
+    danger: { card: 'bg-danger/5 border-danger/20', text: 'text-danger' },
+    success: { card: 'bg-success/5 border-success/20', text: 'text-success' },
+    info: { card: 'bg-info/5 border-info/20', text: 'text-info' },
+    warning: { card: 'bg-warning/5 border-warning/20', text: 'text-warning' },
+  }[amountFlow.tone as 'danger' | 'success' | 'info' | 'warning'];
+
+  // Added (SOUPFIN-157): label of the account chosen on one side of the entry
+  const debitAccountLabel = debitAccountOptions.find((o) => o.value === watch('debitAccountId'))?.label
+    || typeRule.debit.label;
+  const creditAccountLabel = creditAccountOptions.find((o) => o.value === watch('creditAccountId'))?.label
+    || typeRule.credit.label;
 
   // Added (SOUPFIN-154): loading state while an existing voucher is fetched
   if (isExisting && isLoadingVoucher) {
@@ -492,7 +506,7 @@ export function VoucherFormPage() {
       {accountsError && (
         <ModuleDisabledBanner
           error={accountsError}
-          context="Bank/Cash, Expense, and Income account dropdowns are unavailable until the module is enabled."
+          context="The debit and credit account dropdowns are unavailable until the module is enabled."
           testId="voucher-form-module-disabled"
         />
       )}
@@ -549,7 +563,7 @@ export function VoucherFormPage() {
                   >
                     <span className="flex items-center gap-2">
                       <span className="material-symbols-outlined text-lg">
-                        {option.value === 'PAYMENT' ? 'payments' : option.value === 'RECEIPT' ? 'receipt_long' : 'account_balance'}
+                        {VOUCHER_TYPE_RULES[option.value as VoucherType].icon}
                       </span>
                       {option.label}
                     </span>
@@ -614,7 +628,10 @@ export function VoucherFormPage() {
         </div>
       </div>
 
-      {/* Beneficiary/Payer Section */}
+      {/* Beneficiary/Payer Section
+          Changed (SOUPFIN-157): hidden for a contra, which moves money between
+          the tenant's own accounts and has no outside party */}
+      {typeRule.hasBeneficiary && (
       <div
         className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden"
         data-testid="voucher-beneficiary-section"
@@ -651,7 +668,7 @@ export function VoucherFormPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {watchedVoucherTo === 'CLIENT' && (
               <Input
-                label={isPaymentType ? 'Client (Beneficiary)' : 'Client (Payer)'}
+                label={`Client (${beneficiaryLabel})`}
                 placeholder="Search or enter client name..."
                 {...register('clientId')}
                 error={errors.clientId?.message}
@@ -661,7 +678,7 @@ export function VoucherFormPage() {
             )}
             {watchedVoucherTo === 'VENDOR' && (
               <Input
-                label={isPaymentType ? 'Vendor (Beneficiary)' : 'Vendor (Payer)'}
+                label={`Vendor (${beneficiaryLabel})`}
                 placeholder="Search or enter vendor name..."
                 {...register('vendorId')}
                 error={errors.vendorId?.message}
@@ -671,7 +688,7 @@ export function VoucherFormPage() {
             )}
             {watchedVoucherTo === 'STAFF' && (
               <Input
-                label={isPaymentType ? 'Staff Member (Beneficiary)' : 'Staff Member (Payer)'}
+                label={`Staff Member (${beneficiaryLabel})`}
                 placeholder="Search or enter staff name..."
                 {...register('staffId')}
                 error={errors.staffId?.message}
@@ -691,6 +708,7 @@ export function VoucherFormPage() {
           </div>
         </div>
       </div>
+      )}
 
       {/* Account Selection Section */}
       <div
@@ -701,46 +719,29 @@ export function VoucherFormPage() {
           <h2 className="text-lg font-bold text-text-light dark:text-text-dark">Account Selection</h2>
         </div>
         <div className="p-6">
+          {/* Changed (SOUPFIN-157): one selector per side of the entry, labelled
+              and filtered by the voucher type's rules */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Added: Bank/Cash account selector (required for all types) */}
             <Select
-              label="Bank/Cash Account"
+              label={typeRule.debit.label}
               required
-              options={cashAccountOptions}
+              options={debitAccountOptions}
               placeholder="Select account..."
-              {...register('cashAccountId')}
-              error={errors.cashAccountId?.message}
-              helperText="Account used for payment or receipt"
-              data-testid="voucher-cash-account-select"
+              {...register('debitAccountId')}
+              error={errors.debitAccountId?.message}
+              helperText={`Debit · ${typeRule.debit.helperText}`}
+              data-testid="voucher-debit-account-select"
             />
-
-            {/* Added: Expense account selector (only for payment vouchers) */}
-            {isPaymentType && (
-              <Select
-                label="Expense Account"
-                required
-                options={expenseAccountOptions}
-                placeholder="Select expense account..."
-                {...register('expenseAccountId')}
-                error={errors.expenseAccountId?.message}
-                helperText="Account to debit for this expense"
-                data-testid="voucher-expense-account-select"
-              />
-            )}
-
-            {/* Added: Income account selector (only for receipt/deposit vouchers) */}
-            {isReceiptType && (
-              <Select
-                label="Income Account"
-                required
-                options={incomeAccountOptions}
-                placeholder="Select income account..."
-                {...register('incomeAccountId')}
-                error={errors.incomeAccountId?.message}
-                helperText="Account to credit for this income"
-                data-testid="voucher-income-account-select"
-              />
-            )}
+            <Select
+              label={typeRule.credit.label}
+              required
+              options={creditAccountOptions}
+              placeholder="Select account..."
+              {...register('creditAccountId')}
+              error={errors.creditAccountId?.message}
+              helperText={`Credit · ${typeRule.credit.helperText}`}
+              data-testid="voucher-credit-account-select"
+            />
           </div>
         </div>
       </div>
@@ -769,35 +770,22 @@ export function VoucherFormPage() {
               data-testid="voucher-amount-input"
             />
 
-            {/* Added: Amount preview card */}
+            {/* Added: Amount preview card
+                Changed (SOUPFIN-157): tone and wording follow the voucher type */}
             <div className="flex items-center">
               <div
-                className={`
-                  flex-1 p-4 rounded-lg border
-                  ${isPaymentType
-                    ? 'bg-danger/5 border-danger/20'
-                    : 'bg-success/5 border-success/20'
-                  }
-                `}
+                className={`flex-1 p-4 rounded-lg border ${toneClasses.card}`}
                 data-testid="voucher-amount-preview"
               >
                 <div className="flex items-center gap-3">
-                  <span
-                    className={`material-symbols-outlined text-2xl ${
-                      isPaymentType ? 'text-danger' : 'text-success'
-                    }`}
-                  >
-                    {isPaymentType ? 'arrow_upward' : 'arrow_downward'}
+                  <span className={`material-symbols-outlined text-2xl ${toneClasses.text}`}>
+                    {amountFlow.icon}
                   </span>
                   <div>
                     <p className="text-sm text-subtle-text font-medium">
-                      {isPaymentType ? 'Money Out' : 'Money In'}
+                      {amountFlow.label}
                     </p>
-                    <p
-                      className={`text-xl font-bold ${
-                        isPaymentType ? 'text-danger' : 'text-success'
-                      }`}
-                    >
+                    <p className={`text-xl font-bold ${toneClasses.text}`}>
                       {formatCurrency(watch('amount') || 0)}
                     </p>
                   </div>
@@ -860,63 +848,22 @@ export function VoucherFormPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {isPaymentType ? (
-                    <>
-                      {/* Added: Payment voucher - Debit expense, Credit bank */}
-                      <tr className="border-t border-border-light dark:border-border-dark">
-                        <td className="px-4 py-2 text-text-light dark:text-text-dark">
-                          {watch('expenseAccountId')
-                            ? expenseAccountOptions.find(o => o.value === watch('expenseAccountId'))?.label || 'Expense Account'
-                            : 'Expense Account'
-                          }
-                        </td>
-                        <td className="px-4 py-2 text-right font-medium text-text-light dark:text-text-dark">
-                          {formatCurrency(watch('amount') || 0)}
-                        </td>
-                        <td className="px-4 py-2 text-right text-subtle-text">-</td>
-                      </tr>
-                      <tr className="border-t border-border-light dark:border-border-dark">
-                        <td className="px-4 py-2 text-text-light dark:text-text-dark">
-                          {watch('cashAccountId')
-                            ? cashAccountOptions.find(o => o.value === watch('cashAccountId'))?.label || 'Bank/Cash Account'
-                            : 'Bank/Cash Account'
-                          }
-                        </td>
-                        <td className="px-4 py-2 text-right text-subtle-text">-</td>
-                        <td className="px-4 py-2 text-right font-medium text-text-light dark:text-text-dark">
-                          {formatCurrency(watch('amount') || 0)}
-                        </td>
-                      </tr>
-                    </>
-                  ) : (
-                    <>
-                      {/* Added: Receipt voucher - Debit bank, Credit income */}
-                      <tr className="border-t border-border-light dark:border-border-dark">
-                        <td className="px-4 py-2 text-text-light dark:text-text-dark">
-                          {watch('cashAccountId')
-                            ? cashAccountOptions.find(o => o.value === watch('cashAccountId'))?.label || 'Bank/Cash Account'
-                            : 'Bank/Cash Account'
-                          }
-                        </td>
-                        <td className="px-4 py-2 text-right font-medium text-text-light dark:text-text-dark">
-                          {formatCurrency(watch('amount') || 0)}
-                        </td>
-                        <td className="px-4 py-2 text-right text-subtle-text">-</td>
-                      </tr>
-                      <tr className="border-t border-border-light dark:border-border-dark">
-                        <td className="px-4 py-2 text-text-light dark:text-text-dark">
-                          {watch('incomeAccountId')
-                            ? incomeAccountOptions.find(o => o.value === watch('incomeAccountId'))?.label || 'Income Account'
-                            : 'Income Account'
-                          }
-                        </td>
-                        <td className="px-4 py-2 text-right text-subtle-text">-</td>
-                        <td className="px-4 py-2 text-right font-medium text-text-light dark:text-text-dark">
-                          {formatCurrency(watch('amount') || 0)}
-                        </td>
-                      </tr>
-                    </>
-                  )}
+                  {/* Changed (SOUPFIN-157): every voucher type debits one
+                      account and credits the other */}
+                  <tr className="border-t border-border-light dark:border-border-dark" data-testid="voucher-preview-debit-row">
+                    <td className="px-4 py-2 text-text-light dark:text-text-dark">{debitAccountLabel}</td>
+                    <td className="px-4 py-2 text-right font-medium text-text-light dark:text-text-dark">
+                      {formatCurrency(watch('amount') || 0)}
+                    </td>
+                    <td className="px-4 py-2 text-right text-subtle-text">-</td>
+                  </tr>
+                  <tr className="border-t border-border-light dark:border-border-dark" data-testid="voucher-preview-credit-row">
+                    <td className="px-4 py-2 text-text-light dark:text-text-dark">{creditAccountLabel}</td>
+                    <td className="px-4 py-2 text-right text-subtle-text">-</td>
+                    <td className="px-4 py-2 text-right font-medium text-text-light dark:text-text-dark">
+                      {formatCurrency(watch('amount') || 0)}
+                    </td>
+                  </tr>
                 </tbody>
                 <tfoot className="border-t-2 border-border-light dark:border-border-dark font-bold">
                   <tr>

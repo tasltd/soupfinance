@@ -308,8 +308,13 @@ export default function App() {
             {/* Added (SOUPFIN-154): the register's Edit action links here */}
             <Route path="/accounting/journal-entry/:id/edit" element={<JournalEntryPage />} />
             {/* Changed: Added routes for voucher type URLs to match navigation handlers */}
-            <Route path="/accounting/voucher/payment" element={<VoucherFormPage />} />
-            <Route path="/accounting/voucher/receipt" element={<VoucherFormPage />} />
+            {/* Fix (SOUPFIN-157): keyed by type so moving between them from the
+                sidebar remounts the form; otherwise it kept the previous type */}
+            <Route path="/accounting/voucher/payment" element={<VoucherFormPage key="payment" />} />
+            <Route path="/accounting/voucher/receipt" element={<VoucherFormPage key="receipt" />} />
+            {/* Added (SOUPFIN-157): contra and journal vouchers */}
+            <Route path="/accounting/voucher/contra" element={<VoucherFormPage key="contra" />} />
+            <Route path="/accounting/voucher/journal" element={<VoucherFormPage key="journal" />} />
             {/* Fix (SOUPFIN-154): there is no voucher list page; vouchers are
                 listed in the Transaction Register, so send the list URL there
                 instead of rendering a blank create form */}

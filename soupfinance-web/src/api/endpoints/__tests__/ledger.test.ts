@@ -192,7 +192,7 @@ describe('updateVoucher FK binding (SOUPFIN-154)', () => {
     });
   });
 
-  it('sends staff, income account and payment method as nested FKs', async () => {
+  it('sends staff, both entry sides and payment method as nested FKs', async () => {
     vi.resetModules();
     const { updateVoucher } = await import('../ledger');
     await updateVoucher('v1', {
@@ -201,8 +201,8 @@ describe('updateVoucher FK binding (SOUPFIN-154)', () => {
       amount: 1250,
       notes: 'Refund',
       staffId: 's1',
-      cashAccountId: 'acc-cash',
-      incomeAccountId: 'acc-income',
+      debitAccountId: 'acc-cash',
+      creditAccountId: 'acc-income',
       paymentMethodId: 'pm-1',
     });
 
@@ -215,8 +215,8 @@ describe('updateVoucher FK binding (SOUPFIN-154)', () => {
       amount: 1250,
       notes: 'Refund',
       staff: { id: 's1' },
-      cashAccount: { id: 'acc-cash' },
-      incomeAccount: { id: 'acc-income' },
+      debitLedgerAccount: { id: 'acc-cash' },
+      creditLedgerAccount: { id: 'acc-income' },
       paymentMethod: { id: 'pm-1' },
     });
     // No flat *Id keys leak through: Grails would ignore them silently.
@@ -228,5 +228,59 @@ describe('updateVoucher FK binding (SOUPFIN-154)', () => {
     const { updateVoucher } = await import('../ledger');
     await updateVoucher('v2', { notes: 'Only the description changed' });
     expect(mockPut.mock.calls[0][1]).toEqual({ id: 'v2', notes: 'Only the description changed' });
+  });
+});
+
+// Added (SOUPFIN-157): every voucher type is posted with its two entry sides
+// under the backend's names. The Voucher delegates to a LedgerTransaction whose
+// fields are debitLedgerAccount/creditLedgerAccount; any other key is dropped.
+describe('createVoucher entry sides (SOUPFIN-157)', () => {
+  let mockGet: ReturnType<typeof vi.fn>;
+  let mockPost: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGet = vi.fn().mockResolvedValue({
+      data: { SYNCHRONIZER_TOKEN: 'tok', SYNCHRONIZER_URI: '/voucher/create' },
+    });
+    mockPost = vi.fn().mockResolvedValue({ data: { id: 'v-new' } });
+    (axios.create as ReturnType<typeof vi.fn>).mockReturnValue({
+      interceptors: { request: { use: vi.fn() }, response: { use: vi.fn() } },
+      get: mockGet,
+      post: mockPost,
+      put: vi.fn(),
+      delete: vi.fn(),
+    });
+  });
+
+  it.each([
+    ['PAYMENT', 'acc-expense', 'acc-bank'],
+    ['RECEIPT', 'acc-bank', 'acc-income'],
+    ['CONTRA', 'acc-savings', 'acc-bank'],
+    ['JOURNAL', 'acc-depreciation', 'acc-accumulated'],
+  ] as const)('%s posts Dr %s and Cr %s', async (voucherType, debit, credit) => {
+    vi.resetModules();
+    const { createVoucher } = await import('../ledger');
+    const saved = await createVoucher({
+      voucherType,
+      voucherTo: 'OTHER',
+      transactionDate: '2026-10-12',
+      amount: 1500,
+      notes: `${voucherType} test`,
+      debitAccountId: debit,
+      creditAccountId: credit,
+    });
+
+    expect(mockGet).toHaveBeenCalledWith('/voucher/create.json');
+    const [url, body] = mockPost.mock.calls[0];
+    expect(url).toBe('/voucher/save.json?SYNCHRONIZER_TOKEN=tok&SYNCHRONIZER_URI=%2Fvoucher%2Fcreate');
+    expect(body.voucherType).toBe(voucherType);
+    expect(body.debitLedgerAccount).toEqual({ id: debit });
+    expect(body.creditLedgerAccount).toEqual({ id: credit });
+    // The keys the backend has no field for are gone.
+    expect(body).not.toHaveProperty('cashAccount');
+    expect(body).not.toHaveProperty('expenseAccount');
+    expect(body).not.toHaveProperty('incomeAccount');
+    expect(saved).toEqual({ id: 'v-new' });
   });
 });
