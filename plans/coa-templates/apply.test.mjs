@@ -1,6 +1,6 @@
 // Acceptance checks for the SOUPFIN-145 endpoints (applyTemplate + coaTemplate/index).
 // The backend Spock specs in plans/soupfin-145-apply-template-endpoints.html port these
-// one for one. Run with: node --test plans/coa-templates/
+// one for one. Run with: node --test plans/coa-templates/*.test.mjs
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';

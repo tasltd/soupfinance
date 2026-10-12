@@ -56,7 +56,7 @@
 <table>
 <tr><th>Part</th><th>What</th><th>Status</th></tr>
 <tr><td>P1</td><td>Endpoint contract, validation and response shapes, as runnable code: <code>plans/coa-templates/apply.mjs</code></td><td><span class="pill done">done</span></td></tr>
-<tr><td>P2</td><td>Acceptance checks in <code>plans/coa-templates/apply.test.mjs</code> (24 checks; with SOUPFIN-143's 50, <code>node --test plans/coa-templates/</code> runs 74, all passing). Five deliberate bugs were planted one at a time; each turned at least one check red.</td><td><span class="pill done">done</span></td></tr>
+<tr><td>P2</td><td>Acceptance checks in <code>plans/coa-templates/apply.test.mjs</code> (24 checks; with SOUPFIN-143's 50, <code>node --test plans/coa-templates/*.test.mjs</code> runs 74, all passing). Five deliberate bugs were planted one at a time; each turned at least one check red.</td><td><span class="pill done">done</span></td></tr>
 <tr><td>P3</td><td><code>CoaTemplateService.apply</code> and <code>listTemplates</code></td><td><span class="pill todo">todo</span></td></tr>
 <tr><td>P4</td><td>The two controller actions, security and CSRF</td><td><span class="pill todo">todo</span></td></tr>
 <tr><td>P5</td><td>Module gating and the apply lock</td><td><span class="pill todo">todo</span></td></tr>
@@ -229,7 +229,7 @@ CoaApplyResult apply(Account account, CoaApplyCommand cmd) {
 <ul>
 <li>soupmarkets-web <code>e0b818d716</code> (2026-10-09): <code>LedgerAccountController</code>, <code>TokenWithFormInterceptor</code>, <code>FinanceModuleInterceptor</code>, <code>LedgerAccount</code>, <code>Account</code>, <code>SbRole</code>, <code>AgentController</code>.</li>
 <li><code>plans/soupfin-143-coa-template-seed-data.html</code> (template data, <code>compose()</code>, seeding algorithm) and <code>plans/coa-template-seeding.md</code> (parent plan, task 3).</li>
-<li>Reference and checks: <code>plans/coa-templates/apply.mjs</code>, <code>plans/coa-templates/apply.test.mjs</code>. Run <code>node --test plans/coa-templates/</code>.</li>
+<li>Reference and checks: <code>plans/coa-templates/apply.mjs</code>, <code>plans/coa-templates/apply.test.mjs</code>. Run <code>node --test plans/coa-templates/*.test.mjs</code>.</li>
 </ul>
 </main>
 </body>

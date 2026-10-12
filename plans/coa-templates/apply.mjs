@@ -7,7 +7,7 @@
 // shapes below are the contract SOUPFIN-147 (the frontend template picker) builds on.
 // apply.test.mjs holds the acceptance checks the Spock specs must port.
 //
-// Run the checks with: node --test plans/coa-templates/
+// Run the checks with: node --test plans/coa-templates/*.test.mjs
 
 import { compose, validate } from './compose.mjs';
 
