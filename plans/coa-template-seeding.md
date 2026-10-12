@@ -65,7 +65,7 @@ The base account trees are already written in `plans/soupfinance-tenant-architec
 |---|------|-------|----------|
 | 1 | Backend plan + implementation: COA template domain and seed data (TRADING, SERVICES, + Ghana tax overlay) | Backend | Urgent |
 | 2 | Backend: seed the COA and enable the Ledger/Accounting modules inside `/account/register.json` | Backend | Urgent |
-| 3 | Backend: `applyTemplate` (idempotent, dry-run) + `coaTemplate/index` endpoints | Backend | High |
+| 3 | Backend: `applyTemplate` (idempotent, dry-run) + `coaTemplate/index` endpoints — plan: `plans/soupfin-145-apply-template-endpoints.html` | Backend | High |
 | 4 | Backend: backfill migration for existing tenants with an empty COA | Backend | High |
 | 5 | Frontend: COA empty-state CTA + template picker + apply flow | Frontend | High |
 | 6 | Frontend: fix the blank COA render when no group derives; "Uncategorised" fallback | Frontend | Medium |
