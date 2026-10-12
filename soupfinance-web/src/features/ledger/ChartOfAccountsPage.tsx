@@ -9,9 +9,12 @@
  * Fix (SOUPFIN-142): fetch every page of accounts (the backend default is 10),
  *   show accounts with no derivable group under "Uncategorised" instead of
  *   rendering nothing, and give the empty state a way forward.
+ * Added (SOUPFIN-147): the empty state's call to action opens the template picker
+ *   (coaTemplate/index + applyTemplate), and a banner reports what was added.
  */
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { listAllLedgerAccounts } from '../../api/endpoints/ledger';
 import { useFormatCurrency } from '../../stores';
 import { ApiErrorState } from '../../components/feedback';
@@ -19,6 +22,7 @@ import type { LedgerAccount, LedgerGroup } from '../../types';
 // Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
 import { HelpLink } from '../../components/help';
 import { logger } from '../../utils/logger';
+import { CoaTemplatePicker } from './CoaTemplatePicker';
 
 // Added: Group configuration with colors and icons
 const GROUP_CONFIG: Record<LedgerGroup, { label: string; icon: string; colorClass: string }> = {
@@ -50,6 +54,11 @@ const DISPLAY_CONFIG: Record<DisplayGroup, { label: string; icon: string; colorC
 
 export function ChartOfAccountsPage() {
   const formatCurrency = useFormatCurrency();
+  const { t } = useTranslation('ledger');
+
+  // Added (SOUPFIN-147): template picker and the result of the last apply
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [applied, setApplied] = useState<{ count: number; template: string } | null>(null);
 
   // Added: Track expanded groups
   const [expandedGroups, setExpandedGroups] = useState<Set<DisplayGroup>>(new Set(DISPLAY_ORDER));
@@ -114,6 +123,28 @@ export function ChartOfAccountsPage() {
         </div>
       </div>
 
+      {/* Added (SOUPFIN-147): confirmation after a template was applied */}
+      {applied && (
+        <div
+          role="status"
+          className="flex items-center justify-between gap-3 rounded-lg border border-success/30 bg-success/10 px-4 py-3 text-sm text-success"
+          data-testid="coa-setup-success"
+        >
+          <span className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-base" aria-hidden="true">check_circle</span>
+            {t('chartOfAccounts.setup.applied', { count: applied.count, template: applied.template })}
+          </span>
+          <button
+            type="button"
+            onClick={() => setApplied(null)}
+            aria-label={t('chartOfAccounts.setup.close')}
+            className="flex size-7 items-center justify-center rounded-full hover:bg-success/20"
+          >
+            <span className="material-symbols-outlined text-base" aria-hidden="true">close</span>
+          </button>
+        </div>
+      )}
+
       {/* Content */}
       {isLoading ? (
         <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-8 text-center text-subtle-text" data-testid="coa-loading">
@@ -127,24 +158,33 @@ export function ChartOfAccountsPage() {
         />
       ) : !accounts || accounts.length === 0 ? (
         <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-12 text-center" data-testid="coa-empty">
-          <span className="material-symbols-outlined text-6xl text-subtle-text/50 mb-4">account_tree</span>
-          <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">No accounts found</h3>
-          <p className="text-subtle-text">Your chart of accounts is empty.</p>
-          {/* Added (SOUPFIN-142): a starter chart is seeded at sign-up; until there is a
-              self-service template picker, refresh or escalate to an administrator. */}
-          <p className="text-subtle-text mt-1" data-testid="coa-empty-hint">
-            A starter chart is normally added when your company signs up. Refresh to check again,
-            or ask your administrator to set one up.
+          <span className="material-symbols-outlined text-6xl text-primary/70 mb-4" aria-hidden="true">account_tree</span>
+          {/* Changed (SOUPFIN-147): "Your chart of accounts is empty" becomes a set-up call to action */}
+          <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">{t('chartOfAccounts.setup.ctaTitle')}</h3>
+          <p className="text-subtle-text max-w-xl mx-auto" data-testid="coa-empty-hint">
+            {t('chartOfAccounts.setup.ctaBody')}
           </p>
-          <button
-            type="button"
-            onClick={() => refetch()}
-            className="mt-6 inline-flex items-center justify-center gap-2 rounded-lg h-10 px-4 bg-primary text-white text-sm font-bold hover:bg-primary/90"
-            data-testid="coa-empty-refresh"
-          >
-            <span className="material-symbols-outlined text-base" aria-hidden="true">refresh</span>
-            Refresh accounts
-          </button>
+          <div className="mt-6 flex flex-wrap justify-center gap-3">
+            <button
+              type="button"
+              onClick={() => setPickerOpen(true)}
+              className="inline-flex items-center justify-center gap-2 rounded-lg h-10 px-4 bg-primary text-white text-sm font-bold hover:bg-primary/90"
+              data-testid="coa-setup-cta"
+            >
+              <span className="material-symbols-outlined text-base" aria-hidden="true">auto_awesome</span>
+              {t('chartOfAccounts.setup.ctaButton')}
+            </button>
+            {/* Added (SOUPFIN-142): a chart may arrive from sign-up or an administrator */}
+            <button
+              type="button"
+              onClick={() => refetch()}
+              className="inline-flex items-center justify-center gap-2 rounded-lg h-10 px-4 bg-[#f5f1f0] dark:bg-white/10 text-text-light dark:text-text-dark text-sm font-bold hover:bg-gray-200 dark:hover:bg-white/20"
+              data-testid="coa-empty-refresh"
+            >
+              <span className="material-symbols-outlined text-base" aria-hidden="true">refresh</span>
+              {t('chartOfAccounts.setup.refresh')}
+            </button>
+          </div>
         </div>
       ) : (
         <div className="space-y-4" data-testid="coa-groups">
@@ -241,6 +281,16 @@ export function ChartOfAccountsPage() {
             );
           })}
         </div>
+      )}
+
+      {pickerOpen && (
+        <CoaTemplatePicker
+          onClose={() => setPickerOpen(false)}
+          onApplied={(result, templateName) => {
+            setPickerOpen(false);
+            setApplied({ count: result.summary.created, template: templateName });
+          }}
+        />
       )}
     </div>
   );

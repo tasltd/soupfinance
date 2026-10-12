@@ -193,13 +193,15 @@ test.describe('SOUPFIN-142: Chart of Accounts shows the seeded chart', () => {
     await shot(page, 'coa-uncategorised-fallback');
   });
 
-  test('an empty chart explains the starter chart and Refresh reloads it', async ({ page }) => {
+  test('an empty chart offers set-up and Refresh reloads it', async ({ page }) => {
     const requests = await serveLedgerAccounts(page, (call) => (call === 1 ? [] : templateRows()));
     await openChartOfAccountsFromMenu(page);
 
-    await expect(page.getByTestId('coa-empty')).toContainText('No accounts found');
-    await expect(page.getByTestId('coa-empty-hint')).toHaveText(
-      'A starter chart is normally added when your company signs up. Refresh to check again, or ask your administrator to set one up.'
+    // Changed (SOUPFIN-147): the empty state now leads with the template picker CTA
+    await expect(page.getByTestId('coa-empty')).toContainText('Set up your chart of accounts');
+    await expect(page.getByTestId('coa-setup-cta')).toBeVisible();
+    await expect(page.getByTestId('coa-empty-hint')).toContainText(
+      'Start from a template built for your kind of business.'
     );
     await shot(page, 'coa-empty-state');
 

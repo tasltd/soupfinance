@@ -6,7 +6,7 @@
 <script type="application/json" id="plan-index">
 {
   "title": "SOUPFIN-145 — applyTemplate and coaTemplate/index endpoints",
-  "revision": "1",
+  "revision": "2",
   "goal": "An admin or finance user can list the chart-of-accounts templates and apply one (with optional country and industry overlays) to their own tenant, as a dry-run preview or for real, and applying the same selection twice creates nothing the second time.",
   "stories": [
     {"id": "P1", "title": "Endpoint contract, request validation and response shapes fixed in a runnable reference (plans/coa-templates/apply.mjs)", "status": "done"},
@@ -87,9 +87,9 @@
       "description": "Consultancies, agencies, clinics, schools and any business that sells time or expertise rather than stock.",
       "accountCount": 69, "categoryCount": 21, "systemAccountCount": 18,
       "preview": [
-        { "number": "1000", "name": "Cash on Hand", "ledgerAccountCategory": "CASH ON HAND",
+        { "number": "1000", "name": "Cash on Hand", "ledgerAccountCategory": "CASH ON HAND", "ledgerGroup": "ASSET",
           "parentAccount": null, "accountType": "CASH", "systemAccount": true },
-        { "number": "1010", "name": "Petty Cash", "ledgerAccountCategory": "CASH ON HAND",
+        { "number": "1010", "name": "Petty Cash", "ledgerAccountCategory": "CASH ON HAND", "ledgerGroup": "ASSET",
           "parentAccount": null, "accountType": null, "systemAccount": false }
       ],
       "previewTruncated": false },
@@ -109,6 +109,7 @@
 <li><code>preview</code> holds up to 100 accounts (<code>PREVIEW_LIMIT</code>). Every template today has 69 to 73, so it is the whole list and <code>previewTruncated</code> is false.</li>
 <li>Overlay keys are unique across countries and industries, so the request can use bare keys. A spec asserts this, so adding a clashing key fails the build.</li>
 <li><code>recommended</code> is null when the tenant's licence category has no template (a brokerage tenant).</li>
+<li><code>ledgerGroup</code> (revision 2, added for the SOUPFIN-147 picker) is the statement section: <code>ASSET</code>, <code>LIABILITY</code>, <code>EQUITY</code>, <code>INCOME</code> or <code>EXPENSE</code>. Income and expense categories are stored as group EQUITY with sub-group INCOME/EXPENSE, so the sub-group wins there (<code>effectiveLedgerGroup</code> in apply.mjs). It is on every <code>preview</code> row and every <code>created</code> row. The picker falls back to the number's first digit when it is missing.</li>
 </ul>
 
 <h3><span class="pill post">POST</span> <code>/rest/ledgerAccount/applyTemplate.json?SYNCHRONIZER_TOKEN={token}&amp;SYNCHRONIZER_URI={uri}</code></h3>
@@ -118,9 +119,9 @@
 <pre><code>{
   "dryRun": true, "template": "services", "overlays": ["GH"], "composedKey": "services+GH",
   "created": [
-    { "number": "1020", "name": "Mobile Money Wallets", "ledgerAccountCategory": "CASH ON HAND",
+    { "number": "1020", "name": "Mobile Money Wallets", "ledgerAccountCategory": "CASH ON HAND", "ledgerGroup": "ASSET",
       "parentAccount": null, "accountType": "BANK" },
-    { "number": "1050", "name": "Undeposited Funds", "ledgerAccountCategory": "CASH ON HAND",
+    { "number": "1050", "name": "Undeposited Funds", "ledgerAccountCategory": "CASH ON HAND", "ledgerGroup": "ASSET",
       "parentAccount": null, "accountType": "UNDEPOSITED_FUNDS" }
   ],
   "skipped": [
