@@ -11,7 +11,12 @@
  * which is what production code produces anyway.
  */
 import { describe, it, expect } from 'vitest';
-import { parseApiError, getApiErrorMessage, getLoginErrorMessage } from '../errors';
+import {
+  parseApiError,
+  getApiErrorMessage,
+  getLoginErrorMessage,
+  classifyForbiddenBody,
+} from '../errors';
 
 // Build a duck-typed axios error matching the shape the response interceptor
 // sees in production (config.url + response.status + response.data).
@@ -80,6 +85,132 @@ describe('parseApiError', () => {
 
       expect(result.kind).toBe('forbidden');
       expect(result.message).toBe('Custom backend message about lacking ROLE_ADMIN');
+    });
+  });
+
+  // SOUPFIN-150: the module gate and the role check both answer 403 on the same
+  // URLs. The body tells them apart. Bodies below are the exact shapes the
+  // backend sends (FinanceModuleInterceptor; Spring Boot error envelope from
+  // Spring Security's sendError, captured from the LXC backend 2026-10-12).
+  describe('403 cause from the body (SOUPFIN-150)', () => {
+    const MODULE_GATE_BODY = { error: 'Finance module is not enabled for this tenant' };
+    const SPRING_ROLE_BODY = {
+      timestamp: 1791812465647,
+      status: 403,
+      error: 'Forbidden',
+      path: '/rest/ledgerAccount/index.json',
+    };
+
+    it('module interceptor body on the ledger URL → module_disabled, Ledger named', () => {
+      const result = parseApiError(makeAxiosError(403, '/ledgerAccount/index.json', MODULE_GATE_BODY));
+
+      expect(result.kind).toBe('module_disabled');
+      expect(result.title).toBe('Ledger module is not available');
+      expect(result.actionHint).toContain('enable this module');
+    });
+
+    it('Spring Security body on the ledger URL → forbidden with ask-your-admin copy', () => {
+      const result = parseApiError(makeAxiosError(403, '/ledgerAccount/index.json', SPRING_ROLE_BODY));
+
+      expect(result.kind).toBe('forbidden');
+      expect(result.title).toBe('You do not have permission');
+      expect(result.message).toBe('Your account does not have permission to use Ledger.');
+      expect(result.actionHint).toBe('Ask your administrator to give your account access.');
+      // Never the module copy, never Spring's jargon.
+      expect(`${result.title} ${result.message}`).not.toMatch(/module|not available|Forbidden/);
+      expect(result.status).toBe(403);
+    });
+
+    it.each<[string, string]>([
+      ['/ledgerTransaction/index.json', 'Ledger'],
+      ['/rest/ledgerTransactionGroup/show/abc.json', 'Ledger'],
+      ['/voucher/save.json', 'Accounting'],
+      ['/paymentMethod/index.json', 'Accounting'],
+    ])('Spring Security body on gated %s → forbidden, names %s', (url, module) => {
+      const result = parseApiError(makeAxiosError(403, url, SPRING_ROLE_BODY));
+
+      expect(result.kind).toBe('forbidden');
+      expect(result.message).toContain(module);
+    });
+
+    it('"Access Denied" message variant of the envelope → forbidden', () => {
+      const result = parseApiError(
+        makeAxiosError(403, '/ledgerAccount/index.json', { ...SPRING_ROLE_BODY, message: 'Access Denied' }),
+      );
+
+      expect(result.kind).toBe('forbidden');
+    });
+
+    it('module body on a URL the frontend does not list → module_disabled, backend name used', () => {
+      const result = parseApiError(makeAxiosError(403, '/invoice/index.json', MODULE_GATE_BODY));
+
+      expect(result.kind).toBe('module_disabled');
+      expect(result.title).toBe('Finance module is not available');
+    });
+
+    it('plain-text module body (non-JSON request) → module_disabled', () => {
+      const result = parseApiError(
+        makeAxiosError(403, '/vendor/index', 'Trading module is not enabled for this tenant'),
+      );
+
+      expect(result.kind).toBe('module_disabled');
+      expect(result.title).toBe('Trading module is not available');
+    });
+
+    it('generic URL with a bare "Forbidden" body → forbidden without echoing the jargon', () => {
+      const result = parseApiError(makeAxiosError(403, '/invoice/save.json', { error: 'Forbidden' }));
+
+      expect(result.kind).toBe('forbidden');
+      expect(result.message).not.toMatch(/forbidden/i);
+      expect(result.message).toContain('permission');
+    });
+
+    it.each<[string, unknown]>([
+      ['no body', undefined],
+      ['empty object', {}],
+      ['empty string', ''],
+      ['HTML error page', '<html><body><h1>HTTP Status 403</h1></body></html>'],
+    ])('silent body (%s) on the ledger URL keeps the URL fallback → module_disabled', (_label, body) => {
+      const result = parseApiError(makeAxiosError(403, '/ledgerAccount/index.json', body));
+
+      expect(result.kind).toBe('module_disabled');
+      expect(result.title).toContain('Ledger');
+    });
+
+    it('silent body on a generic URL → forbidden', () => {
+      expect(parseApiError(makeAxiosError(403, '/invoice/save.json', {})).kind).toBe('forbidden');
+    });
+
+    it('a 10,000-character body is ignored, not matched or echoed', () => {
+      const huge = 'x'.repeat(10_000);
+      const result = parseApiError(makeAxiosError(403, '/invoice/save.json', { error: huge }));
+
+      expect(result.kind).toBe('forbidden');
+      expect(result.message.length).toBeLessThan(300);
+    });
+  });
+
+  describe('classifyForbiddenBody (SOUPFIN-150)', () => {
+    it.each<[string, unknown, string, string | undefined]>([
+      ['interceptor JSON', { error: 'Finance module is not enabled for this tenant' }, 'module_disabled', 'Finance'],
+      ['CIS interceptor JSON', { error: 'CIS/Funds module is not enabled for this tenant' }, 'module_disabled', 'CIS/Funds'],
+      ['interceptor plain text', 'Souplify module is not enabled for this tenant', 'module_disabled', 'Souplify'],
+      ['explicit code', { code: 'MODULE_DISABLED', module: 'FINANCE' }, 'module_disabled', 'Finance'],
+      ['explicit code, no module', { code: 'module_disabled' }, 'module_disabled', undefined],
+      ['explicit role code', { code: 'ROLE_DENIED', error: 'Forbidden' }, 'role_denied', undefined],
+      ['Spring envelope', { status: 403, error: 'Forbidden', path: '/rest/x' }, 'role_denied', undefined],
+      ['Access Denied message', { message: 'Access Denied' }, 'role_denied', undefined],
+      ['plain "Forbidden" text', 'Forbidden', 'role_denied', undefined],
+      ['null', null, 'unknown', undefined],
+      ['undefined', undefined, 'unknown', undefined],
+      ['empty object', {}, 'unknown', undefined],
+      ['number', 403, 'unknown', undefined],
+      ['unrelated message', { error: 'Custom backend message about lacking ROLE_ADMIN' }, 'unknown', undefined],
+    ])('%s → %s', (_label, body, cause, module) => {
+      const result = classifyForbiddenBody(body);
+
+      expect(result.cause).toBe(cause);
+      expect(result.backendModule).toBe(module);
     });
   });
 
