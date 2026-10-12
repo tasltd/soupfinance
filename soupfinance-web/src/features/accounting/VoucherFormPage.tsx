@@ -34,7 +34,7 @@ import { usePaymentMethods } from '../../hooks/usePaymentMethods';
 import { DEFAULT_CURRENCIES } from '../../api/endpoints/domainData';
 // Added (SOUPFIN-9): module-disabled banner + user-friendly submit errors
 import { ModuleDisabledBanner } from '../../components/feedback';
-import { getApiErrorMessage } from '../../api/errors';
+import { getApiErrorMessage, getPeriodLockError } from '../../api/errors';
 import type { CreateVoucherRequest, VoucherType, VoucherTo } from '../../types';
 // Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
 import { HelpLink } from '../../components/help';
@@ -180,6 +180,7 @@ export function VoucherFormPage() {
     watch,
     setValue,
     reset,
+    setError,
     formState: { errors },
   } = useForm<VoucherFormData>({
     resolver: standardSchemaResolver(voucherFormSchema),
@@ -363,13 +364,19 @@ export function VoucherFormPage() {
       // /accounting/vouchers used to render a fresh blank form here.
       navigate('/accounting/transactions');
     } catch (error) {
+      // Added (SOUPFIN-158): a date in a closed period belongs on the date field
+      const lock = getPeriodLockError(error);
+      if (lock) {
+        setError('transactionDate', { type: 'server', message: lock.message }, { shouldFocus: true });
+        return;
+      }
       // Changed (SOUPFIN-9): use parseApiError so 403 ("module disabled")
       // shows a useful message instead of raw axios "Request failed..." text.
       setSubmitError(getApiErrorMessage(error));
     } finally {
       setIsSubmitting(false);
     }
-  }, [navigate, isExisting, voucherId]);
+  }, [navigate, isExisting, voucherId, setError]);
 
   // Added: Wrapper for save draft action - explicitly typed for TypeScript
   const handleSaveDraft = handleSubmit(onSubmit);

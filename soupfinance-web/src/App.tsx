@@ -103,6 +103,8 @@ import {
   BankAccountListPage,
   BankAccountFormPage,
   AccountSettingsPage,
+  FinancialYearsPage,
+  OpeningBalancesPage,
 } from './features/settings';
 
 // Added (SOUPFIN-75): In-app user guide
@@ -359,6 +361,9 @@ export default function App() {
               <Route path="bank-accounts/:id" element={<BankAccountFormPage />} />
               {/* Account Settings */}
               <Route path="account" element={<AccountSettingsPage />} />
+              {/* Added (SOUPFIN-158): Financial years and opening balances */}
+              <Route path="financial-years" element={<FinancialYearsPage />} />
+              <Route path="financial-years/opening-balances" element={<OpeningBalancesPage />} />
             </Route>
 
             {/* Added (SOUPFIN-75): User guide, reached from the sidebar Help link */}

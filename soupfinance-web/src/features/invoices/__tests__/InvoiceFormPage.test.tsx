@@ -1276,3 +1276,37 @@ describe('InvoiceFormPage', () => {
     });
   });
 });
+
+// Added (SOUPFIN-158): an invoice dated in a closed period is refused by the
+// backend with PERIOD_LOCKED; the reason belongs under the Invoice Date field.
+describe('InvoiceFormPage locked period (SOUPFIN-158)', () => {
+  it('shows the lock message under the invoice date and stays on the form', async () => {
+    const user = userEvent.setup();
+    mockNavigate.mockClear();
+    setupDefaultMocks([
+      createMockClient({ id: 'c-1', name: 'Test Corp', accountServices: { id: 'as-1', serialised: 'Test Corp' } }),
+    ]);
+    vi.mocked(createInvoice).mockRejectedValue(
+      Object.assign(new Error('Request failed with status code 422'), {
+        isAxiosError: true,
+        config: { url: '/invoice/save.json' },
+        response: { status: 422, data: { code: 'PERIOD_LOCKED', error: 'The books are closed up to 31 Dec 2025.' } },
+      })
+    );
+
+    renderInvoiceFormPage();
+    await screen.findByText('Test Corp');
+    await user.selectOptions(screen.getByTestId('invoice-client-select'), 'c-1');
+    const dueDate = screen.getByTestId('invoice-due-date-input');
+    await user.clear(dueDate);
+    await user.type(dueDate, '2026-02-28');
+    await user.type(screen.getByTestId('invoice-item-description-0'), 'Service');
+    await user.clear(screen.getByTestId('invoice-item-unitPrice-0'));
+    await user.type(screen.getByTestId('invoice-item-unitPrice-0'), '100');
+    await user.click(screen.getByTestId('invoice-form-save-draft-button'));
+
+    expect(await screen.findByTestId('invoice-date-error')).toHaveTextContent('The books are closed up to 31 Dec 2025.');
+    expect(screen.getByTestId('invoice-date-input')).toHaveAttribute('aria-invalid', 'true');
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+});

@@ -18,6 +18,8 @@ import { listVendors } from '../../api/endpoints/vendors';
 import { listTaxRates, listBillServices, DEFAULT_CURRENCIES } from '../../api/endpoints/domainData';
 import { useFormatCurrency } from '../../stores';
 import { getTodayIsoDate, sanitizeDateInputValue } from '../../utils/date';
+// Added (SOUPFIN-158): recognise a save rejected for a closed period
+import { getPeriodLockError } from '../../api/errors';
 // Added (SOUPFIN-30 #15): create a vendor without leaving this form
 import { AddEntityButton } from '../../components/forms/AddEntityButton';
 import type { BillItem } from '../../types';
@@ -55,6 +57,8 @@ export function BillFormPage() {
   // Fix (SOUPFIN-64): local calendar day, not UTC today — `new Date().toISOString()`
   // defaults the field to yesterday for part of every day east of UTC.
   const [billDate, setBillDate] = useState(getTodayIsoDate());
+  // Added (SOUPFIN-158): the backend's locked-period rejection, shown under the date
+  const [billDateError, setBillDateError] = useState<string | null>(null);
   const [paymentDate, setPaymentDate] = useState('');
   const [notes, setNotes] = useState('');
   // Added: Missing SSR fields (gap analysis §2.2)
@@ -140,6 +144,12 @@ export function BillFormPage() {
       navigate('/bills');
     },
     onError: (error: Error) => {
+      // Added (SOUPFIN-158): a date in a closed period belongs on the date field
+      const lock = getPeriodLockError(error);
+      if (lock) {
+        setBillDateError(lock.message);
+        return;
+      }
       setFormError(error.message || 'Failed to create bill');
     },
   });
@@ -153,6 +163,12 @@ export function BillFormPage() {
       navigate(`/bills/${id}`);
     },
     onError: (error: Error) => {
+      // Added (SOUPFIN-158): a date in a closed period belongs on the date field
+      const lock = getPeriodLockError(error);
+      if (lock) {
+        setBillDateError(lock.message);
+        return;
+      }
       setFormError(error.message || 'Failed to update bill');
     },
   });
@@ -408,10 +424,17 @@ export function BillFormPage() {
               <input
                 type="date"
                 value={billDate}
-                onChange={(e) => setBillDate(e.target.value)}
-                className="w-full h-12 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-3 text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/50"
+                onChange={(e) => {
+                  setBillDate(e.target.value);
+                  setBillDateError(null);
+                }}
+                aria-invalid={!!billDateError}
+                className={`w-full h-12 rounded-lg border ${billDateError ? 'border-danger' : 'border-border-light dark:border-border-dark'} bg-white dark:bg-background-dark px-3 text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/50`}
                 data-testid="bill-date-input"
               />
+              {billDateError && (
+                <p className="mt-1 text-sm text-danger" role="alert" data-testid="bill-date-error">{billDateError}</p>
+              )}
             </div>
 
             {/* Changed: Payment Date (backend: paymentDate, previously misnamed as dueDate) */}

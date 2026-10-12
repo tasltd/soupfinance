@@ -30,6 +30,8 @@ const ICON_BY_KIND: Record<ApiErrorKind, string> = {
   not_found: 'search_off',
   server_error: 'cloud_off',
   network: 'wifi_off',
+  // Added (SOUPFIN-158)
+  period_locked: 'event_busy',
   unknown: 'error',
 };
 

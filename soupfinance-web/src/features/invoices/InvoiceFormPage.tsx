@@ -39,6 +39,8 @@ import { useFormatCurrency } from '../../stores';
 import { DEFAULT_CURRENCIES } from '../../api/endpoints/domainData';
 import type { InvoiceItem, ClientType } from '../../types';
 import { getTodayIsoDate } from '../../utils/date';
+// Added (SOUPFIN-158): recognise a save rejected for a closed period
+import { getPeriodLockError } from '../../api/errors';
 // Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
 import { HelpLink } from '../../components/help';
 
@@ -89,6 +91,8 @@ export function InvoiceFormPage() {
   // Fix (SOUPFIN-64): local calendar day, not UTC today — `new Date().toISOString()`
   // defaults the field to yesterday for part of every day east of UTC.
   const [invoiceDate, setInvoiceDate] = useState(getTodayIsoDate());
+  // Added (SOUPFIN-158): the backend's locked-period rejection, shown under the date
+  const [invoiceDateError, setInvoiceDateError] = useState<string | null>(null);
   const [paymentDate, setPaymentDate] = useState('');
   const [notes, setNotes] = useState('');
   const [purchaseOrderNumber, setPurchaseOrderNumber] = useState('');
@@ -250,6 +254,12 @@ export function InvoiceFormPage() {
       navigate('/invoices');
     },
     onError: (error: Error) => {
+      // Added (SOUPFIN-158): a date in a closed period belongs on the date field
+      const lock = getPeriodLockError(error);
+      if (lock) {
+        setInvoiceDateError(lock.message);
+        return;
+      }
       setFormError(error.message || 'Failed to create invoice');
     },
   });
@@ -269,6 +279,12 @@ export function InvoiceFormPage() {
       navigate(`/invoices/${id}`);
     },
     onError: (error: Error) => {
+      // Added (SOUPFIN-158): a date in a closed period belongs on the date field
+      const lock = getPeriodLockError(error);
+      if (lock) {
+        setInvoiceDateError(lock.message);
+        return;
+      }
       setFormError(error.message || 'Failed to update invoice');
     },
   });
@@ -293,6 +309,12 @@ export function InvoiceFormPage() {
       navigate(`/invoices/${sentInvoice.id}`);
     },
     onError: (error: Error) => {
+      // Added (SOUPFIN-158): a date in a closed period belongs on the date field
+      const lock = getPeriodLockError(error);
+      if (lock) {
+        setInvoiceDateError(lock.message);
+        return;
+      }
       setFormError(error.message || 'Failed to send invoice');
     },
   });
@@ -822,10 +844,17 @@ export function InvoiceFormPage() {
               <input
                 type="date"
                 value={invoiceDate}
-                onChange={(e) => setInvoiceDate(e.target.value)}
-                className="w-full h-12 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-3 text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/50"
+                onChange={(e) => {
+                  setInvoiceDate(e.target.value);
+                  setInvoiceDateError(null);
+                }}
+                aria-invalid={!!invoiceDateError}
+                className={`w-full h-12 rounded-lg border ${invoiceDateError ? 'border-danger' : 'border-border-light dark:border-border-dark'} bg-white dark:bg-background-dark px-3 text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/50`}
                 data-testid="invoice-date-input"
               />
+              {invoiceDateError && (
+                <p className="mt-1 text-sm text-danger" role="alert" data-testid="invoice-date-error">{invoiceDateError}</p>
+              )}
             </div>
 
             {/* Payment Date (Due Date) */}

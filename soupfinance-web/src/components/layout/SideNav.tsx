@@ -75,6 +75,8 @@ const navItems: NavItem[] = [
       { label: 'Users', path: '/settings/users' },
       { label: 'Bank Accounts', path: '/settings/bank-accounts' },
       { label: 'Account Settings', path: '/settings/account' },
+      // Added (SOUPFIN-158)
+      { label: 'Financial Years', path: '/settings/financial-years' },
     ],
   },
 ];

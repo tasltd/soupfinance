@@ -131,6 +131,9 @@ describe('settingsHelpSection', () => {
     ['/settings/bank-accounts', 'bank-accounts'],
     ['/settings/bank-accounts/new', 'bank-accounts'],
     ['/settings/account', 'account-settings'],
+    // Added (SOUPFIN-158)
+    ['/settings/financial-years', 'financial-years'],
+    ['/settings/financial-years/opening-balances', 'opening-balances'],
   ])('%s opens #%s', (path, section) => {
     expect(settingsHelpSection(path)).toBe(section);
   });
@@ -148,6 +151,9 @@ describe('Layouts pick the section from the route', () => {
     ['/settings/users', 'users'],
     ['/settings/bank-accounts/new', 'bank-accounts'],
     ['/settings/account', 'account-settings'],
+    // Added (SOUPFIN-158)
+    ['/settings/financial-years', 'financial-years'],
+    ['/settings/financial-years/opening-balances', 'opening-balances'],
   ])('Settings header at %s links to #%s', (path, section) => {
     render(
       <MemoryRouter initialEntries={[path]}>

@@ -14,6 +14,8 @@
  * not the URL — see classifyForbiddenBody().
  */
 import type { AxiosError } from 'axios';
+// Added (SOUPFIN-158): lock-date messages use the app's display date format
+import { formatDisplayDate } from '../utils/date';
 
 // Kind of error — drives icon + tone, lets pages branch on intent (retry vs contact admin)
 export type ApiErrorKind =
@@ -23,6 +25,7 @@ export type ApiErrorKind =
   | 'not_found'         // 404
   | 'server_error'      // 5xx
   | 'network'           // connection failure, timeout
+  | 'period_locked'     // Added (SOUPFIN-158): the date falls on or before the books' lock date
   | 'unknown';          // fallback
 
 export interface ParsedApiError {
@@ -179,6 +182,42 @@ function isGenericAuthFailure(message: string): boolean {
 }
 
 /**
+ * Added (SOUPFIN-158): a save rejected because its date is in a locked period.
+ * `lockDate` is the last locked day (YYYY-MM-DD) when the backend sends it.
+ */
+export interface PeriodLockError {
+  message: string;
+  lockDate?: string;
+  /** The form field the backend named, e.g. "transactionDate". */
+  field?: string;
+}
+
+/**
+ * Added (SOUPFIN-158): recognise the backend's locked-period rejection.
+ *
+ * The backend plan (plans/soupfin-158-period-end-backend.md) answers 422 with
+ * `{ code: "PERIOD_LOCKED", error: "...", lockDate: "2025-12-31", field: "..." }`.
+ * The code decides, not the status: the ticket allows 403 too, and a 403 here
+ * must not be read as "module disabled". Returns null for every other error.
+ */
+export function getPeriodLockError(error: unknown): PeriodLockError | null {
+  if (!error || typeof error !== 'object' || (error as Record<string, unknown>).isAxiosError !== true) {
+    return null;
+  }
+  const data = (error as AxiosError).response?.data;
+  if (!data || typeof data !== 'object') return null;
+  const body = data as Record<string, unknown>;
+  if (typeof body.code !== 'string' || body.code.toUpperCase() !== 'PERIOD_LOCKED') return null;
+
+  const lockDate = typeof body.lockDate === 'string' && body.lockDate ? body.lockDate.split('T')[0] : undefined;
+  const field = typeof body.field === 'string' && body.field ? body.field : undefined;
+  const fallback = lockDate
+    ? `The books are closed up to ${formatDisplayDate(lockDate) || lockDate}. Choose a date after that day.`
+    : 'This date is in a closed period. Choose a later date.';
+  return { message: extractServerMessage(body) || fallback, lockDate, field };
+}
+
+/**
  * Convert any thrown error (Axios, native Error, unknown) into a ParsedApiError
  * with a human-readable title and message.
  *
@@ -203,6 +242,19 @@ export function parseApiError(error: unknown): ParsedApiError {
         title: 'Connection problem',
         message: 'We could not reach the server. Check your internet connection and try again.',
         actionHint: 'If the problem persists, contact your administrator.',
+      };
+    }
+
+    // Added (SOUPFIN-158): a locked period is decided by its code, before the
+    // status branches — a 403 PERIOD_LOCKED must not read as "module disabled".
+    const periodLock = getPeriodLockError(error);
+    if (periodLock) {
+      return {
+        kind: 'period_locked',
+        title: 'This period is closed',
+        message: periodLock.message,
+        actionHint: 'Choose a later date, or ask your administrator to move the lock date.',
+        status,
       };
     }
 

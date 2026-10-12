@@ -1115,3 +1115,47 @@ describe('BillFormPage', () => {
     });
   });
 });
+
+// Added (SOUPFIN-158): a bill dated in a closed period is refused by the
+// backend with PERIOD_LOCKED; the reason belongs under the Bill Date field.
+describe('BillFormPage locked period (SOUPFIN-158)', () => {
+  it('shows the lock message under the bill date and stays on the form', async () => {
+    const user = userEvent.setup();
+    mockNavigate.mockClear();
+    vi.mocked(listTaxRates).mockResolvedValue([]);
+    vi.mocked(listBillServices).mockResolvedValue([]);
+    vi.mocked(listVendors).mockResolvedValue([createMockVendor({ id: 'vendor-1', name: 'Acme' })]);
+    vi.mocked(createBill).mockRejectedValue(
+      Object.assign(new Error('Request failed with status code 422'), {
+        isAxiosError: true,
+        config: { url: '/bill/save.json' },
+        response: { status: 422, data: { code: 'PERIOD_LOCKED', lockDate: '2025-12-31', field: 'billDate' } },
+      })
+    );
+
+    renderBillFormPage();
+    await waitFor(() => expect(screen.getByTestId('bill-vendor-select')).toHaveTextContent('Acme'));
+    await user.selectOptions(screen.getByTestId('bill-vendor-select'), 'vendor-1');
+    const billDate = screen.getByTestId('bill-date-input');
+    await user.clear(billDate);
+    await user.type(billDate, '2025-11-15');
+    const dueDate = screen.getByTestId('bill-due-date-input');
+    await user.clear(dueDate);
+    await user.type(dueDate, '2025-12-15');
+    await user.type(screen.getByTestId('bill-item-description-0'), 'Rent');
+    await user.clear(screen.getByTestId('bill-item-unitPrice-0'));
+    await user.type(screen.getByTestId('bill-item-unitPrice-0'), '100');
+    await user.click(screen.getByTestId('bill-form-save-button'));
+
+    expect(await screen.findByTestId('bill-date-error')).toHaveTextContent(
+      'The books are closed up to December 31, 2025. Choose a date after that day.'
+    );
+    expect(billDate).toHaveAttribute('aria-invalid', 'true');
+    expect(mockNavigate).not.toHaveBeenCalled();
+
+    // Changing the date clears the message
+    await user.clear(billDate);
+    await user.type(billDate, '2026-01-05');
+    expect(screen.queryByTestId('bill-date-error')).not.toBeInTheDocument();
+  });
+});

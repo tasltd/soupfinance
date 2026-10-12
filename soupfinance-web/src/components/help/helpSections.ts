@@ -58,6 +58,9 @@ export const HELP_SECTIONS = [
   'users',
   'bank-accounts',
   'account-settings',
+  // Added (SOUPFIN-158)
+  'financial-years',
+  'opening-balances',
   'support',
   'module-not-enabled',
 ] as const;
@@ -89,5 +92,8 @@ export function settingsHelpSection(pathname: string): HelpSection {
   if (pathname.startsWith('/settings/users')) return 'users';
   if (pathname.startsWith('/settings/bank-accounts')) return 'bank-accounts';
   if (pathname.startsWith('/settings/account')) return 'account-settings';
+  // Added (SOUPFIN-158)
+  if (pathname.startsWith('/settings/financial-years/opening-balances')) return 'opening-balances';
+  if (pathname.startsWith('/settings/financial-years')) return 'financial-years';
   return 'settings';
 }

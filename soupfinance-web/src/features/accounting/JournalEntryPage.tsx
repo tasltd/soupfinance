@@ -25,7 +25,7 @@ import { useLedgerAccounts } from '../../hooks/useLedgerAccounts';
 import { useFormatCurrency } from '../../stores';
 // Added (SOUPFIN-9): explain disabled module + parse submit errors
 import { ModuleDisabledBanner } from '../../components/feedback';
-import { getApiErrorMessage } from '../../api/errors';
+import { getApiErrorMessage, getPeriodLockError } from '../../api/errors';
 import type { CreateJournalEntryRequest } from '../../types';
 // Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
 import { HelpLink } from '../../components/help';
@@ -133,6 +133,7 @@ export function JournalEntryPage() {
     control,
     handleSubmit,
     reset,
+    setError,
     formState: { errors },
   } = useForm<JournalEntryFormData>({
     resolver: zodResolver(journalEntrySchema) as never,
@@ -243,6 +244,12 @@ export function JournalEntryPage() {
       // Changed (SOUPFIN-154): return to the register the entry is listed in
       navigate('/accounting/transactions');
     } catch (error) {
+      // Added (SOUPFIN-158): a date in a closed period belongs on the date field
+      const lock = getPeriodLockError(error);
+      if (lock) {
+        setError('entryDate', { type: 'server', message: lock.message }, { shouldFocus: true });
+        return;
+      }
       // Changed (SOUPFIN-9): use parseApiError so 403 ("module disabled")
       // shows a useful message instead of raw axios "Request failed..." text.
       setSubmitError(getApiErrorMessage(error));
