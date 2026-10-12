@@ -1,0 +1,16 @@
+{
+  "key": "retail",
+  "name": "Retail",
+  "appliesTo": ["TRADING"],
+  "description": "Shops and online stores selling to consumers through tills, cards and mobile money.",
+  "remove": [],
+  "add": [
+    { "number": "1030", "name": "Till Floats", "ledgerAccountCategory": "CASH ON HAND", "cashFlow": true },
+    { "number": "1040", "name": "Card and MoMo Settlements in Transit", "ledgerAccountCategory": "CASH ON HAND", "cashFlow": true },
+    { "number": "2135", "name": "Gift Card and Voucher Liabilities", "ledgerAccountCategory": "SHORT -TERM LIABILITIES" },
+    { "number": "4085", "name": "Promotions and Loyalty Rewards", "ledgerAccountCategory": "INCOME", "contra": true },
+    { "number": "5045", "name": "Inventory Shrinkage", "ledgerAccountCategory": "COST OF SALES" },
+    { "number": "6330", "name": "Point-of-Sale and E-commerce Fees", "ledgerAccountCategory": "SELLING & PROMOTIONAL" },
+    { "number": "6340", "name": "Store Supplies and Packaging", "ledgerAccountCategory": "SELLING & PROMOTIONAL" }
+  ]
+}
