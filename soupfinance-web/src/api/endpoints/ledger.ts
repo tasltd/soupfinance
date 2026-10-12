@@ -385,17 +385,61 @@ export async function updateVoucher(id: string, data: Partial<CreateVoucherReque
 }
 
 /**
- * Approve a pending voucher
- * POST /rest/voucher/approve/:id.json
+ * Fix (SOUPFIN-156): VoucherController has no approve or cancel action, so the
+ * old /voucher/approve/:id.json and /voucher/cancel/:id.json calls could only
+ * 404. A voucher's status is set by saving a VoucherApproval:
+ * VoucherApprovalService.doSave copies approvalState onto voucher.status.
+ *
+ * POST /rest/voucherApproval/save.json needs a CSRF token (withForm) and an
+ * agent (nullable:false). create.json renders the new approval with the
+ * current user's agent already set, so the agent comes from there, falling
+ * back to /user/current.json.
  */
-export async function approveVoucher(id: string): Promise<Voucher> {
-  const response = await apiClient.post<Voucher>(`/voucher/approve/${id}.json`);
-  return response.data;
+async function saveVoucherApproval(
+  voucherId: string,
+  approvalState: 'APPROVED' | 'REJECTED',
+  comments?: string
+): Promise<void> {
+  const created = await apiClient.get<Record<string, unknown>>(
+    `/voucherApproval/create.json?voucher.id=${encodeURIComponent(voucherId)}`
+  );
+  const data = created.data ?? {};
+  const nested = (data.voucherApproval ?? {}) as Record<string, unknown>;
+  const csrf = {
+    SYNCHRONIZER_TOKEN: String(nested.SYNCHRONIZER_TOKEN ?? data.SYNCHRONIZER_TOKEN ?? ''),
+    SYNCHRONIZER_URI: String(nested.SYNCHRONIZER_URI ?? data.SYNCHRONIZER_URI ?? ''),
+  };
+
+  let agentId = ((nested.agent ?? data.agent) as { id?: string } | undefined)?.id;
+  if (!agentId) {
+    const current = await apiClient.get<{ agentId?: string }>('/user/current.json');
+    agentId = current.data?.agentId;
+  }
+
+  const body: Record<string, unknown> = {
+    voucher: { id: voucherId },
+    approvalState,
+  };
+  if (agentId) body.agent = { id: agentId };
+  if (comments) body.comments = comments;
+
+  await apiClient.post(`/voucherApproval/save.json?${csrfQueryString(csrf)}`, body);
+}
+
+/**
+ * Approve a pending voucher
+ * Changed (SOUPFIN-156): POST /rest/voucherApproval/save.json, approvalState APPROVED
+ */
+export async function approveVoucher(id: string, comments?: string): Promise<void> {
+  await saveVoucherApproval(id, 'APPROVED', comments);
 }
 
 /**
  * Post an approved voucher to ledger
  * POST /rest/voucher/post/:id.json
+ *
+ * The backend refuses (422) unless the voucher is APPROVED, and marks the
+ * voucher's ledger transaction verified.
  */
 export async function postVoucher(id: string): Promise<Voucher> {
   const response = await apiClient.post<Voucher>(`/voucher/post/${id}.json`);
@@ -403,12 +447,14 @@ export async function postVoucher(id: string): Promise<Voucher> {
 }
 
 /**
- * Cancel a voucher
- * POST /rest/voucher/cancel/:id.json
+ * Reject a voucher that has not been posted
+ * Added (SOUPFIN-156): replaces cancelVoucher, which called a
+ * /voucher/cancel action the backend never had. Rejection is the backend's
+ * only way to stop a voucher: POST /rest/voucherApproval/save.json with
+ * approvalState REJECTED. A posted voucher cannot be rejected or reversed.
  */
-export async function cancelVoucher(id: string): Promise<Voucher> {
-  const response = await apiClient.post<Voucher>(`/voucher/cancel/${id}.json`);
-  return response.data;
+export async function rejectVoucher(id: string, comments?: string): Promise<void> {
+  await saveVoucherApproval(id, 'REJECTED', comments);
 }
 
 /**
