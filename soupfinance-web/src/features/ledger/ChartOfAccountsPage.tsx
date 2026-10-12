@@ -8,8 +8,17 @@
  * Added: data-testid attributes for E2E testing
  */
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { listLedgerAccounts } from '../../api/endpoints/ledger';
+import { Link } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  listLedgerAccounts,
+  ledgerAccountHasTransactions,
+  deleteLedgerAccount,
+  deactivateLedgerAccount,
+  canEditLedgerAccount,
+  canDeleteLedgerAccount,
+} from '../../api/endpoints/ledger';
+import { getApiErrorMessage } from '../../api/errors';
 import { useFormatCurrency } from '../../stores';
 import { ApiErrorState } from '../../components/feedback';
 import type { LedgerAccount, LedgerGroup } from '../../types';
@@ -29,8 +38,65 @@ const GROUP_CONFIG: Record<LedgerGroup, { label: string; icon: string; colorClas
 // Added: Order for displaying groups
 const GROUP_ORDER: LedgerGroup[] = ['ASSET', 'LIABILITY', 'EQUITY', 'INCOME', 'REVENUE', 'EXPENSE'];
 
+/**
+ * Added (SOUPFIN-149): state of the remove-account dialog.
+ * - checking: asking the backend whether the account has transactions
+ * - delete: no transactions, a hard delete is safe
+ * - deactivate: has transactions (or the check failed), archive instead
+ */
+type RemoveMode = 'checking' | 'delete' | 'deactivate';
+interface RemoveState {
+  account: LedgerAccount;
+  mode: RemoveMode;
+  checkError?: string;
+  actionError?: string;
+  pending?: boolean;
+}
+
 export function ChartOfAccountsPage() {
   const formatCurrency = useFormatCurrency();
+  const queryClient = useQueryClient();
+
+  // Added (SOUPFIN-149): remove (delete / deactivate) flow
+  const [removing, setRemoving] = useState<RemoveState | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  const startRemove = async (account: LedgerAccount) => {
+    setNotice(null);
+    setRemoving({ account, mode: 'checking' });
+    try {
+      const hasTransactions = await ledgerAccountHasTransactions(account.id);
+      setRemoving((prev) =>
+        prev?.account.id === account.id ? { account, mode: hasTransactions ? 'deactivate' : 'delete' } : prev
+      );
+    } catch (err) {
+      // Without proof the account is unused, only offer the reversible option.
+      setRemoving((prev) =>
+        prev?.account.id === account.id
+          ? { account, mode: 'deactivate', checkError: getApiErrorMessage(err) }
+          : prev
+      );
+    }
+  };
+
+  const confirmRemove = async () => {
+    if (!removing || removing.mode === 'checking') return;
+    const { account, mode } = removing;
+    setRemoving({ ...removing, pending: true, actionError: undefined });
+    try {
+      if (mode === 'delete') {
+        await deleteLedgerAccount(account.id);
+        setNotice(`${account.name} was deleted.`);
+      } else {
+        await deactivateLedgerAccount(account.id);
+        setNotice(`${account.name} was deactivated. Its transactions are kept.`);
+      }
+      setRemoving(null);
+      await queryClient.invalidateQueries({ queryKey: ['ledger-accounts'] });
+    } catch (err) {
+      setRemoving({ ...removing, pending: false, actionError: getApiErrorMessage(err) });
+    }
+  };
 
   // Added: Track expanded groups
   const [expandedGroups, setExpandedGroups] = useState<Set<LedgerGroup>>(new Set(GROUP_ORDER));
@@ -82,7 +148,34 @@ export function ChartOfAccountsPage() {
           <p className="text-subtle-text">Manage your ledger accounts</p>
           <HelpLink section="chart-of-accounts" className="mt-1 self-start" />
         </div>
+        {/* Added (SOUPFIN-149): create a ledger account */}
+        <Link
+          to="/ledger/accounts/new"
+          className="h-10 px-4 inline-flex items-center gap-2 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90"
+          data-testid="coa-new-account"
+        >
+          <span className="material-symbols-outlined text-xl">add</span>
+          New Account
+        </Link>
       </div>
+
+      {notice && (
+        <div
+          className="p-4 rounded-lg bg-success/10 border border-success/30 text-success flex items-start gap-3"
+          role="status"
+          data-testid="coa-notice"
+        >
+          <span className="material-symbols-outlined text-xl">check_circle</span>
+          <p className="font-medium flex-1">{notice}</p>
+          <button
+            onClick={() => setNotice(null)}
+            className="material-symbols-outlined text-xl"
+            aria-label="Dismiss"
+          >
+            close
+          </button>
+        </div>
+      )}
 
       {/* Content */}
       {isLoading ? (
@@ -148,6 +241,9 @@ export function ChartOfAccountsPage() {
                           <th className="px-6 py-3 text-left">Currency</th>
                           <th className="px-6 py-3 text-right">Balance</th>
                           <th className="px-6 py-3 text-center">Status</th>
+                          <th className="px-6 py-3 text-right">
+                            <span className="sr-only">Actions</span>
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
@@ -182,6 +278,39 @@ export function ChartOfAccountsPage() {
                                 <span className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${account.isActive ? 'bg-success/10 text-success' : 'bg-subtle-text/10 text-subtle-text'}`}>
                                   {account.isActive ? 'Active' : 'Inactive'}
                                 </span>
+                                {account.systemAccount === true && (
+                                  <span
+                                    className="ml-2 px-2.5 py-0.5 text-xs font-medium rounded-full bg-info/10 text-info"
+                                    data-testid={`coa-system-${account.id}`}
+                                  >
+                                    System
+                                  </span>
+                                )}
+                              </td>
+                              {/* Added (SOUPFIN-149): actions respect systemAccount/editable/deletable */}
+                              <td className="px-6 py-4 text-right whitespace-nowrap">
+                                {canEditLedgerAccount(account) && (
+                                  <Link
+                                    to={`/ledger/accounts/${account.id}/edit`}
+                                    className="inline-flex p-2 rounded-full text-subtle-text hover:bg-primary/10 hover:text-primary"
+                                    aria-label={`Edit ${account.name}`}
+                                    title="Edit"
+                                    data-testid={`coa-edit-${account.id}`}
+                                  >
+                                    <span className="material-symbols-outlined text-xl" aria-hidden="true">edit</span>
+                                  </Link>
+                                )}
+                                {canDeleteLedgerAccount(account) && (
+                                  <button
+                                    onClick={() => startRemove(account)}
+                                    className="inline-flex p-2 rounded-full text-subtle-text hover:bg-danger/10 hover:text-danger"
+                                    aria-label={`Delete ${account.name}`}
+                                    title="Delete"
+                                    data-testid={`coa-delete-${account.id}`}
+                                  >
+                                    <span className="material-symbols-outlined text-xl" aria-hidden="true">delete</span>
+                                  </button>
+                                )}
                               </td>
                             </tr>
                           ))}
@@ -192,6 +321,83 @@ export function ChartOfAccountsPage() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Added (SOUPFIN-149): delete / deactivate confirmation */}
+      {removing && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="coa-remove-title"
+            className="relative w-full max-w-sm rounded-xl bg-surface-light dark:bg-surface-dark shadow-2xl overflow-hidden p-6"
+            data-testid="coa-remove-dialog"
+          >
+            <div className="flex flex-col items-center text-center">
+              <div className="size-12 rounded-full bg-danger/10 flex items-center justify-center mb-4">
+                <span className="material-symbols-outlined text-danger text-2xl">
+                  {removing.mode === 'deactivate' ? 'block' : 'delete'}
+                </span>
+              </div>
+              {removing.mode === 'checking' ? (
+                <>
+                  <h3 id="coa-remove-title" className="text-lg font-bold text-text-light dark:text-text-dark mb-2">
+                    Checking {removing.account.name}
+                  </h3>
+                  <p className="text-subtle-text mb-6" data-testid="coa-remove-checking">
+                    Looking for transactions on this account...
+                  </p>
+                </>
+              ) : removing.mode === 'delete' ? (
+                <>
+                  <h3 id="coa-remove-title" className="text-lg font-bold text-text-light dark:text-text-dark mb-2">
+                    Delete {removing.account.name}?
+                  </h3>
+                  <p className="text-subtle-text mb-6" data-testid="coa-remove-message">
+                    This account has no transactions. Deleting it removes it for good.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h3 id="coa-remove-title" className="text-lg font-bold text-text-light dark:text-text-dark mb-2">
+                    Deactivate {removing.account.name}?
+                  </h3>
+                  <p className="text-subtle-text mb-6" data-testid="coa-remove-message">
+                    {removing.checkError
+                      ? `We couldn't check this account for transactions (${removing.checkError}), so it can only be deactivated.`
+                      : "This account has transactions, so it can't be deleted."}{' '}
+                    Deactivating hides it from your accounts and keeps its history.
+                  </p>
+                </>
+              )}
+              {removing.actionError && (
+                <p className="text-sm text-danger mb-4" role="alert" data-testid="coa-remove-error">
+                  {removing.actionError}
+                </p>
+              )}
+              <div className="flex gap-3 w-full">
+                <button
+                  onClick={() => setRemoving(null)}
+                  disabled={removing.pending}
+                  className="flex-1 h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm hover:bg-primary/5 disabled:opacity-50"
+                  data-testid="coa-remove-cancel"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmRemove}
+                  disabled={removing.mode === 'checking' || removing.pending}
+                  className="flex-1 h-10 px-4 rounded-lg bg-danger text-white font-bold text-sm hover:bg-danger/90 disabled:opacity-50"
+                  data-testid="coa-remove-confirm"
+                >
+                  {removing.pending
+                    ? removing.mode === 'delete' ? 'Deleting...' : 'Deactivating...'
+                    : removing.mode === 'deactivate' ? 'Deactivate' : 'Delete'}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -227,6 +227,8 @@ describe('Every page header carries a "Need Help?" link', () => {
     'payments/PaymentListPage.tsx': ['payments'],
     'payments/PaymentFormPage.tsx': ['record-payment'],
     'ledger/ChartOfAccountsPage.tsx': ['chart-of-accounts'],
+    // Added (SOUPFIN-149): ledger account create/edit
+    'ledger/LedgerAccountFormPage.tsx': ['chart-of-accounts'],
     'ledger/LedgerTransactionsPage.tsx': ['ledger-transactions'],
     'accounting/TransactionRegisterPage.tsx': ['transaction-register'],
     'accounting/JournalEntryPage.tsx': ['journal-entry'],

@@ -14,6 +14,7 @@
 import apiClient, { toQueryString, getCsrfToken, csrfQueryString } from '../client';
 import type {
   LedgerAccount,
+  LedgerAccountCategory,
   LedgerTransaction,
   LedgerTransactionGroup,
   Voucher,
@@ -146,7 +147,8 @@ export async function createLedgerAccount(data: Partial<LedgerAccount>): Promise
     `/ledgerAccount/save.json?${csrfQueryString(csrf)}`,
     data
   );
-  return response.data;
+  // Changed (SOUPFIN-149): normalise like every other read so callers get code/ledgerGroup
+  return transformLedgerAccount(response.data);
 }
 
 /**
@@ -160,15 +162,78 @@ export async function updateLedgerAccount(id: string, data: Partial<LedgerAccoun
     `/ledgerAccount/update/${id}.json`,
     { ...data, id }
   );
-  return response.data;
+  // Changed (SOUPFIN-149): normalise the echoed account
+  return transformLedgerAccount(response.data);
 }
 
 /**
- * Delete ledger account (soft delete)
+ * Delete ledger account
  * DELETE /rest/ledgerAccount/delete/:id.json
+ *
+ * NOTE (SOUPFIN-149): LedgerAccountService.delete() is a HARD delete. Only call
+ * it for accounts with no transactions; use deactivateLedgerAccount otherwise.
  */
 export async function deleteLedgerAccount(id: string): Promise<void> {
   await apiClient.delete(`/ledgerAccount/delete/${id}.json`);
+}
+
+/**
+ * Added (SOUPFIN-149): Deactivate (archive) a ledger account.
+ * PUT /rest/ledgerAccount/update/:id.json with { archived: true }
+ *
+ * The backend docs prefer soft delete (SbDomain.archived) for accounts with
+ * transaction history: the rows keep their FK and the account drops out of
+ * index.json (which filters archived=false). No CSRF token on PUT.
+ */
+export async function deactivateLedgerAccount(id: string): Promise<LedgerAccount> {
+  return updateLedgerAccount(id, { archived: true });
+}
+
+/**
+ * Added (SOUPFIN-149): Does any ledger transaction reference this account?
+ * GET /rest/ledgerTransaction/index.json?ledgerAccount=:id&max=1
+ *
+ * LedgerTransaction.searchList matches `ledgerAccount` against the debit,
+ * credit and single-entry account FKs, so one row is enough to answer.
+ */
+export async function ledgerAccountHasTransactions(id: string): Promise<boolean> {
+  const response = await apiClient.get<LedgerTransaction[]>(
+    `/ledgerTransaction/index.json?${toQueryString({ ledgerAccount: id, max: 1 })}`
+  );
+  return Array.isArray(response.data) && response.data.length > 0;
+}
+
+/**
+ * Added (SOUPFIN-149): List ledger account categories for the account form.
+ * GET /rest/ledgerAccountCategory/index.json?max=1000
+ *
+ * Grails index defaults to 10 rows, so ask for the backend maximum. The domain
+ * has `ledgerGroup` directly; fall back to the serialised suffix if a
+ * shallow row omits it.
+ */
+export async function listLedgerAccountCategories(): Promise<LedgerAccountCategory[]> {
+  const response = await apiClient.get<LedgerAccountCategory[]>(
+    `/ledgerAccountCategory/index.json?max=1000`
+  );
+  return (response.data || []).map((raw) => ({
+    ...raw,
+    ledgerGroup:
+      raw.ledgerGroup ??
+      (deriveLedgerGroup({ ledgerAccountCategory: { id: raw.id, serialised: raw.serialised } }) as LedgerGroup),
+  }));
+}
+
+/**
+ * Added (SOUPFIN-149): System flags. The domain flags are Boolean wrappers that
+ * are null on older rows; null means the domain default (editable/deletable
+ * true, systemAccount false).
+ */
+export function canEditLedgerAccount(account: Pick<LedgerAccount, 'editable' | 'systemAccount'>): boolean {
+  return account.systemAccount !== true && account.editable !== false;
+}
+
+export function canDeleteLedgerAccount(account: Pick<LedgerAccount, 'deletable' | 'systemAccount'>): boolean {
+  return account.systemAccount !== true && account.deletable !== false;
 }
 
 // =============================================================================

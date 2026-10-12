@@ -366,11 +366,15 @@ export type VoucherType = 'PAYMENT' | 'DEPOSIT' | 'RECEIPT';
 export type VoucherTo = 'CLIENT' | 'VENDOR' | 'STAFF' | 'OTHER';
 
 // Added: Ledger account category interface
+// Changed (SOUPFIN-149): mirror soupbroker.finance.LedgerAccountCategory — the
+// domain has no `code`; it carries system/editable flags like LedgerAccount.
 export interface LedgerAccountCategory extends BaseEntity {
   name: string;
-  code: string;
+  code?: string;
   ledgerGroup: LedgerGroup;
   description?: string;
+  serialised?: string;
+  systemCategory?: boolean | null;
 }
 
 export interface LedgerAccount extends BaseEntity {
@@ -379,13 +383,18 @@ export interface LedgerAccount extends BaseEntity {
   number?: string; // Added: account number for reporting
   description?: string;
   ledgerGroup: LedgerGroup;
-  ledgerAccountCategory?: { id: string; name?: string; class?: string }; // Added: category reference
-  parentAccount?: { id: string; name?: string; class?: string }; // Added: class field for Grails FK
-  currency?: string; // Added: Account currency
-  cashFlow?: string; // Added: Cash flow classification
-  hiddenAccount?: boolean; // Added: Hide from account lists
-  editable?: boolean; // Added: Can be edited
-  deletable?: boolean; // Added: Can be deleted
+  ledgerAccountCategory?: { id: string; name?: string; class?: string; serialised?: string }; // Added: category reference
+  parentAccount?: { id: string; name?: string; class?: string; serialised?: string } | null; // Added: class field for Grails FK
+  currency?: string; // Added: Account currency (java.util.Currency, ISO 4217 code)
+  // Fix (SOUPFIN-149): LedgerAccount.cashFlow is a Boolean on the domain
+  // ("appears in cash flow statements"), not a classification string.
+  cashFlow?: boolean | null;
+  // Flags below are Boolean wrappers on the domain and can be null on old rows.
+  hiddenAccount?: boolean | null; // Added: Hide from account lists
+  systemAccount?: boolean | null; // Added (SOUPFIN-149): system-generated, not user-modifiable
+  editable?: boolean | null; // Added: Can be edited
+  deletable?: boolean | null; // Added: Can be deleted
+  archived?: boolean; // Added (SOUPFIN-149): SbDomain soft-delete flag (deactivated)
   isActive: boolean;
   balance: number;
 }
