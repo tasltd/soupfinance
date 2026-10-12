@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SOUPFIN-159 — Audit trail (plan)</title>
+<script type="application/json" id="plan-index">
+{
+  "title": "SOUPFIN-159 — Audit trail for ledger and accounting records",
+  "revision": "1",
+  "goal": "A finance user can see who created, edited, approved, posted and reversed each journal entry and voucher, in a History panel on the record and in a filterable /reports/audit-trail report with CSV export, read from the tenant-scoped backend audit log.",
+  "stories": [
+    { "id": "F1", "title": "Frontend: audit endpoint module that groups per-property audit rows into events and re-applies filters", "status": "done" },
+    { "id": "F2", "title": "Frontend: History panel on journal entry and voucher pages (entry plus its lines)", "status": "done" },
+    { "id": "F3", "title": "Frontend: /reports/audit-trail with date, user, event, record type and text filters, before/after detail and CSV export; menu and hub links", "status": "done" },
+    { "id": "F4", "title": "Frontend: unit tests, mock E2E on the post/reverse contract, LXC integration E2E on real audit rows, user guide section", "status": "done" },
+    { "id": "B1", "title": "Backend: exact actor and eventName filters, persistedObjectId IN list, optional value search", "status": "todo" },
+    { "id": "B2", "title": "Backend: GET /rest/auditTrail/history.json returning grouped events paged by event", "status": "todo" },
+    { "id": "B3", "title": "Backend: composite indexes on audit_log", "status": "todo" },
+    { "id": "B4", "title": "Backend: tenant-isolation functional spec, decide ROLE_USER scope, query-cache eviction check", "status": "todo" },
+    { "id": "B5", "title": "Backend: confirm AUDIT_DISABLED unset in production; Auditable on Invoice, Bill, payments, LedgerAccount", "status": "todo" }
+  ],
+  "screens": ["audit-trail-report", "journal-entry-history"],
+  "dependsOn": ["SOUPFIN-155 (journal entry post and reverse endpoints)", "SOUPFIN-248 (saveMultiple answers 201 without saving)"],
+  "unblocks": ["LXC E2E of the post-then-reverse acceptance"]
+}
+</script>
+<style>
+  :root { --primary:#f24a0d; --text:#181311; --sub:#8a6b60; --border:#e6dedb; --bg:#f8f6f5; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:15px/1.55 Manrope, "Noto Sans", system-ui, sans-serif; color:var(--text); background:var(--bg); }
+  main { max-width: 1000px; margin: 0 auto; padding: 32px 24px 64px; }
+  h1 { font-size: 28px; font-weight: 800; letter-spacing:-0.02em; }
+  h2 { font-size: 21px; margin: 36px 0 10px; padding-top: 8px; border-top: 1px solid var(--border); }
+  h3 { font-size: 16px; margin: 22px 0 6px; }
+  table { border-collapse: collapse; width: 100%; background:#fff; margin: 10px 0; font-size: 14px; }
+  th, td { border: 1px solid var(--border); padding: 6px 10px; text-align: left; vertical-align: top; }
+  th { background:#f5f1f0; color: var(--sub); font-size: 12px; text-transform: uppercase; }
+  code { background:#f5f1f0; padding: 1px 5px; border-radius: 4px; font-size: 13px; }
+  pre { background:#1f1715; color:#f8f6f5; padding: 14px; border-radius: 10px; overflow-x:auto; }
+  pre code { background: none; color: inherit; padding: 0; }
+  figure { margin: 18px 0; background:#fff; border:1px solid var(--border); border-radius:12px; padding:12px; }
+  figure img { width: 100%; height: auto; border-radius: 8px; display:block; }
+  figcaption { color: var(--sub); font-size: 13px; margin-top: 8px; }
+  .status { display:flex; flex-wrap:wrap; gap:8px; margin: 12px 0; }
+  .pill { border-radius: 999px; padding: 2px 10px; font-size: 12px; font-weight: 700; }
+  .done { background:#dcfce7; color:#166534; } .todo { background:#fef9c3; color:#854d0e; }
+</style>
+</head>
+<body>
+<main>
+<div class="status"><span class="pill done">F1 done</span><span class="pill done">F2 done</span><span class="pill done">F3 done</span><span class="pill done">F4 done</span><span class="pill todo">B1 todo</span><span class="pill todo">B2 todo</span><span class="pill todo">B3 todo</span><span class="pill todo">B4 todo</span><span class="pill todo">B5 todo</span></div>
+<h2 id="screens">Screens (captured from the E2E spec)</h2>
+<figure id="audit-trail-report">
+  <img src="../soupfinance-web/public/user-guide/images/audit-trail.jpg" alt="Audit Trail report filtered to reversals, one row opened to show the status change from POSTED to REVERSED.">
+  <figcaption>/reports/audit-trail, filtered to Reversed, with the change opened. Mockup: soupfinance-designs/audit-trail-log/.</figcaption>
+</figure>
+<figure id="journal-entry-history">
+  <img src="../soupfinance-web/public/user-guide/images/journal-entry-history.jpg" alt="A reversed journal entry whose History panel lists Reversed and Posted by ama.mensah and Created by kofi.boateng.">
+  <figcaption>History panel on a journal entry after it was posted and then reversed.</figcaption>
+</figure>
+<h1
+id="soupfin-159-audit-trail-backend-plan-a-read-endpoint-over-the-existing-audit-log">SOUPFIN-159
+Audit Trail Backend Plan: a read endpoint over the existing audit
+log</h1>
+<p><strong>For:</strong> a soupmarkets-web session. Per
+<code>.claude/rules/backend-changes-workflow.md</code>, the soupfinance
+session does not edit the backend. <strong>Frontend:</strong> done on
+the SOUPFIN-159 branch. It works today on the existing endpoint;
+everything below makes it faster, exact and complete. <strong>HTML
+version with screens and the plan index:</strong>
+<code>plans/soupfin-159-audit-trail.html</code>.</p>
+<h2 id="context">Context</h2>
+<p>SOUPFIN-159 asks who created, edited, approved, posted and reversed
+each ledger record. It wants a History panel on journal entries and
+vouchers, and a <code>/reports/audit-trail</code> report with filters
+and CSV export.</p>
+<p>The backend already records this. What exists today (read 2026-10-12,
+soupmarkets-web and the LXC):</p>
+<table>
+<thead>
+<tr>
+<th>Piece</th>
+<th>State</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Audit plugin</td>
+<td><code>org.grails.plugins:audit-logging:4.0.3</code>,
+<code>auditDomainClassName = 'soupbroker.AuditTrail'</code></td>
+</tr>
+<tr>
+<td><code>soupbroker.AuditTrail</code></td>
+<td>Table <code>audit_log</code>. <code>MultiTenant</code>, so every
+query is scoped to the caller's tenant. One row per changed property:
+<code>actor</code>, <code>uri</code>, <code>className</code>,
+<code>persistedObjectId</code>, <code>eventName</code>
+(INSERT/UPDATE/DELETE), <code>propertyName</code>,
+<code>oldValue</code>, <code>newValue</code>, <code>dateCreated</code>,
+<code>tenantId</code></td>
+</tr>
+<tr>
+<td>Audited ledger domains</td>
+<td><code>LedgerTransactionGroup</code>, <code>LedgerTransaction</code>,
+<code>Voucher</code> implement <code>Auditable</code></td>
+</tr>
+<tr>
+<td><code>AuditTrailController.index</code></td>
+<td><code>@Secured(['ROLE_ADMIN','ROLE_USER'])</code>. <code>max</code>
+capped at 1000. Filters: <code>search</code> (ilike over 8 columns,
+every word must match), <code>from</code>/<code>to</code></td>
+</tr>
+<tr>
+<td>Exact filters on the LXC build of 2026-10-12</td>
+<td><code>className</code> and <code>persistedObjectId</code> are
+applied exactly. <code>actor</code> and <code>eventName</code> are
+<strong>ignored</strong></td>
+</tr>
+<tr>
+<td>Volume</td>
+<td>158,269 rows on <code>soupbroker_dev</code>. One voucher save writes
+about 40 rows</td>
+</tr>
+<tr>
+<td>Config</td>
+<td>Audit is <strong>disabled</strong> in <code>development</code>
+(<code>application.yml</code>) but writes on the LXC anyway; production
+reads <code>AUDIT_DISABLED</code> (default enabled)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="what-the-spa-does-today-and-why-it-is-not-enough">What the SPA
+does today, and why it is not enough</h3>
+<p>The SPA reads <code>index.json</code>, re-applies every filter in the
+browser, and folds the per-property rows into one event per save
+(<code>soupfinance-web/src/api/endpoints/auditTrail.ts</code>). That is
+correct, but:</p>
+<ol type="1">
+<li><strong>Row cap.</strong> The report fetches 1000 rows. 1000 rows is
+about 25 saves, so a busy month is cut off. The page says so, but cannot
+page further back by event.</li>
+<li><strong>One request per record.</strong> A journal entry's history
+needs the group and every line (approval changes the lines' status).
+<code>search</code> ANDs its words, so N lines means N+1 requests.</li>
+<li><strong>No exact actor filter.</strong> The actor goes into
+<code>search</code>, which also matches the actor's name inside
+<code>oldValue</code>/<code>newValue</code>.</li>
+<li><strong>Slow search.</strong> <code>ilike '%x%'</code> over 8
+columns, including two <code>text</code> columns, cannot use an
+index.</li>
+<li><strong>"Posted" and "Reversed" are inferred.</strong> The SPA reads
+them from the request path (<code>/post</code>, <code>/reverse</code>,
+<code>/approve</code>, <code>/cancel</code>) or a <code>status</code>
+change. That works, but the backend knows the action and should say
+it.</li>
+</ol>
+<h2 id="1-audittrailsearchlist-exact-filters">1.
+<code>AuditTrail.searchList</code>: exact filters</h2>
+<p>Add to the criteria in <code>AuditTrail.searchList</code>, each only
+when the param is present:</p>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Criteria</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>className</code></td>
+<td><code>eq('className', v)</code></td>
+<td>Accept a short name too: if it has no <code>.</code>, match
+<code>like('className', '%.' + v)</code></td>
+</tr>
+<tr>
+<td><code>persistedObjectId</code></td>
+<td><code>eq</code> for one value, <code>in</code> for a list</td>
+<td><code>persistedObjectId=a&amp;persistedObjectId=b</code> gives the
+JE group and its lines in one request</td>
+</tr>
+<tr>
+<td><code>actor</code></td>
+<td><code>eq('actor', v)</code></td>
+<td>Exact, case-insensitive (<code>ilike</code> without wildcards)</td>
+</tr>
+<tr>
+<td><code>eventName</code></td>
+<td><code>eq('eventName', v)</code></td>
+<td>INSERT / UPDATE / DELETE</td>
+</tr>
+</tbody>
+</table>
+<p>Keep <code>search</code>, but stop searching
+<code>oldValue</code>/<code>newValue</code> unless
+<code>searchValues=true</code>: those two <code>text</code> columns are
+most of the cost.</p>
+<h2 id="2-new-action-get-restaudittrailhistoryjson">2. New action:
+<code>GET /rest/auditTrail/history.json</code></h2>
+<p>One event per save, newest first, paged by event rather than by
+row.</p>
+<p>Request:</p>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Required</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>className</code></td>
+<td>no</td>
+<td>Short or qualified class name</td>
+</tr>
+<tr>
+<td><code>id</code></td>
+<td>no, repeatable</td>
+<td>Record id(s). The SPA sends a JE group and all its lines</td>
+</tr>
+<tr>
+<td><code>actor</code></td>
+<td>no</td>
+<td>Exact username</td>
+</tr>
+<tr>
+<td><code>action</code></td>
+<td>no</td>
+<td>CREATED, EDITED, APPROVED, POSTED, REVERSED, CANCELLED, ARCHIVED,
+DELETED</td>
+</tr>
+<tr>
+<td><code>from</code>, <code>to</code></td>
+<td>no</td>
+<td><code>yyyy-MM-dd</code>, inclusive, through
+<code>utilityService.formatFromAndToDates</code></td>
+</tr>
+<tr>
+<td><code>max</code>, <code>offset</code></td>
+<td>no</td>
+<td>Events, not rows. <code>max</code> default 25, cap 200</td>
+</tr>
+</tbody>
+</table>
+<p>Response:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;total&quot;</span><span class="fu">:</span> <span class="dv">132</span><span class="fu">,</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;events&quot;</span><span class="fu">:</span> <span class="ot">[</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">{</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;at&quot;</span><span class="fu">:</span> <span class="st">&quot;2026-10-12T11:00:00Z&quot;</span><span class="fu">,</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;actor&quot;</span><span class="fu">:</span> <span class="st">&quot;ama.mensah&quot;</span><span class="fu">,</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;action&quot;</span><span class="fu">:</span> <span class="st">&quot;REVERSED&quot;</span><span class="fu">,</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;className&quot;</span><span class="fu">:</span> <span class="st">&quot;soupbroker.finance.LedgerTransactionGroup&quot;</span><span class="fu">,</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;entityId&quot;</span><span class="fu">:</span> <span class="st">&quot;je-1&quot;</span><span class="fu">,</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;uri&quot;</span><span class="fu">:</span> <span class="st">&quot;/rest/ledgerTransactionGroup/reverse/je-1.json&quot;</span><span class="fu">,</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;changes&quot;</span><span class="fu">:</span> <span class="ot">[</span> <span class="fu">{</span> <span class="dt">&quot;property&quot;</span><span class="fu">:</span> <span class="st">&quot;status&quot;</span><span class="fu">,</span> <span class="dt">&quot;oldValue&quot;</span><span class="fu">:</span> <span class="st">&quot;POSTED&quot;</span><span class="fu">,</span> <span class="dt">&quot;newValue&quot;</span><span class="fu">:</span> <span class="st">&quot;REVERSED&quot;</span> <span class="fu">}</span> <span class="ot">]</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    <span class="fu">}</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>  <span class="ot">]</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<p>Rules (the SPA's <code>groupAuditRows</code> and
+<code>classifyAuditAction</code> are the reference; keep the backend's
+output identical):</p>
+<ul>
+<li><strong>Group</strong> rows by <code>className</code>,
+<code>persistedObjectId</code>, <code>eventName</code>,
+<code>actor</code>, <code>uri</code>, and <code>dateCreated</code> to
+the second.</li>
+<li><strong>Drop noise properties:</strong> <code>serialised</code>,
+<code>callback</code>, <code>synchronizerUri</code>,
+<code>synchronizerToken</code>, <code>SYNCHRONIZER_TOKEN</code>,
+<code>SYNCHRONIZER_URI</code>, <code>dateCreated</code>,
+<code>lastUpdated</code>, <code>tenantId</code>, <code>version</code>.
+Also drop INSERT properties whose old and new values are both null. An
+UPDATE left with no changes is not an event.</li>
+<li><strong>Action:</strong> INSERT → CREATED, DELETE → DELETED. For
+UPDATE, the request path decides first (<code>/reverse</code>,
+<code>/cancel</code>, <code>/post</code> or <code>/batchPost</code>,
+<code>/approve</code>). Otherwise the new <code>status</code> decides
+(REVERSED, CANCELLED/CANCELED, POSTED, APPROVED), then
+<code>posted → true</code>, then <code>archived → true</code>. Anything
+else is EDITED.</li>
+<li>Better still: have the post, reverse, approve and cancel actions set
+<code>auditLog</code> context so the action is recorded, not inferred.
+The plugin supports a custom <code>uri</code>/<code>actor</code>
+closure.</li>
+</ul>
+<p>The SPA will switch <code>getEntityHistory()</code> and
+<code>listAuditEvents()</code> to this action once it ships. Until then
+they stay on <code>index.json</code>.</p>
+<h2 id="3-index">3. Index</h2>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode sql"><code class="sourceCode sql"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">CREATE</span> <span class="kw">INDEX</span> audit_log_tenant_class_obj_date</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">ON</span> audit_log (tenant_id, class_name, persisted_object_id, date_created);</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">CREATE</span> <span class="kw">INDEX</span> audit_log_tenant_actor_date</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="kw">ON</span> audit_log (tenant_id, actor, date_created);</span></code></pre></div>
+<p>The existing single-column indexes (<code>old_value_idx</code>,
+<code>new_value_idx</code> on <code>text</code> columns) are prefix
+indexes that <code>ilike '%x%'</code> cannot use. Leave them, but do not
+rely on them.</p>
+<h2 id="4-security-and-tenancy">4. Security and tenancy</h2>
+<ul>
+<li>Tenancy is already enforced by <code>MultiTenant</code>. Add a
+functional spec: two tenants each write a voucher, and each sees only
+its own rows from <code>index.json</code> and <code>history.json</code>.
+On the LXC (2026-10-12), a user resolved to tenant
+<code>01e11e50…</code> saw none of the Demo tenant's rows, which shows
+today's behaviour.</li>
+<li><code>@Secured(['ROLE_ADMIN','ROLE_USER'])</code> lets every user
+read the whole tenant's log, including
+<code>oldValue</code>/<code>newValue</code> of every audited domain.
+Decide whether <code>ROLE_USER</code> should be limited to finance
+classes (<code>soupbroker.finance.*</code>) or to records they can
+already read. Until then the SPA shows the report to every signed-in
+user, matching the backend.</li>
+<li><code>AuditTrail</code> has <code>cache usage: 'read-only'</code>
+and <code>cache(true)</code> in <code>searchList</code>. A freshly
+written row must appear in the next read: verify that the query cache is
+evicted on insert, or drop <code>cache(true)</code> for this
+domain.</li>
+</ul>
+<h2 id="5-configuration">5. Configuration</h2>
+<ul>
+<li>Confirm <code>AUDIT_DISABLED</code> is unset on the production host
+that serves <code>tas.soupmarkets.com</code>, so SoupFinance tenants are
+audited.</li>
+<li>Add <code>Auditable</code> to <code>Invoice</code>,
+<code>Bill</code>, <code>InvoicePayment</code>, <code>BillPayment</code>
+and <code>LedgerAccount</code> if they do not have it. The report's
+record-type filter already lists them.</li>
+</ul>
+<h2 id="tests">Tests</h2>
+<table>
+<thead>
+<tr>
+<th>Kind</th>
+<th>What</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Unit</td>
+<td><code>AuditTrail.searchList</code> with each exact filter, an
+<code>in</code> list, and <code>searchValues=false</code></td>
+</tr>
+<tr>
+<td>Unit</td>
+<td>Grouping and action classification: copy the cases from
+<code>soupfinance-web/src/api/endpoints/__tests__/auditTrail.test.ts</code></td>
+</tr>
+<tr>
+<td>Functional</td>
+<td>Save, post and reverse a JE (after SOUPFIN-155), then call
+<code>history.json?className=LedgerTransactionGroup&amp;id=…</code>:
+three events, newest first, each with its actor</td>
+</tr>
+<tr>
+<td>Functional</td>
+<td>Tenant isolation as in section 4</td>
+</tr>
+<tr>
+<td>Functional</td>
+<td>Overflow: 10,000 rows across 250 saves page by event correctly
+(<code>total</code> = 250, <code>max=25</code> gives 10 pages)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="related">Related</h2>
+<ul>
+<li>SOUPFIN-155: JE post and reverse endpoints. Needed for the
+acceptance "posting then reversing a JE shows both events" on a real
+backend.</li>
+<li>SOUPFIN-248: <code>saveMultiple</code> answers 201 without saving
+the entry. Found while testing this; until it is fixed, a JE saved from
+SoupFinance writes no audit rows.</li>
+</ul>
+</main>
+</body>
+</html>

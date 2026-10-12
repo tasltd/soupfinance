@@ -241,6 +241,8 @@ describe('Every page header carries a "Need Help?" link', () => {
     // Changed (SOUPFIN-103): the report pages render their header through
     // <ReportShell>, so their link is checked in the block below instead.
     'reports/ScheduledReportsPage.tsx': ['scheduled-reports'],
+    // Added (SOUPFIN-159)
+    'reports/AuditTrailPage.tsx': ['audit-trail'],
     // Added (SOUPFIN-84): the four company verification (KYC) wizard steps
     'corporate/CompanyInfoPage.tsx': ['kyc-company-details'],
     'corporate/DirectorsPage.tsx': ['kyc-directors'],

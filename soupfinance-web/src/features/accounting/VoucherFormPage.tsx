@@ -38,6 +38,8 @@ import { getApiErrorMessage, getPeriodLockError } from '../../api/errors';
 import type { CreateVoucherRequest, VoucherType, VoucherTo } from '../../types';
 // Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
 import { HelpLink } from '../../components/help';
+// Added (SOUPFIN-159): who created, edited, posted and cancelled this voucher
+import { AuditHistoryPanel } from '../../components/audit';
 
 // Added: Zod schema for voucher form validation
 // Changed: Renamed voucherDate→transactionDate, description→notes to match backend domain
@@ -942,6 +944,20 @@ export function VoucherFormPage() {
         </div>
       </div>
       </fieldset>
+
+      {/* Added (SOUPFIN-159): audit history of a saved voucher. Its ledger
+          transaction is included: posting can change that row, not the voucher. */}
+      {isExisting && existingVoucher && voucherId && (
+        <AuditHistoryPanel
+          entities={[
+            { className: 'Voucher', id: voucherId },
+            ...(existingVoucher.ledgerTransaction?.id
+              ? [{ className: 'LedgerTransaction', id: existingVoucher.ledgerTransaction.id }]
+              : []),
+          ]}
+          testId="voucher-history"
+        />
+      )}
     </div>
   );
 }

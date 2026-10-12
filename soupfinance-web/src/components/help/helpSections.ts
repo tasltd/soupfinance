@@ -54,6 +54,8 @@ export const HELP_SECTIONS = [
   'trial-balance',
   'trial-balance-unbalanced',
   'scheduled-reports',
+  // Added (SOUPFIN-159)
+  'audit-trail',
   'settings',
   'users',
   'bank-accounts',

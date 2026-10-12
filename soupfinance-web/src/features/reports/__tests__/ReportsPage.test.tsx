@@ -41,6 +41,9 @@ describe('Reports hub', () => {
       expect(within(section).getByTestId(`report-link-${report.id}`)).toHaveAttribute('href', report.path);
     }
     expect(screen.getByTestId('report-link-scheduled')).toHaveAttribute('href', '/reports/scheduled');
+    // Added (SOUPFIN-159)
+    expect(within(screen.getByTestId('reports-compliance')).getByTestId('report-link-audit-trail'))
+      .toHaveAttribute('href', '/reports/audit-trail');
   });
 
   it('narrows the list as the user searches, and hides categories with no match', async () => {
@@ -53,6 +56,7 @@ describe('Reports hub', () => {
     expect(screen.queryByTestId('report-link-profit-loss')).not.toBeInTheDocument();
     expect(screen.queryByTestId('reports-category-business-overview')).not.toBeInTheDocument();
     expect(screen.queryByTestId('reports-automation')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('reports-compliance')).not.toBeInTheDocument();
   });
 
   it('says so when nothing matches, and Clear search brings everything back', async () => {
@@ -64,7 +68,8 @@ describe('Reports hub', () => {
 
     await user.click(screen.getByTestId('reports-clear-search'));
     expect(screen.queryByTestId('reports-no-results')).not.toBeInTheDocument();
-    expect(screen.getAllByTestId(/^report-link-/)).toHaveLength(REPORTS.length + 1);
+    // Changed (SOUPFIN-159): Scheduled Reports and Audit Trail sit outside the registry
+    expect(screen.getAllByTestId(/^report-link-/)).toHaveLength(REPORTS.length + 2);
   });
 });
 

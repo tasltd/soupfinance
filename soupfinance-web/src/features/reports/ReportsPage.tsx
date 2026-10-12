@@ -153,6 +153,27 @@ export function ReportsPage() {
           </div>
         </section>
       )}
+
+      {/* Added (SOUPFIN-159): the audit trail reads the change log, not the ledger, so it sits outside the categories */}
+      {!searching && (
+        <section className="flex flex-col gap-3" data-testid="reports-compliance">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-primary">verified_user</span>
+            <h2 className="text-lg font-bold text-text-light dark:text-text-dark">Compliance</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Link
+              to="/reports/audit-trail"
+              className="flex flex-col gap-3 p-6 rounded-xl border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark hover:border-primary transition-colors"
+              data-testid="report-link-audit-trail"
+            >
+              <span className="material-symbols-outlined text-3xl text-primary">manage_search</span>
+              <h3 className="text-lg font-bold text-text-light dark:text-text-dark">Audit Trail</h3>
+              <p className="text-sm text-subtle-text">See who created, edited, posted or reversed each record</p>
+            </Link>
+          </div>
+        </section>
+      )}
     </div>
   );
 }

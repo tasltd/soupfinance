@@ -64,6 +64,8 @@ const navItems: NavItem[] = [
       { label: 'Trial Balance', path: '/reports/trial-balance' },
       // Added: Scheduled Reports for automated delivery
       { label: 'Scheduled Reports', path: '/reports/scheduled' },
+      // Added (SOUPFIN-159): who changed which record, and when
+      { label: 'Audit Trail', path: '/reports/audit-trail' },
     ],
   },
   // Added (2026-01-30): Settings section

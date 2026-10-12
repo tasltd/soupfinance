@@ -29,6 +29,9 @@ import { getApiErrorMessage, getPeriodLockError } from '../../api/errors';
 import type { CreateJournalEntryRequest } from '../../types';
 // Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
 import { HelpLink } from '../../components/help';
+// Added (SOUPFIN-159): who created, edited, approved, posted and reversed this entry
+import { AuditHistoryPanel } from '../../components/audit';
+import type { AuditEntityRef } from '../../types/auditTrail';
 
 // Added: Zod schema for journal entry line item validation
 // Fix: Using number().default(0) instead of coerce.number() for proper TypeScript inference
@@ -109,6 +112,18 @@ export function JournalEntryPage() {
 
   // Added: Determine if entry is read-only (posted or reversed entries cannot be edited)
   const isReadOnly = isEditMode && !!existingGroup && (existingGroup.status === 'POSTED' || existingGroup.status === 'REVERSED');
+
+  // Added (SOUPFIN-159): the entry's history covers its lines too, because
+  // approving or posting changes each line's status, not the group's.
+  const historyEntities = useMemo<AuditEntityRef[]>(() => {
+    if (!isEditMode || !entryId) return [];
+    return [
+      { className: 'LedgerTransactionGroup', id: entryId },
+      ...(existingGroup?.ledgerTransactionList ?? [])
+        .filter((line) => !!line?.id)
+        .map((line) => ({ className: 'LedgerTransaction', id: line.id })),
+    ];
+  }, [isEditMode, entryId, existingGroup]);
 
   // Changed (SOUPFIN-9): expose the accounts query error so we can render a
   // ModuleDisabledBanner when the Ledger module is not enabled for the tenant.
@@ -601,6 +616,11 @@ export function JournalEntryPage() {
           </div>
         </div>
       </div>
+
+      {/* Added (SOUPFIN-159): audit history of a saved entry */}
+      {isEditMode && existingGroup && (
+        <AuditHistoryPanel entities={historyEntities} testId="journal-entry-history" />
+      )}
     </div>
   );
 }

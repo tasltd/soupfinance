@@ -70,6 +70,7 @@
         <li><a href="#aging">Aging reports</a></li>
         <li><a href="#trial-balance">Trial balance</a></li>
         <li><a href="#scheduled-reports">Scheduled reports</a></li>
+        <li><a href="#audit-trail">Audit trail</a></li>
       </ol>
     </li>
     <li><a href="#settings">Settings</a>
@@ -960,6 +961,39 @@
 
   <p>Each schedule shows when it last ran and when it runs next. Pause a schedule to stop it
   temporarily, and resume it when you need it again.</p>
+
+  <h3 id="audit-trail">Audit trail</h3>
+
+  <p>The audit trail lists every change to your records. Each row shows who made the change, when,
+  and what it changed. Use it to answer an auditor, or to find out why a figure moved.</p>
+
+  <figure>
+    <img src="images/audit-trail.jpg" alt="The audit trail report, with date, user, event and record type filters above a table of changes. One row is open to show the fields it changed, before and after." width="1440" height="900">
+    <figcaption>The audit trail, with one change opened to show its before and after values.</figcaption>
+  </figure>
+
+  <ol class="steps">
+    <li>Open <span class="ui">Reports</span>, then <span class="ui">Audit Trail</span>.</li>
+    <li>Set the <strong>From</strong> and <strong>To</strong> dates. The page starts with the last 30 days.</li>
+    <li>Narrow it by <strong>user</strong>, <strong>event</strong> or <strong>record type</strong> if you need to.</li>
+    <li>Select <span class="ui">Apply filters</span>.</li>
+    <li>Select the plus sign on a row to see each field's value before and after the change.</li>
+    <li>Select <span class="ui">Export CSV</span> to save the filtered list as a spreadsheet file.</li>
+  </ol>
+
+  <p>An event is one of: <em>Created</em>, <em>Edited</em>, <em>Approved</em>, <em>Posted</em>,
+  <em>Reversed</em>, <em>Cancelled</em>, <em>Archived</em> or <em>Deleted</em>.</p>
+
+  <p>Each journal entry and voucher also has a <strong>History</strong> panel at the bottom of its
+  page. It shows the same events for that one record, newest first.</p>
+
+  <figure>
+    <img src="images/journal-entry-history.jpg" alt="A posted journal entry. Its History panel lists Reversed, Posted and Created, each with the user who did it and the time." width="1440" height="1497">
+    <figcaption>A journal entry's History panel after it was posted and then reversed.</figcaption>
+  </figure>
+
+  <p>The trail shows changes made after audit logging was switched on for your company. If a page
+  says only the latest changes are shown, narrow the dates to see older ones.</p>
 </section>
 
 <!-- ============================================================= settings -->
