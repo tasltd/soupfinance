@@ -7,22 +7,128 @@
  * Added: data-testid attributes for E2E testing
  * Changed: Uses dynamic currency formatting from account settings
  */
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { listBills } from '../../api/endpoints/bills';
+import { listVendors } from '../../api/endpoints/vendors';
 import { useFormatCurrency } from '../../stores';
 // Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
 import { HelpLink } from '../../components/help';
+// Added (SOUPFIN-171): paging, search, filters and overdue highlighting
+import {
+  BILL_FILTER_WINDOW,
+  BILL_PAGE_SIZE,
+  EMPTY_BILL_FILTERS,
+  applyBillFilters,
+  buildBillListParams,
+  hasActiveBillFilters,
+  isBillOverdue,
+  pageNumbers,
+  readTotalCount,
+  todayLocalISO,
+  type BillListFilters,
+  type BillStatusFilter,
+} from './billListFilters';
+
+const STATUS_OPTIONS: Array<{ value: BillStatusFilter; label: string }> = [
+  { value: '', label: 'All statuses' },
+  { value: 'PENDING', label: 'Pending' },
+  { value: 'PARTIAL', label: 'Partially paid' },
+  { value: 'PAID', label: 'Paid' },
+  { value: 'OVERDUE', label: 'Overdue' },
+];
+
+const FILTER_INPUT_CLASS =
+  'h-10 px-3 rounded-lg border bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary/20 focus:outline-none';
+
+function filterBorder(active: boolean): string {
+  return active
+    ? 'border-primary ring-2 ring-primary/20 font-semibold'
+    : 'border-border-light dark:border-border-dark focus:border-primary';
+}
 
 export function BillListPage() {
-  // Added: Fetch bills from API
-  const { data: bills, isLoading, error } = useQuery({
-    queryKey: ['bills'],
-    queryFn: () => listBills({ max: 20, sort: 'dateCreated', order: 'desc' }),
+  // Added (SOUPFIN-171): filter + page state. The search box is debounced so
+  // each keystroke does not fire a request.
+  const [searchInput, setSearchInput] = useState('');
+  const [filters, setFilters] = useState<BillListFilters>(EMPTY_BILL_FILTERS);
+  const [page, setPage] = useState(1);
+
+  // Every filter change returns to the first page.
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      setFilters((prev) => {
+        if (prev.search === searchInput) return prev;
+        setPage(1);
+        return { ...prev, search: searchInput };
+      });
+    }, 300);
+    return () => clearTimeout(handle);
+  }, [searchInput]);
+
+  const filtering = hasActiveBillFilters(filters);
+  const params = buildBillListParams(filters, page);
+
+  // Changed (SOUPFIN-171): was a hard-coded `max: 20` — bills past the 20th
+  // were unreachable. Unfiltered, the server pages; filtered, a window is
+  // fetched and refined in the browser (see billListFilters.ts for why).
+  const { data: rows, isLoading, isFetching, error } = useQuery({
+    queryKey: ['bills', 'list', params],
+    queryFn: () => listBills(params),
+    placeholderData: keepPreviousData,
   });
+
+  // Added (SOUPFIN-171): vendor filter options
+  const { data: vendors } = useQuery({
+    queryKey: ['vendors', 'bill-filter'],
+    queryFn: () => listVendors({ max: BILL_FILTER_WINDOW }),
+  });
+  const vendorOptions = useMemo(
+    () => [...(vendors || [])].sort((a, b) => (a.name || '').localeCompare(b.name || '')),
+    [vendors]
+  );
 
   // Changed: Use dynamic currency formatting from account settings
   const formatCurrency = useFormatCurrency();
+  const today = todayLocalISO();
+
+  // Rows on screen, the total behind them, and whether the window was cut short.
+  const view = useMemo(() => {
+    const fetched = rows || [];
+    if (!filtering) {
+      const total = readTotalCount(fetched, params.offset as number);
+      return { bills: fetched, total, windowFull: false };
+    }
+    const matched = applyBillFilters(fetched, filters, today);
+    const start = (page - 1) * BILL_PAGE_SIZE;
+    const windowFull =
+      fetched.length >= BILL_FILTER_WINDOW || Number(fetched[0]?.totalCount) > BILL_FILTER_WINDOW;
+    return { bills: matched.slice(start, start + BILL_PAGE_SIZE), total: matched.length, windowFull };
+  }, [rows, filtering, filters, page, today, params.offset]);
+
+  const offset = (page - 1) * BILL_PAGE_SIZE;
+  const totalPages = view.total != null ? Math.max(1, Math.ceil(view.total / BILL_PAGE_SIZE)) : null;
+  const hasNext = totalPages != null ? page < totalPages : view.bills.length === BILL_PAGE_SIZE;
+  const hasPrev = page > 1;
+
+  // Move to a page and bring the top of the table back into view — the pager
+  // sits below the rows, so otherwise the new page opens scrolled to its end.
+  const tableRef = useRef<HTMLDivElement>(null);
+  const goToPage = (n: number) => {
+    setPage(n);
+    tableRef.current?.scrollIntoView?.({ block: 'start', behavior: 'smooth' });
+  };
+
+  const clearFilters = () => {
+    setSearchInput('');
+    setFilters(EMPTY_BILL_FILTERS);
+    setPage(1);
+  };
+  const setFilter = <K extends keyof BillListFilters>(key: K, value: BillListFilters[K]) => {
+    setFilters((prev) => ({ ...prev, [key]: value }));
+    setPage(1);
+  };
 
   return (
     <div className="flex flex-col gap-6" data-testid="bill-list-page">
@@ -45,8 +151,113 @@ export function BillListPage() {
         </Link>
       </div>
 
+      {/* Added (SOUPFIN-171): search and filter bar */}
+      <div className="flex flex-wrap items-end gap-3" data-testid="bill-filters">
+        <div className="relative flex-1 min-w-[200px] max-w-md">
+          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-subtle-text text-xl">
+            search
+          </span>
+          <input
+            type="search"
+            id="bill-search"
+            name="bill-search"
+            aria-label="Search bills by number or vendor"
+            placeholder="Search by bill number or vendor"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            className="w-full h-10 pl-10 pr-4 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark placeholder:text-subtle-text focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none"
+            data-testid="bill-search-input"
+          />
+        </div>
+
+        <select
+          id="bill-status-filter"
+          name="bill-status-filter"
+          aria-label="Filter bills by status"
+          value={filters.status}
+          onChange={(e) => setFilter('status', e.target.value as BillStatusFilter)}
+          className={`${FILTER_INPUT_CLASS} ${filterBorder(Boolean(filters.status))}`}
+          data-testid="bill-status-filter"
+        >
+          {STATUS_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+
+        <select
+          id="bill-vendor-filter"
+          name="bill-vendor-filter"
+          aria-label="Filter bills by vendor"
+          value={filters.vendorId}
+          onChange={(e) => setFilter('vendorId', e.target.value)}
+          className={`${FILTER_INPUT_CLASS} max-w-[220px] ${filterBorder(Boolean(filters.vendorId))}`}
+          data-testid="bill-vendor-filter"
+        >
+          <option value="">All vendors</option>
+          {vendorOptions.map((vendor) => (
+            <option key={vendor.id} value={vendor.id}>
+              {vendor.name}
+            </option>
+          ))}
+        </select>
+
+        <label className="flex flex-col text-xs font-medium text-subtle-text">
+          Bill date from
+          <input
+            type="date"
+            id="bill-date-from"
+            name="bill-date-from"
+            value={filters.from}
+            max={filters.to || undefined}
+            onChange={(e) => setFilter('from', e.target.value)}
+            className={`mt-1 ${FILTER_INPUT_CLASS} ${filterBorder(Boolean(filters.from))}`}
+            data-testid="bill-date-from"
+          />
+        </label>
+        <label className="flex flex-col text-xs font-medium text-subtle-text">
+          Bill date to
+          <input
+            type="date"
+            id="bill-date-to"
+            name="bill-date-to"
+            value={filters.to}
+            min={filters.from || undefined}
+            onChange={(e) => setFilter('to', e.target.value)}
+            className={`mt-1 ${FILTER_INPUT_CLASS} ${filterBorder(Boolean(filters.to))}`}
+            data-testid="bill-date-to"
+          />
+        </label>
+
+        {isFetching && !isLoading && (
+          <span className="flex items-center gap-1 h-10 text-sm text-subtle-text" data-testid="bill-list-filtering" role="status" aria-live="polite">
+            <span className="material-symbols-outlined text-lg animate-spin">progress_activity</span>
+            Loading
+          </span>
+        )}
+
+        {(filtering || searchInput) && (
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="flex items-center gap-1 h-10 px-3 rounded-lg text-sm text-subtle-text hover:text-primary hover:bg-primary/5"
+            data-testid="bill-filters-clear"
+          >
+            <span className="material-symbols-outlined text-lg">filter_alt_off</span>
+            Clear filters
+          </button>
+        )}
+      </div>
+
+      {view.windowFull && (
+        <p className="text-sm text-subtle-text" data-testid="bill-filter-window-note">
+          Filters search the {BILL_FILTER_WINDOW.toLocaleString()} most recent bills.
+        </p>
+      )}
+
       {/* Bill Table */}
-      <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden" data-testid="bill-table-container">
+      <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden" data-testid="bill-table-container" ref={tableRef}>
         {isLoading ? (
           <div className="p-8 text-center text-subtle-text" data-testid="bill-list-loading">Loading bills...</div>
         ) : error ? (
@@ -63,7 +274,7 @@ export function BillListPage() {
               Retry
             </button>
           </div>
-        ) : bills?.length ? (
+        ) : view.bills.length ? (
           <div className="overflow-x-auto">
             {/* Changed: Added min-w for proper horizontal scroll on mobile */}
             <table className="w-full min-w-[800px] text-sm" data-testid="bill-list-table">
@@ -80,8 +291,16 @@ export function BillListPage() {
                 </tr>
               </thead>
               <tbody>
-                {bills.map((bill) => (
-                  <tr key={bill.id} className="border-b border-border-light dark:border-border-dark hover:bg-primary/5" data-testid={`bill-row-${bill.id}`}>
+                {view.bills.map((bill) => {
+                  // Added (SOUPFIN-171): due date passed with money still owed
+                  const overdue = isBillOverdue(bill, today);
+                  return (
+                  <tr
+                    key={bill.id}
+                    className={`border-b border-border-light dark:border-border-dark ${overdue ? 'bg-danger/5 hover:bg-danger/10' : 'hover:bg-primary/5'}`}
+                    data-testid={`bill-row-${bill.id}`}
+                    data-overdue={overdue ? 'true' : undefined}
+                  >
                     <td className="px-4 sm:px-6 py-4">
                       <Link to={`/bills/${bill.id}`} className="font-medium text-primary hover:underline" data-testid={`bill-link-${bill.id}`}>
                         {bill.billNumber}
@@ -89,7 +308,18 @@ export function BillListPage() {
                     </td>
                     <td className="px-4 sm:px-6 py-4 text-text-light dark:text-text-dark">{bill.vendor?.name || 'N/A'}</td>
                     <td className="px-4 sm:px-6 py-4 text-subtle-text">{bill.billDate}</td>
-                    <td className="px-4 sm:px-6 py-4 text-subtle-text">{bill.paymentDate}</td>
+                    <td className={`px-4 sm:px-6 py-4 ${overdue ? 'text-danger font-semibold' : 'text-subtle-text'}`}>
+                      {/* Pill stacks under the date so the row stays narrow enough to show Actions */}
+                      <span className="flex flex-col items-start gap-1">
+                        {bill.paymentDate}
+                        {overdue && (
+                          <span className="inline-flex items-center gap-0.5 px-2 py-0.5 text-xs font-medium rounded-full bg-danger/10 text-danger" data-testid={`bill-overdue-${bill.id}`}>
+                            <span className="material-symbols-outlined text-sm">schedule</span>
+                            Overdue
+                          </span>
+                        )}
+                      </span>
+                    </td>
                     <td className="px-4 sm:px-6 py-4 text-right font-medium text-text-light dark:text-text-dark">
                       {formatCurrency(bill.totalAmount)}
                     </td>
@@ -107,9 +337,43 @@ export function BillListPage() {
                       </Link>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
+          </div>
+        ) : filtering ? (
+          // Added (SOUPFIN-171): filters are active but nothing matched — not the
+          // same as "no bills yet". Design: empty-state-no-search-results.
+          <div className="p-12 text-center" data-testid="bill-list-no-results">
+            <span className="material-symbols-outlined text-6xl text-subtle-text/50 mb-4 block">search_off</span>
+            <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">No bills match your filters</h3>
+            <p className="text-subtle-text mb-4">
+              {filters.search.trim()
+                ? `Nothing matches "${filters.search.trim()}" with the filters you chose. Try different words or clear the filters.`
+                : 'Try a different status, vendor or date range, or clear the filters.'}
+            </p>
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="inline-flex items-center gap-2 h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-bold text-sm hover:bg-primary/5"
+              data-testid="bill-list-clear-filters-button"
+            >
+              <span className="material-symbols-outlined text-lg">filter_alt_off</span>
+              Clear filters
+            </button>
+          </div>
+        ) : page > 1 ? (
+          // Added (SOUPFIN-171): stepped past the last page (the total was unknown)
+          <div className="p-12 text-center" data-testid="bill-list-page-empty">
+            <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">No more bills</h3>
+            <button
+              type="button"
+              onClick={() => setPage(1)}
+              className="inline-flex items-center gap-2 h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-bold text-sm hover:bg-primary/5"
+            >
+              Back to the first page
+            </button>
           </div>
         ) : (
           // Added: Empty state when no bills exist
@@ -124,6 +388,70 @@ export function BillListPage() {
           </div>
         )}
       </div>
+
+      {/* Added (SOUPFIN-171): pagination — design system, invoice-management mockup */}
+      {!isLoading && !error && view.bills.length > 0 && (hasPrev || hasNext || (totalPages ?? 1) > 1) && (
+        <nav className="flex flex-wrap items-center justify-between gap-3" aria-label="Bill pages" data-testid="bill-pagination">
+          <p className="text-sm text-subtle-text" data-testid="bill-pagination-summary">
+            Showing <span className="font-semibold">{offset + 1}</span> to{' '}
+            <span className="font-semibold">{offset + view.bills.length}</span>
+            {view.total != null && (
+              <>
+                {' '}of <span className="font-semibold">{view.total}</span>
+              </>
+            )}{' '}
+            bills
+          </p>
+          <div className="flex items-center">
+            <button
+              type="button"
+              onClick={() => goToPage(page - 1)}
+              disabled={!hasPrev}
+              aria-label="Previous page"
+              className="flex size-9 items-center justify-center rounded-lg text-subtle-text hover:bg-primary/5 disabled:opacity-40 disabled:cursor-not-allowed"
+              data-testid="bill-pagination-prev"
+            >
+              <span className="material-symbols-outlined">chevron_left</span>
+            </button>
+            {totalPages != null
+              ? pageNumbers(page, totalPages).map((n, i) =>
+                  n == null ? (
+                    <span key={`gap-${i}`} className="flex size-9 items-center justify-center text-sm text-subtle-text">
+                      …
+                    </span>
+                  ) : (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => goToPage(n)}
+                      aria-current={n === page ? 'page' : undefined}
+                      className={`flex size-9 items-center justify-center rounded-lg text-sm ${
+                        n === page ? 'bg-primary font-bold text-white' : 'text-subtle-text hover:bg-primary/5'
+                      }`}
+                      data-testid={`bill-pagination-page-${n}`}
+                    >
+                      {n}
+                    </button>
+                  )
+                )
+              : (
+                  <span className="flex h-9 items-center px-2 text-sm font-bold text-text-light dark:text-text-dark" data-testid="bill-pagination-current">
+                    Page {page}
+                  </span>
+                )}
+            <button
+              type="button"
+              onClick={() => goToPage(page + 1)}
+              disabled={!hasNext}
+              aria-label="Next page"
+              className="flex size-9 items-center justify-center rounded-lg text-subtle-text hover:bg-primary/5 disabled:opacity-40 disabled:cursor-not-allowed"
+              data-testid="bill-pagination-next"
+            >
+              <span className="material-symbols-outlined">chevron_right</span>
+            </button>
+          </div>
+        </nav>
+      )}
     </div>
   );
 }

@@ -1316,6 +1316,9 @@ export async function mockAmbientApi(page: import('@playwright/test').Page) {
   );
   await page.route('**/rest/client/index.json*', (route) => route.fulfill(json([])));
   await page.route('**/rest/ledgerAccount/index.json*', (route) => route.fulfill(json([])));
+  // Added (SOUPFIN-171): the Bills list now loads vendors for its vendor filter.
+  // Default to none; a spec that needs vendors registers its own mock after this.
+  await page.route('**/rest/trading/vendor/index.json*', (route) => route.fulfill(json([])));
 
   // Added (SOUPFIN-55): the dashboard now resolves whether the tenant has an
   // unfinished corporate KYC application, to decide whether to offer the

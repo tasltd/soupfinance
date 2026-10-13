@@ -3,7 +3,7 @@
  * Tests rendering, loading/error/empty states, data display, and navigation
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, within, waitFor, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BillListPage } from '../BillListPage';
@@ -12,6 +12,11 @@ import type { Bill, BillStatus } from '../../../types';
 // Mock the bills API - must match the import path in BillListPage
 vi.mock('../../../api/endpoints/bills', () => ({
   listBills: vi.fn(),
+}));
+
+// Added (SOUPFIN-171): the vendor filter's options
+vi.mock('../../../api/endpoints/vendors', () => ({
+  listVendors: vi.fn(),
 }));
 
 // Mock the account store for currency formatting
@@ -23,6 +28,7 @@ vi.mock('../../../stores', () => ({
 }));
 
 import { listBills } from '../../../api/endpoints/bills';
+import { listVendors } from '../../../api/endpoints/vendors';
 
 // ============================================================================
 // Test Helpers
@@ -76,6 +82,7 @@ function renderBillListPage() {
 describe('BillListPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(listVendors).mockResolvedValue([]);
   });
 
   describe('rendering', () => {
@@ -345,8 +352,10 @@ describe('BillListPage', () => {
 
       await screen.findByTestId('bill-list-page');
 
+      // Changed (SOUPFIN-171): now pages with an explicit offset
       expect(listBills).toHaveBeenCalledWith({
         max: 20,
+        offset: 0,
         sort: 'dateCreated',
         order: 'desc',
       });
@@ -408,6 +417,279 @@ describe('BillListPage', () => {
 
       const row = await screen.findByTestId('bill-row-bill-whole');
       expect(within(row).getByText('$500.00')).toBeInTheDocument();
+    });
+  });
+
+  // ==========================================================================
+  // Added (SOUPFIN-171): paging, search, filters, overdue highlighting
+  // ==========================================================================
+
+  /** The params of the most recent listBills call. */
+  function lastParams() {
+    const calls = vi.mocked(listBills).mock.calls;
+    return calls[calls.length - 1][0];
+  }
+
+  function page(n: number, size: number, total: number | undefined, prefix = 'p') {
+    return Array.from({ length: size }, (_, i) =>
+      createMockBill({
+        id: `${prefix}${n}-${i}`,
+        billNumber: `BILL-${(n - 1) * 20 + i + 1}`,
+        totalCount: total,
+        paymentDate: '2099-01-01',
+      })
+    );
+  }
+
+  describe('pagination (SOUPFIN-171)', () => {
+    it('shows "1 to 20 of 45" and three page buttons from the stamped totalCount', async () => {
+      vi.mocked(listBills).mockResolvedValue(page(1, 20, 45));
+      renderBillListPage();
+
+      const summary = await screen.findByTestId('bill-pagination-summary');
+      expect(summary.textContent?.replace(/\s+/g, ' ').trim()).toBe('Showing 1 to 20 of 45 bills');
+      expect(screen.getByTestId('bill-pagination-page-3')).toBeInTheDocument();
+      expect(screen.queryByTestId('bill-pagination-page-4')).not.toBeInTheDocument();
+      expect(screen.getByTestId('bill-pagination-prev')).toBeDisabled();
+      expect(screen.getByTestId('bill-pagination-next')).toBeEnabled();
+    });
+
+    it('Next requests offset 20 and renders the second page — bill 21 is reachable', async () => {
+      vi.mocked(listBills).mockImplementation(async (params) =>
+        (params?.offset as number) === 20 ? page(2, 20, 45) : page(1, 20, 45)
+      );
+      renderBillListPage();
+
+      fireEvent.click(await screen.findByTestId('bill-pagination-next'));
+
+      expect(await screen.findByText('BILL-21')).toBeInTheDocument();
+      expect(lastParams()).toEqual({ max: 20, offset: 20, sort: 'dateCreated', order: 'desc' });
+      expect(screen.getByTestId('bill-pagination-page-2')).toHaveAttribute('aria-current', 'page');
+    });
+
+    it('a page number jumps straight to its offset', async () => {
+      vi.mocked(listBills).mockResolvedValue(page(1, 20, 45));
+      renderBillListPage();
+
+      fireEvent.click(await screen.findByTestId('bill-pagination-page-3'));
+      await waitFor(() => expect(lastParams()).toMatchObject({ max: 20, offset: 40 }));
+    });
+
+    it('collapses 50,000 pages to 1 2 … 50000', async () => {
+      vi.mocked(listBills).mockResolvedValue(page(1, 20, 1_000_000));
+      renderBillListPage();
+
+      expect(await screen.findByTestId('bill-pagination-page-50000')).toBeInTheDocument();
+      expect(screen.getByTestId('bill-pagination-page-2')).toBeInTheDocument();
+      expect(screen.queryByTestId('bill-pagination-page-3')).not.toBeInTheDocument();
+      expect(screen.getByTestId('bill-pagination-summary').textContent).toContain('1000000');
+    });
+
+    it('without a stamped total, Next is enabled only when the page is full', async () => {
+      vi.mocked(listBills).mockResolvedValue(page(1, 20, undefined));
+      renderBillListPage();
+
+      expect(await screen.findByTestId('bill-pagination-current')).toHaveTextContent('Page 1');
+      expect(screen.getByTestId('bill-pagination-next')).toBeEnabled();
+    });
+
+    it('a single short page shows no pagination bar', async () => {
+      vi.mocked(listBills).mockResolvedValue(page(1, 3, 3));
+      renderBillListPage();
+
+      await screen.findByTestId('bill-list-table');
+      expect(screen.queryByTestId('bill-pagination')).not.toBeInTheDocument();
+    });
+
+    it('no bills at all shows the first-bill empty state and no pagination', async () => {
+      vi.mocked(listBills).mockResolvedValue([]);
+      renderBillListPage();
+
+      expect(await screen.findByTestId('bill-list-empty')).toBeInTheDocument();
+      expect(screen.queryByTestId('bill-pagination')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('bill-list-no-results')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('search and filters (SOUPFIN-171)', () => {
+    const rows = [
+      createMockBill({ id: 'a', billNumber: 'BILL-1', vendor: { id: 'v1', name: 'Acme Supplies' }, status: 'PENDING', billDate: '2026-01-10', paymentDate: '2026-02-10', amountDue: 50 }),
+      createMockBill({ id: 'b', billNumber: 'BILL-2', vendor: { id: 'v2', name: 'Zenith Power' }, status: 'PARTIAL', billDate: '2026-06-15', paymentDate: '2099-12-15', amountDue: 20 }),
+      createMockBill({ id: 'c', billNumber: 'BILL-3', vendor: { id: 'v1', name: 'Acme Supplies' }, status: 'PAID', billDate: '2026-09-30', paymentDate: '2026-10-01', amountDue: 0 }),
+    ];
+
+    beforeEach(() => {
+      vi.mocked(listBills).mockResolvedValue(rows);
+      vi.mocked(listVendors).mockResolvedValue([
+        { id: 'v2', name: 'Zenith Power' },
+        { id: 'v1', name: 'Acme Supplies' },
+      ] as never);
+    });
+
+    it('search sends `search` (split bill number) with the 1000-row window', async () => {
+      renderBillListPage();
+      await screen.findByTestId('bill-list-table');
+
+      fireEvent.change(screen.getByTestId('bill-search-input'), { target: { value: 'BILL-2' } });
+
+      await waitFor(() =>
+        expect(lastParams()).toEqual({ max: 1000, offset: 0, sort: 'dateCreated', order: 'desc', search: 'BILL 2' })
+      );
+      // The server's OR match is a superset; only BILL-2 stays on screen.
+      await waitFor(() => expect(screen.queryByTestId('bill-row-a')).not.toBeInTheDocument());
+      expect(screen.getByTestId('bill-row-b')).toBeInTheDocument();
+    });
+
+    it('the vendor dropdown lists vendors alphabetically and filters on bill.vendor.id', async () => {
+      renderBillListPage();
+      await screen.findByTestId('bill-list-table');
+      const select = screen.getByTestId('bill-vendor-filter');
+      await waitFor(() => expect(within(select).getAllByRole('option')).toHaveLength(3));
+      expect(within(select).getAllByRole('option').map((o) => o.textContent)).toEqual([
+        'All vendors',
+        'Acme Supplies',
+        'Zenith Power',
+      ]);
+
+      fireEvent.change(select, { target: { value: 'v1' } });
+
+      await waitFor(() => expect(screen.queryByTestId('bill-row-b')).not.toBeInTheDocument());
+      expect(screen.getByTestId('bill-row-a')).toBeInTheDocument();
+      expect(screen.getByTestId('bill-row-c')).toBeInTheDocument();
+      // Neither backend honours a vendor param — none is sent.
+      expect(lastParams()).toEqual({ max: 1000, offset: 0, sort: 'dateCreated', order: 'desc' });
+    });
+
+    it('status PAID keeps only paid bills and sends no status param', async () => {
+      renderBillListPage();
+      await screen.findByTestId('bill-list-table');
+
+      fireEvent.change(screen.getByTestId('bill-status-filter'), { target: { value: 'PAID' } });
+
+      await waitFor(() => expect(screen.queryByTestId('bill-row-a')).not.toBeInTheDocument());
+      expect(screen.getByTestId('bill-row-c')).toBeInTheDocument();
+      expect(lastParams()).not.toHaveProperty('status');
+    });
+
+    it('status Overdue keeps past-due bills with a balance', async () => {
+      renderBillListPage();
+      await screen.findByTestId('bill-list-table');
+
+      fireEvent.change(screen.getByTestId('bill-status-filter'), { target: { value: 'OVERDUE' } });
+
+      await waitFor(() => expect(screen.queryByTestId('bill-row-b')).not.toBeInTheDocument());
+      expect(screen.getByTestId('bill-row-a')).toBeInTheDocument();
+      expect(screen.queryByTestId('bill-row-c')).not.toBeInTheDocument();
+    });
+
+    it('the status options follow the backend enum plus Overdue (no DRAFT / CANCELLED)', async () => {
+      renderBillListPage();
+      const options = within(await screen.findByTestId('bill-status-filter')).getAllByRole('option');
+      expect(options.map((o) => (o as HTMLOptionElement).value)).toEqual(['', 'PENDING', 'PARTIAL', 'PAID', 'OVERDUE']);
+    });
+
+    it('the bill-date range filters inclusively and never sends from/to', async () => {
+      renderBillListPage();
+      await screen.findByTestId('bill-list-table');
+
+      fireEvent.change(screen.getByTestId('bill-date-from'), { target: { value: '2026-06-15' } });
+      fireEvent.change(screen.getByTestId('bill-date-to'), { target: { value: '2026-09-30' } });
+
+      await waitFor(() => expect(screen.queryByTestId('bill-row-a')).not.toBeInTheDocument());
+      expect(screen.getByTestId('bill-row-b')).toBeInTheDocument();
+      expect(screen.getByTestId('bill-row-c')).toBeInTheDocument();
+      expect(lastParams()).not.toHaveProperty('from');
+      expect(lastParams()).not.toHaveProperty('to');
+    });
+
+    it('no match shows the no-results state, and Clear filters returns to server paging', async () => {
+      renderBillListPage();
+      await screen.findByTestId('bill-list-table');
+
+      fireEvent.change(screen.getByTestId('bill-date-from'), { target: { value: '2030-01-01' } });
+
+      expect(await screen.findByTestId('bill-list-no-results')).toBeInTheDocument();
+      expect(screen.queryByTestId('bill-list-empty')).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByTestId('bill-list-clear-filters-button'));
+
+      await waitFor(() =>
+        expect(lastParams()).toEqual({ max: 20, offset: 0, sort: 'dateCreated', order: 'desc' })
+      );
+      expect(await screen.findByTestId('bill-row-a')).toBeInTheDocument();
+      expect(screen.getByTestId('bill-date-from')).toHaveValue('');
+    });
+
+    it('a filter change returns to page 1', async () => {
+      vi.mocked(listBills).mockImplementation(async (params) =>
+        (params?.max as number) === 1000 ? rows : page((params?.offset as number) / 20 + 1, 20, 60)
+      );
+      renderBillListPage();
+      fireEvent.click(await screen.findByTestId('bill-pagination-page-3'));
+      await waitFor(() => expect(lastParams()).toMatchObject({ offset: 40 }));
+
+      fireEvent.change(screen.getByTestId('bill-status-filter'), { target: { value: 'PENDING' } });
+
+      expect(await screen.findByTestId('bill-row-a')).toBeInTheDocument();
+      expect(screen.queryByTestId('bill-pagination')).not.toBeInTheDocument();
+    });
+
+    it('filtered results page in the browser, 20 at a time', async () => {
+      const many = Array.from({ length: 45 }, (_, i) =>
+        createMockBill({ id: `m${i}`, billNumber: `BILL-${i + 1}`, status: 'PENDING', paymentDate: '2099-01-01' })
+      );
+      vi.mocked(listBills).mockResolvedValue(many);
+      renderBillListPage();
+      await screen.findByTestId('bill-list-table');
+
+      fireEvent.change(screen.getByTestId('bill-status-filter'), { target: { value: 'PENDING' } });
+
+      const summary = await screen.findByTestId('bill-pagination-summary');
+      await waitFor(() =>
+        expect(summary.textContent?.replace(/\s+/g, ' ').trim()).toBe('Showing 1 to 20 of 45 bills')
+      );
+      fireEvent.click(screen.getByTestId('bill-pagination-page-3'));
+      expect(await screen.findByTestId('bill-row-m40')).toBeInTheDocument();
+      expect(screen.queryByTestId('bill-row-m0')).not.toBeInTheDocument();
+    });
+
+    it('a full 1000-row window says the filters only see the most recent 1,000 bills', async () => {
+      // Realistic: 20 rows for the unfiltered page, the full window once a filter asks for it.
+      const window = Array.from({ length: 1000 }, (_, i) =>
+        createMockBill({ id: `w${i}`, status: 'PENDING', totalCount: 1500, paymentDate: '2099-01-01' })
+      );
+      vi.mocked(listBills).mockImplementation(async (params) =>
+        (params?.max as number) === 1000 ? window : window.slice(0, 20)
+      );
+      renderBillListPage();
+      await screen.findByTestId('bill-list-table');
+      expect(screen.queryByTestId('bill-filter-window-note')).not.toBeInTheDocument();
+
+      fireEvent.change(screen.getByTestId('bill-status-filter'), { target: { value: 'PENDING' } });
+
+      expect(await screen.findByTestId('bill-filter-window-note')).toHaveTextContent('1,000 most recent bills');
+    });
+  });
+
+  describe('overdue highlighting (SOUPFIN-171)', () => {
+    it('marks a past-due bill with a balance, and not a paid or future one', async () => {
+      vi.mocked(listBills).mockResolvedValue([
+        createMockBill({ id: 'late', paymentDate: '2020-01-01', amountDue: 10 }),
+        createMockBill({ id: 'paid', paymentDate: '2020-01-01', amountDue: 0, status: 'PAID' }),
+        createMockBill({ id: 'future', paymentDate: '2099-01-01', amountDue: 10 }),
+      ]);
+      renderBillListPage();
+
+      const late = await screen.findByTestId('bill-row-late');
+      expect(late).toHaveAttribute('data-overdue', 'true');
+      expect(late.className).toContain('bg-danger/5');
+      expect(within(late).getByTestId('bill-overdue-late')).toHaveTextContent('Overdue');
+
+      for (const id of ['paid', 'future']) {
+        const row = screen.getByTestId(`bill-row-${id}`);
+        expect(row).not.toHaveAttribute('data-overdue');
+        expect(screen.queryByTestId(`bill-overdue-${id}`)).not.toBeInTheDocument();
+      }
     });
   });
 });

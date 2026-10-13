@@ -1,0 +1,23 @@
+
+[1m[46m RUN [49m[22m [36mv4.0.17 [39m[90m/home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-171-075219-fznv/soupfinance-web[39m
+
+ [32m✓[39m src/features/bills/__tests__/BillFormPage.test.tsx [2m([22m[2m48 tests[22m[2m)[22m[33m 9054[2mms[22m[39m
+       [33m[2m✓[22m[39m displays vendors in dropdown [33m 587[2mms[22m[39m
+       [33m[2m✓[22m[39m allows selecting a vendor [33m 424[2mms[22m[39m
+       [33m[2m✓[22m[39m can remove line item [33m 345[2mms[22m[39m
+       [33m[2m✓[22m[39m can edit line item fields [33m 853[2mms[22m[39m
+       [33m[2m✓[22m[39m calls createBill on form submit [33m 943[2mms[22m[39m
+       [33m[2m✓[22m[39m navigates to bills list after successful create [33m 445[2mms[22m[39m
+       [33m[2m✓[22m[39m shows error when line item description is empty [33m 448[2mms[22m[39m
+       [33m[2m✓[22m[39m allows entering notes [33m 865[2mms[22m[39m
+       [33m[2m✓[22m[39m notes are included in form submission [33m 521[2mms[22m[39m
+       [33m[2m✓[22m[39m sends the TaxEntry id as taxEntries, never a bare rate [33m 523[2mms[22m[39m
+       [33m[2m✓[22m[39m still sends the fields BillItem does have [33m 398[2mms[22m[39m
+       [33m[2m✓[22m[39m omits taxEntries entirely for an untaxed line [33m 361[2mms[22m[39m
+       [33m[2m✓[22m[39m displays submission error when createBill fails [33m 353[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[32m48 passed[39m[22m[90m (48)[39m
+[2m   Start at [22m 12:18:26
+[2m   Duration [22m 12.65s[2m (transform 1.25s, setup 292ms, import 1.62s, tests 9.05s, environment 1.13s)[22m
+

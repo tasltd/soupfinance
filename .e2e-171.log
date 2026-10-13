@@ -1,0 +1,12 @@
+
+Running 8 tests using 8 workers
+
+[1A[2K[1/8] [firefox] › e2e/soupfin-171-bill-list-filters.spec.ts:223:3 › SOUPFIN-171 — Bills list paging, search and filters › #3 search by bill number finds BILL-7 only
+[1A[2K[2/8] [firefox] › e2e/soupfin-171-bill-list-filters.spec.ts:169:3 › SOUPFIN-171 — Bills list paging, search and filters › #1 pages on the server: bill 21 and bill 45 are reachable
+[1A[2K[3/8] [firefox] › e2e/soupfin-171-bill-list-filters.spec.ts:249:3 › SOUPFIN-171 — Bills list paging, search and filters › #5 status filter: Overdue, then Paid
+[1A[2K[4/8] [firefox] › e2e/soupfin-171-bill-list-filters.spec.ts:300:3 › SOUPFIN-171 — Bills list paging, search and filters › #8 no match shows the no-results state; Clear filters restores server paging
+[1A[2K[5/8] [firefox] › e2e/soupfin-171-bill-list-filters.spec.ts:281:3 › SOUPFIN-171 — Bills list paging, search and filters › #7 bill-date range is inclusive and combines with the vendor filter
+[1A[2K[6/8] [firefox] › e2e/soupfin-171-bill-list-filters.spec.ts:196:3 › SOUPFIN-171 — Bills list paging, search and filters › #2 highlights overdue bills: due date passed with money owed
+[1A[2K[7/8] [firefox] › e2e/soupfin-171-bill-list-filters.spec.ts:268:3 › SOUPFIN-171 — Bills list paging, search and filters › #6 vendor filter keeps only the chosen vendor's 15 bills
+[1A[2K[8/8] [firefox] › e2e/soupfin-171-bill-list-filters.spec.ts:239:3 › SOUPFIN-171 — Bills list paging, search and filters › #4 search by vendor name
+[1A[2K  8 passed (36.9s)

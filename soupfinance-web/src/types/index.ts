@@ -291,6 +291,9 @@ export interface Bill extends BaseEntity {
   basePaidAmount?: number;
   notes?: string;
   billItemList?: BillItem[]; // Changed: Backend field name (was previously aliased as items)
+  // Added (SOUPFIN-171): rows behind the whole query, stamped on every index.json
+  // row by both _bill.gson and the Go gateway (SoupComparableList). List responses only.
+  totalCount?: number;
 }
 
 /**

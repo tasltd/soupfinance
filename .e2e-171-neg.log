@@ -1,0 +1,29 @@
+
+Running 1 test using 1 worker
+
+[1A[2K[1/1] [firefox] › e2e/soupfin-171-bill-list-filters.spec.ts:196:3 › SOUPFIN-171 — Bills list paging, search and filters › #2 highlights overdue bills: due date passed with money owed
+[1A[2K  1) [firefox] › e2e/soupfin-171-bill-list-filters.spec.ts:196:3 › SOUPFIN-171 — Bills list paging, search and filters › #2 highlights overdue bills: due date passed with money owed 
+
+    Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoBeLessThanOrEqual[2m([22m[32mexpected[39m[2m)[22m
+
+    Expected: <= [32m0[39m
+    Received:    [31m79[39m
+
+      211 |         return scroller.scrollWidth - scroller.clientWidth;
+      212 |       });
+    > 213 |     expect(overflow).toBeLessThanOrEqual(0);
+          |                      ^
+      214 |     await expect(page.getByTestId('bill-edit-bill-004')).toBeVisible();
+      215 |
+      216 |     const paidPastDue = page.getByTestId('bill-row-bill-020');
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-171-075219-fznv/soupfinance-web/e2e/soupfin-171-bill-list-filters.spec.ts:213:22
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/soupfin-171-bill-list-filt-f9754-date-passed-with-money-owed-firefox/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/soupfin-171-bill-list-filt-f9754-date-passed-with-money-owed-firefox/error-context.md
+
+
+[1A[2K  1 failed
+    [firefox] › e2e/soupfin-171-bill-list-filters.spec.ts:196:3 › SOUPFIN-171 — Bills list paging, search and filters › #2 highlights overdue bills: due date passed with money owed 
