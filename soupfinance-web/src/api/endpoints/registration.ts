@@ -23,6 +23,8 @@
  * - POST /account/resetPassword.json - Reset password with token
  */
 import axios from 'axios';
+// Added (SOUPFIN-186): plain-language fallback for reset failures
+import { getApiErrorMessage } from '../errors';
 
 // Axios instance for /account/ endpoints (public, unauthenticated)
 // Uses empty baseURL so requests go through the proxy which injects Api-Authorization
@@ -143,7 +145,23 @@ export interface ConfirmationResponse {
   message: string;
   error?: string;
   errors?: Record<string, string>;
+  /**
+   * Added (SOUPFIN-186): machine-readable failure reason on the password
+   * reset endpoints. See plans/soupfin-186-password-reset-backend.md.
+   */
+  code?: PasswordResetErrorCode;
 }
+
+/**
+ * Added (SOUPFIN-186): failure codes from /account/forgotPassword.json and
+ * /account/resetPassword.json (contract in plans/soupfin-186-password-reset-backend.md).
+ */
+export type PasswordResetErrorCode =
+  | 'EMAIL_INVALID'
+  | 'TOKEN_INVALID'
+  | 'TOKEN_EXPIRED'
+  | 'PASSWORD_TOO_SHORT'
+  | 'PASSWORD_MISMATCH';
 
 // =============================================================================
 // API Functions
@@ -238,11 +256,13 @@ export async function resendConfirmation(email: string): Promise<ConfirmationRes
  * POST /account/forgotPassword.json
  *
  * Sends a password reset link to the user's email.
- * Returns success even if email doesn't exist (prevents email enumeration).
+ * Returns 200 for every well-formed email, whether or not an account exists
+ * (prevents email enumeration). Any error is therefore a real failure.
  *
- * NOTE: Backend endpoint may not yet exist. This is the frontend-ready API call.
- * Backend needs: AccountController.forgotPassword action that generates a reset token,
- * stores it, and sends an email with a link to /reset-password?token=xxx
+ * Changed (SOUPFIN-186): the backend action is specified in
+ * plans/soupfin-186-password-reset-backend.md. Until it ships, the backend
+ * answers 302 to its login page; the browser follows it (CORS allows it) and
+ * gets a 200 HTML page, so the body is checked before success is reported.
  *
  * @param email - Email address to send reset link to
  * @returns Confirmation response
@@ -253,18 +273,18 @@ export async function forgotPassword(email: string): Promise<ConfirmationRespons
     { email }
   );
 
-  return response.data;
+  return requireSuccessBody(response.data);
 }
 
 /**
  * Reset password using token from email
  * POST /account/resetPassword.json
  *
- * Validates the reset token and sets a new password.
+ * Validates the reset token and sets a new password. Failures are 400 with a
+ * `code` (see PasswordResetErrorCode); use getResetPasswordError() to read them.
  *
- * NOTE: Backend endpoint may not yet exist. This is the frontend-ready API call.
- * Backend needs: AccountController.resetPassword action that validates the token,
- * updates the password, and invalidates the token.
+ * Changed (SOUPFIN-186): backend action specified in
+ * plans/soupfin-186-password-reset-backend.md (not deployed yet).
  *
  * @param data - Token and new password
  * @returns Confirmation response
@@ -276,7 +296,76 @@ export async function resetPassword(data: PasswordReset): Promise<ConfirmationRe
     data
   );
 
-  return response.data;
+  return requireSuccessBody(response.data);
+}
+
+/** Added (SOUPFIN-186): shown when a reset endpoint answers 2xx without its JSON contract. */
+export const PASSWORD_RESET_UNAVAILABLE_MESSAGE =
+  'Password reset is not available right now. Please try again later or contact support.';
+
+/**
+ * Added (SOUPFIN-186): a 2xx only counts as success when it carries the JSON
+ * contract `{ success: true }`. A redirect to the backend's login page arrives
+ * as 200 text/html and must not read as "link sent" or "password reset".
+ */
+function requireSuccessBody(data: unknown): ConfirmationResponse {
+  if (data && typeof data === 'object' && (data as ConfirmationResponse).success === true) {
+    return data as ConfirmationResponse;
+  }
+  throw new Error(PASSWORD_RESET_UNAVAILABLE_MESSAGE);
+}
+
+/**
+ * Added (SOUPFIN-186): what a failed reset means for the page.
+ * - `link_expired` / `link_invalid`: the token cannot be used again; the page
+ *   swaps the form for a "request a new link" screen.
+ * - `form`: the token may still be fine (e.g. password too short); keep the form.
+ */
+export interface ResetPasswordError {
+  kind: 'link_expired' | 'link_invalid' | 'form';
+  message: string;
+}
+
+// Older backends answer 400 with only a sentence. A 400 that talks about the
+// token or link is treated as an unusable link, never as a password problem.
+const LINK_PROBLEM_TEXT = /\b(token|link)\b/i;
+const MAX_SERVER_MESSAGE_LENGTH = 300;
+
+/** Added (SOUPFIN-186): classify an error thrown by resetPassword(). */
+export function getResetPasswordError(error: unknown): ResetPasswordError {
+  // Duck-typed like parseApiError(): tests mock the axios module, so axios.isAxiosError may be absent
+  const response = (error as { isAxiosError?: boolean; response?: { status?: number; data?: unknown } } | null)
+    ?.isAxiosError === true
+    ? (error as { response?: { status?: number; data?: unknown } }).response
+    : undefined;
+  const data = (response?.data ?? null) as Partial<ConfirmationResponse> | null;
+  const rawMessage =
+    data && typeof data === 'object'
+      ? (typeof data.message === 'string' && data.message) ||
+        (typeof data.error === 'string' && data.error) ||
+        ''
+      : '';
+  // Same cap as extractServerMessage() in api/errors.ts: a page-sized body is not a sentence
+  const serverMessage = rawMessage.length < MAX_SERVER_MESSAGE_LENGTH ? rawMessage : '';
+  const code = data && typeof data === 'object' ? data.code : undefined;
+  const expiredText = 'This password reset link has expired.';
+  const invalidText = 'This password reset link is invalid or has already been used.';
+
+  if (code === 'TOKEN_EXPIRED') {
+    return { kind: 'link_expired', message: serverMessage || expiredText };
+  }
+  if (code === 'TOKEN_INVALID') {
+    return { kind: 'link_invalid', message: serverMessage || invalidText };
+  }
+  if (response?.status === 400 && !code && LINK_PROBLEM_TEXT.test(rawMessage)) {
+    return /expir/i.test(rawMessage)
+      ? { kind: 'link_expired', message: serverMessage || expiredText }
+      : { kind: 'link_invalid', message: serverMessage || invalidText };
+  }
+  if (response?.status === 400 && serverMessage) {
+    return { kind: 'form', message: serverMessage };
+  }
+  return { kind: 'form', message: getApiErrorMessage(error) };
 }
 
 // =============================================================================

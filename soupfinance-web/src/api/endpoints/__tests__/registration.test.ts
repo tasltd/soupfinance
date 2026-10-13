@@ -401,3 +401,166 @@ describe('Registration API', () => {
     });
   });
 });
+
+// Added (SOUPFIN-186): password reset endpoints and the reset-error classifier
+describe('Password reset API (SOUPFIN-186)', () => {
+  function mockClient(post: ReturnType<typeof vi.fn>) {
+    (axios.create as ReturnType<typeof vi.fn>).mockReturnValue({
+      interceptors: { request: { use: vi.fn() }, response: { use: vi.fn() } },
+      post,
+      get: vi.fn(),
+    });
+  }
+
+  function axiosError(status: number | undefined, data?: unknown) {
+    return {
+      isAxiosError: true,
+      message: status ? `Request failed with status code ${status}` : 'Network Error',
+      response: status === undefined ? undefined : { status, data },
+      config: { url: '/account/resetPassword.json' },
+    };
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('forgotPassword posts the email to /account/forgotPassword.json and returns the body', async () => {
+    const post = vi.fn().mockResolvedValue({
+      data: { success: true, message: 'If an account exists for that email, a password reset link has been sent.' },
+    });
+    mockClient(post);
+    vi.resetModules();
+    const { forgotPassword } = await import('../registration');
+
+    const result = await forgotPassword('jane@acme.com');
+
+    expect(post).toHaveBeenCalledWith('/account/forgotPassword.json', { email: 'jane@acme.com' });
+    expect(result).toEqual({
+      success: true,
+      message: 'If an account exists for that email, a password reset link has been sent.',
+    });
+  });
+
+  it('forgotPassword lets a failure reject instead of resolving as success', async () => {
+    const post = vi.fn().mockRejectedValue(axiosError(undefined));
+    mockClient(post);
+    vi.resetModules();
+    const { forgotPassword } = await import('../registration');
+
+    await expect(forgotPassword('jane@acme.com')).rejects.toMatchObject({ isAxiosError: true });
+  });
+
+  it.each([
+    ['a 200 HTML login page (the backend redirect followed today)', '<html><body>Login</body></html>'],
+    ['an empty body', ''],
+    ['an object without success', {}],
+    ['success: false', { success: false, message: 'nope' }],
+    ['null', null],
+  ])('forgotPassword and resetPassword reject %s', async (_label, data) => {
+    const post = vi.fn().mockResolvedValue({ status: 200, data });
+    mockClient(post);
+    vi.resetModules();
+    const { forgotPassword, resetPassword, PASSWORD_RESET_UNAVAILABLE_MESSAGE } = await import('../registration');
+
+    await expect(forgotPassword('jane@acme.com')).rejects.toThrow(PASSWORD_RESET_UNAVAILABLE_MESSAGE);
+    await expect(
+      resetPassword({ token: 't', password: 'NewPass123!', confirmPassword: 'NewPass123!' }),
+    ).rejects.toThrow(PASSWORD_RESET_UNAVAILABLE_MESSAGE);
+  });
+
+  it('getResetPasswordError keeps the form for the "unavailable" error', async () => {
+    const { getResetPasswordError, PASSWORD_RESET_UNAVAILABLE_MESSAGE } = await import('../registration');
+    expect(getResetPasswordError(new Error(PASSWORD_RESET_UNAVAILABLE_MESSAGE))).toEqual({
+      kind: 'form',
+      message: PASSWORD_RESET_UNAVAILABLE_MESSAGE,
+    });
+  });
+
+  it('resetPassword posts token and both passwords to /account/resetPassword.json', async () => {
+    const body = { token: 'tok_abc', password: 'NewPass123!', confirmPassword: 'NewPass123!' };
+    const post = vi.fn().mockResolvedValue({ data: { success: true, message: 'Your password has been reset.' } });
+    mockClient(post);
+    vi.resetModules();
+    const { resetPassword } = await import('../registration');
+
+    const result = await resetPassword(body);
+
+    expect(post).toHaveBeenCalledWith('/account/resetPassword.json', body);
+    expect(result.success).toBe(true);
+  });
+
+  describe('getResetPasswordError', () => {
+    it.each([
+      ['TOKEN_EXPIRED', 'link_expired', 'This password reset link has expired.'],
+      ['TOKEN_INVALID', 'link_invalid', 'This password reset link is invalid or has already been used.'],
+    ])('code %s → %s with the backend message', async (code, kind, message) => {
+      const { getResetPasswordError } = await import('../registration');
+      expect(getResetPasswordError(axiosError(400, { success: false, code, message }))).toEqual({ kind, message });
+    });
+
+    it('uses a default sentence when the backend sends a code but no message', async () => {
+      const { getResetPasswordError } = await import('../registration');
+      expect(getResetPasswordError(axiosError(400, { success: false, code: 'TOKEN_EXPIRED' }))).toEqual({
+        kind: 'link_expired',
+        message: 'This password reset link has expired.',
+      });
+    });
+
+    it.each([
+      ['PASSWORD_TOO_SHORT', 'Password must be at least 8 characters'],
+      ['PASSWORD_MISMATCH', 'Passwords do not match'],
+    ])('code %s keeps the form open', async (code, message) => {
+      const { getResetPasswordError } = await import('../registration');
+      expect(getResetPasswordError(axiosError(400, { success: false, code, message }))).toEqual({
+        kind: 'form',
+        message,
+      });
+    });
+
+    it('treats a code-less 400 that mentions the token as an unusable link (older backend)', async () => {
+      const { getResetPasswordError } = await import('../registration');
+      expect(
+        getResetPasswordError(axiosError(400, { success: false, message: 'Invalid or expired reset token' })),
+      ).toEqual({ kind: 'link_expired', message: 'Invalid or expired reset token' });
+      expect(getResetPasswordError(axiosError(400, { success: false, error: 'Unknown reset link' }))).toEqual({
+        kind: 'link_invalid',
+        message: 'Unknown reset link',
+      });
+    });
+
+    it('never shows "Request failed with status code" for a network failure or a 500', async () => {
+      const { getResetPasswordError } = await import('../registration');
+      for (const err of [axiosError(undefined), axiosError(500, '<html>boom</html>'), axiosError(302, '')]) {
+        const parsed = getResetPasswordError(err);
+        expect(parsed.kind).toBe('form');
+        expect(parsed.message).not.toMatch(/status code/i);
+        expect(parsed.message.length).toBeGreaterThan(0);
+      }
+    });
+
+    it('handles empty inputs: null, undefined, a plain Error and a 400 with no body', async () => {
+      const { getResetPasswordError } = await import('../registration');
+      for (const err of [null, undefined, new Error('x'), axiosError(400, null), axiosError(400, {})]) {
+        const parsed = getResetPasswordError(err);
+        expect(parsed.kind).toBe('form');
+        expect(parsed.message.length).toBeGreaterThan(0);
+      }
+    });
+
+    it('caps an oversized backend message (overflow)', async () => {
+      const { getResetPasswordError } = await import('../registration');
+      const huge = 'token '.repeat(20_000);
+      const parsed = getResetPasswordError(axiosError(400, { success: false, message: huge }));
+      // Classified from the text, but a page-sized body is never shown to the user
+      expect(parsed).toEqual({
+        kind: 'link_invalid',
+        message: 'This password reset link is invalid or has already been used.',
+      });
+      const expired = getResetPasswordError(
+        axiosError(400, { success: false, code: 'TOKEN_EXPIRED', message: 'x'.repeat(5_000) }),
+      );
+      expect(expired).toEqual({ kind: 'link_expired', message: 'This password reset link has expired.' });
+    });
+  });
+});

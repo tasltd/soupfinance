@@ -504,6 +504,10 @@ Frontend pages exist for `/forgot-password` and `/reset-password` but the backen
 - `forgotPassword`: Generate reset token, store with TTL, send email with link to `{applicationUrl}/reset-password?token=xxx`
 - `resetPassword`: Validate token, update password, invalidate token
 
+**Superseded (SOUPFIN-186, 2026-10-13):** the full spec, API contract and tests are in
+`plans/soupfin-186-password-reset-backend.md`. Do NOT reuse the confirmation token format
+(`base64(agentId:timestamp)`, unsigned) or the Origin-header URL fallback for reset links.
+
 ### Remaining Work
 
 1. **Issue #7 (Agent NULL tenantId)** — Still needs backend code fix (wrap Agent creation in `Tenants.withId(account.id)`)
