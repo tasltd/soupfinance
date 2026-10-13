@@ -15,12 +15,14 @@ describe('clients API', () => {
   // Tracked mock functions — assigned per test so we can inspect calls per endpoint
   let mockGet: ReturnType<typeof vi.fn>;
   let mockPost: ReturnType<typeof vi.fn>;
+  let mockDelete: ReturnType<typeof vi.fn>;
 
   // The axios instance returned by axios.create() — both apiClient and
   // accountClient share the same shape so a single mock services both.
   function installAxiosMock() {
     mockGet = vi.fn();
     mockPost = vi.fn();
+    mockDelete = vi.fn();
     (axios.create as ReturnType<typeof vi.fn>).mockReturnValue({
       interceptors: {
         request: { use: vi.fn() },
@@ -29,7 +31,7 @@ describe('clients API', () => {
       get: mockGet,
       post: mockPost,
       put: vi.fn(),
-      delete: vi.fn(),
+      delete: mockDelete,
     });
   }
 
@@ -618,6 +620,77 @@ describe('clients API', () => {
       expect(getClientDisplayName({ name: '', companyName: 'Globex' } as never)).toBe('Globex');
       expect(getClientDisplayName({ name: '', email: 'a@b.co' } as never)).toBe('a@b.co');
       expect(getClientDisplayName({ name: '' } as never)).toBe('Unnamed client');
+    });
+  });
+
+  // Added (SOUPFIN-169): the backend answers 200 + relatedList and deletes
+  // nothing when the client has linked records. That must not read as success.
+  describe('deleteClient (SOUPFIN-169)', () => {
+    const related = (module: string, i: number) => ({
+      relatedToClass: `soupbroker.kyc.${module.replace(/ /g, '')}`,
+      relatedToId: `rel-${i}`,
+      relatedModule: module,
+      targetDomainClassName: 'client',
+      targetParentId: 'client-1',
+    });
+
+    it('resolves when the backend deletes (204, empty body)', async () => {
+      mockDelete.mockResolvedValue({ status: 204, data: '' });
+      vi.resetModules();
+      const { deleteClient } = await import('../clients');
+
+      await expect(deleteClient('client-1')).resolves.toBeUndefined();
+      expect(mockDelete).toHaveBeenCalledWith('/client/delete/client-1.json');
+    });
+
+    it('resolves when the backend returns an empty relatedList', async () => {
+      mockDelete.mockResolvedValue({ status: 200, data: { relatedList: [] } });
+      vi.resetModules();
+      const { deleteClient } = await import('../clients');
+
+      await expect(deleteClient('client-1')).resolves.toBeUndefined();
+    });
+
+    it('rejects with ClientDeleteBlockedError when the backend returns linked records', async () => {
+      mockDelete.mockResolvedValue({
+        status: 200,
+        data: {
+          relatedList: [related('Client Contact', 1), related('Client Portfolio', 2), related('Individual', 3)],
+          targetControllerName: 'client',
+          targetId: 'client-1',
+        },
+      });
+      vi.resetModules();
+      const { deleteClient, ClientDeleteBlockedError } = await import('../clients');
+
+      const error = await deleteClient('client-1').catch((e) => e);
+      expect(error).toBeInstanceOf(ClientDeleteBlockedError);
+      expect(error.name).toBe('ClientDeleteBlockedError');
+      expect(error.relatedModules).toEqual(['Client Contact', 'Client Portfolio', 'Individual']);
+    });
+
+    it('still rejects, with each module listed once, when 500 linked records come back', async () => {
+      const modules = ['Client Contact', 'Client Portfolio', 'Individual'];
+      mockDelete.mockResolvedValue({
+        status: 200,
+        data: { relatedList: Array.from({ length: 500 }, (_, i) => related(modules[i % 3], i)) },
+      });
+      vi.resetModules();
+      const { deleteClient } = await import('../clients');
+
+      const error = await deleteClient('client-1').catch((e) => e);
+      expect(error.name).toBe('ClientDeleteBlockedError');
+      expect(error.relatedModules).toEqual(modules);
+    });
+
+    it('rejects even when the linked records carry no module name', async () => {
+      mockDelete.mockResolvedValue({ status: 200, data: { relatedList: [{ relatedToId: 'x' }] } });
+      vi.resetModules();
+      const { deleteClient } = await import('../clients');
+
+      const error = await deleteClient('client-1').catch((e) => e);
+      expect(error.name).toBe('ClientDeleteBlockedError');
+      expect(error.relatedModules).toEqual([]);
     });
   });
 });

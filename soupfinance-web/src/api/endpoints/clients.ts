@@ -293,11 +293,44 @@ export async function updateClient(id: string, data: Record<string, unknown>): P
 }
 
 /**
+ * Thrown when the backend answers a client DELETE without deleting anything.
+ *
+ * Added (SOUPFIN-169): the backend's DeleteInterceptor sends every JSON delete
+ * through UtilityController.deleteChecker. When the client still has linked
+ * records (its contact, portfolio and Individual/Corporate row, which every
+ * SoupFinance client has) it replies 200 with a `relatedList` and leaves the
+ * client untouched. Treating that 200 as success told the user the client was
+ * gone while it stayed in the list (SOUPFIN-7 #1). Backend fix:
+ * plans/soupfin-169-client-delete-backend.md.
+ */
+export class ClientDeleteBlockedError extends Error {
+  readonly relatedModules: string[];
+
+  constructor(relatedModules: string[]) {
+    super('This client was not deleted because it still has linked records.');
+    this.name = 'ClientDeleteBlockedError';
+    this.relatedModules = relatedModules;
+  }
+}
+
+/**
  * Delete a client
  * DELETE /rest/client/delete/:id.json
+ *
+ * Resolves only when the backend actually deleted (archived) the client.
+ * Rejects with ClientDeleteBlockedError when it returned a `relatedList` instead.
  */
 export async function deleteClient(id: string): Promise<void> {
-  await apiClient.delete(`${BASE_URL}/delete/${id}.json`);
+  const response = await apiClient.delete<{ relatedList?: Array<{ relatedModule?: string }> }>(
+    `${BASE_URL}/delete/${id}.json`
+  );
+  const relatedList = response?.data?.relatedList;
+  if (Array.isArray(relatedList) && relatedList.length > 0) {
+    const modules = [
+      ...new Set(relatedList.map((r) => r?.relatedModule).filter((m): m is string => !!m)),
+    ];
+    throw new ClientDeleteBlockedError(modules);
+  }
 }
 
 /**
