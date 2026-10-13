@@ -3,11 +3,13 @@
  * Tests rendering, loading/error/empty states, data display, and navigation
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, within, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { InvoiceListPage } from '../InvoiceListPage';
 import type { Invoice, InvoiceStatus } from '../../../types';
+// Added (SOUPFIN-166): Axios-shaped 403/500 errors
+import { moduleDisabled403, roleDenied403, serverError500 } from '../../../test/apiErrorFixtures';
 
 // Mock the invoices API
 vi.mock('../../../api', () => ({
@@ -136,8 +138,9 @@ describe('InvoiceListPage', () => {
 
       renderInvoiceListPage();
 
+      // Changed (SOUPFIN-166): ApiErrorState shows the error's own message
       expect(await screen.findByTestId('invoice-list-error')).toBeInTheDocument();
-      expect(screen.getByText('Failed to load invoices')).toBeInTheDocument();
+      expect(screen.getByTestId('invoice-list-error-title')).toHaveTextContent('Something went wrong');
     });
 
     it('displays retry button in error state', async () => {
@@ -154,7 +157,7 @@ describe('InvoiceListPage', () => {
 
       renderInvoiceListPage();
 
-      expect(await screen.findByText(/There was an error loading your invoices/i)).toBeInTheDocument();
+      expect(await screen.findByTestId('invoice-list-error-message')).toHaveTextContent('Network error');
     });
   });
 
@@ -414,6 +417,56 @@ describe('InvoiceListPage', () => {
 
       const row = await screen.findByTestId('invoice-row-inv-whole');
       expect(within(row).getByText('$500.00')).toBeInTheDocument();
+    });
+  });
+
+  // Added (SOUPFIN-166): the error card names the cause and Retry refetches
+  describe('module-aware errors (SOUPFIN-166)', () => {
+    it.each([
+      ['a disabled Finance module', () => moduleDisabled403('Finance', '/invoice/index.json'), 'module_disabled', 'Finance module is not available'],
+      ['a missing role', () => roleDenied403('/invoice/index.json'), 'forbidden', 'You do not have permission'],
+      ['a server fault', () => serverError500('/invoice/index.json'), 'server_error', 'Server error'],
+    ])('explains %s', async (_cause, makeError, kind, title) => {
+      vi.mocked(listInvoices).mockRejectedValue(makeError());
+
+      renderInvoiceListPage();
+
+      const card = await screen.findByTestId('invoice-list-error');
+      expect(card).toHaveAttribute('data-error-kind', kind);
+      expect(within(card).getByText(title)).toBeInTheDocument();
+      expect(document.body.textContent).not.toMatch(/status code/i);
+    });
+
+    it('offers no Retry when the module is disabled', async () => {
+      vi.mocked(listInvoices).mockRejectedValue(moduleDisabled403('Finance', '/invoice/index.json'));
+
+      renderInvoiceListPage();
+
+      const card = await screen.findByTestId('invoice-list-error');
+      expect(within(card).queryByRole('button', { name: /retry/i })).not.toBeInTheDocument();
+      expect(within(card).getByText(/contact your administrator to enable this module/i)).toBeInTheDocument();
+    });
+
+    it('Retry after a server fault refetches without reloading the page', async () => {
+      const reload = vi.fn();
+      const original = window.location;
+      Object.defineProperty(window, 'location', { configurable: true, value: { ...original, reload } });
+      try {
+        vi.mocked(listInvoices).mockRejectedValueOnce(serverError500('/invoice/index.json'));
+
+        renderInvoiceListPage();
+
+        const card = await screen.findByTestId('invoice-list-error');
+        vi.mocked(listInvoices).mockResolvedValue([createMockInvoice({ id: 'inv-after-retry' })]);
+        within(card).getByRole('button', { name: /retry/i }).click();
+
+        await waitFor(() => expect(screen.queryByTestId('invoice-list-error')).not.toBeInTheDocument());
+        expect(await screen.findByTestId('invoice-row-inv-after-retry')).toBeInTheDocument();
+        expect(vi.mocked(listInvoices)).toHaveBeenCalledTimes(2);
+        expect(reload).not.toHaveBeenCalled();
+      } finally {
+        Object.defineProperty(window, 'location', { configurable: true, value: original });
+      }
     });
   });
 });
