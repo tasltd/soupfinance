@@ -1,0 +1,19 @@
+
+Running 4 tests using 1 worker
+
+Tax options: [{"value":"","label":"No Tax"},{"value":"ee5058c1bd464e14ae3c33e3530d1a9e","label":"LGC name KTOSP660 (1%)"},{"value":"35f8ffb142284ffd9cc00fc1d1f9fbee","label":"LGC name XN2K4302 (1%)"},{"value":"c533446fd0394070833622125266c3ba","label":"LGC name PZYOC728 (1%)"},{"value":"89a68ba9201b478c8d10a8164fc6f374","label":"LGC name 2W1PF492 (1%)"},{"value":"4a8ed9aa7c434489a80db3dcfee5338e","label":"LGC name MGS4Y872 (1%)"},{"value":"7be491563cad4dc5bf569fbf86ed6901","label":"LGC name INESG907 (1%)"},{"value":"9ad52a991c1844d4a474ad534af38c08","label":"LGC name 90KEG195 (1%)"},{"value":"52e5d35daa6f4d7faef41012f39b3cb3","label":"LGC name 1WCHV805 (1%)"},{"value":"7e796ea199bc4131b48e50f9a1d6cb8a","label":"LGC name X0S7K533 (1%)"},{"value":"525df7ea8a0c4797a9d98d14d92bec80","label":"LGC name INHA0859 5da6c6d12 (1%)"},{"value":"779b6843306d4025aab8d490b4543cda","label":"LGC name INHA0859 (1%)"},{"value":"24f574e5dc30420da34ed3ebd12fc1b0","label":"Covid 19 87ff577db 07e6b2f4c a941ec328 527e4f5b3 (1%)"},{"value":"859a109bed614200afae68bd6875d30f","label":"Covid 19 87ff577db 07e6b2f4c a941ec328 (1%)"},{"value":"bc0bbedb1508410d9f4721c3e341f443","label":"Covid 19 87ff577db 07e6b2f4c (1%)"},{"value":"ba6bb03f500142b9859a0323d685af6a","label":"Covid 19 87ff577db (1%)"},{"value":"ff80818196cf615b0196cf80f6f40007","label":"Covid 19 (1%)"},{"value":"ff80818186941f2701869cb315b11dda","label":"VAT- STANDARD (15%)"},{"value":"ff8081817fe4ae93017fe5c9cf10017b","label":"CST (5%)"},{"value":"ff8081817f8e0105017f8ea9ba580014","label":"Value Added Tax -Flat Rate (3%)"},{"value":"ff8081817f699e42017f6a8cd9e20076","label":"Covid 19 Levy (1%)"},{"value":"ff8081817f699e42017f6a8c3fb10075","label":"Tourism Levy (1%)"},{"value":"ff80818173ca7d260173ca82dcc00002","label":"Ghana Education Trust Fund Levy (2.5%)"},{"value":"ff80818173ca7d260173ca8249e70001","label":"National Health Insurance Levy (2.5%)"},{"value":"ff80818173ca7d260173ca81dbde0000","label":"Value Added Tax (12.5%)"}]
+Created invoice: 65e39a8d020a4c59b673656326c7883c Invoice(number:2025021, accountServices:Direct Account : Corporate(Lgc Name K3qjg909), total:0.00)
+Persisted item: "InvoiceItem(quantity:2.0, unitPrice:1500, taxEntries:[LGC abbreviation KTOSP709-1.0%], invoice:Invoice(number:2025021, accountServices:Direct Account : Corporate(Lgc Name K3qjg909), total:0.00))"
+Persisted tax: 30 (expected ~30 at 1%)
+  ✓  1 [firefox] › e2e/integration/invoice-tax.integration.spec.ts:115:3 › Invoice line-item tax persistence (SOUPFIN-37) › a taxed invoice created through the UI persists its tax on the backend (26.2s)
+  ✓  2 [firefox] › e2e/integration/invoice-tax.integration.spec.ts:270:3 › Invoice line-item tax persistence (SOUPFIN-37) › an untaxed invoice saves cleanly with no tax rows (20.3s)
+[SOUPFIN-170] create.json latency ms: 115, 234, 95
+  ✓  3 [firefox] › e2e/integration/soupfin-170-invoice-numbering.integration.spec.ts:91:3 › SOUPFIN-170 invoice numbering against the LXC backend › GET /rest/invoice/create.json latency (7.4s)
+[SOUPFIN-170] save 1: id=3e12fe887b51497c85405d7010e4ee5c number=2025023 status=201
+[SOUPFIN-170] save 2: id=526374e8298e40cebd3ced6f853b18a2 number=2025024 status=201
+[SOUPFIN-170] save 3: id=8d2d288f37874314bd67653ebd1948ef number=2025025 status=201
+[SOUPFIN-170] save 4: id=6a4c821e1bdc4266912a1f4a482480b5 number=2025026 status=201
+[SOUPFIN-170] save 5: id=75f829c316544a9eb4d75645a0ce5b26 number=2025027 status=201
+  ✓  4 [firefox] › e2e/integration/soupfin-170-invoice-numbering.integration.spec.ts:104:3 › SOUPFIN-170 invoice numbering against the LXC backend › 5 consecutive invoice saves each get a new number and no 422 (38.4s)
+
+  4 passed (1.8m)

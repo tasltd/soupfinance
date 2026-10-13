@@ -1,0 +1,107 @@
+
+Running 24 tests using 1 worker
+
+[RESPONSE VALIDATION] http://localhost:5197/rest/invoice/index.json?max=20&sort=dateCreated&order=desc: Response.invoice[0]: missing required field 'invoiceDate'
+[Invoice Test] Found existing invoice: 65ae8c614d094170a02ce722324b387c
+  ✓   1 [firefox] › e2e/integration/03-invoices.integration.spec.ts:123:3 › Invoice Integration Tests › invoice list page loads correctly (20.6s)
+[RESPONSE VALIDATION] http://localhost:5197/rest/invoice/index.json?max=20&sort=dateCreated&order=desc: Response.invoice[0]: missing required field 'invoiceDate'
+  ✓   2 [firefox] › e2e/integration/03-invoices.integration.spec.ts:159:3 › Invoice Integration Tests › clicking New Invoice navigates to form (15.2s)
+[RESPONSE VALIDATION] http://localhost:5197/rest/invoice/index.json?max=5&sort=dateCreated&order=desc: Response.invoice[0]: missing required field 'invoiceDate'
+[RESPONSE VALIDATION] http://localhost:5197/rest/bill/index.json?max=1000: Response.bill[0]: 'status' must be string, got object
+[Invoice Test] API probe: 10 clients found via direct API
+[Invoice Test] Client dropdown options: 101 (available: true)
+[Invoice Test]   Client option 1: LGC firstname K3QJG957  LGC lastname K3QJG698
+[Invoice Test]   Client option 2: Corporate(Lgc Name K3qjg909)
+[Invoice Test]   Client option 3: Individual()
+[Invoice Test]   Client option 4: Individual(Sec Rity)
+[Invoice Test]   Client option 5: Individual(Sec Rity)
+  ✓   3 [firefox] › e2e/integration/03-invoices.integration.spec.ts:201:3 › Invoice Integration Tests › detect client availability for create flow (25.9s)
+[RESPONSE VALIDATION] http://localhost:5197/rest/invoice/show/65ae8c614d094170a02ce722324b387c.json: Response.invoice: missing required field 'invoiceDate'
+[Invoice Test] Detail page heading: Invoice 2025019
+[Invoice Test] Client:  On : Corporate(Ashfield Investment Managers)
+[Invoice Test] Invoice status: DRAFT
+[Invoice Test] Buttons: edit=true delete=true send=true pdf=true
+  ✓   4 [firefox] › e2e/integration/03-invoices.integration.spec.ts:265:3 › Invoice Integration Tests › existing invoice detail page shows information (11.6s)
+[RESPONSE VALIDATION] http://localhost:5197/rest/invoice/index.json?max=20&sort=dateCreated&order=desc: Response.invoice[0]: missing required field 'invoiceDate'
+[RESPONSE VALIDATION] http://localhost:5197/rest/invoice/show/65ae8c614d094170a02ce722324b387c.json: Response.invoice: missing required field 'invoiceDate'
+  ✓   5 [firefox] › e2e/integration/03-invoices.integration.spec.ts:345:3 › Invoice Integration Tests › clicking invoice link navigates to detail page (15.5s)
+[RESPONSE VALIDATION] http://localhost:5197/rest/invoice/show/65ae8c614d094170a02ce722324b387c.json: Response.invoice: missing required field 'invoiceDate'
+[Invoice Test] Edit button not visible (invoice is not DRAFT status — this is expected for existing invoices)
+  ✓   6 [firefox] › e2e/integration/03-invoices.integration.spec.ts:369:3 › Invoice Integration Tests › can navigate to edit from detail page (14.2s)
+[RESPONSE VALIDATION] http://localhost:5197/rest/invoice/index.json?max=20&sort=dateCreated&order=desc: Response.invoice[0]: missing required field 'invoiceDate'
+[RESPONSE VALIDATION] http://localhost:5197/rest/invoice/show/65ae8c614d094170a02ce722324b387c.json: Response.invoice: missing required field 'invoiceDate'
+[Invoice Test] Successfully navigated to edit form from list
+  ✓   7 [firefox] › e2e/integration/03-invoices.integration.spec.ts:398:3 › Invoice Integration Tests › clicking edit in list navigates to edit form (11.6s)
+  ✓   8 [firefox] › e2e/integration/03-invoices.integration.spec.ts:430:3 › Invoice Integration Tests › cancel button on form returns to invoice list (12.8s)
+[Invoice Test] Validation error: Please select a client
+  ✓   9 [firefox] › e2e/integration/03-invoices.integration.spec.ts:448:3 › Invoice Integration Tests › form validation shows error for missing client (14.8s)
+[Invoice Test] Validation error (no account/no due date): Please select a client
+  ✓  10 [firefox] › e2e/integration/03-invoices.integration.spec.ts:474:3 › Invoice Integration Tests › form validation shows error for missing due date (11.9s)
+  ✓  11 [firefox] › e2e/integration/03-invoices.integration.spec.ts:501:3 › Invoice Integration Tests › can add and remove line items (13.3s)
+[Invoice Test] Subtotal with one item: GH₵500.00
+[Invoice Test] Subtotal with two items: GH₵1,100.00
+[Invoice Test] Total: GH₵1,100.00
+  ✓  12 [firefox] › e2e/integration/03-invoices.integration.spec.ts:540:3 › Invoice Integration Tests › totals calculate correctly from line items (12.6s)
+[RESPONSE VALIDATION] http://localhost:5197/rest/invoice/show/65ae8c614d094170a02ce722324b387c.json: Response.invoice: missing required field 'invoiceDate'
+[Invoice Test] Payments section: No payments recorded yet
+  ✓  13 [firefox] › e2e/integration/03-invoices.integration.spec.ts:582:3 › Invoice Integration Tests › invoice detail shows payment history section (10.2s)
+[RESPONSE VALIDATION] http://localhost:5197/rest/invoice/show/65ae8c614d094170a02ce722324b387c.json: Response.invoice: missing required field 'invoiceDate'
+[Invoice Test] No line items displayed
+  ✓  14 [firefox] › e2e/integration/03-invoices.integration.spec.ts:620:3 › Invoice Integration Tests › invoice detail shows line items section (10.8s)
+[RESPONSE VALIDATION] http://localhost:5197/rest/invoice/index.json?max=20&sort=dateCreated&order=desc: Response.invoice[0]: missing required field 'invoiceDate'
+  ✓  15 [firefox] › e2e/integration/03-invoices.integration.spec.ts:660:3 › Invoice Integration Tests › invoice list is usable on mobile viewport (10.2s)
+  ✓  16 [firefox] › e2e/integration/03-invoices.integration.spec.ts:674:3 › Invoice Integration Tests › invoice form is usable on mobile viewport (11.7s)
+[Invoice Test] Client dropdown options: 1
+[Invoice Test] No clients in dropdown — cannot create invoice
+  ✓  17 [firefox] › e2e/integration/03-invoices.integration.spec.ts:693:3 › Invoice Integration Tests › create invoice via form when clients are available (17.8s)
+[Invoice Test] Delete button not visible (invoice is not DRAFT status — expected for existing data)
+[RESPONSE VALIDATION] http://localhost:5197/rest/invoice/show/65ae8c614d094170a02ce722324b387c.json: Response.invoice: missing required field 'invoiceDate'
+  ✓  18 [firefox] › e2e/integration/03-invoices.integration.spec.ts:771:3 › Invoice Integration Tests › delete invoice flow uses confirmation dialog (12.6s)
+[RESPONSE VALIDATION] http://localhost:5197/rest/invoice/show/65ae8c614d094170a02ce722324b387c.json: Response.invoice: missing required field 'invoiceDate'
+[Invoice Test] Cancel button not visible (invoice may be CANCELLED or PAID)
+  ✓  19 [firefox] › e2e/integration/03-invoices.integration.spec.ts:814:3 › Invoice Integration Tests › cancel invoice action uses confirmation dialog (11.9s)
+[RESPONSE VALIDATION] http://localhost:5197/rest/invoice/index.json?max=5&sort=dateCreated&order=desc: Response.invoice[0]: missing required field 'invoiceDate'
+[RESPONSE VALIDATION] http://localhost:5197/rest/invoice/show/65ae8c614d094170a02ce722324b387c.json: Response.invoice: missing required field 'invoiceDate'
+[Invoice Test] PDF button text: downloadDownload PDF
+  ✓  20 [firefox] › e2e/integration/03-invoices.integration.spec.ts:857:3 › Invoice Integration Tests › download PDF button is present on detail page (12.8s)
+[RESPONSE VALIDATION] http://localhost:5197/rest/invoice/index.json?max=20&sort=dateCreated&order=desc: Response.invoice[0]: missing required field 'invoiceDate'
+[Invoice Test] Invoice rows in table: 20
+[Invoice Test] Table columns: 7
+[Invoice Test] Column headers: Invoice # | Client | Invoice Date | Due Date | Amount | Status | Actions
+  ✓  21 [firefox] › e2e/integration/03-invoices.integration.spec.ts:885:3 › Invoice Integration Tests › invoice list displays multiple invoices with correct columns (15.2s)
+[Invoice Test] Subtotal: GH₵1,000.00
+[Invoice Test] Total with 1% tax: GH₵1,010.00 (expected 1010)
+  ✓  22 [firefox] › e2e/integration/03-invoices.integration.spec.ts:934:3 › Invoice Integration Tests › line item tax is applied to the previewed total (11.4s)
+Tax options: [{"value":"","label":"No Tax"},{"value":"ee5058c1bd464e14ae3c33e3530d1a9e","label":"LGC name KTOSP660 (1%)"},{"value":"35f8ffb142284ffd9cc00fc1d1f9fbee","label":"LGC name XN2K4302 (1%)"},{"value":"c533446fd0394070833622125266c3ba","label":"LGC name PZYOC728 (1%)"},{"value":"89a68ba9201b478c8d10a8164fc6f374","label":"LGC name 2W1PF492 (1%)"},{"value":"4a8ed9aa7c434489a80db3dcfee5338e","label":"LGC name MGS4Y872 (1%)"},{"value":"7be491563cad4dc5bf569fbf86ed6901","label":"LGC name INESG907 (1%)"},{"value":"9ad52a991c1844d4a474ad534af38c08","label":"LGC name 90KEG195 (1%)"},{"value":"52e5d35daa6f4d7faef41012f39b3cb3","label":"LGC name 1WCHV805 (1%)"},{"value":"7e796ea199bc4131b48e50f9a1d6cb8a","label":"LGC name X0S7K533 (1%)"},{"value":"525df7ea8a0c4797a9d98d14d92bec80","label":"LGC name INHA0859 5da6c6d12 (1%)"},{"value":"779b6843306d4025aab8d490b4543cda","label":"LGC name INHA0859 (1%)"},{"value":"24f574e5dc30420da34ed3ebd12fc1b0","label":"Covid 19 87ff577db 07e6b2f4c a941ec328 527e4f5b3 (1%)"},{"value":"859a109bed614200afae68bd6875d30f","label":"Covid 19 87ff577db 07e6b2f4c a941ec328 (1%)"},{"value":"bc0bbedb1508410d9f4721c3e341f443","label":"Covid 19 87ff577db 07e6b2f4c (1%)"},{"value":"ba6bb03f500142b9859a0323d685af6a","label":"Covid 19 87ff577db (1%)"},{"value":"ff80818196cf615b0196cf80f6f40007","label":"Covid 19 (1%)"},{"value":"ff80818186941f2701869cb315b11dda","label":"VAT- STANDARD (15%)"},{"value":"ff8081817fe4ae93017fe5c9cf10017b","label":"CST (5%)"},{"value":"ff8081817f8e0105017f8ea9ba580014","label":"Value Added Tax -Flat Rate (3%)"},{"value":"ff8081817f699e42017f6a8cd9e20076","label":"Covid 19 Levy (1%)"},{"value":"ff8081817f699e42017f6a8c3fb10075","label":"Tourism Levy (1%)"},{"value":"ff80818173ca7d260173ca82dcc00002","label":"Ghana Education Trust Fund Levy (2.5%)"},{"value":"ff80818173ca7d260173ca8249e70001","label":"National Health Insurance Levy (2.5%)"},{"value":"ff80818173ca7d260173ca81dbde0000","label":"Value Added Tax (12.5%)"}]
+Created invoice: c6abecc2b33348c2a0fd7d4b41a5fef4 Invoice(number:2025020, accountServices:Direct Account : Corporate(Lgc Name K3qjg909), total:0.00)
+Persisted item: "InvoiceItem(quantity:2.0, unitPrice:1500, taxEntries:[LGC abbreviation KTOSP709-1.0%], invoice:Invoice(number:2025020, accountServices:Direct Account : Corporate(Lgc Name K3qjg909), total:0.00))"
+Persisted tax: 30 (expected ~30 at 1%)
+  ✓  23 [firefox] › e2e/integration/invoice-tax.integration.spec.ts:114:3 › Invoice line-item tax persistence (SOUPFIN-37) › a taxed invoice created through the UI persists its tax on the backend (25.6s)
+  ✘  24 [firefox] › e2e/integration/invoice-tax.integration.spec.ts:311:3 › Invoice line-item tax persistence (SOUPFIN-37) › an untaxed invoice saves cleanly with no tax rows (1.8m)
+
+
+  1) [firefox] › e2e/integration/invoice-tax.integration.spec.ts:311:3 › Invoice line-item tax persistence (SOUPFIN-37) › an untaxed invoice saves cleanly with no tax rows 
+
+    Error: Invoice save failed without a timeout. Banner: Selected client has no account services. Please choose a different client.
+
+      82 |         .textContent()
+      83 |         .catch(() => null);
+    > 84 |       throw new Error(`Invoice save failed without a timeout. Banner: ${banner ?? '(none)'}`);
+         |             ^
+      85 |     }
+      86 |     console.log(`Save attempt ${attempt} hit the client timeout; retrying.`);
+      87 |   }
+        at saveDraftWithRetry (/home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-170-075203-qnyl/soupfinance-web/e2e/integration/invoice-tax.integration.spec.ts:84:13)
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-170-075203-qnyl/soupfinance-web/e2e/integration/invoice-tax.integration.spec.ts:346:5
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results-lxc/invoice-tax.integration-In-5c78b-es-cleanly-with-no-tax-rows-firefox/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results-lxc/invoice-tax.integration-In-5c78b-es-cleanly-with-no-tax-rows-firefox/error-context.md
+
+  Slow test file: [firefox] › e2e/integration/03-invoices.integration.spec.ts (5.1m)
+  Consider running tests from slow files in parallel. See: https://playwright.dev/docs/test-parallel
+  1 failed
+    [firefox] › e2e/integration/invoice-tax.integration.spec.ts:311:3 › Invoice line-item tax persistence (SOUPFIN-37) › an untaxed invoice saves cleanly with no tax rows 
+  23 passed (7.5m)

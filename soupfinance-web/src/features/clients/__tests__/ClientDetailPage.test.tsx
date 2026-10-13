@@ -63,6 +63,18 @@ function renderPage(id = 'client-123') {
   );
 }
 
+// Added (SOUPFIN-178): entry point to receive one payment against several invoices
+describe('ClientDetailPage receive payment (SOUPFIN-178)', () => {
+  it('links to the allocation screen with this client preselected', async () => {
+    vi.mocked(getClient).mockResolvedValue(createMockClient({ id: 'client-123', name: 'Acme' }));
+    renderPage();
+
+    const link = await screen.findByTestId('client-receive-payment');
+    expect(link).toHaveTextContent('Receive Payment');
+    expect(link).toHaveAttribute('href', '/payments/receive?clientId=client-123');
+  });
+});
+
 describe('ClientDetailPage delete flow (SOUP-1929)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -104,6 +116,26 @@ describe('ClientDetailPage delete flow (SOUP-1929)', () => {
     await user.click(await screen.findByTestId('delete-confirm-button'));
 
     expect(await screen.findByTestId('client-delete-error')).toBeInTheDocument();
+    expect(screen.getByTestId('delete-confirmation-modal')).toBeInTheDocument();
+    expect(navigateMock).not.toHaveBeenCalled();
+  });
+
+  // Added (SOUPFIN-169): a delete the backend refused (200 + relatedList) must
+  // not navigate away as if the client were gone.
+  it('stays on the client and says it was kept when the delete is blocked by linked records', async () => {
+    const user = userEvent.setup();
+    vi.mocked(getClient).mockResolvedValue(createMockClient({ id: 'client-123', name: 'Alice Smith' }));
+    vi.mocked(deleteClient).mockRejectedValue(
+      Object.assign(new Error('blocked'), { name: 'ClientDeleteBlockedError' }),
+    );
+    renderPage();
+
+    await user.click(await screen.findByTestId('client-detail-delete'));
+    await user.click(await screen.findByTestId('delete-confirm-button'));
+
+    expect(await screen.findByTestId('client-delete-error')).toHaveTextContent(
+      'This client was not deleted',
+    );
     expect(screen.getByTestId('delete-confirmation-modal')).toBeInTheDocument();
     expect(navigateMock).not.toHaveBeenCalled();
   });

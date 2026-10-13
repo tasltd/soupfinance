@@ -109,6 +109,15 @@ export function VendorDetailPage() {
           >
             Delete
           </button>
+          {/* Added (SOUPFIN-178): pay several of this vendor's bills in one payment */}
+          <Link
+            to={`/payments/make?vendorId=${id}`}
+            className="flex items-center gap-2 h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm hover:bg-primary/5"
+            data-testid="vendor-pay-bills"
+          >
+            <span className="material-symbols-outlined text-lg">call_made</span>
+            Pay Bills
+          </Link>
           <Link
             to={`/vendors/${id}/edit`}
             className="flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90"

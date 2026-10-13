@@ -8,6 +8,7 @@
  */
 // Changed: Removed unused getCsrfTokenForEdit import (will be used when edit is implemented)
 import apiClient, { toQueryString, getCsrfToken, csrfQueryString } from '../client';
+import { assertDeleteApplied } from './deleteOutcome';
 import type { Bill, BillItem, BillPayment, ListParams } from '../../types';
 import {
   parseJoinRowTaxAmount,
@@ -410,9 +411,24 @@ export async function recordBillPayment(data: Partial<BillPayment>): Promise<Bil
 }
 
 /**
- * Delete bill payment
+ * Get a single bill payment
+ * GET /rest/billPayment/show/:id.json
+ * Added (SOUPFIN-177): backs the payment detail page
+ */
+export async function getBillPayment(id: string): Promise<BillPayment> {
+  const response = await apiClient.get<BillPayment>(`/billPayment/show/${id}.json`);
+  return transformPayment(response.data);
+}
+
+/**
+ * Delete (void) bill payment
  * DELETE /rest/billPayment/delete/:id.json
+ *
+ * Fix (SOUPFIN-177): resolves only when the backend really deleted the row.
+ * A 200 carrying `relatedList` or `deleteRequestId` deleted nothing, so it
+ * rejects with DeleteBlockedError / DeletePendingApprovalError instead.
  */
 export async function deleteBillPayment(id: string): Promise<void> {
-  await apiClient.delete(`/billPayment/delete/${id}.json`);
+  const response = await apiClient.delete(`/billPayment/delete/${id}.json`);
+  assertDeleteApplied(response?.data);
 }

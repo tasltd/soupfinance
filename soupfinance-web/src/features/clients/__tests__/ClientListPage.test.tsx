@@ -220,6 +220,44 @@ describe('ClientListPage delete flow (SOUP-1929)', () => {
     // Modal stays open so the user can retry rather than silently stalling.
     expect(screen.getByTestId('delete-confirmation-modal')).toBeInTheDocument();
   });
+
+  // Added (SOUPFIN-169): the backend can answer 200 + relatedList and delete
+  // nothing. The list must keep the client, and the message must not say "try again".
+  it('says the client was kept, and leaves the list alone, when the delete is blocked by linked records', async () => {
+    const user = userEvent.setup();
+    vi.mocked(listClients).mockResolvedValue([
+      createMockClient({ id: 'c1', name: 'Alice Smith' }),
+    ]);
+    vi.mocked(deleteClient).mockRejectedValue(
+      Object.assign(new Error('blocked'), { name: 'ClientDeleteBlockedError' }),
+    );
+    renderPage();
+
+    await user.click(await screen.findByTestId('client-delete-c1'));
+    await user.click(await screen.findByTestId('delete-confirm-button'));
+
+    const message = await screen.findByTestId('client-delete-error');
+    expect(message).toHaveTextContent('This client was not deleted');
+    expect(message).not.toHaveTextContent('try again');
+    expect(screen.getByTestId('delete-confirmation-modal')).toBeInTheDocument();
+    expect(screen.getByTestId('client-delete-c1')).toBeInTheDocument();
+  });
+
+  it('keeps the generic retry message for an ordinary failure', async () => {
+    const user = userEvent.setup();
+    vi.mocked(listClients).mockResolvedValue([
+      createMockClient({ id: 'c1', name: 'Alice Smith' }),
+    ]);
+    vi.mocked(deleteClient).mockRejectedValue(new Error('500'));
+    renderPage();
+
+    await user.click(await screen.findByTestId('client-delete-c1'));
+    await user.click(await screen.findByTestId('delete-confirm-button'));
+
+    expect(await screen.findByTestId('client-delete-error')).toHaveTextContent(
+      'Could not delete this client. Please try again.',
+    );
+  });
 });
 
 describe('ClientListPage filter/search empty states (SOUPFIN-16)', () => {
