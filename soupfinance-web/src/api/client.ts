@@ -12,6 +12,121 @@ import { logger } from '../utils/logger';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/rest';
 
+// Fix (SOUPFIN-49): every auth artefact a signed-in session writes, in one place.
+// `auth-storage` is Zustand's persisted key (see authStore's persist name) and
+// `auth_storage_type` records which storage login chose (dual-storage strategy).
+// The 401 handler used to clear only access_token and user, so the persisted key
+// survived; useAuthStore rehydrated isAuthenticated: true and PublicRoute
+// (App.tsx) bounced the user straight from /login back to /dashboard.
+const AUTH_STORAGE_KEYS = [
+  'access_token',
+  'user',
+  'auth-storage',
+  'auth_storage_type',
+] as const;
+
+/**
+ * Fix (SOUPFIN-49): Clear every auth artefact from BOTH storages.
+ *
+ * Storage-only — it deliberately does NOT touch the Zustand store, so
+ * authStore.logout() can call it without recursing back through the resetter.
+ */
+export function clearAuthSession(): void {
+  AUTH_STORAGE_KEYS.forEach((key) => {
+    localStorage.removeItem(key);
+    sessionStorage.removeItem(key);
+  });
+}
+
+// Added (SOUPFIN-188): one-shot flag set by the 401 handler and read once by
+// LoginPage. sessionStorage, so it survives the redirect's full reload but never
+// leaks into another tab or a later browser session.
+export const SESSION_EXPIRED_FLAG = 'session_expired';
+
+/**
+ * Added (SOUPFIN-188): Whether the last session ended in a 401. A pure read, so
+ * React StrictMode's double-invoked state initialisers see the same answer.
+ */
+export function isSessionExpiredFlagSet(): boolean {
+  return sessionStorage.getItem(SESSION_EXPIRED_FLAG) === '1';
+}
+
+/** Added (SOUPFIN-188): Drop the flag once LoginPage has shown the notice. */
+export function clearSessionExpiredFlag(): void {
+  // The store reset in handleUnauthorized re-renders this document onto /login
+  // before the full reload lands. Clearing here would leave the reloaded
+  // LoginPage, the one the user actually sees, with nothing to show.
+  if (loginRedirectPending) return;
+  sessionStorage.removeItem(SESSION_EXPIRED_FLAG);
+}
+
+// Added (SOUPFIN-188): true once handleUnauthorized has started the full-page
+// redirect; this document is about to be replaced.
+let loginRedirectPending = false;
+
+/** Added (SOUPFIN-188): tests only. A browser resets this by reloading. */
+export function resetLoginRedirectPending(): void {
+  loginRedirectPending = false;
+}
+
+// Added (SOUPFIN-188): No idle "Stay signed in?" warning. The backend issues an
+// opaque token (RedisTokenStorageService) whose 30-day TTL resets on every
+// request, and /rest/api/login returns no expires_in, so the browser has no
+// expiry time to warn ahead of. A client-side idle timer would invent a timeout
+// the server does not enforce.
+
+// Fix (SOUPFIN-49): authStore registers its own state reset here. Registration
+// rather than a direct import because authStore already imports this module — a
+// static import back would close the cycle. Left null until authStore loads;
+// clearAuthSession() above still runs, so the storage clear never depends on it.
+let resetAuthState: (() => void) | null = null;
+
+export function setAuthStateResetter(fn: (() => void) | null): void {
+  resetAuthState = fn;
+}
+
+/**
+ * Fix (SOUPFIN-49): Shared 401 handler for apiClient and accountClient.
+ *
+ * Clearing storage alone is not enough, for two reasons:
+ *  1. Zustand persist re-writes `auth-storage` on any later set(). window.location.href
+ *     does not navigate synchronously, so a plain removeItem can be resurrected
+ *     before the browser actually leaves the page.
+ *  2. When the 401 arrives while already on /login there is no reload at all, so
+ *     nothing would re-read storage — the in-memory store keeps saying authenticated
+ *     and PublicRoute forwards to /dashboard.
+ * Resetting the store covers both; the store then re-persists isAuthenticated: false.
+ */
+export function handleUnauthorized(): void {
+  logger.auth('session_expired');
+
+  // Added (SOUPFIN-188): only a request that carried a token can have an expired
+  // session. A wrong password on /login also 401s, but with no token stored, and
+  // must not tell the user their session expired.
+  const hadSession = Boolean(
+    localStorage.getItem('access_token') || sessionStorage.getItem('access_token'),
+  );
+
+  clearAuthSession();
+
+  // Added (SOUPFIN-188): the redirect below is a full page load, which wipes the
+  // in-memory store, so leave a one-shot note for LoginPage to explain why.
+  // Written AFTER clearAuthSession so the clear cannot remove it, and BEFORE the
+  // store reset, which re-renders this document onto /login.
+  if (hadSession) {
+    sessionStorage.setItem(SESSION_EXPIRED_FLAG, '1');
+  }
+  const redirecting = window.location.pathname !== '/login';
+  if (redirecting) loginRedirectPending = true;
+
+  resetAuthState?.();
+
+  // Redirect to login if not already there
+  if (redirecting) {
+    window.location.href = '/login';
+  }
+}
+
 // Extend axios config to include metadata for timing
 declare module 'axios' {
   export interface InternalAxiosRequestConfig {
@@ -111,19 +226,10 @@ apiClient.interceptors.response.use(
     }
 
     // Handle 401 errors by redirecting to login
+    // Changed (SOUPFIN-49): delegate to the shared handler so the persisted
+    // Zustand key and the in-memory store are cleared too, not just the tokens.
     if (status === 401) {
-      logger.auth('session_expired');
-
-      // Fix: Clear stored credentials from both storages (dual-storage pattern)
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('user');
-      sessionStorage.removeItem('access_token');
-      sessionStorage.removeItem('user');
-
-      // Redirect to login if not already there
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
-      }
+      handleUnauthorized();
     }
 
     return Promise.reject(error);
@@ -187,15 +293,10 @@ accountClient.interceptors.response.use(
         data: error.response?.data,
       });
     }
+    // Changed (SOUPFIN-49): same shared handler as apiClient — accountClient
+    // (/account/*) had its own copy of the same incomplete clearing logic.
     if (status === 401) {
-      logger.auth('session_expired');
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('user');
-      sessionStorage.removeItem('access_token');
-      sessionStorage.removeItem('user');
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
-      }
+      handleUnauthorized();
     }
     return Promise.reject(error);
   }
