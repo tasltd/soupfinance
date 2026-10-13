@@ -6,16 +6,21 @@
  * Added: Dynamic invoice/bill selection based on payment type
  * Added: Form validation and error handling
  * Added: data-testid attributes for E2E testing
+ * Changed (SOUPFIN-180): strings come from the `payments` namespace, and a gated
+ *   Finance module shows ModuleDisabledBanner above the form instead of replacing it
  */
 import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { listInvoices, recordInvoicePayment } from '../../api/endpoints/invoices';
 import { listBills, recordBillPayment } from '../../api/endpoints/bills';
 import { useFormatCurrency, useCurrencySymbol } from '../../stores';
 import { useLedgerAccounts } from '../../hooks/useLedgerAccounts';
 import { usePaymentMethods } from '../../hooks/usePaymentMethods';
-import { isModuleDisabledError } from '../../utils/apiErrors';
+// Changed (SOUPFIN-180): api/errors replaces the legacy utils/apiErrors check
+import { parseApiError, getApiErrorMessage } from '../../api/errors';
+import { ModuleDisabledBanner } from '../../components/feedback/ModuleDisabledBanner';
 import type { Invoice, Bill, InvoicePayment, BillPayment } from '../../types';
 import { getTodayIsoDate } from '../../utils/date';
 // Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
@@ -25,6 +30,7 @@ import { HelpLink } from '../../components/help';
 type PaymentType = 'invoice' | 'bill';
 
 export function PaymentFormPage() {
+  const { t } = useTranslation('payments');
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const formatCurrency = useFormatCurrency();
@@ -122,8 +128,9 @@ export function PaymentFormPage() {
       queryClient.invalidateQueries({ queryKey: ['invoice', selectedId] });
       navigate('/payments');
     },
+    // Changed (SOUPFIN-180): never show axios's "Request failed with status code"
     onError: (error: Error) => {
-      setFormError(error.message || 'Failed to record payment');
+      setFormError(getApiErrorMessage(error));
     },
   });
 
@@ -136,8 +143,9 @@ export function PaymentFormPage() {
       queryClient.invalidateQueries({ queryKey: ['bill', selectedId] });
       navigate('/payments');
     },
+    // Changed (SOUPFIN-180): never show axios's "Request failed with status code"
     onError: (error: Error) => {
-      setFormError(error.message || 'Failed to record payment');
+      setFormError(getApiErrorMessage(error));
     },
   });
 
@@ -148,23 +156,23 @@ export function PaymentFormPage() {
 
     // Validate
     if (!selectedId) {
-      setFormError(`Please select ${paymentType === 'invoice' ? 'an invoice' : 'a bill'}`);
+      setFormError(paymentType === 'invoice' ? t('form.errors.selectInvoice') : t('form.errors.selectBill'));
       return;
     }
 
     const paymentAmount = parseFloat(amount);
     if (isNaN(paymentAmount) || paymentAmount <= 0) {
-      setFormError('Please enter a valid payment amount');
+      setFormError(t('form.errors.invalidAmount'));
       return;
     }
 
     if (maxAmount && paymentAmount > maxAmount) {
-      setFormError(`Payment amount cannot exceed balance due (${formatCurrency(maxAmount)})`);
+      setFormError(t('form.errors.exceedsBalance', { amount: formatCurrency(maxAmount) }));
       return;
     }
 
     if (!paymentDate) {
-      setFormError('Please select a payment date');
+      setFormError(t('form.errors.dateRequired'));
       return;
     }
 
@@ -196,60 +204,13 @@ export function PaymentFormPage() {
   const isPending = invoicePaymentMutation.isPending || billPaymentMutation.isPending;
   const isLoadingData = paymentType === 'invoice' ? isLoadingInvoices : isLoadingBills;
 
-  // Added: Detect Finance module disabled (403 on the source list endpoint)
-  // We only check the active tab's endpoint because the other one is disabled by `enabled: false`.
+  // Changed (SOUPFIN-180): classify the source-list error with api/errors. Only the
+  // active type's endpoint matters — the other query is disabled by `enabled: false`.
+  // A gated module keeps the form on screen under a banner; any other failure is
+  // named under the document dropdown so an empty list is never mistaken for "nothing due".
   const dataError = paymentType === 'invoice' ? invoicesError : billsError;
-  const isModuleDisabled = isModuleDisabledError(dataError);
-
-  if (isModuleDisabled) {
-    return (
-      <div className="flex flex-col gap-6" data-testid="payment-form-page">
-        <div className="flex flex-wrap justify-between items-center gap-4">
-          <div>
-            <h1
-              className="text-3xl font-black tracking-tight text-text-light dark:text-text-dark"
-              data-testid="payment-form-heading"
-            >
-              Record Payment
-            </h1>
-            <p className="text-subtle-text">Record a payment against an invoice or bill</p>
-            <HelpLink section="record-payment" className="mt-1 self-start" />
-          </div>
-        </div>
-        <div
-          className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-12 text-center max-w-2xl"
-          data-testid="payment-form-module-disabled"
-        >
-          <span className="material-symbols-outlined text-6xl text-warning/70 mb-4">block</span>
-          <h2 className="text-xl font-bold text-text-light dark:text-text-dark mb-2">
-            Finance module not available
-          </h2>
-          <p className="text-subtle-text mb-6">
-            The Finance module is not enabled for your account, so payments cannot be
-            recorded right now. Please contact your administrator to enable it.
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            <Link
-              to="/payments"
-              className="inline-flex items-center gap-2 h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm hover:bg-primary/5"
-              data-testid="payment-form-module-disabled-back"
-            >
-              <span className="material-symbols-outlined text-lg">arrow_back</span>
-              Back to Payments
-            </Link>
-            <a
-              href="mailto:support@soupfinance.com?subject=Enable%20Finance%20module"
-              className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90"
-              data-testid="payment-form-module-disabled-contact"
-            >
-              <span className="material-symbols-outlined text-lg">mail</span>
-              Contact Support
-            </a>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const dataErrorKind = dataError ? parseApiError(dataError).kind : null;
+  const isModuleDisabled = dataErrorKind === 'module_disabled';
 
   return (
     <div className="flex flex-col gap-6" data-testid="payment-form-page">
@@ -257,12 +218,10 @@ export function PaymentFormPage() {
       <div className="flex flex-wrap justify-between items-center gap-4">
         <div>
           <h1 className="text-3xl font-black tracking-tight text-text-light dark:text-text-dark" data-testid="payment-form-heading">
-            Record Payment
+            {t('form.title')}
           </h1>
           <p className="text-subtle-text">
-            {paymentType === 'invoice'
-              ? 'Record payment received against an invoice'
-              : 'Record payment made against a bill'}
+            {paymentType === 'invoice' ? t('form.subtitleInvoice') : t('form.subtitleBill')}
           </p>
           <HelpLink section="record-payment" className="mt-1 self-start" />
         </div>
@@ -271,15 +230,22 @@ export function PaymentFormPage() {
           className="h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm hover:bg-primary/5"
           data-testid="cancel-button"
         >
-          Cancel
+          {t('form.cancel')}
         </button>
       </div>
+
+      {/* Added (SOUPFIN-180): renders only for module_disabled; the form stays visible below */}
+      <ModuleDisabledBanner
+        error={dataError}
+        context={t('form.moduleContext')}
+        testId="payment-form-module-disabled"
+      />
 
       {/* Payment Form */}
       <form onSubmit={handleSubmit} className="max-w-2xl">
         <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden">
           <div className="px-6 py-4 border-b border-border-light dark:border-border-dark">
-            <h2 className="text-lg font-bold text-text-light dark:text-text-dark">Payment Details</h2>
+            <h2 className="text-lg font-bold text-text-light dark:text-text-dark">{t('form.detailsHeading')}</h2>
           </div>
 
           <div className="p-6 space-y-6">
@@ -292,7 +258,7 @@ export function PaymentFormPage() {
 
             {/* Payment Type Toggle */}
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium text-text-light dark:text-text-dark">Payment Type</label>
+              <label className="text-sm font-medium text-text-light dark:text-text-dark">{t('form.paymentType')}</label>
               <div className="flex gap-2" data-testid="payment-type-toggle">
                 <button
                   type="button"
@@ -305,7 +271,7 @@ export function PaymentFormPage() {
                   data-testid="type-invoice"
                 >
                   <span className="material-symbols-outlined">arrow_downward</span>
-                  Incoming (Invoice)
+                  {t('form.typeInvoice')}
                 </button>
                 <button
                   type="button"
@@ -318,7 +284,7 @@ export function PaymentFormPage() {
                   data-testid="type-bill"
                 >
                   <span className="material-symbols-outlined">arrow_upward</span>
-                  Outgoing (Bill)
+                  {t('form.typeBill')}
                 </button>
               </div>
             </div>
@@ -326,11 +292,11 @@ export function PaymentFormPage() {
             {/* Invoice/Bill Selection */}
             <div className="flex flex-col gap-2">
               <label className="text-sm font-medium text-text-light dark:text-text-dark">
-                {paymentType === 'invoice' ? 'Invoice' : 'Bill'} *
+                {paymentType === 'invoice' ? t('form.invoice') : t('form.bill')} *
               </label>
               {isLoadingData ? (
                 <div className="h-12 rounded-lg border border-border-light dark:border-border-dark bg-background-light/50 flex items-center px-4 text-subtle-text">
-                  Loading...
+                  {t('form.loading')}
                 </div>
               ) : (
                 <select
@@ -341,31 +307,38 @@ export function PaymentFormPage() {
                   required
                 >
                   <option value="">
-                    Select {paymentType === 'invoice' ? 'an invoice' : 'a bill'}
+                    {paymentType === 'invoice' ? t('form.selectInvoice') : t('form.selectBill')}
                   </option>
                   {paymentType === 'invoice'
                     ? unpaidInvoices?.map((invoice: Invoice) => (
                         <option key={invoice.id} value={invoice.id}>
-                          {String(invoice.number)} - {invoice.accountServices?.serialised || 'Unknown'} - Due: {formatCurrency(invoice.amountDue)}
+                          {String(invoice.number)} - {invoice.accountServices?.serialised || t('form.unknownParty')} -{' '}
+                          {t('form.due', { amount: formatCurrency(invoice.amountDue) })}
                         </option>
                       ))
                     : unpaidBills?.map((bill: Bill) => (
                         <option key={bill.id} value={bill.id}>
-                          {bill.billNumber} - {bill.vendor?.name || 'Unknown'} - Due: {formatCurrency(bill.amountDue)}
+                          {bill.billNumber} - {bill.vendor?.name || t('form.unknownParty')} -{' '}
+                          {t('form.due', { amount: formatCurrency(bill.amountDue) })}
                         </option>
                       ))}
                 </select>
               )}
+              {dataError && !isModuleDisabled && (
+                <p className="text-sm text-danger" data-testid="document-load-error" role="alert">
+                  {t('form.errors.documentsFailed', { message: getApiErrorMessage(dataError) })}
+                </p>
+              )}
               {maxAmount !== undefined && (
                 <p className="text-sm text-subtle-text">
-                  Balance due: <span className="font-medium text-text-light dark:text-text-dark">{formatCurrency(maxAmount)}</span>
+                  {t('form.balanceDue')} <span className="font-medium text-text-light dark:text-text-dark">{formatCurrency(maxAmount)}</span>
                 </p>
               )}
             </div>
 
             {/* Amount */}
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium text-text-light dark:text-text-dark">Amount *</label>
+              <label className="text-sm font-medium text-text-light dark:text-text-dark">{t('form.amount')} *</label>
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-subtle-text">{currencySymbol}</span>
                 <input
@@ -388,14 +361,14 @@ export function PaymentFormPage() {
                   className="text-sm text-primary hover:underline text-left"
                   data-testid="pay-full-button"
                 >
-                  Pay full balance ({formatCurrency(maxAmount)})
+                  {t('form.payFull', { amount: formatCurrency(maxAmount) })}
                 </button>
               )}
             </div>
 
             {/* Payment Date */}
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium text-text-light dark:text-text-dark">Payment Date *</label>
+              <label className="text-sm font-medium text-text-light dark:text-text-dark">{t('form.paymentDate')} *</label>
               <input
                 type="date"
                 value={paymentDate}
@@ -408,14 +381,14 @@ export function PaymentFormPage() {
 
             {/* Changed: Payment method dropdown from backend domain records (not hardcoded enum) */}
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium text-text-light dark:text-text-dark">Payment Method</label>
+              <label className="text-sm font-medium text-text-light dark:text-text-dark">{t('form.paymentMethod')}</label>
               <select
                 value={paymentMethodId}
                 onChange={(e) => setPaymentMethodId(e.target.value)}
                 className="h-12 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-4 text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/50"
                 data-testid="method-select"
               >
-                <option value="">Select payment method...</option>
+                <option value="">{t('form.selectMethod')}</option>
                 {(paymentMethodRecords || []).map((pm) => (
                   <option key={pm.id} value={pm.id}>
                     {pm.name}
@@ -427,7 +400,7 @@ export function PaymentFormPage() {
             {/* Added: Bank/Cash Account selection */}
             <div className="flex flex-col gap-2">
               <label className="text-sm font-medium text-text-light dark:text-text-dark">
-                {paymentType === 'invoice' ? 'Deposit To (Bank/Cash Account)' : 'Pay From (Bank/Cash Account)'}
+                {paymentType === 'invoice' ? t('form.depositTo') : t('form.payFrom')}
               </label>
               <select
                 value={bankAccountId}
@@ -435,7 +408,7 @@ export function PaymentFormPage() {
                 className="h-12 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-4 text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/50"
                 data-testid="bank-account-select"
               >
-                <option value="">Select bank/cash account...</option>
+                <option value="">{t('form.selectAccount')}</option>
                 {bankCashAccounts.map((account) => (
                   <option key={account.id} value={account.id}>
                     {account.code} - {account.name}
@@ -443,20 +416,18 @@ export function PaymentFormPage() {
                 ))}
               </select>
               <p className="text-xs text-subtle-text">
-                {paymentType === 'invoice'
-                  ? 'Account where the payment will be deposited'
-                  : 'Account from which the payment will be made'}
+                {paymentType === 'invoice' ? t('form.depositHint') : t('form.payFromHint')}
               </p>
             </div>
 
             {/* Reference */}
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium text-text-light dark:text-text-dark">Reference</label>
+              <label className="text-sm font-medium text-text-light dark:text-text-dark">{t('form.reference')}</label>
               <input
                 type="text"
                 value={reference}
                 onChange={(e) => setReference(e.target.value)}
-                placeholder="e.g., Check #, Transaction ID"
+                placeholder={t('form.referencePlaceholder')}
                 className="h-12 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-4 text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/50 placeholder:text-subtle-text"
                 data-testid="reference-input"
               />
@@ -464,11 +435,11 @@ export function PaymentFormPage() {
 
             {/* Notes */}
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium text-text-light dark:text-text-dark">Notes</label>
+              <label className="text-sm font-medium text-text-light dark:text-text-dark">{t('form.notes')}</label>
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="Optional payment notes..."
+                placeholder={t('form.notesPlaceholder')}
                 rows={3}
                 className="rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-4 py-3 text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/50 placeholder:text-subtle-text resize-none"
                 data-testid="notes-input"
@@ -484,23 +455,23 @@ export function PaymentFormPage() {
               className="h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm hover:bg-primary/5"
               disabled={isPending}
             >
-              Cancel
+              {t('form.cancel')}
             </button>
             <button
               type="submit"
-              disabled={isPending || !selectedId || !amount}
+              disabled={isPending || isModuleDisabled || !selectedId || !amount}
               className="h-10 px-6 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               data-testid="submit-button"
             >
               {isPending ? (
                 <>
                   <span className="material-symbols-outlined animate-spin text-lg">progress_activity</span>
-                  Recording...
+                  {t('form.recording')}
                 </>
               ) : (
                 <>
                   <span className="material-symbols-outlined text-lg">check</span>
-                  Record Payment
+                  {t('form.submit')}
                 </>
               )}
             </button>

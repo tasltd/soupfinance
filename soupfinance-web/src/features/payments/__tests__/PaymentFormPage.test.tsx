@@ -1,15 +1,19 @@
 /**
  * Unit tests for PaymentFormPage.
  *
- * Focus: graceful handling of the 403-on-source-list scenario that occurs
- * when the Finance module is not enabled (SOUPFIN-8). The form must NOT
- * render with empty dropdowns when the underlying invoice/bill list endpoint
- * is forbidden — it should render a clear "module not available" page.
+ * Focus: the 403-on-source-list scenario that occurs when the Finance module is
+ * not enabled (SOUPFIN-8).
+ *
+ * Changed (SOUPFIN-180): the page now keeps the form on screen and shows
+ * ModuleDisabledBanner above it, as the Journal Entry and Voucher forms do.
+ * Submit stays disabled, so the user cannot send a payment into a guaranteed 403.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import i18n from '../../../i18n';
 import { PaymentFormPage } from '../PaymentFormPage';
 
 vi.mock('../../../api/endpoints/invoices', () => ({
@@ -34,16 +38,27 @@ vi.mock('../../../hooks/usePaymentMethods', () => ({
   usePaymentMethods: () => ({ data: [], isLoading: false }),
 }));
 
-import { listInvoices } from '../../../api/endpoints/invoices';
+import { listInvoices, recordInvoicePayment } from '../../../api/endpoints/invoices';
 import { listBills } from '../../../api/endpoints/bills';
+import type { Invoice } from '../../../types';
 
-function buildAxiosError(status: number) {
-  return {
-    name: 'AxiosError',
-    message: `Request failed with status code ${status}`,
-    response: { status },
-  };
+const FINANCE_GATE = { error: 'Finance module is not enabled for this tenant' };
+
+function axiosError(status: number, url: string, data: unknown = undefined) {
+  return Object.assign(new Error(`Request failed with status code ${status}`), {
+    isAxiosError: true,
+    config: { url },
+    response: { status, data },
+  });
 }
+
+const OPEN_INVOICE = {
+  id: 'inv-1',
+  number: 1001,
+  status: 'SENT',
+  amountDue: 500,
+  accountServices: { id: 'as-1', serialised: 'Acme Ltd' },
+} as unknown as Invoice;
 
 function renderPage() {
   const queryClient = new QueryClient({
@@ -59,83 +74,138 @@ function renderPage() {
 }
 
 describe('PaymentFormPage', () => {
+  beforeAll(async () => {
+    await i18n.changeLanguage('en');
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   describe('happy path — module enabled', () => {
-    it('renders the form when invoices load successfully', async () => {
+    it('renders the form without a banner when invoices load', async () => {
       vi.mocked(listInvoices).mockResolvedValue([]);
       vi.mocked(listBills).mockResolvedValue([]);
 
       renderPage();
 
       expect(await screen.findByTestId('payment-form-page')).toBeInTheDocument();
-      // The actual form is rendered (not the module-disabled banner)
       await waitFor(() => expect(screen.getByTestId('payment-type-toggle')).toBeInTheDocument());
       expect(screen.queryByTestId('payment-form-module-disabled')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('document-load-error')).not.toBeInTheDocument();
+    });
+
+    // Added (SOUPFIN-180): the mutation error is parsed, never axios's own text
+    it('shows a readable message when recording the payment fails', async () => {
+      vi.mocked(listInvoices).mockResolvedValue([OPEN_INVOICE]);
+      vi.mocked(recordInvoicePayment).mockRejectedValue(axiosError(500, '/invoicePayment/save.json'));
+      const user = userEvent.setup();
+
+      renderPage();
+
+      await waitFor(() => expect(screen.getByRole('option', { name: /1001/ })).toBeInTheDocument());
+      await user.selectOptions(screen.getByTestId('select-document'), 'inv-1');
+      await user.type(screen.getByTestId('amount-input'), '100');
+      await user.click(screen.getByTestId('submit-button'));
+
+      const formError = await screen.findByTestId('form-error');
+      expect(formError).toHaveTextContent('Something went wrong on our side');
+      expect(formError).not.toHaveTextContent(/status code/);
+      expect(recordInvoicePayment).toHaveBeenCalledWith(
+        expect.objectContaining({ 'invoice.id': 'inv-1', amount: 100 })
+      );
     });
   });
 
-  describe('module disabled — 403 on invoice list (SOUPFIN-8)', () => {
+  describe('module disabled — 403 on the invoice list (SOUPFIN-8)', () => {
     beforeEach(() => {
-      vi.mocked(listInvoices).mockRejectedValue(buildAxiosError(403));
-      vi.mocked(listBills).mockRejectedValue(buildAxiosError(403));
+      vi.mocked(listInvoices).mockRejectedValue(axiosError(403, '/invoice/index.json', FINANCE_GATE));
+      vi.mocked(listBills).mockRejectedValue(axiosError(403, '/bill/index.json', FINANCE_GATE));
     });
 
-    it('renders the module-disabled banner instead of the form', async () => {
+    it('shows ModuleDisabledBanner with the cause and the next step', async () => {
       renderPage();
       const banner = await screen.findByTestId('payment-form-module-disabled');
-      expect(banner).toBeInTheDocument();
-      expect(banner).toHaveTextContent(/Finance module not available/i);
+      expect(banner).toHaveAttribute('role', 'alert');
+      expect(banner).toHaveTextContent(/Finance module is not available/i);
+      expect(banner).toHaveTextContent(/requires the Finance module to be enabled/i);
+      expect(banner).toHaveTextContent(/Contact your administrator/i);
+      expect(banner).toHaveTextContent(/nothing to record a payment against/i);
     });
 
-    it('does NOT render the broken form with empty dropdowns', async () => {
+    it('keeps the form layout visible under the banner', async () => {
       renderPage();
       await screen.findByTestId('payment-form-module-disabled');
-      // The form's selectors must not be present when the module is disabled,
-      // otherwise users see empty dropdowns (the original SOUPFIN-8 UX failure).
-      expect(screen.queryByTestId('payment-type-toggle')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('select-document')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('submit-button')).not.toBeInTheDocument();
+      expect(screen.getByTestId('payment-type-toggle')).toBeInTheDocument();
+      expect(screen.getByTestId('select-document')).toBeInTheDocument();
+      expect(screen.getByTestId('amount-input')).toBeInTheDocument();
+      // The banner already explains the empty dropdown; no second error line
+      expect(screen.queryByTestId('document-load-error')).not.toBeInTheDocument();
     });
 
-    it('explains the cause to the user', async () => {
-      renderPage();
-      const banner = await screen.findByTestId('payment-form-module-disabled');
-      expect(banner).toHaveTextContent(/not enabled for your account/i);
-      expect(banner).toHaveTextContent(/contact your administrator/i);
-    });
-
-    it('offers a Back to Payments escape hatch', async () => {
+    it('keeps Record Payment disabled even when an amount is typed', async () => {
+      const user = userEvent.setup();
       renderPage();
       await screen.findByTestId('payment-form-module-disabled');
-      const backLink = screen.getByTestId('payment-form-module-disabled-back');
-      expect(backLink).toBeInTheDocument();
-      expect(backLink).toHaveAttribute('href', '/payments');
+      await user.type(screen.getByTestId('amount-input'), '100');
+      expect(screen.getByTestId('submit-button')).toBeDisabled();
+      expect(recordInvoicePayment).not.toHaveBeenCalled();
     });
 
-    it('offers a Contact Support mailto link', async () => {
+    it('follows the payment type: the bill side is gated too', async () => {
+      const user = userEvent.setup();
       renderPage();
       await screen.findByTestId('payment-form-module-disabled');
-      const contactLink = screen.getByTestId('payment-form-module-disabled-contact');
-      expect(contactLink).toBeInTheDocument();
-      expect(contactLink.getAttribute('href')).toMatch(/^mailto:/);
+      await user.click(screen.getByTestId('type-bill'));
+      await waitFor(() => expect(listBills).toHaveBeenCalled());
+      expect(await screen.findByTestId('payment-form-module-disabled')).toBeInTheDocument();
     });
   });
 
-  describe('non-403 errors', () => {
-    it('still renders the form for 500 errors (the dropdown is empty but the page works)', async () => {
-      vi.mocked(listInvoices).mockRejectedValue(buildAxiosError(500));
-      vi.mocked(listBills).mockRejectedValue(buildAxiosError(500));
+  describe('non-module errors', () => {
+    it('a 500 keeps the form, shows no banner, and names the failure under the dropdown', async () => {
+      vi.mocked(listInvoices).mockRejectedValue(axiosError(500, '/invoice/index.json'));
+      vi.mocked(listBills).mockResolvedValue([]);
 
       renderPage();
 
-      // 500 is NOT a module-disabled signal — it's a transient backend error.
-      // The form still renders; user can retry. (No fallback banner.)
-      await screen.findByTestId('payment-form-page');
-      await waitFor(() => expect(screen.getByTestId('payment-type-toggle')).toBeInTheDocument());
+      const loadError = await screen.findByTestId('document-load-error');
+      expect(loadError).toHaveTextContent('The list could not be loaded');
+      expect(loadError).not.toHaveTextContent(/status code/);
+      expect(screen.getByTestId('payment-type-toggle')).toBeInTheDocument();
       expect(screen.queryByTestId('payment-form-module-disabled')).not.toBeInTheDocument();
+    });
+
+    it('a role denial (Spring "Forbidden" body) is not reported as a disabled module', async () => {
+      vi.mocked(listInvoices).mockRejectedValue(
+        axiosError(403, '/invoice/index.json', { status: 403, error: 'Forbidden' })
+      );
+
+      renderPage();
+
+      const loadError = await screen.findByTestId('document-load-error');
+      expect(loadError).toHaveTextContent(/does not have permission/);
+      expect(screen.queryByTestId('payment-form-module-disabled')).not.toBeInTheDocument();
+    });
+  });
+
+  // Added (SOUPFIN-180)
+  describe('translations', () => {
+    it.each([
+      ['de', 'Zahlung erfassen', 'Zahlungsdatum'],
+      ['fr', 'Enregistrer un paiement', 'Date du paiement'],
+      ['nl', 'Betaling registreren', 'Betaaldatum'],
+    ])('renders the form in %s', async (lang, heading, dateLabel) => {
+      vi.mocked(listInvoices).mockResolvedValue([]);
+      await i18n.changeLanguage(lang);
+      try {
+        renderPage();
+        expect(await screen.findByTestId('payment-form-heading')).toHaveTextContent(heading);
+        expect(screen.getByText(new RegExp(dateLabel))).toBeInTheDocument();
+        expect(screen.getByTestId('payment-form-page')).not.toHaveTextContent(/form\.\w+/);
+      } finally {
+        await i18n.changeLanguage('en');
+      }
     });
   });
 });

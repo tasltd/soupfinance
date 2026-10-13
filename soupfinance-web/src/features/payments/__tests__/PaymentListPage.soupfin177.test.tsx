@@ -5,11 +5,12 @@
  * The invoices/bills endpoint modules are mocked at the list-call level so
  * the real listPaymentsPage runs between the page and the "server".
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import i18n from '../../../i18n';
 import { PaymentListPage, PAYMENT_PAGE_SIZE } from '../PaymentListPage';
 
 vi.mock('../../../api/endpoints/invoices', () => ({
@@ -90,6 +91,11 @@ function renderPage(initialPath = '/payments') {
 }
 
 describe('PaymentListPage (SOUPFIN-177)', () => {
+  // Added (SOUPFIN-180): the page now reads its strings from the payments namespace
+  beforeAll(async () => {
+    await i18n.changeLanguage('en');
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(listAllBillPayments).mockResolvedValue([outgoing(1, 1)]);

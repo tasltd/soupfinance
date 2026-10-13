@@ -343,7 +343,9 @@ test.describe('Payment Management', () => {
       await expect(page.getByTestId('payment-row-ip-003')).toBeVisible();
 
       // Verify payment data
-      await expect(page.locator('text=Bank Transfer').first()).toBeVisible();
+      // Fix (SOUPFIN-180): scoped to the row badge; a bare text match hit the hidden
+      // <option> in the SOUPFIN-177 method filter first
+      await expect(page.getByTestId('payment-method-badge-ip-001')).toHaveText('Bank Transfer');
       await expect(page.locator('text=+$2,500.00')).toBeVisible();
 
       // Verify summary is visible
@@ -455,7 +457,9 @@ test.describe('Payment Management', () => {
 
       // Should show error state
       await expect(page.getByTestId('payment-list-error')).toBeVisible();
-      await expect(page.locator('text=Failed to load payments')).toBeVisible();
+      // Changed (SOUPFIN-180): ApiErrorState names the cause instead of a generic card
+      await expect(page.getByTestId('payment-list-error')).toHaveAttribute('data-error-kind', 'server_error');
+      await expect(page.getByTestId('payment-list-error-retry')).toBeVisible();
 
       await takeScreenshot(page, 'payment-list-error');
     });

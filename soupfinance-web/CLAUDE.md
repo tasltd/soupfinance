@@ -143,13 +143,13 @@ The SoupFinance tenant runs a **SERVICES license category**, so several backend 
 
 | Module | Exports | Used by |
 |--------|---------|---------|
-| `src/api/errors.ts` (**newest, richest — prefer this**) | `parseApiError()`, `getApiErrorMessage()`, `ApiErrorKind` (`module_disabled` \| `forbidden` \| `unauthorized` \| `not_found` \| `server_error` \| …) | accounting pages, ledger pages, `ApiErrorState`, `ModuleDisabledBanner` |
-| `src/utils/apiErrors.ts` | `isModuleDisabledError()` | `payments/PaymentFormPage`, `payments/PaymentListPage` |
+| `src/api/errors.ts` (**newest, richest — prefer this**) | `parseApiError()`, `getApiErrorMessage()`, `ApiErrorKind` (`module_disabled` \| `forbidden` \| `unauthorized` \| `not_found` \| `server_error` \| …) | accounting pages, ledger pages, payments list + form, `ApiErrorState`, `ModuleDisabledBanner` |
+| `src/utils/apiErrors.ts` | `isModuleDisabledError()` | no page since SOUPFIN-180 (payments moved to `api/errors.ts`) |
 | `src/utils/apiError.ts` | `normalizeApiError()` | `settings/UserListPage`, `settings/UserFormPage` |
 
 **Two presentation components** (`src/components/feedback/`):
 - **`ApiErrorState`** — full-page replacement for a failed list/page load; branches on `ApiErrorKind` for icon + tone (retry vs contact admin)
-- **`ModuleDisabledBanner`** — inline banner on *form* pages (Journal Entry, Voucher). The form still renders so the layout is visible, but the banner explains why account dropdowns are empty rather than letting the user submit into a guaranteed 403
+- **`ModuleDisabledBanner`** — inline banner on *form* pages (Journal Entry, Voucher, Record Payment). The form still renders so the layout is visible, but the banner explains why account dropdowns are empty rather than letting the user submit into a guaranteed 403
 
 **Do not swallow errors into empty state.** A `.catch(() => null)` in an endpoint makes a 500 look like "no data" — `isError` never fires and the page renders an empty table. Let the error propagate so `ApiErrorState` can render it.
 
