@@ -1,6 +1,7 @@
 # SOUP-2619 Backend Plan — invoice/bill save blocker (422 unique number) + empty bill CSRF token
 
-**Status:** backend work; must be executed from a `soupmarkets-web` session (see
+**Status:** DONE and deployed — verified 2026-10-13 by SOUPFIN-170 (see the section at the end).
+Originally: backend work; must be executed from a `soupmarkets-web` session (see
 [.claude/rules/backend-changes-workflow.md](../.claude/rules/backend-changes-workflow.md)).
 **PM item:** SOUP-2619 (urgent, still **To Do**), project SOUP.
 **Target branch:** `authentication-base-on-multi-tenancy-descriminator` (the multi-tenant branch).
@@ -106,3 +107,14 @@ until then the path cannot be exercised at all.
 
 No frontend change is required for any of the three findings. Finding 2 in particular cannot be
 fixed frontend-side — both candidate paths return the same token-less body.
+
+## Verification (SOUPFIN-170, 2026-10-13)
+
+| Check | Result |
+|---|---|
+| Sequencer merged | `d5ad3765b3` (2026-08-04), merged via `ad48cd6333` and `3bc850a689` into `authentication-base-on-multi-tenancy-descriminator` and `master` |
+| Deployed to tas.soupmarkets.com | `DocumentNumberSequencer.class` in `/root/tomcat9078/webapps/ROOT` on 140.82.32.141, built 2026-10-13 06:35 UTC, `soupbroker.service` started 08:28 UTC |
+| Deployed to LXC WAR | same class in `/opt/soupmarkets/exploded`, built 2026-10-13 06:38 UTC, service started 09:29 UTC |
+| Finding 2 (bill CSRF) | `GET /rest/bill/create.json` now returns `SYNCHRONIZER_TOKEN` on the LXC |
+| Five consecutive invoice saves | all 201, numbers 2025023 to 2025027, no 422 (`e2e/integration/soupfin-170-invoice-numbering.integration.spec.ts`) |
+| `GET /rest/invoice/create.json` latency | 95 to 234 ms through the Vite proxy (was about 23 s, SOUPFIN-41) |
