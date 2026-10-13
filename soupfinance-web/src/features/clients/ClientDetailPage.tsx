@@ -13,6 +13,9 @@ import { useState } from 'react';
 import { getClientDisplayName } from './getClientDisplayName';
 // Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
 import { HelpLink } from '../../components/help';
+// Added (SOUPFIN-166): say why the client could not be loaded
+import { ApiErrorState } from '../../components/feedback';
+import { parseApiError } from '../../api/errors';
 
 interface DeleteState {
   isOpen: boolean;
@@ -25,7 +28,7 @@ export function ClientDetailPage() {
   const [deleteState, setDeleteState] = useState<DeleteState>({ isOpen: false });
 
   // Query to fetch client data
-  const { data: client, isLoading, error } = useQuery({
+  const { data: client, isLoading, error, refetch } = useQuery({
     queryKey: ['client', id],
     queryFn: () => getClient(id!),
     enabled: !!id,
@@ -55,17 +58,23 @@ export function ClientDetailPage() {
   if (error || !client) {
     return (
       <div className="flex flex-col gap-6" data-testid="client-detail-page">
-        <div className="p-12 text-center">
-          <span className="material-symbols-outlined text-6xl text-danger/50 mb-4 block">error</span>
-          <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">Client not found</h3>
-          <p className="text-subtle-text mb-4">The client you're looking for doesn't exist or has been deleted.</p>
-          <Link
-            to="/clients"
-            className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm"
-          >
-            Back to Clients
-          </Link>
-        </div>
+        {/* Changed (SOUPFIN-166): a 404 or an empty answer is "not found"; any
+            other failure says why (module disabled, no permission, server fault). */}
+        {error && parseApiError(error).kind !== 'not_found' ? (
+          <ApiErrorState error={error} onRetry={() => refetch()} testId="client-detail-error" />
+        ) : (
+          <div className="p-12 text-center" data-testid="client-detail-error" data-error-kind="not_found">
+            <span className="material-symbols-outlined text-6xl text-danger/50 mb-4 block">search_off</span>
+            <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">Client not found</h3>
+            <p className="text-subtle-text mb-4">The client you're looking for doesn't exist or has been deleted.</p>
+            <Link
+              to="/clients"
+              className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm"
+            >
+              Back to Clients
+            </Link>
+          </div>
+        )}
       </div>
     );
   }

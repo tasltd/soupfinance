@@ -9,6 +9,8 @@ import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { InvoiceDetailPage } from '../InvoiceDetailPage';
 import type { Invoice, InvoicePayment, InvoiceStatus, InvoiceItem } from '../../../types';
+// Added (SOUPFIN-166): Axios-shaped 403/404/500 errors
+import { axiosError, moduleDisabled403, roleDenied403, serverError500 } from '../../../test/apiErrorFixtures';
 
 // Mock the invoices API
 vi.mock('../../../api/endpoints/invoices', () => ({
@@ -172,9 +174,10 @@ describe('InvoiceDetailPage', () => {
 
       renderInvoiceDetailPage();
 
-      expect(await screen.findByTestId('invoice-detail-error')).toBeInTheDocument();
-      expect(screen.getByText('Failed to load invoice')).toBeInTheDocument();
-      expect(screen.getByText(/could not be found or there was an error/i)).toBeInTheDocument();
+      // Changed (SOUPFIN-166): ApiErrorState shows the error's own message
+      const card = await screen.findByTestId('invoice-detail-error');
+      expect(card).toHaveAttribute('data-error-kind', 'unknown');
+      expect(within(card).getByText('Network error')).toBeInTheDocument();
     });
 
     it('displays error when invoice is null', async () => {
@@ -848,6 +851,63 @@ describe('InvoiceDetailPage', () => {
       await screen.findByTestId('invoice-detail-heading');
       const backButton = screen.getByRole('link', { name: 'Back' });
       expect(backButton).toHaveAttribute('href', '/invoices');
+    });
+  });
+
+  // Added (SOUPFIN-166): the error card names the cause; a 404 says "not found"
+  describe('module-aware errors (SOUPFIN-166)', () => {
+    beforeEach(() => {
+      vi.mocked(listInvoicePayments).mockResolvedValue([]);
+    });
+
+    it.each([
+      ['a disabled Finance module', () => moduleDisabled403('Finance', '/invoice/show/inv-123.json'), 'module_disabled', 'Finance module is not available'],
+      ['a missing role', () => roleDenied403('/invoice/show/inv-123.json'), 'forbidden', 'You do not have permission'],
+      ['a server fault', () => serverError500('/invoice/show/inv-123.json'), 'server_error', 'Server error'],
+    ])('explains %s', async (_cause, makeError, kind, title) => {
+      vi.mocked(getInvoice).mockRejectedValue(makeError());
+
+      renderInvoiceDetailPage();
+
+      const card = await screen.findByTestId('invoice-detail-error');
+      expect(card).toHaveAttribute('data-error-kind', kind);
+      expect(within(card).getByText(title)).toBeInTheDocument();
+      expect(document.body.textContent).not.toMatch(/status code/i);
+    });
+
+    it('offers no Retry when the module is disabled', async () => {
+      vi.mocked(getInvoice).mockRejectedValue(moduleDisabled403('Finance', '/invoice/show/inv-123.json'));
+
+      renderInvoiceDetailPage();
+
+      const card = await screen.findByTestId('invoice-detail-error');
+      expect(within(card).queryByRole('button', { name: /retry/i })).not.toBeInTheDocument();
+    });
+
+    it('shows "Invoice not found" for a 404 id, with no Retry', async () => {
+      vi.mocked(getInvoice).mockRejectedValue(axiosError(404, {}, '/invoice/show/missing.json'));
+
+      renderInvoiceDetailPage('missing');
+
+      const card = await screen.findByTestId('invoice-detail-error');
+      expect(card).toHaveAttribute('data-error-kind', 'not_found');
+      expect(within(card).getByText('Invoice not found')).toBeInTheDocument();
+      expect(within(card).queryByRole('button', { name: /retry/i })).not.toBeInTheDocument();
+      expect(within(card).getByRole('link', { name: 'Back to Invoices' })).toHaveAttribute('href', '/invoices');
+    });
+
+    it('Retry after a server fault refetches and shows the invoice', async () => {
+      vi.mocked(getInvoice).mockRejectedValueOnce(serverError500('/invoice/show/inv-123.json'));
+
+      renderInvoiceDetailPage();
+
+      const card = await screen.findByTestId('invoice-detail-error');
+      vi.mocked(getInvoice).mockResolvedValue(createMockInvoice());
+      within(card).getByRole('button', { name: /retry/i }).click();
+
+      expect(await screen.findByTestId('invoice-info-card')).toBeInTheDocument();
+      expect(screen.queryByTestId('invoice-detail-error')).not.toBeInTheDocument();
+      expect(vi.mocked(getInvoice)).toHaveBeenCalledTimes(2);
     });
   });
 });

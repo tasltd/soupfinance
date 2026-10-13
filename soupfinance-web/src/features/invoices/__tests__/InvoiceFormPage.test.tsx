@@ -17,6 +17,8 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { InvoiceFormPage } from '../InvoiceFormPage';
 import type { Invoice, InvoiceStatus, Client, ClientType } from '../../../types';
+// Added (SOUPFIN-166): Axios-shaped 403/500 errors
+import { moduleDisabled403, serverError500 } from '../../../test/apiErrorFixtures';
 
 // Mock the API modules - must match exact import paths in InvoiceFormPage.tsx
 vi.mock('../../../api/endpoints/invoices', async () => {
@@ -334,6 +336,76 @@ describe('InvoiceFormPage', () => {
       });
 
       expect(await screen.findByTestId('invoice-form-error')).toBeInTheDocument();
+    });
+
+    // Added (SOUPFIN-166): the load error names its cause
+    it('explains a disabled module when the invoice load is refused', async () => {
+      setupDefaultMocks();
+      vi.mocked(getInvoice).mockRejectedValue(moduleDisabled403('Finance', '/invoice/show/inv-123.json'));
+
+      renderInvoiceFormPage({ route: '/invoices/inv-123/edit', path: '/invoices/:id/edit' });
+
+      const card = await screen.findByTestId('invoice-form-error');
+      expect(card).toHaveAttribute('data-error-kind', 'module_disabled');
+      expect(within(card).queryByRole('button', { name: /retry/i })).not.toBeInTheDocument();
+      expect(document.body.textContent).not.toMatch(/status code/i);
+    });
+
+    it('offers Retry for a server fault on the invoice load', async () => {
+      setupDefaultMocks();
+      vi.mocked(getInvoice).mockRejectedValue(serverError500('/invoice/show/inv-123.json'));
+
+      renderInvoiceFormPage({ route: '/invoices/inv-123/edit', path: '/invoices/:id/edit' });
+
+      const card = await screen.findByTestId('invoice-form-error');
+      expect(card).toHaveAttribute('data-error-kind', 'server_error');
+      expect(within(card).getByRole('button', { name: /retry/i })).toBeInTheDocument();
+    });
+  });
+
+  // Added (SOUPFIN-166): a lookup refused because its module is disabled shows a
+  // banner instead of leaving silently empty dropdowns; other failures do not.
+  describe('module-disabled lookups (SOUPFIN-166)', () => {
+    it.each([
+      ['client', () => vi.mocked(listClients).mockRejectedValue(moduleDisabled403('Kyc', '/client/index.json')), 'Kyc module is not available'],
+      ['tax catalogue', () => vi.mocked(listTaxRates).mockRejectedValue(moduleDisabled403('Finance', '/taxEntry/index.json')), 'Finance module is not available'],
+      ['service description', () => vi.mocked(listInvoiceServices).mockRejectedValue(moduleDisabled403('Finance', '/serviceDescription/index.json')), 'Finance module is not available'],
+    ])('shows the banner when the %s lookup returns a module-disabled 403', async (_lookup, refuse, title) => {
+      setupDefaultMocks();
+      refuse();
+
+      renderInvoiceFormPage();
+
+      const banner = await screen.findByTestId('invoice-form-module-disabled');
+      expect(within(banner).getByText(title)).toBeInTheDocument();
+      expect(within(banner).getByText(/lists may be empty until the module is enabled/i)).toBeInTheDocument();
+      // The form itself still renders so the user can see the layout
+      expect(screen.getByTestId('invoice-details-card')).toBeInTheDocument();
+      expect(document.body.textContent).not.toMatch(/status code/i);
+    });
+
+    it('shows no banner when a lookup fails with a 500', async () => {
+      setupDefaultMocks();
+      vi.mocked(listTaxRates).mockRejectedValue(serverError500('/taxEntry/index.json'));
+      vi.mocked(listClients).mockRejectedValue(serverError500('/client/index.json'));
+
+      renderInvoiceFormPage();
+
+      await screen.findByTestId('invoice-details-card');
+      await waitFor(() => expect(vi.mocked(listTaxRates)).toHaveBeenCalled());
+      // Let the rejected queries settle before asserting absence
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      expect(screen.queryByTestId('invoice-form-module-disabled')).not.toBeInTheDocument();
+    });
+
+    it('shows no banner when every lookup succeeds', async () => {
+      setupDefaultMocks();
+
+      renderInvoiceFormPage();
+
+      await screen.findByTestId('invoice-details-card');
+      await waitFor(() => expect(vi.mocked(listInvoiceServices)).toHaveBeenCalled());
+      expect(screen.queryByTestId('invoice-form-module-disabled')).not.toBeInTheDocument();
     });
   });
 
