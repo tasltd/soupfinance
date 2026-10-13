@@ -258,7 +258,31 @@ export interface InvoicePayment extends BaseEntity {
 // Finance Types - Bill (Expenses)
 // =============================================================================
 
+/**
+ * Mirrors `soupbroker.finance.PaymentStatus` — the only values `Bill.status`
+ * carries on the wire. The backend DERIVES it from payments
+ * (`Bill.getCheckStatus()` in `beforeUpdate`) and marks it `bindable:false`, so
+ * a client can never set it. A bill that has not been updated since it was
+ * created reads `null`.
+ */
+export type PaymentStatus = 'PENDING' | 'PROCESSING' | 'PARTIAL' | 'PAID' | 'FAILED' | 'EXPIRED';
+
+/**
+ * The lifecycle shown to users (PRD `prd/features/bills.md`):
+ * DRAFT -> PENDING -> PARTIAL/PAID -> OVERDUE, with PENDING -> CANCELLED.
+ *
+ * Changed (SOUPFIN-184): this is a DISPLAY value computed by
+ * `getBillDisplayStatus()`, never a field the backend sends — read that helper,
+ * not `bill.status`, to decide what to show or allow.
+ */
 export type BillStatus = 'DRAFT' | 'PENDING' | 'PARTIAL' | 'PAID' | 'OVERDUE' | 'CANCELLED';
+
+/**
+ * Added (SOUPFIN-184): whether the bill is posted to the ledger. PLANNED backend
+ * field `Bill.postingStatus` — see `plans/soupfin-184-bill-lifecycle.html`.
+ * Absent on today's backend, where every saved bill is posted; `null` means POSTED.
+ */
+export type BillPostingStatus = 'DRAFT' | 'POSTED' | 'CANCELLED';
 
 export interface Bill extends BaseEntity {
   number?: number; // Added: Bill number (backend field)
@@ -271,7 +295,17 @@ export interface Bill extends BaseEntity {
   exchangeRate?: number; // Added: Exchange rate when currency != account default
   purchaseOrderNumber?: string; // Added: PO number reference
   salesOrderNumber?: string; // Added: SO number reference
-  status: BillStatus;
+  /**
+   * Changed (SOUPFIN-184): the raw backend value (a `PaymentStatus`, or null).
+   * `BillStatus` stays in the union only so older fixtures that carry a display
+   * value still type-check. Never render it directly: use `getBillDisplayStatus()`.
+   */
+  status?: PaymentStatus | BillStatus | null;
+  /** Added (SOUPFIN-184): planned backend field, see `BillPostingStatus`. */
+  postingStatus?: BillPostingStatus | null;
+  /** Added (SOUPFIN-184): planned backend fields, set when a bill is voided. */
+  cancelledDate?: string | null;
+  cancelReason?: string | null;
   /**
    * Changed (SOUPFIN-43): these five are NORMALISED names produced by
    * `transformBill()`. The backend spells four of them differently — see the

@@ -9,11 +9,22 @@
  * Added: data-testid attributes for E2E testing
  * Changed (2026-02-01): Added tax rate dropdown from domain data API
  * Changed (2026-02-01): Added service description autocomplete for line items
+ * Changed (SOUPFIN-184): "Save draft" and "Submit" replace the single save
+ * button; a PAID or CANCELLED bill opens locked.
  */
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getBill, createBill, updateBill, resolveBillItemTaxEntryId } from '../../api/endpoints/bills';
+import {
+  getBill,
+  createBill,
+  updateBill,
+  saveBillDraft,
+  submitBill,
+  resolveBillItemTaxEntryId,
+} from '../../api/endpoints/bills';
+// Added (SOUPFIN-184): draft / submit / locked lifecycle
+import { canEditBill, getBillDisplayStatus, isDraftBill } from './billStatus';
 import { listVendors } from '../../api/endpoints/vendors';
 import { listTaxRates, listBillServices, DEFAULT_CURRENCIES } from '../../api/endpoints/domainData';
 import { useFormatCurrency } from '../../stores';
@@ -147,42 +158,76 @@ export function BillFormPage() {
     }
   }, [bill, taxRates]);
 
-  // Added: Create mutation
+  // Added (SOUPFIN-184): where the bill sits in its lifecycle decides which
+  // buttons the form offers and whether it can be saved at all.
+  const displayStatus = bill ? getBillDisplayStatus(bill) : null;
+  const isLocked = isEdit && !!displayStatus && !canEditBill(displayStatus);
+  const isEditingDraft = isEdit && !!displayStatus && isDraftBill(displayStatus);
+  // Drafts are offered for a new bill and for a bill that is still a draft.
+  // A posted bill cannot go back to draft: its ledger entries already exist.
+  const canSaveDraft = !isEdit || isEditingDraft;
+
+  // Added (SOUPFIN-158): a date in a closed period belongs on the date field.
+  // Changed (SOUPFIN-160): never show "Request failed with status code 403".
+  // Changed (SOUPFIN-184): shared by every save path below.
+  const handleSaveError = (fallback: string) => (error: Error) => {
+    const lock = getPeriodLockError(error);
+    if (lock) {
+      setBillDateError(lock.message);
+      return;
+    }
+    setFormError(getApiErrorMessage(error) || fallback);
+  };
+
+  const afterListChange = () => queryClient.invalidateQueries({ queryKey: ['bills'] });
+
+  // Added: Create mutation — Changed (SOUPFIN-184): this is "Submit", which posts the bill
   const createMutation = useMutation({
     mutationFn: (data: Record<string, unknown>) => createBill(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['bills'] });
+      afterListChange();
       navigate('/bills');
     },
-    onError: (error: Error) => {
-      // Added (SOUPFIN-158): a date in a closed period belongs on the date field
-      const lock = getPeriodLockError(error);
-      if (lock) {
-        setBillDateError(lock.message);
-        return;
-      }
-      // Changed (SOUPFIN-160): never show "Request failed with status code 403"
-      setFormError(getApiErrorMessage(error) || 'Failed to create bill');
-    },
+    onError: handleSaveError('Failed to create bill'),
   });
 
-  // Added: Update mutation
+  // Added (SOUPFIN-184): "Save draft" on a new bill — stored, not posted
+  const draftMutation = useMutation({
+    mutationFn: (data: Record<string, unknown>) => saveBillDraft(data),
+    onSuccess: () => {
+      afterListChange();
+      navigate('/bills');
+    },
+    onError: handleSaveError('Failed to save draft'),
+  });
+
+  // Added: Update mutation (a posted bill, or "Save draft" on an existing draft)
   const updateMutation = useMutation({
     mutationFn: (data: Record<string, unknown>) => updateBill(id!, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['bills'] });
+      afterListChange();
+      queryClient.invalidateQueries({ queryKey: ['bill', id] });
+      navigate(`/bills/${id}`);
+    },
+    onError: handleSaveError('Failed to update bill'),
+  });
+
+  // Added (SOUPFIN-184): "Submit" on an existing draft — save the edits, then post it.
+  // If the submit step fails the edits are already saved; the error says why it
+  // is still a draft, and the bill query is refreshed so the page shows that.
+  const submitDraftMutation = useMutation({
+    mutationFn: async (data: Record<string, unknown>) => {
+      await updateBill(id!, data);
+      return submitBill(id!);
+    },
+    onSuccess: () => {
+      afterListChange();
       queryClient.invalidateQueries({ queryKey: ['bill', id] });
       navigate(`/bills/${id}`);
     },
     onError: (error: Error) => {
-      // Added (SOUPFIN-158): a date in a closed period belongs on the date field
-      const lock = getPeriodLockError(error);
-      if (lock) {
-        setBillDateError(lock.message);
-        return;
-      }
-      // Changed (SOUPFIN-160): never show "Request failed with status code 403"
-      setFormError(getApiErrorMessage(error) || 'Failed to update bill');
+      queryClient.invalidateQueries({ queryKey: ['bill', id] });
+      handleSaveError('Failed to submit bill')(error);
     },
   });
 
@@ -248,12 +293,16 @@ export function BillFormPage() {
   };
 
   // Added: Handle form submission
-  const handleSubmit = (e: React.FormEvent) => {
+  // Changed (SOUPFIN-184): `mode` picks draft or submit; Enter in a field submits,
+  // as the single save button did before.
+  const handleSubmit = (e: React.FormEvent, mode: 'draft' | 'submit' = 'submit') => {
     e.preventDefault();
     setFormError(null);
 
     // Added (SOUPFIN-160): Enter in a field must not bypass the disabled button
     if (isModuleBlocked) return;
+    // Added (SOUPFIN-184): same for a closed (paid or voided) bill
+    if (isLocked) return;
 
     // Validate
     if (!vendorId) {
@@ -279,10 +328,10 @@ export function BillFormPage() {
       billDate, // Changed: Backend uses billDate (not issueDate)
       paymentDate, // Changed: Backend uses paymentDate (not dueDate)
       notes,
-      subtotal,
-      taxAmount,
-      totalAmount,
-      status: isEdit ? undefined : 'DRAFT',
+      // Removed (SOUPFIN-184): `subtotal` / `taxAmount` / `totalAmount` are not
+      // Bill columns (the backend derives subTotal / totalTaxAmount / total from
+      // the lines), and `status` is a derived PaymentStatus the backend refuses
+      // to bind. "DRAFT" was never a value it could hold.
       // Added: New fields from gap analysis
       ...(purchaseOrderNumber && { purchaseOrderNumber }),
       ...(salesOrderNumber && { salesOrderNumber }),
@@ -309,14 +358,24 @@ export function BillFormPage() {
       }
     });
 
-    if (isEdit) {
-      updateMutation.mutate(formData);
+    if (!isEdit) {
+      (mode === 'draft' ? draftMutation : createMutation).mutate(formData);
+    } else if (isEditingDraft && mode === 'submit') {
+      submitDraftMutation.mutate(formData);
     } else {
-      createMutation.mutate(formData);
+      updateMutation.mutate(formData);
     }
   };
 
-  const isPending = createMutation.isPending || updateMutation.isPending;
+  const isPending =
+    createMutation.isPending ||
+    draftMutation.isPending ||
+    updateMutation.isPending ||
+    submitDraftMutation.isPending;
+  const pendingMode =
+    draftMutation.isPending || (updateMutation.isPending && isEditingDraft) ? 'draft' : 'submit';
+  const isSaveDisabled = isPending || isModuleBlocked || isLocked;
+  const primaryLabel = isEdit && !isEditingDraft ? 'Update Bill' : 'Submit Bill';
 
   // Added: Loading state for edit mode
   if (isEdit && billLoading) {
@@ -367,16 +426,53 @@ export function BillFormPage() {
           >
             Cancel
           </button>
+          {/* Added (SOUPFIN-184): keep the bill without posting it to the ledger */}
+          {canSaveDraft && (
+            <button
+              type="button"
+              onClick={(e) => handleSubmit(e, 'draft')}
+              disabled={isSaveDisabled}
+              className="h-10 px-4 rounded-lg bg-primary/20 text-primary font-bold text-sm hover:bg-primary/30 disabled:opacity-50 disabled:cursor-not-allowed"
+              data-testid="bill-form-save-draft-button"
+            >
+              {isPending && pendingMode === 'draft' ? 'Saving...' : 'Save Draft'}
+            </button>
+          )}
+          {/* Changed (SOUPFIN-184): Submit posts the bill; it then awaits payment (PENDING) */}
           <button
-            onClick={handleSubmit}
-            disabled={isPending || isModuleBlocked}
+            type="button"
+            onClick={(e) => handleSubmit(e, 'submit')}
+            disabled={isSaveDisabled}
             className="h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
             data-testid="bill-form-save-button"
           >
-            {isPending ? 'Saving...' : isEdit ? 'Update Bill' : 'Save Bill'}
+            {isPending && pendingMode === 'submit' ? 'Saving...' : primaryLabel}
           </button>
         </div>
       </div>
+
+      {/* Added (SOUPFIN-184): a paid or voided bill is closed; its form is read-only */}
+      {isLocked && (
+        <div
+          className="flex flex-wrap items-center justify-between gap-3 bg-warning/10 border border-warning/30 rounded-lg p-4 text-text-light dark:text-text-dark"
+          role="status"
+          data-testid="bill-form-locked"
+        >
+          <p>
+            {displayStatus === 'PAID'
+              ? 'This bill is paid, so it can no longer be edited.'
+              : 'This bill was voided, so it can no longer be edited.'}
+          </p>
+          <button
+            type="button"
+            onClick={() => navigate(`/bills/${id}`)}
+            className="h-9 px-3 rounded-lg border border-border-light dark:border-border-dark font-medium text-sm"
+            data-testid="bill-form-locked-back"
+          >
+            View bill
+          </button>
+        </div>
+      )}
 
       {/* Added (SOUPFIN-160): explain why the vendor or tax lists are empty */}
       {isModuleBlocked && (
@@ -395,7 +491,9 @@ export function BillFormPage() {
       )}
 
       {/* Form */}
-      <form onSubmit={handleSubmit} className="space-y-6">
+      {/* Changed (SOUPFIN-184): a locked bill's fields are disabled, not just its buttons */}
+      <form onSubmit={(e) => handleSubmit(e, 'submit')} className="space-y-6">
+        <fieldset disabled={isLocked} className="space-y-6 min-w-0" data-testid="bill-form-fields">
         {/* Bill Details Card */}
         <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark" data-testid="bill-details-card">
           <div className="px-6 py-4 border-b border-border-light dark:border-border-dark">
@@ -726,6 +824,7 @@ export function BillFormPage() {
             </div>
           </div>
         </div>
+        </fieldset>
       </form>
     </div>
   );
