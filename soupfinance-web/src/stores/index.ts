@@ -10,6 +10,8 @@ export {
   useCurrencyConfig,
   formatCurrency,
   getCurrencySymbol,
+  // Added (SOUPFIN-181)
+  isAnyModuleEnabled,
   CURRENCIES,
   type CurrencyConfig,
 } from './accountStore';

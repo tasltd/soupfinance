@@ -9,12 +9,15 @@
  * positions ('before' and 'after') and both the zero and overflow ends of the
  * range are covered here.
  */
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import {
   CURRENCIES,
   formatAmountWithConfig,
   useAccountStore,
+  isAnyModuleEnabled,
 } from '../accountStore'
+// Added (SOUPFIN-181)
+import { modulesApi, type ModuleGroup } from '../../api/endpoints/modules'
 
 const GHS = CURRENCIES.GHS // symbolPosition: 'before', 2 decimals
 const USD = CURRENCIES.USD // symbolPosition: 'before', 2 decimals
@@ -150,5 +153,64 @@ describe('accountStore currency formatting', () => {
 
   it('defaults to USD formatting when no tenant currency is set', () => {
     expect(useAccountStore.getState().formatCurrency(-1200)).toBe('-$1,200.00')
+  })
+})
+
+// Added (SOUPFIN-181): the tenant's enabled modules, which decide what the nav shows
+describe('enabled modules (SOUPFIN-181)', () => {
+  beforeEach(() => {
+    useAccountStore.getState().reset()
+    vi.restoreAllMocks()
+  })
+
+  it('starts unknown (null), so nothing is hidden before the list loads', () => {
+    expect(useAccountStore.getState().enabledModules).toBeNull()
+  })
+
+  it('stores the list fetchEnabledModules loads', async () => {
+    vi.spyOn(modulesApi, 'list').mockResolvedValue(['CLIENT', 'FINANCE'])
+    await useAccountStore.getState().fetchEnabledModules()
+    expect(useAccountStore.getState().enabledModules).toEqual(['CLIENT', 'FINANCE'])
+  })
+
+  it('stores an empty list as empty, distinct from unknown', async () => {
+    vi.spyOn(modulesApi, 'list').mockResolvedValue([])
+    await useAccountStore.getState().fetchEnabledModules()
+    expect(useAccountStore.getState().enabledModules).toEqual([])
+  })
+
+  it('leaves the list unknown when the request fails, and does not throw', async () => {
+    vi.spyOn(modulesApi, 'list').mockRejectedValue(new Error('boom'))
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    await expect(useAccountStore.getState().fetchEnabledModules()).resolves.toBeUndefined()
+    expect(useAccountStore.getState().enabledModules).toBeNull()
+  })
+
+  it('reset (logout) forgets the previous tenant\'s modules', async () => {
+    vi.spyOn(modulesApi, 'list').mockResolvedValue(['FINANCE'])
+    await useAccountStore.getState().fetchEnabledModules()
+    useAccountStore.getState().reset()
+    expect(useAccountStore.getState().enabledModules).toBeNull()
+  })
+
+  it('is not persisted, so a stale list never outlives the session', async () => {
+    vi.spyOn(modulesApi, 'list').mockResolvedValue(['FINANCE'])
+    await useAccountStore.getState().fetchEnabledModules()
+    expect(localStorage.getItem('account-storage') ?? '').not.toContain('enabledModules')
+  })
+})
+
+describe('isAnyModuleEnabled (SOUPFIN-181)', () => {
+  it.each<[string, ModuleGroup[] | null | undefined, ModuleGroup[] | undefined, boolean]>([
+    ['ungated entry, modules unknown', null, undefined, true],
+    ['ungated entry, no modules', [], [], true],
+    ['gated entry, modules unknown', null, ['FINANCE'], true],
+    ['gated entry, modules undefined', undefined, ['FINANCE'], true],
+    ['gated entry, tenant has none', [], ['FINANCE'], false],
+    ['gated entry, tenant has it', ['FINANCE'], ['FINANCE'], true],
+    ['any-of, tenant has the second', ['TRADING'], ['FINANCE', 'TRADING'], true],
+    ['any-of, tenant has neither', ['CLIENT'], ['FINANCE', 'TRADING'], false],
+  ])('%s', (_label, enabled, anyOf, expected) => {
+    expect(isAnyModuleEnabled(enabled, anyOf)).toBe(expected)
   })
 })

@@ -573,9 +573,12 @@ test.describe('Ledger Management', () => {
         });
       });
 
-      // Delay transactions response
+      // Fix (SOUPFIN-181): hold the transactions response until the loading state has
+      // been seen, instead of a fixed 3s delay that a slow page load could outlast.
+      let release!: () => void;
+      const held = new Promise<void>((resolve) => { release = resolve; });
       await page.route('**/rest/ledgerTransaction/index.json*', async (route) => {
-        await new Promise((resolve) => setTimeout(resolve, 3000));
+        await held;
         route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -584,14 +587,15 @@ test.describe('Ledger Management', () => {
       });
 
       await page.goto('/ledger/transactions', { waitUntil: 'commit' });
-      await page.waitForSelector('[data-testid="ledger-transactions-page"]', { timeout: 5000 });
+      await page.waitForSelector('[data-testid="ledger-transactions-page"]', { timeout: 15000 });
 
       // Should show loading state
-      await expect(page.getByTestId('ledger-loading')).toBeVisible({ timeout: 2000 });
+      await expect(page.getByTestId('ledger-loading')).toBeVisible({ timeout: 15000 });
       await takeScreenshot(page, 'ledger-transactions-loading');
 
-      // Wait for data to load
-      await expect(page.getByTestId('ledger-table')).toBeVisible({ timeout: 10000 });
+      // Let the response through, then wait for data to load
+      release();
+      await expect(page.getByTestId('ledger-table')).toBeVisible({ timeout: 15000 });
     });
 
     test('shows empty state when no transactions', async ({ page }) => {

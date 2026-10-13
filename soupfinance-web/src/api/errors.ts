@@ -107,7 +107,10 @@ export function classifyForbiddenBody(data: unknown): ForbiddenClassification {
   } else if (typeof data === 'object') {
     const obj = data as Record<string, unknown>;
     const code = typeof obj.code === 'string' ? obj.code.toUpperCase() : '';
-    if (code === 'MODULE_DISABLED') {
+    // Changed (SOUPFIN-181): the ticket's shape puts the code in `error`; the backend
+    // keeps the sentence there and sends `code`. Accept either.
+    const errorCode = typeof obj.error === 'string' ? obj.error.trim().toUpperCase() : '';
+    if (code === 'MODULE_DISABLED' || errorCode === 'MODULE_DISABLED') {
       const module = typeof obj.module === 'string' && obj.module ? obj.module : undefined;
       return { cause: 'module_disabled', backendModule: module ? capitalise(module) : undefined };
     }
@@ -127,6 +130,29 @@ export function classifyForbiddenBody(data: unknown): ForbiddenClassification {
     return { cause: 'role_denied' };
   }
   return { cause: 'unknown' };
+}
+
+/**
+ * Added (SOUPFIN-181): read the module-gate headers. Every module interceptor sets
+ * `X-Module-Status: disabled` and `X-Module: FINANCE` on its 403, JSON or plain text, so
+ * this works even when the body is an HTML page or empty. Returns cause 'unknown' when
+ * the headers are absent (a role denial, or a backend from before SOUPFIN-181).
+ */
+export function classifyForbiddenHeaders(headers: unknown): ForbiddenClassification {
+  const status = readHeader(headers, 'x-module-status');
+  if (status?.trim().toLowerCase() !== 'disabled') return { cause: 'unknown' };
+  const module = readHeader(headers, 'x-module')?.trim();
+  return { cause: 'module_disabled', backendModule: module ? capitalise(module) : undefined };
+}
+
+/** Header lookup that works for AxiosHeaders (has get()) and plain lower-cased objects. */
+function readHeader(headers: unknown, name: string): string | undefined {
+  if (!headers || typeof headers !== 'object') return undefined;
+  const h = headers as { get?: (n: string) => unknown } & Record<string, unknown>;
+  const value = typeof h.get === 'function' ? h.get(name) : undefined;
+  const raw = value ?? h[name] ?? Object.entries(h).find(([k]) => k.toLowerCase() === name)?.[1];
+  if (Array.isArray(raw)) return raw.length > 0 ? String(raw[0]) : undefined;
+  return raw == null ? undefined : String(raw);
 }
 
 /** "FINANCE" → "Finance"; leaves mixed-case names such as "CIS/Funds" alone. */
@@ -270,8 +296,12 @@ export function parseApiError(error: unknown): ParsedApiError {
     if (status === 403) {
       // Changed (SOUPFIN-150): the body decides first. The URL only decides when
       // the body says nothing — a ledger URL no longer implies "module disabled".
+      // Changed (SOUPFIN-181): the module-gate headers decide before the body, the body
+      // before the URL. The URL only speaks when neither says anything.
       const urlModule = moduleForUrl(url);
-      const { cause, backendModule } = classifyForbiddenBody(axErr.response.data);
+      const fromHeaders = classifyForbiddenHeaders(axErr.response.headers);
+      const { cause, backendModule } =
+        fromHeaders.cause !== 'unknown' ? fromHeaders : classifyForbiddenBody(axErr.response.data);
       if (cause === 'module_disabled' || (cause === 'unknown' && urlModule)) {
         const moduleName = urlModule ?? backendModule;
         return {

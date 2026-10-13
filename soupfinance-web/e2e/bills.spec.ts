@@ -572,9 +572,13 @@ test.describe('Bill Management', () => {
       // Mock token validation to keep user authenticated
       await mockTokenValidationApi(page, true);
 
-      // Fix: Increased delay to 5s to eliminate race condition with page navigation
+      // Fix (SOUPFIN-181): hold the response until the loading state has been seen,
+      // instead of a fixed 5s delay. The delay left no margin for the table wait below,
+      // so one extra request at sign-in (the tenant's modules) made it fail under load.
+      let release!: () => void;
+      const held = new Promise<void>((resolve) => { release = resolve; });
       await page.route('**/rest/bill/index.json*', async (route: any) => {
-        await new Promise((resolve) => setTimeout(resolve, 5000));
+        await held;
         route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -585,12 +589,12 @@ test.describe('Bill Management', () => {
       // Navigate to the page
       await page.goto('/bills', { waitUntil: 'commit' });
 
-      // Fix: Increased timeout to 5s to match the delayed response
-      await expect(page.getByTestId('bill-list-loading')).toBeVisible({ timeout: 5000 });
+      await expect(page.getByTestId('bill-list-loading')).toBeVisible({ timeout: 15000 });
       await takeScreenshot(page, 'bills-list-loading');
 
-      // Wait for table to appear after delay
-      await expect(page.getByTestId('bill-list-table')).toBeVisible({ timeout: 5000 });
+      // Let the response through, then the table replaces the loading state
+      release();
+      await expect(page.getByTestId('bill-list-table')).toBeVisible({ timeout: 15000 });
     });
 
     test('shows empty state when no bills exist', async ({ page }) => {

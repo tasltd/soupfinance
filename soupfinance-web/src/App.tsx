@@ -190,6 +190,8 @@ export default function App() {
   const tenantId = useAuthStore((state) => state.user?.tenantId);
   const darkMode = useUIStore((state) => state.darkMode);
   const fetchAccountSettings = useAccountStore((state) => state.fetchSettings);
+  // Added (SOUPFIN-181): which tenant modules are on, so the nav hides guaranteed-403 pages
+  const fetchEnabledModules = useAccountStore((state) => state.fetchEnabledModules);
   const accountInitialized = useAccountStore((state) => state.isInitialized);
 
   // Initialize frontend logger on mount - captures console errors, JS errors, and promise rejections
@@ -221,8 +223,9 @@ export default function App() {
       fetchAccountSettings().catch((error) => {
         console.error('[App] Failed to fetch account settings:', error);
       });
+      void fetchEnabledModules();
     }
-  }, [isAuthenticated, authInitialized, tenantId, accountInitialized, fetchAccountSettings]);
+  }, [isAuthenticated, authInitialized, tenantId, accountInitialized, fetchAccountSettings, fetchEnabledModules]);
 
   // Apply dark mode class — darkMode is resolved from themeMode (light/dark/system) in uiStore
   useEffect(() => {

@@ -22,21 +22,28 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, act, fireEvent } from '@testing-library/react';
 import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom';
 import type { BusinessLicenceCategory } from '../../../types/settings';
+import type { ModuleGroup } from '../../../api/endpoints/modules';
 
 // Driven per-test; `undefined` models "account settings not loaded yet".
 let mockBusinessCategory: BusinessLicenceCategory | undefined;
+// Added (SOUPFIN-181): driven per-test; `null` models "modules not known".
+let mockEnabledModules: ModuleGroup[] | null = null;
 
 vi.mock('../../../stores', async () => {
   const actual = await vi.importActual<typeof import('../../../stores')>('../../../stores');
   return {
     ...actual,
     useAccountStore: (
-      selector: (s: { settings: { businessLicenceCategory?: BusinessLicenceCategory } | null }) => unknown
-    ) => selector({ settings: { businessLicenceCategory: mockBusinessCategory } }),
+      selector: (s: {
+        settings: { businessLicenceCategory?: BusinessLicenceCategory } | null;
+        enabledModules: ModuleGroup[] | null;
+      }) => unknown
+    ) => selector({ settings: { businessLicenceCategory: mockBusinessCategory }, enabledModules: mockEnabledModules }),
   };
 });
 
 import { SideNav } from '../SideNav';
+import { filterNavItems } from '../navItems';
 import { useUIStore } from '../../../stores';
 
 function renderAt(path: string) {
@@ -315,4 +322,125 @@ describe('SideNav — mobile drawer closes on navigation (SOUPFIN-76)', () => {
     }
     expect(where).toHaveTextContent('/dashboard');
   }, 20_000);
+});
+
+// Added (SOUPFIN-181): the nav hides pages whose backend module the tenant lacks, so a
+// FINANCE-less tenant stops opening Payments, Ledger and Accounting into guaranteed 403s.
+describe('SideNav — hides entries for modules the tenant lacks (SOUPFIN-181)', () => {
+  const FINANCE_PAGES = ['Invoices', 'Bills', 'Payments', 'Ledger', 'Accounting'];
+
+  beforeEach(() => {
+    useUIStore.setState({ sidebarCollapsed: false, mobileSidebarOpen: false });
+    mockBusinessCategory = 'SERVICES';
+    mockEnabledModules = null;
+  });
+
+  // The icon ligature is real text (aria-hidden), so read the visible label <p>, not textContent
+  function topLevelLabels(): string[] {
+    return screen.getAllByRole('link').map((a) => a.querySelector('p')?.textContent?.trim() ?? a.textContent?.trim() ?? '');
+  }
+
+  it('shows every entry while the module list is unknown', () => {
+    mockEnabledModules = null;
+    renderAt('/dashboard');
+    for (const label of [...FINANCE_PAGES, 'Vendors', 'Clients', 'Reports', 'Settings']) {
+      expect(topLevelLabels()).toContain(label);
+    }
+    expect(screen.queryByTestId('nav-modules-hidden-note')).toBeNull();
+  });
+
+  it('shows every entry and no note when FINANCE is enabled', () => {
+    mockEnabledModules = ['CLIENT', 'FINANCE'];
+    renderAt('/dashboard');
+    for (const label of [...FINANCE_PAGES, 'Vendors']) expect(topLevelLabels()).toContain(label);
+    expect(screen.queryByTestId('nav-modules-hidden-note')).toBeNull();
+  });
+
+  it('hides the FINANCE pages, keeps the ungated ones and explains why', () => {
+    mockEnabledModules = ['CLIENT'];
+    renderAt('/dashboard');
+    const labels = topLevelLabels();
+    for (const label of FINANCE_PAGES) expect(labels).not.toContain(label);
+    for (const label of ['Dashboard', 'Clients', 'Reports', 'Settings']) expect(labels).toContain(label);
+    expect(screen.getByTestId('nav-modules-hidden-note')).toHaveTextContent(/turned off for your organisation/);
+  });
+
+  it('hides everything gated when the tenant has no modules at all (zero end)', () => {
+    mockEnabledModules = [];
+    renderAt('/dashboard');
+    expect(topLevelLabels()).not.toContain('Vendors');
+    expect(topLevelLabels()).not.toContain('Payments');
+    expect(topLevelLabels()).toContain('Dashboard');
+  });
+
+  it('keeps Vendors for a TRADING-only tenant: the vendor gate accepts TRADING or FINANCE', () => {
+    mockEnabledModules = ['TRADING'];
+    renderAt('/dashboard');
+    expect(topLevelLabels()).toContain('Vendors');
+    expect(topLevelLabels()).not.toContain('Payments');
+  });
+
+  it('drops only the gated children of an ungated section', () => {
+    mockEnabledModules = ['CLIENT'];
+    renderAt('/reports');
+    expect(screen.getByRole('link', { name: 'Trial Balance' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Scheduled Reports' })).toBeNull();
+  });
+
+  it('does not show the note when the sidebar is collapsed', () => {
+    mockEnabledModules = ['CLIENT'];
+    useUIStore.setState({ sidebarCollapsed: true });
+    renderAt('/dashboard');
+    expect(screen.queryByTestId('nav-modules-hidden-note')).toBeNull();
+  });
+});
+
+describe('filterNavItems (SOUPFIN-181)', () => {
+  const items = [
+    { label: 'Open', icon: 'x', path: '/open' },
+    { label: 'Gated', icon: 'x', path: '/gated', modules: ['FINANCE'] as ModuleGroup[] },
+    {
+      label: 'Mixed',
+      icon: 'x',
+      path: '/mixed',
+      children: [
+        { label: 'A', path: '/mixed/a' },
+        { label: 'B', path: '/mixed/b', modules: ['FINANCE'] as ModuleGroup[] },
+      ],
+    },
+    {
+      label: 'AllGatedChildren',
+      icon: 'x',
+      path: '/all',
+      children: [{ label: 'C', path: '/all/c', modules: ['CIS'] as ModuleGroup[] }],
+    },
+  ];
+
+  it('returns the list unchanged when modules are unknown', () => {
+    expect(filterNavItems(items, null)).toEqual(items);
+    expect(filterNavItems(items, undefined)).toEqual(items);
+  });
+
+  it('drops gated entries, gated children, and a section left with no children', () => {
+    const result = filterNavItems(items, []);
+    expect(result.map((i) => i.label)).toEqual(['Open', 'Mixed']);
+    expect(result[1].children?.map((c) => c.label)).toEqual(['A']);
+  });
+
+  it('does not mutate the input', () => {
+    const before = JSON.stringify(items);
+    filterNavItems(items, []);
+    expect(JSON.stringify(items)).toBe(before);
+  });
+
+  it('copes with a very long nav (overflow end)', () => {
+    const many = Array.from({ length: 5000 }, (_, i) => ({
+      label: `L${i}`,
+      icon: 'x',
+      path: `/p${i}`,
+      modules: (i % 2 ? ['FINANCE'] : undefined) as ModuleGroup[] | undefined,
+    }));
+    expect(filterNavItems(many, ['CLIENT'])).toHaveLength(2500);
+    expect(filterNavItems(many, ['FINANCE'])).toHaveLength(5000);
+  });
 });

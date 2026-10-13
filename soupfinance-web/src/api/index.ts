@@ -19,5 +19,7 @@ export * from './endpoints/corporate';
 export * from './endpoints/registration';
 export * from './endpoints/reports';
 export * from './endpoints/settings';
+// Added (SOUPFIN-181)
+export * from './endpoints/modules';
 export * from './endpoints/email';
 export * from './endpoints/domainData';

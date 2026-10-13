@@ -554,6 +554,11 @@ export async function installGuideMocks(page: Page) {
   );
   await page.route('**/rest/user/current.json*', fulfil(guideUser));
   await page.route('**/account/show/*.json*', fulfil(accountSettings));
+  // Added (SOUPFIN-181): every module on, so the guide captures show the full menu
+  await page.route(
+    '**/account/modules.json*',
+    fulfil({ tenantId: guideUser.tenantId, modules: ['CIS', 'CLIENT', 'FINANCE', 'SOUPLIFY', 'TRADING'] })
+  );
 
   // --- reference data -------------------------------------------------------
   await page.route('**/rest/paymentMethod/index.json*', fulfil(paymentMethods));

@@ -4,85 +4,24 @@
  */
 import { useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { useAuthStore, useUIStore } from '../../stores';
+import { useAuthStore, useUIStore, useAccountStore } from '../../stores';
 import { Logo } from '../Logo';
-
-interface NavItem {
-  label: string;
-  icon: string;
-  path: string;
-  children?: { label: string; path: string }[];
-}
-
-// Changed (2026-01-28): Added Vendors, Accounting section, Trial Balance to Reports
-const navItems: NavItem[] = [
-  { label: 'Dashboard', icon: 'dashboard', path: '/dashboard' },
-  { label: 'Invoices', icon: 'receipt_long', path: '/invoices' },
-  { label: 'Bills', icon: 'receipt', path: '/bills' },
-  // Added: Vendors navigation item
-  // Fix (SOUPFIN-173): shown for every business category. SOUPFIN-25 hid it for
-  // SERVICES tenants, but service businesses still pay rent, utilities and
-  // contractors: Bills requires a vendor, so hiding the list left vendor
-  // management reachable only from the bill form's "+" link.
-  { label: 'Vendors', icon: 'storefront', path: '/vendors' },
-  // Added: Clients navigation item (gap analysis §4.5 - was only reachable via invoice form)
-  { label: 'Clients', icon: 'people', path: '/clients' },
-  { label: 'Payments', icon: 'payments', path: '/payments' },
-  {
-    label: 'Ledger',
-    icon: 'account_balance',
-    path: '/ledger',
-    children: [
-      { label: 'Chart of Accounts', path: '/ledger/accounts' },
-      { label: 'Transactions', path: '/ledger/transactions' },
-    ],
-  },
-  // Added: Accounting section for journal entries, vouchers
-  {
-    label: 'Accounting',
-    icon: 'calculate',
-    path: '/accounting',
-    children: [
-      { label: 'Transaction Register', path: '/accounting/transactions' },
-      { label: 'Journal Entry', path: '/accounting/journal-entry' },
-      { label: 'Payment Voucher', path: '/accounting/voucher/payment' },
-      { label: 'Receipt Voucher', path: '/accounting/voucher/receipt' },
-    ],
-  },
-  {
-    label: 'Reports',
-    icon: 'analytics',
-    path: '/reports',
-    children: [
-      { label: 'All Reports', path: '/reports' },
-      { label: 'Profit & Loss', path: '/reports/pnl' },
-      { label: 'Balance Sheet', path: '/reports/balance-sheet' },
-      { label: 'Cash Flow', path: '/reports/cash-flow' },
-      { label: 'Aging Reports', path: '/reports/aging' },
-      // Added: Trial Balance report
-      { label: 'Trial Balance', path: '/reports/trial-balance' },
-      // Added: Scheduled Reports for automated delivery
-      { label: 'Scheduled Reports', path: '/reports/scheduled' },
-    ],
-  },
-  // Added (2026-01-30): Settings section
-  {
-    label: 'Settings',
-    icon: 'settings',
-    path: '/settings',
-    children: [
-      { label: 'Users', path: '/settings/users' },
-      { label: 'Bank Accounts', path: '/settings/bank-accounts' },
-      { label: 'Account Settings', path: '/settings/account' },
-      // Added (SOUPFIN-158)
-      { label: 'Financial Years', path: '/settings/financial-years' },
-    ],
-  },
-];
+// Changed (SOUPFIN-181): nav data lives in navItems.ts so the filter can be exported
+// without breaking fast refresh (react-refresh/only-export-components)
+import { navItems, filterNavItems } from './navItems';
 
 export function SideNav() {
   const location = useLocation();
   const user = useAuthStore((state) => state.user);
+  // Added (SOUPFIN-181): null/undefined = modules not known yet, so nothing is hidden
+  const enabledModules = useAccountStore((state) => state.enabledModules);
+  const visibleItems = filterNavItems(navItems, enabledModules);
+  const hiddenCount =
+    navItems.length - visibleItems.length +
+    visibleItems.reduce((n, item) => {
+      const original = navItems.find((i) => i.path === item.path);
+      return n + (original?.children?.length ?? 0) - (item.children?.length ?? 0);
+    }, 0);
   const logout = useAuthStore((state) => state.logout);
   const { sidebarCollapsed, setSidebarCollapsed, mobileSidebarOpen, setMobileSidebarOpen } =
     useUIStore();
@@ -167,7 +106,7 @@ export function SideNav() {
 
             {/* Navigation */}
             <nav className="flex flex-col gap-1 mt-4">
-              {navItems.map((item) => (
+              {visibleItems.map((item) => (
                 <div key={item.path}>
                   <NavLink
                     to={item.children ? item.children[0].path : item.path}
@@ -232,6 +171,18 @@ export function SideNav() {
                 </div>
               ))}
             </nav>
+
+            {/* Added (SOUPFIN-181): say why entries are missing, so a hidden Payments
+                page reads as a setting the admin controls, not a broken menu. */}
+            {hiddenCount > 0 && !sidebarCollapsed && (
+              <p
+                data-testid="nav-modules-hidden-note"
+                className="mx-3 mt-2 rounded-lg bg-background-light dark:bg-background-dark px-3 py-2 text-xs text-subtle-text dark:text-subtle-text-dark"
+              >
+                Some pages are hidden because their module is turned off for your organisation.
+                Ask your administrator to turn it on.
+              </p>
+            )}
           </div>
 
           {/* Bottom Links — shrink-0 keeps Help/Logout pinned and full height

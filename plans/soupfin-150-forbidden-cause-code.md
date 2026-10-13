@@ -17,6 +17,11 @@ The SoupFinance frontend used to decide from the URL alone, so a role failure on
 Matching English text works, but one wording change in an interceptor would break it
 silently. This plan adds a stable machine-readable field.
 
+> **Update (SOUPFIN-181):** the `code` and `module` fields below are built, together with
+> `X-Module-Status` / `X-Module` headers. See
+> [soupfin-181-module-gate-signal-and-modules-endpoint.md](soupfin-181-module-gate-signal-and-modules-endpoint.md).
+> The optional `ROLE_DENIED` handler is not built.
+
 ## Required changes (soupmarkets-web)
 
 ### Module interceptors (4 files, same edit)

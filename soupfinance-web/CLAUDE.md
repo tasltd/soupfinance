@@ -139,6 +139,8 @@ The SoupFinance tenant runs a **SERVICES license category**, so several backend 
 
 **The body decides, not the URL (SOUPFIN-150).** A role failure (Spring Security, body `{"error":"Forbidden","status":403,"path":…}`) and a disabled module (module interceptor, body `{"error":"Finance module is not enabled for this tenant"}`) both return 403 on the same URL. `classifyForbiddenBody()` in `api/errors.ts` tells them apart; the URL list only decides when the body is empty. Mock the module gate with the interceptor's real body, never `{ error: 'Forbidden' }`. Backend `code` field plan: `plans/soupfin-150-forbidden-cause-code.md`.
 
+**Headers first (SOUPFIN-181).** The backend module gate also sends `X-Module-Status: disabled` + `X-Module: FINANCE` and a body `{ error, code: "MODULE_DISABLED", module, message }`. `parseApiError` reads the headers, then the body, then the URL. After sign-in the app loads `GET /account/modules.json` into `accountStore.enabledModules` (null = unknown → show everything) and the SideNav hides entries tagged with a module the tenant lacks (`components/layout/navItems.ts`). E2E: `mockTokenValidationApi` and `installGuideMocks` default the modules call to "all on"; register your own `**/account/modules.json*` route after them to test the gate. Plan: `../plans/soupfin-181-module-gate-signal-and-modules-endpoint.md`.
+
 **Three overlapping error helpers exist.** They are not interchangeable — match the one already used by the feature you are editing, and prefer `api/errors.ts` for new code:
 
 | Module | Exports | Used by |

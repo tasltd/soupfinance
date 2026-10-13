@@ -644,6 +644,21 @@ export async function mockTokenValidationApi(
     }
   });
 
+  // Added (SOUPFIN-181): the app loads the tenant's enabled modules after sign-in and the
+  // SideNav hides pages for modules the tenant lacks. Default to every module so specs
+  // see the full menu; a spec testing the gate registers its own route after this one.
+  await page.route('**/account/modules.json*', (route) => {
+    if (success) {
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(mockEnabledModules) });
+    } else {
+      route.fulfill({
+        status: 401,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: 'Unauthorized', message: 'Not authenticated' }),
+      });
+    }
+  });
+
   // Fix (SOUPFIN-43): every invoice/bill form and detail page loads the TaxEntry
   // catalogue (SOUPFIN-37/38 moved line-item tax off the hardcoded rate list onto
   // real TaxEntry rows). No shared fixture mocked it, so in mock mode the request
@@ -658,6 +673,15 @@ export async function mockTokenValidationApi(
     await mockTaxEntriesApi(page);
   }
 }
+
+/**
+ * Added (SOUPFIN-181): GET /account/modules.json with every module on, the shape
+ * soupmarkets-web AccountController.modules renders.
+ */
+export const mockEnabledModules = {
+  tenantId: 'account-001',
+  modules: ['CIS', 'CLIENT', 'FINANCE', 'SOUPLIFY', 'TRADING'],
+};
 
 /**
  * Default TaxEntry catalogue — shape verbatim from /rest/taxEntry/index.json.

@@ -485,3 +485,100 @@ describe('getLoginErrorMessage (SOUPFIN-29)', () => {
     expect(getLoginErrorMessage(undefined)).toBe('Unable to sign in. Please try again.');
   });
 });
+
+// Added (SOUPFIN-181): the backend module gate now signals itself with headers
+// (X-Module-Status: disabled, X-Module: FINANCE) and a code in the body.
+describe('module-gated 403 signals (SOUPFIN-181)', () => {
+  function withHeaders(err: unknown, headers: unknown): unknown {
+    (err as { response: { headers: unknown } }).response.headers = headers;
+    return err;
+  }
+
+  // The body the backend ModuleGate renders, verbatim.
+  const gateBody = {
+    error: 'Finance module is not enabled for this tenant',
+    code: 'MODULE_DISABLED',
+    module: 'FINANCE',
+    message: 'Finance module is not enabled for this tenant',
+  };
+  // Spring Boot's envelope for a role denial (verified on the LXC backend).
+  const roleBody = { timestamp: '2026-10-13T10:00:00Z', status: 403, error: 'Forbidden', path: '/rest/invoicePayment/index.json' };
+
+  it('reads module_disabled from the headers on a URL the frontend does not know', () => {
+    const parsed = parseApiError(
+      withHeaders(makeAxiosError(403, '/invoicePayment/index.json', ''), {
+        'x-module-status': 'disabled',
+        'x-module': 'FINANCE',
+      }),
+    );
+    expect(parsed.kind).toBe('module_disabled');
+    expect(parsed.title).toBe('Finance module is not available');
+  });
+
+  it('reads the headers through an AxiosHeaders-style get()', () => {
+    const headers = { get: (n: string) => ({ 'x-module-status': 'disabled', 'x-module': 'TRADING' })[n] };
+    const parsed = parseApiError(withHeaders(makeAxiosError(403, '/orderRequest/index.json', '<html></html>'), headers));
+    expect(parsed.kind).toBe('module_disabled');
+    expect(parsed.title).toBe('Trading module is not available');
+  });
+
+  it('matches the header names case-insensitively on a plain object', () => {
+    const parsed = parseApiError(
+      withHeaders(makeAxiosError(403, '/invoice/index.json', null), { 'X-Module-Status': 'DISABLED', 'X-Module': 'FINANCE' }),
+    );
+    expect(parsed.kind).toBe('module_disabled');
+  });
+
+  it('reads the structured body when the headers are absent', () => {
+    const parsed = parseApiError(makeAxiosError(403, '/bill/index.json', gateBody));
+    expect(parsed.kind).toBe('module_disabled');
+    expect(parsed.title).toBe('Finance module is not available');
+    expect(parsed.message).not.toContain('MODULE_DISABLED');
+  });
+
+  it('accepts the code in the error field, the shape the ticket describes', () => {
+    expect(classifyForbiddenBody({ error: 'MODULE_DISABLED', module: 'finance', message: 'x' })).toEqual({
+      cause: 'module_disabled',
+      backendModule: 'finance',
+    });
+  });
+
+  it('keeps a role denial distinguishable: no header, Spring body → forbidden, even on a gated URL', () => {
+    const parsed = parseApiError(makeAxiosError(403, '/ledgerAccount/index.json', roleBody));
+    expect(parsed.kind).toBe('forbidden');
+    expect(parsed.title).toBe('You do not have permission');
+  });
+
+  it('ignores an X-Module-Status other than disabled and falls back to the body', () => {
+    const parsed = parseApiError(
+      withHeaders(makeAxiosError(403, '/invoicePayment/index.json', roleBody), { 'x-module-status': 'enabled' }),
+    );
+    expect(parsed.kind).toBe('forbidden');
+  });
+
+  it('the header wins over a body that says role denied', () => {
+    const parsed = parseApiError(
+      withHeaders(makeAxiosError(403, '/invoicePayment/index.json', roleBody), { 'x-module-status': 'disabled' }),
+    );
+    expect(parsed.kind).toBe('module_disabled');
+    expect(parsed.title).toBe('Module is not available');
+  });
+
+  it('handles empty, null and array-valued headers without throwing', () => {
+    for (const headers of [undefined, null, {}, { 'x-module-status': [] }, { 'x-module-status': ['disabled'] }]) {
+      expect(() => parseApiError(withHeaders(makeAxiosError(403, '/x/index.json', null), headers))).not.toThrow();
+    }
+    expect(parseApiError(withHeaders(makeAxiosError(403, '/x/index.json', null), { 'x-module-status': ['disabled'] })).kind).toBe(
+      'module_disabled',
+    );
+  });
+
+  it('a very long module name is passed through, not truncated or dropped', () => {
+    const long = 'A'.repeat(2000);
+    const parsed = parseApiError(
+      withHeaders(makeAxiosError(403, '/x/index.json', null), { 'x-module-status': 'disabled', 'x-module': long }),
+    );
+    expect(parsed.kind).toBe('module_disabled');
+    expect(parsed.title.startsWith('A' + 'a'.repeat(10))).toBe(true);
+  });
+});

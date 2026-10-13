@@ -16,6 +16,8 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { AccountSettings } from '../types/settings';
 import { accountSettingsApi } from '../api/endpoints/settings';
+// Added (SOUPFIN-181): tenant modules decide which nav entries can load at all
+import { modulesApi, type ModuleGroup } from '../api/endpoints/modules';
 
 // Currency configuration mapping
 export interface CurrencyConfig {
@@ -91,9 +93,17 @@ interface AccountState {
   isLoading: boolean;
   isInitialized: boolean;
   error: string | null;
+  /**
+   * Added (SOUPFIN-181): modules enabled for the tenant, from GET /account/modules.json.
+   * null = not known (not loaded yet, failed, or a backend without the endpoint); callers
+   * then show everything, which is how the app behaved before the endpoint existed.
+   */
+  enabledModules: ModuleGroup[] | null;
 
   // Actions
   fetchSettings: () => Promise<void>;
+  /** Added (SOUPFIN-181): load enabledModules. Never throws; a failure leaves it null. */
+  fetchEnabledModules: () => Promise<void>;
   getCurrencyConfig: () => CurrencyConfig;
   formatCurrency: (amount: number | null | undefined) => string;
   formatCurrencyValue: (amount: number | null | undefined) => string; // Without symbol
@@ -108,6 +118,7 @@ export const useAccountStore = create<AccountState>()(
       isLoading: false,
       isInitialized: false,
       error: null,
+      enabledModules: null,
 
       fetchSettings: async () => {
         set({ isLoading: true, error: null });
@@ -144,6 +155,16 @@ export const useAccountStore = create<AccountState>()(
         }
       },
 
+      fetchEnabledModules: async () => {
+        try {
+          set({ enabledModules: await modulesApi.list() });
+        } catch (err) {
+          // Unknown is safer than empty: an empty list would hide every gated page.
+          console.error('[AccountStore] Failed to fetch enabled modules:', err);
+          set({ enabledModules: null });
+        }
+      },
+
       getCurrencyConfig: () => {
         return get().currencyConfig;
       },
@@ -175,6 +196,7 @@ export const useAccountStore = create<AccountState>()(
           isLoading: false,
           isInitialized: false,
           error: null,
+          enabledModules: null,
         });
       },
     }),
@@ -222,4 +244,14 @@ export function formatCurrency(amount: number | null | undefined): string {
  */
 export function getCurrencySymbol(): string {
   return useAccountStore.getState().currencyConfig.symbol;
+}
+
+/**
+ * Added (SOUPFIN-181): true when the tenant has any of the given modules, or when the
+ * module list is unknown (null). An empty `anyOf` means the item is not gated.
+ */
+export function isAnyModuleEnabled(enabledModules: ModuleGroup[] | null | undefined, anyOf?: ModuleGroup[]): boolean {
+  if (!anyOf || anyOf.length === 0) return true;
+  if (!enabledModules) return true;
+  return anyOf.some((m) => enabledModules.includes(m));
 }

@@ -37,6 +37,9 @@ In the `soupmarkets-web` repo, locate where module access is gated:
 
 ## Required Backend Changes
 
+> **Items 2 and 3 are SOUPFIN-181.** See [soupfin-181-module-gate-signal-and-modules-endpoint.md](soupfin-181-module-gate-signal-and-modules-endpoint.md)
+> for what was built and the frontend contract. Item 1 is SOUPFIN-15 #4 / SOUPFIN-144.
+
 Once the mechanism is understood:
 
 1. **Enable Finance for the SoupFinance tenant in production** (`tenant_id = ff8081817217e9f3017217f19ccc0000` per project memory). This is a one-time data migration / admin action — NOT a code change.
