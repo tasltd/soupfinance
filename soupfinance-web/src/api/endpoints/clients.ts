@@ -15,7 +15,8 @@
  *   - /rest/accountServices/show/:id.json → Get single account services
  */
 import apiClient, { toQueryString, getCsrfToken, csrfQueryString } from '../client';
-import type { ListParams, AccountServices, Client } from '../../types';
+import type { ListParams, AccountServices, Client, ClientType } from '../../types';
+import { toListPage, DEFAULT_PAGE_SIZE, type ListPage } from './listPage';
 
 const BASE_URL = '/client';
 
@@ -90,6 +91,55 @@ export async function listClients(
   const query = normalized ? `?${toQueryString(normalized)}` : '';
   const response = await apiClient.get<Client[]>(`${BASE_URL}/index.json${query}`);
   return response.data;
+}
+
+/**
+ * Filters the client list sends to the server (SOUPFIN-165).
+ */
+export interface ClientListFilters {
+  offset?: number;
+  max?: number;
+  search?: string;
+  clientType?: ClientType | '';
+  /** Read `archived.json` instead of `index.json`. */
+  archived?: boolean;
+}
+
+/**
+ * List one page of clients.
+ * GET /rest/client/index.json or /rest/client/archived.json
+ *
+ * The two actions take DIFFERENT filter params, so this sends each one what it
+ * actually reads:
+ *   - index.json → ClientService.searchList: `q` (KYC subtype name match, see
+ *     listClients above) and `clientType`.
+ *   - archived.json → Client.archivedList: `search` on serialised only. It
+ *     ignores `q` and `clientType`, so they are not sent — the page disables
+ *     the type filter rather than show a filter that does nothing.
+ *
+ * Requests `max + 1` rows to learn whether a next page exists, because the
+ * backend does not report a total (see listPage.ts).
+ */
+export async function listClientPage(filters: ClientListFilters = {}): Promise<ListPage<Client>> {
+  const max = filters.max ?? DEFAULT_PAGE_SIZE;
+  const offset = filters.offset ?? 0;
+  const term = filters.search?.trim();
+  const params: Record<string, unknown> = {
+    max: max + 1,
+    offset,
+    sort: 'name',
+    order: 'asc',
+  };
+  if (filters.archived) {
+    if (term) params.search = term;
+  } else {
+    if (term) params.q = term;
+    if (filters.clientType) params.clientType = filters.clientType;
+  }
+
+  const action = filters.archived ? 'archived' : 'index';
+  const response = await apiClient.get<Client[]>(`${BASE_URL}/${action}.json?${toQueryString(params)}`);
+  return toListPage(response, offset, max);
 }
 
 /**

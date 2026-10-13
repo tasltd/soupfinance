@@ -11,6 +11,7 @@ export * from './auth';
 
 // Domain endpoints
 export * from './endpoints/invoices';
+export * from './endpoints/listPage';
 export * from './endpoints/bills';
 export * from './endpoints/ledger';
 export * from './endpoints/vendors';

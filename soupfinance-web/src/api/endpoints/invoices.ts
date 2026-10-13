@@ -24,6 +24,7 @@ import {
   resolveTaxEntryIdFromRows,
   type TaxEntryJoinRow,
 } from './taxEntryJoins';
+import { toListPage, DEFAULT_PAGE_SIZE, type ListPage } from './listPage';
 
 const BASE_URL = '/invoice';
 
@@ -254,6 +255,65 @@ export async function listInvoices(params?: ListParams): Promise<Invoice[]> {
   const query = params ? `?${toQueryString(params)}` : '';
   const response = await apiClient.get<Invoice[]>(`${BASE_URL}/index.json${query}`);
   return (response.data || []).map(transformInvoice);
+}
+
+/**
+ * Filters the invoice list sends to the server (SOUPFIN-165).
+ *
+ * Every field here is honoured by Invoice.searchList / Invoice.archivedList in
+ * soupmarkets-web, so filtering happens over the whole table, never over one
+ * truncated page:
+ *   - `search` → ilike on id + serialised. The serialised string is
+ *     `Invoice(numberPrefix, number, accountServices, currency, ...)`, so it
+ *     matches an invoice number or the client name inside the account label.
+ *   - `from` / `to` → invoiceDate range (UtilityService.formatFromAndToDates
+ *     makes `to` inclusive of the whole day).
+ *
+ * Deliberately absent: `status`. The backend ignores it (verified: the same 80
+ * rows come back for status=PAID and status=DRAFT) and its PaymentStatus enum
+ * has only PENDING/PARTIAL/PAID. See
+ * plans/soupfin-165-list-total-count-and-status-filter.md.
+ */
+export interface InvoiceListFilters {
+  offset?: number;
+  max?: number;
+  search?: string;
+  /** yyyy-MM-dd, inclusive. */
+  from?: string;
+  /** yyyy-MM-dd, inclusive. */
+  to?: string;
+  /**
+   * Read `archived.json` instead of `index.json`. NOTE: the backend's
+   * archivedList returns archived OR PAID invoices, and index.json EXCLUDES
+   * paid ones — so this is also the only way to see a paid invoice.
+   */
+  archived?: boolean;
+}
+
+/**
+ * List one page of invoices.
+ * GET /rest/invoice/index.json or /rest/invoice/archived.json
+ *
+ * Requests `max + 1` rows to learn whether a next page exists, because the
+ * backend does not report a total (see listPage.ts).
+ */
+export async function listInvoicePage(filters: InvoiceListFilters = {}): Promise<ListPage<Invoice>> {
+  const max = filters.max ?? DEFAULT_PAGE_SIZE;
+  const offset = filters.offset ?? 0;
+  const params: Record<string, unknown> = {
+    max: max + 1,
+    offset,
+    sort: 'dateCreated',
+    order: 'desc',
+  };
+  if (filters.search?.trim()) params.search = filters.search.trim();
+  if (filters.from) params.from = filters.from;
+  if (filters.to) params.to = filters.to;
+
+  const action = filters.archived ? 'archived' : 'index';
+  const response = await apiClient.get<Invoice[]>(`${BASE_URL}/${action}.json?${toQueryString(params)}`);
+  const page = toListPage(response, offset, max);
+  return { ...page, items: page.items.map(transformInvoice) };
 }
 
 /**
