@@ -238,14 +238,19 @@ export interface InvoiceItem extends BaseEntity {
 }
 
 export interface InvoicePayment extends BaseEntity {
-  invoice: { id: string };
+  // Changed (SOUPFIN-177): FK refs carry serialised/class like every Grails FK
+  invoice: { id: string; serialised?: string; class?: string };
   amount: number;
   paymentDate: string;
-  // Changed: PaymentMethod is a domain class FK, not a string enum
+  // Changed: PaymentMethod is a domain class FK, not a string enum.
+  // The REST index/show only send { id, class, serialised } — no `name`.
   paymentMethod?: { id: string; name?: string; serialised?: string; class?: string };
-  payInAccount?: { id: string; name?: string; code?: string }; // Added: Bank/cash account for deposit
+  payInAccount?: { id: string; name?: string; code?: string; serialised?: string; class?: string }; // Added: Bank/cash account for deposit
   currency?: string; // Added: Payment currency
-  reference?: string;
+  exchangeRate?: number; // Added (SOUPFIN-177): backend field
+  quickReference?: string; // Added (SOUPFIN-177): SbDomain short id, e.g. "03E4211FE7"
+  totalCount?: number; // Added (SOUPFIN-177): list-only — Grails repeats the filtered total on every index row
+  reference?: string; // NOTE: not a backend InvoicePayment field; kept for older callers
   notes?: string;
 }
 
@@ -322,15 +327,20 @@ export interface BillItem extends BaseEntity {
 }
 
 export interface BillPayment extends BaseEntity {
-  bill: { id: string };
+  // Changed (SOUPFIN-177): FK refs carry serialised/class like every Grails FK
+  bill: { id: string; serialised?: string; class?: string };
   amount: number;
   paymentDate: string;
-  // Changed: PaymentMethod is a domain class FK, not a string enum
+  // Changed: PaymentMethod is a domain class FK, not a string enum.
+  // The REST index/show only send { id, class, serialised } — no `name`.
   paymentMethod?: { id: string; name?: string; serialised?: string; class?: string };
-  payOutAccount?: { id: string; name?: string; code?: string }; // Added: Bank/cash account for payment
+  payOutAccount?: { id: string; name?: string; code?: string; serialised?: string; class?: string }; // Added: Bank/cash account for payment
   paymentReceipt?: string; // Added: File upload reference for payment receipt
   currency?: string; // Added: Payment currency
-  reference?: string;
+  exchangeRate?: number; // Added (SOUPFIN-177): backend field
+  quickReference?: string; // Added (SOUPFIN-177): SbDomain short id, e.g. "08FF1C9C7D"
+  totalCount?: number; // Added (SOUPFIN-177): list-only — Grails repeats the filtered total on every index row
+  reference?: string; // NOTE: not a backend BillPayment field; kept for older callers
   notes?: string;
 }
 
