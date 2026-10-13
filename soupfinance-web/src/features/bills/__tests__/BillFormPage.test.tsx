@@ -19,6 +19,8 @@ vi.mock('../../../api/endpoints/bills', async () => {
     getBill: vi.fn(),
     createBill: vi.fn(),
     updateBill: vi.fn(),
+    // Added (SOUPFIN-175): removed lines are deleted after the update
+    deleteBillItem: vi.fn(),
     // SOUPFIN-38: pure helper, no network — keep the real implementation so the
     // edit-mode hydration exercises real FK-reference resolution.
     resolveBillItemTaxEntryId: actual.resolveBillItemTaxEntryId,
@@ -50,7 +52,7 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
-import { getBill, createBill, updateBill } from '../../../api/endpoints/bills';
+import { getBill, createBill, updateBill, deleteBillItem } from '../../../api/endpoints/bills';
 import { listVendors } from '../../../api/endpoints/vendors';
 // Fix: Import domainData mocks — component needs tax rates for dropdown options
 import { listTaxRates, listBillServices } from '../../../api/endpoints/domainData';
@@ -741,6 +743,135 @@ describe('BillFormPage', () => {
         expect(mockNavigate).toHaveBeenCalledWith('/bills/bill-123');
       });
     });
+  });
+
+  // Added (SOUPFIN-175): bill/update.json leaves a line it is not sent on the bill, so the
+  // form deletes the lines the user removed — and only after the update succeeds.
+  describe('removed lines are deleted on save (SOUPFIN-175)', () => {
+    function billWithLines(count: number) {
+      return createMockBill({
+        id: 'bill-123',
+        vendor: { id: 'vendor-1', name: 'Acme Supplies' },
+        billItemList: Array.from({ length: count }, (_, i) => ({
+          id: `item-${i + 1}`,
+          bill: { id: 'bill-123' },
+          description: `Line ${i + 1}`,
+          quantity: 1,
+          unitPrice: 1_000_000 + i,
+          taxRate: 0,
+          amount: 1_000_000 + i,
+        })),
+      } as Partial<Bill>);
+    }
+
+    async function loadEditForm(bill: Bill) {
+      vi.mocked(listVendors).mockResolvedValue([
+        createMockVendor({ id: 'vendor-1', name: 'Acme Supplies' }),
+      ]);
+      vi.mocked(getBill).mockResolvedValue(bill);
+      renderBillFormPage('bill-123');
+      const count = bill.billItemList?.length ?? 0;
+      await waitFor(() => {
+        expect(screen.getByTestId(`bill-item-description-${count - 1}`)).toHaveValue(
+          `Line ${count}`
+        );
+      });
+    }
+
+    it('deletes a removed saved line after the update, and sends only the kept line', async () => {
+      const user = userEvent.setup();
+      const calls: string[] = [];
+      vi.mocked(updateBill).mockImplementation(async () => {
+        calls.push('update');
+        return billWithLines(1);
+      });
+      vi.mocked(deleteBillItem).mockImplementation(async (itemId: string) => {
+        calls.push(`delete:${itemId}`);
+      });
+
+      await loadEditForm(billWithLines(2));
+      await user.click(screen.getByTestId('bill-item-remove-1'));
+      await user.click(screen.getByTestId('bill-form-save-button'));
+
+      await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/bills/bill-123'));
+      expect(calls).toEqual(['update', 'delete:item-2']);
+      const sent = vi.mocked(updateBill).mock.calls[0][1] as Record<string, unknown>;
+      expect(sent['billItemList[0].id']).toBe('item-1');
+      expect(Object.keys(sent).some((k) => k.startsWith('billItemList[1]'))).toBe(false);
+    });
+
+    it('deletes nothing when no saved line was removed', async () => {
+      const user = userEvent.setup();
+      vi.mocked(updateBill).mockResolvedValue(billWithLines(2));
+
+      await loadEditForm(billWithLines(2));
+      await user.click(screen.getByTestId('bill-form-save-button'));
+
+      await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/bills/bill-123'));
+      expect(deleteBillItem).not.toHaveBeenCalled();
+    });
+
+    it('does not delete a line that was added and removed before saving', async () => {
+      const user = userEvent.setup();
+      vi.mocked(updateBill).mockResolvedValue(billWithLines(1));
+
+      await loadEditForm(billWithLines(1));
+      await user.click(screen.getByTestId('bill-add-item-button'));
+      await user.click(screen.getByTestId('bill-item-remove-1'));
+      await user.click(screen.getByTestId('bill-form-save-button'));
+
+      await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/bills/bill-123'));
+      expect(deleteBillItem).not.toHaveBeenCalled();
+    });
+
+    it('deletes nothing when the update is refused, and shows the error', async () => {
+      const user = userEvent.setup();
+      vi.mocked(updateBill).mockRejectedValue(new Error('Update failed'));
+
+      await loadEditForm(billWithLines(2));
+      await user.click(screen.getByTestId('bill-item-remove-1'));
+      await user.click(screen.getByTestId('bill-form-save-button'));
+
+      expect(await screen.findByTestId('bill-form-error-message')).toBeInTheDocument();
+      expect(deleteBillItem).not.toHaveBeenCalled();
+      expect(mockNavigate).not.toHaveBeenCalledWith('/bills/bill-123');
+    });
+
+    it('stops and reports the error when a line delete fails', async () => {
+      const user = userEvent.setup();
+      vi.mocked(updateBill).mockResolvedValue(billWithLines(1));
+      vi.mocked(deleteBillItem).mockRejectedValue(new Error('Delete refused'));
+
+      await loadEditForm(billWithLines(3));
+      await user.click(screen.getByTestId('bill-item-remove-2'));
+      await user.click(screen.getByTestId('bill-item-remove-1'));
+      await user.click(screen.getByTestId('bill-form-save-button'));
+
+      expect(await screen.findByTestId('bill-form-error-message')).toBeInTheDocument();
+      expect(deleteBillItem).toHaveBeenCalledTimes(1);
+      expect(mockNavigate).not.toHaveBeenCalledWith('/bills/bill-123');
+    });
+
+    it('deletes every removed line of a long bill exactly once', async () => {
+      const user = userEvent.setup();
+      vi.mocked(updateBill).mockResolvedValue(billWithLines(1));
+      vi.mocked(deleteBillItem).mockResolvedValue(undefined);
+
+      await loadEditForm(billWithLines(60));
+      // Remove every line but the first, from the bottom up.
+      for (let i = 59; i >= 1; i--) {
+        fireEvent.click(screen.getByTestId(`bill-item-remove-${i}`));
+      }
+      expect(screen.queryByTestId('bill-item-description-1')).not.toBeInTheDocument();
+      await user.click(screen.getByTestId('bill-form-save-button'));
+
+      await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/bills/bill-123'));
+      const deleted = vi.mocked(deleteBillItem).mock.calls.map(([itemId]) => itemId);
+      expect(deleted).toHaveLength(59);
+      expect(new Set(deleted).size).toBe(59);
+      expect(deleted).not.toContain('item-1');
+      // 60 rows re-render on every click; the 5s default is too tight under a full parallel run.
+    }, 30_000);
   });
 
   describe('form validation', () => {

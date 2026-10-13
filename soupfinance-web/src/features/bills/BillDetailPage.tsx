@@ -181,6 +181,19 @@ export function BillDetailPage() {
         </div>
       </div>
 
+      {/* Added (SOUPFIN-175): a refused delete used to look like success. Say so instead. */}
+      {deleteMutation.isError && (
+        <div
+          className="bg-danger/10 border border-danger/30 rounded-lg p-4 text-danger text-sm"
+          role="alert"
+          data-testid="bill-delete-error"
+        >
+          {deleteMutation.error?.name === 'BillDeleteBlockedError'
+            ? 'This bill was not deleted. It still has line items or tax entries, so the server kept it.'
+            : 'Could not delete this bill. Please try again.'}
+        </div>
+      )}
+
       {/* Bill Summary Card */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Bill Info */}

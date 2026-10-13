@@ -314,11 +314,44 @@ export async function updateBill(id: string, data: Partial<Bill>): Promise<Bill>
 }
 
 /**
+ * Thrown when the backend answers a bill DELETE without deleting anything.
+ *
+ * Added (SOUPFIN-175): the backend's DeleteInterceptor sends every JSON delete
+ * through UtilityController.deleteChecker. It counts the bill's OWN line items
+ * and tax rows as linked records, so for any bill with a line it replies 200
+ * with a `relatedList` and leaves the bill untouched. Treating that 200 as
+ * success took the user back to the list with the bill still in it. Same gate
+ * as ClientDeleteBlockedError (SOUPFIN-169).
+ */
+export class BillDeleteBlockedError extends Error {
+  readonly relatedModules: string[];
+
+  constructor(relatedModules: string[]) {
+    super('This bill was not deleted because it still has linked records.');
+    this.name = 'BillDeleteBlockedError';
+    this.relatedModules = relatedModules;
+  }
+}
+
+/**
  * Delete bill (soft delete)
  * DELETE /rest/bill/delete/:id.json
+ *
+ * Resolves only when the backend actually deleted the bill.
+ * Changed (SOUPFIN-175): rejects with BillDeleteBlockedError when it returned a
+ * `relatedList` instead.
  */
 export async function deleteBill(id: string): Promise<void> {
-  await apiClient.delete(`${BASE_URL}/delete/${id}.json`);
+  const response = await apiClient.delete<{ relatedList?: Array<{ relatedModule?: string }> }>(
+    `${BASE_URL}/delete/${id}.json`
+  );
+  const relatedList = response?.data?.relatedList;
+  if (Array.isArray(relatedList) && relatedList.length > 0) {
+    const modules = [
+      ...new Set(relatedList.map((r) => r?.relatedModule).filter((m): m is string => !!m)),
+    ];
+    throw new BillDeleteBlockedError(modules);
+  }
 }
 
 // =============================================================================

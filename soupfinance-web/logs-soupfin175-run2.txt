@@ -1,0 +1,41 @@
+
+Running 1 test using 1 worker
+
+[SOUPFIN-175] created header: {"id":"ff41034fcdb94c75b9c36f61777925c7","quickReference":"61777925C7","serialised":"Bill((0000 SOUPFIN-175 Vendor 1791901646260), LGC numberprefix KMYKD718, 39)","totalCount":null,"dateCreated":"2026-10-13T14:27:43Z","lastUpdated":"2026-10-13T14:27:43Z","archived":false,"tenantId":"ff8081817217e9f3017217f19ccc0000","class":"soupbroker.finance.Bill","numberPrefix":"LGC numberprefix KMYKD718","number":39,"billNumber":"LGC numberprefix KMYKD71839","purchaseOrderNumber":null,"salesOrderNumber":null,"billDate":"2026-10-13T00:00:00Z","paymentDate":"2026-11-12T00:00:00Z","lastItemDate":null,"status":"PENDING","currency":null,"baseCurrency":"GHS","exchangeRate":1,"subTotal":3400,"total":3850,"baseTotal":3850,"paidAmount":0,"basePaidAmount":0,"amountDue":3850,"totalTaxAmount":450,"overPaidAmount":null,"vendor":{"id":"5b73d1a97dd74c31aff546348c8ae841","class":"soupbroker.trading.Vendor$HibernateProxy$zv8SmVOc","serialised":"(0000 SOUPFIN-175 Vendor 1791901646260)","quickReference":"348C8AE841"},"feeType":null,"accountAttributed":false}
+  ✘  1 [firefox] › e2e/integration/soupfin-175-bill-lifecycle.integration.spec.ts:255:3 › SOUPFIN-175 bill lifecycle on the LXC backend › create, edit, pay, print and delete a taxed bill (58.7s)
+
+
+  1) [firefox] › e2e/integration/soupfin-175-bill-lifecycle.integration.spec.ts:255:3 › SOUPFIN-175 bill lifecycle on the LXC backend › create, edit, pay, print and delete a taxed bill › 3. edit: change qty, change the tax, remove line 2 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveValue[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  getByTestId('bill-item-description-1')
+    Expected: [32m"SOUPFIN-175 co[7murier (untaxed[27m)"[39m
+    Received: [31m"SOUPFIN-175 co[7mnsulting (VAT-S[27m)"[39m
+    Timeout:  30000ms
+
+    Call log:
+    [2m  - Expect "toHaveValue" with timeout 30000ms[22m
+    [2m  - waiting for getByTestId('bill-item-description-1')[22m
+    [2m    33 × locator resolved to <input type="text" placeholder="Item description" data-testid="bill-item-description-1" value="SOUPFIN-175 consulting (VAT-S)" class="w-full h-10 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-3 text-text-light dark:text-text-dark focus:border-primary focus:ring-1 focus:ring-primary/50"/>[22m
+    [2m       - unexpected value "SOUPFIN-175 consulting (VAT-S)"[22m
+
+
+      371 |       await expect(page.getByTestId('bill-form-heading')).toBeVisible({ timeout: 30000 });
+      372 |       // Wait for the saved lines and their tax to populate the form.
+    > 373 |       await expect(page.getByTestId('bill-item-description-1')).toHaveValue(LINE_2.description, {
+          |                                                                 ^
+      374 |         timeout: 30000,
+      375 |       });
+      376 |       await expect(page.getByTestId('bill-tax')).toHaveText(money(CREATED.tax), { timeout: 30000 });
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-175-120133-lbnp/soupfinance-web/e2e/integration/soupfin-175-bill-lifecycle.integration.spec.ts:373:65
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-175-120133-lbnp/soupfinance-web/e2e/integration/soupfin-175-bill-lifecycle.integration.spec.ts:368:5
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results-lxc/soupfin-175-bill-lifecycle-362f9-int-and-delete-a-taxed-bill-firefox/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results-lxc/soupfin-175-bill-lifecycle-362f9-int-and-delete-a-taxed-bill-firefox/error-context.md
+
+  1 failed
+    [firefox] › e2e/integration/soupfin-175-bill-lifecycle.integration.spec.ts:255:3 › SOUPFIN-175 bill lifecycle on the LXC backend › create, edit, pay, print and delete a taxed bill 

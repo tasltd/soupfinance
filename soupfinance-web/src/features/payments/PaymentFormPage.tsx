@@ -11,7 +11,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { listInvoices, recordInvoicePayment } from '../../api/endpoints/invoices';
-import { listBills, recordBillPayment } from '../../api/endpoints/bills';
+import { listBills, getBill, recordBillPayment } from '../../api/endpoints/bills';
 import { useFormatCurrency, useCurrencySymbol } from '../../stores';
 import { useLedgerAccounts } from '../../hooks/useLedgerAccounts';
 import { usePaymentMethods } from '../../hooks/usePaymentMethods';
@@ -82,10 +82,27 @@ export function PaymentFormPage() {
     retry: false,
   });
 
+  // Fix (SOUPFIN-175): bill/index.json reports every amount as 0 — `_bill.gson`
+  // falls back to zeros when the line items are not loaded, which they never are
+  // on the list — so the balance-due filter below dropped EVERY bill and "Record
+  // Payment" on a bill opened a form with nothing to pick. bill/show is right, and
+  // getBill() reads it, so fetch the bill the user came from directly.
+  const { data: preselectedBill, isLoading: isLoadingPreselectedBill } = useQuery({
+    queryKey: ['bill', preselectedBillId],
+    queryFn: () => getBill(preselectedBillId!),
+    enabled: !!preselectedBillId && paymentType === 'bill',
+    retry: false,
+  });
+
   // Added: Filter to bills with balance due
-  const unpaidBills = bills?.filter(
-    (bill) => bill.status !== 'PAID' && (bill.amountDue || 0) > 0
-  );
+  // Changed (SOUPFIN-175): the bill fetched by id replaces its list copy, whose amounts are 0.
+  const isUnpaid = (bill: Bill) => bill.status !== 'PAID' && (bill.amountDue || 0) > 0;
+  const unpaidBills = bills
+    ? [
+        ...(preselectedBill && isUnpaid(preselectedBill) ? [preselectedBill] : []),
+        ...bills.filter((bill) => bill.id !== preselectedBill?.id && isUnpaid(bill)),
+      ]
+    : undefined;
 
   // Added: Fetch bank/cash accounts for payInAccount/payOutAccount selection
   const { data: ledgerAccounts } = useLedgerAccounts();
@@ -168,33 +185,49 @@ export function PaymentFormPage() {
       return;
     }
 
+    // Added (SOUPFIN-175): the backend refuses a payment without this account
+    // (InvoicePayment.payInAccount and BillPayment.payOutAccount are nullable:false).
+    if (!bankAccountId) {
+      setFormError(
+        paymentType === 'invoice'
+          ? 'Please select the bank or cash account the payment goes into'
+          : 'Please select the bank or cash account the payment comes from'
+      );
+      return;
+    }
+
     // Submit based on payment type
-    // Changed: Send paymentMethod.id as FK reference (domain class, not string)
+    // Fix (SOUPFIN-175): foreign keys as nested objects. Dot-notation keys such as
+    // 'bill.id' do not bind in a JSON body, so every payment was refused 422
+    // "Property [bill] cannot be null" (checked against the LXC backend).
     if (paymentType === 'invoice') {
       invoicePaymentMutation.mutate({
-        'invoice.id': selectedId,
+        invoice: { id: selectedId },
         amount: paymentAmount,
         paymentDate,
-        ...(paymentMethodId && { 'paymentMethod.id': paymentMethodId }),
+        ...(paymentMethodId && { paymentMethod: { id: paymentMethodId } }),
         reference: reference || undefined,
         notes: notes || undefined,
-        ...(bankAccountId && { 'payInAccount.id': bankAccountId }),
+        payInAccount: { id: bankAccountId },
       } as unknown as Partial<InvoicePayment>);
     } else {
       billPaymentMutation.mutate({
-        'bill.id': selectedId,
+        bill: { id: selectedId },
         amount: paymentAmount,
         paymentDate,
-        ...(paymentMethodId && { 'paymentMethod.id': paymentMethodId }),
+        ...(paymentMethodId && { paymentMethod: { id: paymentMethodId } }),
         reference: reference || undefined,
         notes: notes || undefined,
-        ...(bankAccountId && { 'payOutAccount.id': bankAccountId }),
+        payOutAccount: { id: bankAccountId },
       } as unknown as Partial<BillPayment>);
     }
   };
 
   const isPending = invoicePaymentMutation.isPending || billPaymentMutation.isPending;
-  const isLoadingData = paymentType === 'invoice' ? isLoadingInvoices : isLoadingBills;
+  const isLoadingData =
+    paymentType === 'invoice'
+      ? isLoadingInvoices
+      : isLoadingBills || (!!preselectedBillId && isLoadingPreselectedBill);
 
   // Added: Detect Finance module disabled (403 on the source list endpoint)
   // We only check the active tab's endpoint because the other one is disabled by `enabled: false`.
@@ -427,7 +460,7 @@ export function PaymentFormPage() {
             {/* Added: Bank/Cash Account selection */}
             <div className="flex flex-col gap-2">
               <label className="text-sm font-medium text-text-light dark:text-text-dark">
-                {paymentType === 'invoice' ? 'Deposit To (Bank/Cash Account)' : 'Pay From (Bank/Cash Account)'}
+                {paymentType === 'invoice' ? 'Deposit To (Bank/Cash Account)' : 'Pay From (Bank/Cash Account)'} *
               </label>
               <select
                 value={bankAccountId}

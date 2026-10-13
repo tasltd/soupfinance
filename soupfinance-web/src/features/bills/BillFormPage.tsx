@@ -13,7 +13,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getBill, createBill, updateBill, resolveBillItemTaxEntryId } from '../../api/endpoints/bills';
+import {
+  getBill,
+  createBill,
+  updateBill,
+  deleteBillItem,
+  resolveBillItemTaxEntryId,
+} from '../../api/endpoints/bills';
 import { listVendors } from '../../api/endpoints/vendors';
 import { listTaxRates, listBillServices, DEFAULT_CURRENCIES } from '../../api/endpoints/domainData';
 import { useFormatCurrency } from '../../stores';
@@ -167,8 +173,25 @@ export function BillFormPage() {
   });
 
   // Added: Update mutation
+  // Fix (SOUPFIN-175): a line removed in the form must be deleted on the backend.
+  // bill/update.json only touches the lines it is sent; a line left out of
+  // `billItemList` stays on the bill, so the saved total kept the removed line
+  // (4,900 instead of 4,500 against the LXC backend). Delete each removed line
+  // AFTER the update succeeds, so a refused update never loses a line.
   const updateMutation = useMutation({
-    mutationFn: (data: Record<string, unknown>) => updateBill(id!, data),
+    mutationFn: async ({
+      data,
+      removedItemIds,
+    }: {
+      data: Record<string, unknown>;
+      removedItemIds: string[];
+    }) => {
+      const updated = await updateBill(id!, data);
+      for (const itemId of removedItemIds) {
+        await deleteBillItem(itemId);
+      }
+      return updated;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bills'] });
       queryClient.invalidateQueries({ queryKey: ['bill', id] });
@@ -310,7 +333,12 @@ export function BillFormPage() {
     });
 
     if (isEdit) {
-      updateMutation.mutate(formData);
+      // Added (SOUPFIN-175): lines the bill had when loaded that the form no longer has
+      const keptIds = new Set(lineItems.map((item) => item.id).filter(Boolean));
+      const removedItemIds = (bill?.billItemList ?? [])
+        .map((item) => item.id)
+        .filter((itemId): itemId is string => !!itemId && !keptIds.has(itemId));
+      updateMutation.mutate({ data: formData, removedItemIds });
     } else {
       createMutation.mutate(formData);
     }

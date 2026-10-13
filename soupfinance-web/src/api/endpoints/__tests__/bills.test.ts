@@ -511,3 +511,90 @@ describe('resolveBillItemTaxRate (SOUPFIN-44)', () => {
     ).toBe(0);
   });
 });
+
+// Added (SOUPFIN-175): the backend's delete gate answers 200 + relatedList and deletes
+// nothing for any bill with a line — its own BillItems and BillTaxEntries count as
+// linked records. Captured from the LXC backend on 2026-10-13. That must not read as success.
+describe('deleteBill (SOUPFIN-175)', () => {
+  let mockDelete: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockDelete = vi.fn();
+    (axios.create as ReturnType<typeof vi.fn>).mockReturnValue({
+      interceptors: { request: { use: vi.fn() }, response: { use: vi.fn() } },
+      get: vi.fn(),
+      post: vi.fn(),
+      put: vi.fn(),
+      delete: mockDelete,
+    });
+  });
+
+  const related = (module: string, i: number) => ({
+    relatedToClass: `soupbroker.finance.${module.replace(/ /g, '')}`,
+    relatedToId: `rel-${i}`,
+    relatedToProperty: 'bill',
+    relatedModule: module,
+    targetDomainClassName: 'bill',
+    targetParentId: 'bill-1',
+  });
+
+  it('resolves when the backend deletes (204, empty body)', async () => {
+    mockDelete.mockResolvedValue({ status: 204, data: '' });
+    vi.resetModules();
+    const { deleteBill } = await import('../bills');
+
+    await expect(deleteBill('bill-1')).resolves.toBeUndefined();
+    expect(mockDelete).toHaveBeenCalledWith('/bill/delete/bill-1.json');
+  });
+
+  it('resolves when the backend returns an empty relatedList', async () => {
+    mockDelete.mockResolvedValue({ status: 200, data: { relatedList: [] } });
+    vi.resetModules();
+    const { deleteBill } = await import('../bills');
+
+    await expect(deleteBill('bill-1')).resolves.toBeUndefined();
+  });
+
+  it('rejects with BillDeleteBlockedError when the bill still has lines and tax rows', async () => {
+    mockDelete.mockResolvedValue({
+      status: 200,
+      data: {
+        relatedList: [related('Bill Item', 1), related('Bill Tax Entry', 2), related('Bill Tax Entry', 3)],
+        targetControllerName: 'bill',
+        targetId: 'bill-1',
+      },
+    });
+    vi.resetModules();
+    const { deleteBill, BillDeleteBlockedError } = await import('../bills');
+
+    const error = await deleteBill('bill-1').catch((e) => e);
+    expect(error).toBeInstanceOf(BillDeleteBlockedError);
+    expect(error.name).toBe('BillDeleteBlockedError');
+    expect(error.relatedModules).toEqual(['Bill Item', 'Bill Tax Entry']);
+  });
+
+  it('still rejects, with each module listed once, when 500 linked records come back', async () => {
+    const modules = ['Bill Item', 'Bill Tax Entry', 'Bill Payment'];
+    mockDelete.mockResolvedValue({
+      status: 200,
+      data: { relatedList: Array.from({ length: 500 }, (_, i) => related(modules[i % 3], i)) },
+    });
+    vi.resetModules();
+    const { deleteBill } = await import('../bills');
+
+    const error = await deleteBill('bill-1').catch((e) => e);
+    expect(error.relatedModules).toEqual(modules);
+  });
+
+  it('propagates a transport failure unchanged', async () => {
+    const failure = Object.assign(new Error('Request failed with status code 500'), {
+      response: { status: 500 },
+    });
+    mockDelete.mockRejectedValue(failure);
+    vi.resetModules();
+    const { deleteBill } = await import('../bills');
+
+    await expect(deleteBill('bill-1')).rejects.toBe(failure);
+  });
+});

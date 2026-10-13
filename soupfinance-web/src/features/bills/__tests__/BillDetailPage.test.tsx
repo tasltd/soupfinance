@@ -569,6 +569,61 @@ describe('BillDetailPage', () => {
       confirmSpy.mockRestore();
     });
 
+    // Added (SOUPFIN-175): the backend refuses to delete a bill that still has lines
+    it('stays on the bill and says so when the backend refuses the delete', async () => {
+      const user = userEvent.setup();
+      const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+      const { BillDeleteBlockedError } = await vi.importActual<
+        typeof import('../../../api/endpoints/bills')
+      >('../../../api/endpoints/bills');
+
+      vi.mocked(getBill).mockResolvedValue(createMockBill());
+      vi.mocked(listBillPayments).mockResolvedValue([]);
+      vi.mocked(deleteBill).mockRejectedValue(
+        new BillDeleteBlockedError(['Bill Item', 'Bill Tax Entry'])
+      );
+
+      renderBillDetailPage();
+      await user.click(await screen.findByTestId('bill-delete-button'));
+
+      const alert = await screen.findByTestId('bill-delete-error');
+      expect(alert).toHaveTextContent('This bill was not deleted');
+      expect(alert).toHaveTextContent('line items or tax entries');
+      expect(mockNavigate).not.toHaveBeenCalled();
+      expect(screen.getByTestId('bill-delete-button')).toBeEnabled();
+
+      confirmSpy.mockRestore();
+    });
+
+    it('shows a retry message when the delete fails for another reason', async () => {
+      const user = userEvent.setup();
+      const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+      vi.mocked(getBill).mockResolvedValue(createMockBill());
+      vi.mocked(listBillPayments).mockResolvedValue([]);
+      vi.mocked(deleteBill).mockRejectedValue(new Error('Request failed with status code 500'));
+
+      renderBillDetailPage();
+      await user.click(await screen.findByTestId('bill-delete-button'));
+
+      expect(await screen.findByTestId('bill-delete-error')).toHaveTextContent(
+        'Could not delete this bill. Please try again.'
+      );
+      expect(mockNavigate).not.toHaveBeenCalled();
+
+      confirmSpy.mockRestore();
+    });
+
+    it('shows no delete message before a delete is attempted', async () => {
+      vi.mocked(getBill).mockResolvedValue(createMockBill());
+      vi.mocked(listBillPayments).mockResolvedValue([]);
+
+      renderBillDetailPage();
+      await screen.findByTestId('bill-delete-button');
+
+      expect(screen.queryByTestId('bill-delete-error')).not.toBeInTheDocument();
+    });
+
     it('does not delete when confirmation is cancelled', async () => {
       const user = userEvent.setup();
       const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);

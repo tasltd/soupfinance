@@ -1,0 +1,36 @@
+
+Running 1 test using 1 worker
+
+[SOUPFIN-175] created header: {"id":"9058ec1b417c44e88f0c21b9bed3d5f6","quickReference":"B9BED3D5F6","serialised":"Bill((0000 SOUPFIN-175 Vendor 1791902471055), LGC numberprefix KMYKD718, 38)","totalCount":null,"dateCreated":"2026-10-13T14:41:24Z","lastUpdated":"2026-10-13T14:41:24Z","archived":false,"tenantId":"ff8081817217e9f3017217f19ccc0000","class":"soupbroker.finance.Bill","numberPrefix":"LGC numberprefix KMYKD718","number":38,"billNumber":"LGC numberprefix KMYKD71838","purchaseOrderNumber":null,"salesOrderNumber":null,"billDate":"2026-10-13T00:00:00Z","paymentDate":"2026-11-12T00:00:00Z","lastItemDate":null,"status":"PENDING","currency":null,"baseCurrency":"GHS","exchangeRate":1,"subTotal":3400,"total":3850,"baseTotal":3850,"paidAmount":0,"basePaidAmount":0,"amountDue":3850,"totalTaxAmount":450,"overPaidAmount":null,"vendor":{"id":"1ae2b1af7b3c4c47ba5b7491cf22561c","class":"soupbroker.trading.Vendor$HibernateProxy$zv8SmVOc","serialised":"(0000 SOUPFIN-175 Vendor 1791902471055)","quickReference":"91CF22561C"},"feeType":null,"accountAttributed":false}
+[SOUPFIN-175] edited header: {"id":"9058ec1b417c44e88f0c21b9bed3d5f6","quickReference":"B9BED3D5F6","serialised":"Bill((0000 SOUPFIN-175 Vendor 1791902471055), LGC numberprefix KMYKD718, 38)","totalCount":null,"dateCreated":"2026-10-13T14:41:24Z","lastUpdated":"2026-10-13T14:41:33Z","archived":false,"tenantId":"ff8081817217e9f3017217f19ccc0000","class":"soupbroker.finance.Bill","numberPrefix":"LGC numberprefix KMYKD718","number":38,"billNumber":"LGC numberprefix KMYKD71838","purchaseOrderNumber":null,"salesOrderNumber":null,"billDate":"2026-10-13T00:00:00Z","paymentDate":"2026-11-12T00:00:00Z","lastItemDate":null,"status":"PENDING","currency":null,"baseCurrency":"GHS","exchangeRate":1,"subTotal":4500,"total":4725,"baseTotal":4725,"paidAmount":0,"basePaidAmount":0,"amountDue":4725,"totalTaxAmount":225,"overPaidAmount":null,"vendor":{"id":"1ae2b1af7b3c4c47ba5b7491cf22561c","class":"soupbroker.trading.Vendor$HibernateProxy$zv8SmVOc","serialised":"(0000 SOUPFIN-175 Vendor 1791902471055)","quickReference":"91CF22561C"},"feeType":null,"accountAttributed":false}
+[SOUPFIN-175] edited items: ["SOUPFIN-175 consulting (VAT-S)"]
+  ✘  1 [firefox] › e2e/integration/soupfin-175-bill-lifecycle.integration.spec.ts:263:3 › SOUPFIN-175 bill lifecycle on the LXC backend › create, edit, pay, print and delete a taxed bill (30.3s)
+
+
+  1) [firefox] › e2e/integration/soupfin-175-bill-lifecycle.integration.spec.ts:263:3 › SOUPFIN-175 bill lifecycle on the LXC backend › create, edit, pay, print and delete a taxed bill › 4. record a partial payment 
+
+    Error: billPayment save: {"errors":[{"object":"soupbroker.finance.BillPayment","field":"bill","rejected-value":null,"message":"Property [bill] of class [Bill Payment] cannot be null"},{"object":"soupbroker.finance.BillPayment","field":"payOutAccount","rejected-value":null,"message":"Property [payOutAccount] of class [Bill P
+
+    [2mexpect([22m[31mreceived[39m[2m).[22mtoBe[2m([22m[32mexpected[39m[2m) // Object.is equality[22m
+
+    Expected: [32m201[39m
+    Received: [31m422[39m
+
+      478 |       await page.getByTestId('submit-button').click();
+      479 |       const response = await saved;
+    > 480 |       expect(response.status(), `billPayment save: ${(await response.text()).slice(0, 300)}`).toBe(201);
+          |                                                                                               ^
+      481 |       await expect(page).toHaveURL(/\/payments$/, { timeout: 60000 });
+      482 |       await waitForAuthSettled(page);
+      483 |       await shot(page, '09-payments-after-save');
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-175-120133-lbnp/soupfinance-web/e2e/integration/soupfin-175-bill-lifecycle.integration.spec.ts:480:95
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-175-120133-lbnp/soupfinance-web/e2e/integration/soupfin-175-bill-lifecycle.integration.spec.ts:456:5
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results-lxc/soupfin-175-bill-lifecycle-362f9-int-and-delete-a-taxed-bill-firefox/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results-lxc/soupfin-175-bill-lifecycle-362f9-int-and-delete-a-taxed-bill-firefox/error-context.md
+
+  1 failed
+    [firefox] › e2e/integration/soupfin-175-bill-lifecycle.integration.spec.ts:263:3 › SOUPFIN-175 bill lifecycle on the LXC backend › create, edit, pay, print and delete a taxed bill 

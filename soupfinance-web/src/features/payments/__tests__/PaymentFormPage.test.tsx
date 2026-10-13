@@ -7,7 +7,7 @@
  * is forbidden — it should render a clear "module not available" page.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PaymentFormPage } from '../PaymentFormPage';
@@ -18,6 +18,8 @@ vi.mock('../../../api/endpoints/invoices', () => ({
 }));
 vi.mock('../../../api/endpoints/bills', () => ({
   listBills: vi.fn(),
+  // Added (SOUPFIN-175): the bill opened from its detail page is read by id
+  getBill: vi.fn(),
   recordBillPayment: vi.fn(),
 }));
 vi.mock('../../../stores', () => ({
@@ -27,15 +29,18 @@ vi.mock('../../../stores', () => ({
   },
   useCurrencySymbol: () => '$',
 }));
+// Changed (SOUPFIN-175): per-test accounts, for the payment payload tests
+const ledgerAccounts = vi.hoisted(() => ({ current: [] as Array<Record<string, unknown>> }));
 vi.mock('../../../hooks/useLedgerAccounts', () => ({
-  useLedgerAccounts: () => ({ data: [], isLoading: false }),
+  useLedgerAccounts: () => ({ data: ledgerAccounts.current, isLoading: false }),
 }));
 vi.mock('../../../hooks/usePaymentMethods', () => ({
   usePaymentMethods: () => ({ data: [], isLoading: false }),
 }));
 
-import { listInvoices } from '../../../api/endpoints/invoices';
-import { listBills } from '../../../api/endpoints/bills';
+import { listInvoices, recordInvoicePayment } from '../../../api/endpoints/invoices';
+import { listBills, getBill, recordBillPayment } from '../../../api/endpoints/bills';
+import type { Bill } from '../../../types';
 
 function buildAxiosError(status: number) {
   return {
@@ -45,13 +50,13 @@ function buildAxiosError(status: number) {
   };
 }
 
-function renderPage() {
+function renderPage(path = '/payments/new') {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
   });
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter>
+      <MemoryRouter initialEntries={[path]}>
         <PaymentFormPage />
       </MemoryRouter>
     </QueryClientProvider>
@@ -61,6 +66,7 @@ function renderPage() {
 describe('PaymentFormPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    ledgerAccounts.current = [];
   });
 
   describe('happy path — module enabled', () => {
@@ -136,6 +142,177 @@ describe('PaymentFormPage', () => {
       await screen.findByTestId('payment-form-page');
       await waitFor(() => expect(screen.getByTestId('payment-type-toggle')).toBeInTheDocument());
       expect(screen.queryByTestId('payment-form-module-disabled')).not.toBeInTheDocument();
+    });
+  });
+
+  // Added (SOUPFIN-175): bill/index.json reports every amount as 0, so the balance-due
+  // filter used to drop every bill and "Record Payment" opened an empty bill picker.
+  describe('bill opened from its detail page (SOUPFIN-175)', () => {
+    const bill = (id: string, amountDue: number, status: Bill['status'] = 'PENDING') =>
+      ({
+        id,
+        billNumber: `B-${id}`,
+        vendor: { id: 'v-1', name: 'Acme Supplies' },
+        status,
+        totalAmount: 4725,
+        amountPaid: 4725 - amountDue,
+        amountDue,
+      }) as Bill;
+
+    const options = () =>
+      Array.from(screen.getByTestId('select-document').querySelectorAll('option')).map(
+        (o) => o.value
+      );
+
+    beforeEach(() => {
+      vi.mocked(listInvoices).mockResolvedValue([]);
+    });
+
+    it('offers and selects the bill, with its real balance, though the list reports 0', async () => {
+      vi.mocked(listBills).mockResolvedValue([bill('bill-1', 0), bill('bill-2', 0)]);
+      vi.mocked(getBill).mockResolvedValue(bill('bill-1', 4725));
+
+      renderPage('/payments/new?billId=bill-1');
+
+      await waitFor(() => expect(screen.getByTestId('select-document')).toHaveValue('bill-1'));
+      expect(options()).toEqual(['', 'bill-1']);
+      expect(getBill).toHaveBeenCalledWith('bill-1');
+      expect(screen.getByTestId('select-document')).toHaveTextContent('Due: $4,725.00');
+      expect(screen.getByText('Balance due:')).toHaveTextContent('$4,725.00');
+    });
+
+    it('does not fetch a bill when none was preselected', async () => {
+      vi.mocked(listBills).mockResolvedValue([]);
+
+      renderPage('/payments/new');
+
+      await screen.findByTestId('payment-type-toggle');
+      expect(getBill).not.toHaveBeenCalled();
+    });
+
+    it('does not offer a preselected bill that is already paid', async () => {
+      vi.mocked(listBills).mockResolvedValue([bill('bill-1', 0, 'PAID')]);
+      vi.mocked(getBill).mockResolvedValue(bill('bill-1', 0, 'PAID'));
+
+      renderPage('/payments/new?billId=bill-1');
+
+      await waitFor(() => expect(getBill).toHaveBeenCalled());
+      await waitFor(() => expect(screen.getByTestId('select-document')).toBeInTheDocument());
+      expect(options()).toEqual(['']);
+    });
+
+    it('still renders the picker from the list when the bill fetch fails', async () => {
+      vi.mocked(listBills).mockResolvedValue([bill('bill-9', 120)]);
+      vi.mocked(getBill).mockRejectedValue(buildAxiosError(500));
+
+      renderPage('/payments/new?billId=bill-1');
+
+      await waitFor(() => expect(options()).toEqual(['', 'bill-9']));
+      expect(screen.queryByTestId('payment-form-module-disabled')).not.toBeInTheDocument();
+    });
+
+    it('lists the preselected bill once, first, among 500 unpaid bills', async () => {
+      const many = Array.from({ length: 500 }, (_, i) => bill(`bill-${i}`, 1_000_000 + i));
+      vi.mocked(listBills).mockResolvedValue(many);
+      vi.mocked(getBill).mockResolvedValue(bill('bill-250', 9_999_999));
+
+      renderPage('/payments/new?billId=bill-250');
+
+      await waitFor(() => expect(screen.getByTestId('select-document')).toHaveValue('bill-250'));
+      const values = options();
+      expect(values).toHaveLength(501);
+      expect(values[1]).toBe('bill-250');
+      expect(values.filter((v) => v === 'bill-250')).toHaveLength(1);
+      expect(screen.getByText('Balance due:')).toHaveTextContent('$9,999,999.00');
+    });
+  });
+
+  // Added (SOUPFIN-175): dot-notation keys ('bill.id') do not bind in a JSON body, and the
+  // backend requires the bank/cash account, so every payment was refused 422.
+  describe('payment payload (SOUPFIN-175)', () => {
+    const bank = { id: 'acct-bank', code: '1010', name: 'Main Bank', ledgerGroup: 'ASSET' };
+    const unpaidBill = {
+      id: 'bill-1', billNumber: 'B-1', vendor: { id: 'v-1', name: 'Acme' },
+      status: 'PENDING', totalAmount: 4725, amountPaid: 0, amountDue: 4725,
+    } as Bill;
+
+    function fillAndSubmit(amount: string, withAccount = true) {
+      fireEvent.change(screen.getByTestId('amount-input'), { target: { value: amount } });
+      if (withAccount) {
+        fireEvent.change(screen.getByTestId('bank-account-select'), { target: { value: bank.id } });
+      }
+      fireEvent.click(screen.getByTestId('submit-button'));
+    }
+
+    it('sends the bill, method and account as nested objects', async () => {
+      ledgerAccounts.current = [bank];
+      vi.mocked(listBills).mockResolvedValue([unpaidBill]);
+      vi.mocked(getBill).mockResolvedValue(unpaidBill);
+      vi.mocked(recordBillPayment).mockResolvedValue({} as never);
+
+      renderPage('/payments/new?billId=bill-1');
+      await waitFor(() => expect(screen.getByTestId('select-document')).toHaveValue('bill-1'));
+      fillAndSubmit('1000');
+
+      await waitFor(() => expect(recordBillPayment).toHaveBeenCalledTimes(1));
+      const sent = vi.mocked(recordBillPayment).mock.calls[0][0] as Record<string, unknown>;
+      expect(sent).toMatchObject({
+        bill: { id: 'bill-1' },
+        amount: 1000,
+        payOutAccount: { id: 'acct-bank' },
+      });
+      expect(Object.keys(sent).filter((k) => k.includes('.'))).toEqual([]);
+      expect(sent).not.toHaveProperty('paymentMethod');
+    });
+
+    it('sends an invoice payment with nested invoice and deposit account', async () => {
+      ledgerAccounts.current = [bank];
+      vi.mocked(listInvoices).mockResolvedValue([
+        { id: 'inv-1', number: 7, status: 'SENT', amountDue: 500 } as never,
+      ]);
+      vi.mocked(recordInvoicePayment).mockResolvedValue({} as never);
+
+      renderPage('/payments/new?invoiceId=inv-1');
+      await waitFor(() => expect(screen.getByTestId('select-document')).toHaveValue('inv-1'));
+      fillAndSubmit('500');
+
+      await waitFor(() => expect(recordInvoicePayment).toHaveBeenCalledTimes(1));
+      const sent = vi.mocked(recordInvoicePayment).mock.calls[0][0] as Record<string, unknown>;
+      expect(sent).toMatchObject({ invoice: { id: 'inv-1' }, amount: 500, payInAccount: { id: 'acct-bank' } });
+      expect(Object.keys(sent).filter((k) => k.includes('.'))).toEqual([]);
+    });
+
+    it('asks for the account instead of sending a payment the backend will refuse', async () => {
+      ledgerAccounts.current = [bank];
+      vi.mocked(listBills).mockResolvedValue([unpaidBill]);
+      vi.mocked(getBill).mockResolvedValue(unpaidBill);
+
+      renderPage('/payments/new?billId=bill-1');
+      await waitFor(() => expect(screen.getByTestId('select-document')).toHaveValue('bill-1'));
+      fillAndSubmit('1000', false);
+
+      expect(await screen.findByTestId('form-error')).toHaveTextContent(
+        'Please select the bank or cash account the payment comes from'
+      );
+      expect(recordBillPayment).not.toHaveBeenCalled();
+    });
+
+    it('offers every bank account from a long chart of accounts', async () => {
+      ledgerAccounts.current = [
+        ...Array.from({ length: 300 }, (_, i) => ({
+          id: `exp-${i}`, code: `5${i}`, name: `Vendor ${i}`, ledgerGroup: 'EXPENSE',
+        })),
+        ...Array.from({ length: 263 }, (_, i) => ({
+          id: `bank-${i}`, code: `1${i}`, name: `Bank ${i}`, ledgerGroup: 'ASSET',
+        })),
+      ];
+      vi.mocked(listBills).mockResolvedValue([unpaidBill]);
+      vi.mocked(getBill).mockResolvedValue(unpaidBill);
+
+      renderPage('/payments/new?billId=bill-1');
+      await waitFor(() => expect(screen.getByTestId('select-document')).toHaveValue('bill-1'));
+      const offered = screen.getByTestId('bank-account-select').querySelectorAll('option');
+      expect(offered).toHaveLength(264);
     });
   });
 });
