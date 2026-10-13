@@ -12,6 +12,8 @@
  */
 // Changed: Removed unused getCsrfTokenForEdit import (will be used when edit is implemented)
 import apiClient, { toQueryString, getCsrfToken, csrfQueryString } from '../client';
+// Added (SOUPFIN-163): server-side paging (max/offset + per-row totalCount)
+import { toPagedResult, fetchAllPages, SERVER_MAX_PAGE_SIZE, type PagedResult, type FetchAllResult } from '../paging';
 import type {
   LedgerAccount,
   LedgerTransaction,
@@ -214,17 +216,98 @@ export async function deleteLedgerAccount(id: string): Promise<void> {
 // =============================================================================
 
 /**
- * List ledger transactions with pagination
- * GET /rest/ledgerTransaction/index.json
+ * Added (SOUPFIN-163): filters for the ledger transaction index.
+ *
+ * The page uses friendly names; LedgerTransaction.searchList reads
+ * `ledgerAccount`, `from` and `to` (verified on LXC). The old names
+ * (`accountId`, `startDate`, `endDate`) were silently ignored, so the
+ * account and date filters returned every row.
  */
-export async function listLedgerTransactions(params?: ListParams & {
+export interface LedgerTransactionFilters {
+  accountId?: string;
   startDate?: string;
   endDate?: string;
-  accountId?: string;
-}): Promise<LedgerTransaction[]> {
-  const query = params ? `?${toQueryString(params)}` : '';
-  const response = await apiClient.get<LedgerTransaction[]>(`/ledgerTransaction/index.json${query}`);
-  return response.data;
+}
+
+// Added (SOUPFIN-163): translate page filters into the backend's param names.
+function ledgerTransactionQuery(params: ListParams & LedgerTransactionFilters = {}): Record<string, unknown> {
+  const { accountId, startDate, endDate, ...rest } = params;
+  return {
+    ...rest,
+    ledgerAccount: accountId || undefined,
+    from: startDate || undefined,
+    to: endDate || undefined,
+  };
+}
+
+/**
+ * Added (SOUPFIN-163): fill in display fields the index JSON leaves out.
+ *
+ * The index sends `notes` (no `description`), `quickReference` (no
+ * `transactionNumber`) and a shallow `ledgerAccount` with only id and
+ * `serialised`, e.g. "Cash (1001)[ Bank < ASSET ] - GHS".
+ */
+export function transformLedgerTransaction(raw: LedgerTransaction): LedgerTransaction {
+  const r = raw as LedgerTransaction & {
+    notes?: string;
+    quickReference?: string;
+    debit?: number;
+    credit?: number;
+    ledgerAccount?: { id: string; name?: string; code?: string; serialised?: string };
+  };
+  const account = r.ledgerAccount
+    ? {
+        ...r.ledgerAccount,
+        name: r.ledgerAccount.name || r.ledgerAccount.serialised?.split('[')[0].trim() || '',
+        code: r.ledgerAccount.code || '',
+      }
+    : undefined;
+  return {
+    ...r,
+    description: r.description || r.notes || '',
+    transactionNumber: r.transactionNumber || r.reference || r.quickReference || '',
+    amount: Number(r.amount ?? r.debit ?? r.credit ?? 0),
+    ledgerAccount: account,
+  };
+}
+
+/**
+ * List ledger transactions with pagination
+ * GET /rest/ledgerTransaction/index.json
+ *
+ * Fix (SOUPFIN-163): sends the filter names the backend reads.
+ */
+export async function listLedgerTransactions(params?: ListParams & LedgerTransactionFilters): Promise<LedgerTransaction[]> {
+  return (await listLedgerTransactionsPage(params ?? {})).rows;
+}
+
+/**
+ * Added (SOUPFIN-163): one server-side page of ledger transactions plus the
+ * filtered total (from the `totalCount` on each row).
+ */
+export async function listLedgerTransactionsPage(
+  params: ListParams & LedgerTransactionFilters
+): Promise<PagedResult<LedgerTransaction>> {
+  const max = params.max ?? 10;
+  const offset = params.offset ?? 0;
+  const query = toQueryString(ledgerTransactionQuery({ ...params, max, offset }));
+  const response = await apiClient.get<LedgerTransaction[]>(`/ledgerTransaction/index.json?${query}`);
+  const rows = (Array.isArray(response.data) ? response.data : []).map(transformLedgerTransaction);
+  return toPagedResult(rows, max, offset, response.headers as Record<string, unknown> | undefined);
+}
+
+/**
+ * Added (SOUPFIN-163): every ledger transaction matching the filters, fetched a
+ * server page (1000 rows) at a time. Used by CSV export and the account ledger.
+ */
+export async function listAllLedgerTransactions(
+  params: LedgerTransactionFilters & { sort?: string; order?: 'asc' | 'desc' } = {},
+  options: { maxPages?: number } = {}
+): Promise<FetchAllResult<LedgerTransaction>> {
+  return fetchAllPages(
+    (offset, max) => listLedgerTransactionsPage({ sort: 'transactionDate', order: 'desc', ...params, offset, max }),
+    { pageSize: SERVER_MAX_PAGE_SIZE, maxPages: options.maxPages }
+  );
 }
 
 /**
@@ -295,6 +378,30 @@ export async function getAccountBalance(accountId: string, asOf?: string): Promi
 }
 
 /**
+ * Added (SOUPFIN-163): sums of debits and credits posted to an account between
+ * two dates (inclusive, whole days).
+ * GET /rest/ledgerAccount/balance/:id.json?from=:from&to=:to
+ *
+ * The action also returns startingBalance/endingBalance, but those are signed
+ * by the account's ledgerState, which is null on many accounts. The raw debit
+ * and credit sums are always filled, so callers sign the balance themselves.
+ */
+export async function getAccountPeriodTotals(
+  accountId: string,
+  from: string,
+  to: string
+): Promise<{ debit: number; credit: number }> {
+  const query = toQueryString({ from, to });
+  const response = await apiClient.get<{ debit?: number | string; credit?: number | string }>(
+    `/ledgerAccount/balance/${accountId}.json?${query}`
+  );
+  return {
+    debit: Number(response.data?.debit ?? 0) || 0,
+    credit: Number(response.data?.credit ?? 0) || 0,
+  };
+}
+
+/**
  * Get trial balance from ledger accounts
  * GET /rest/ledgerAccount/trialBalance.json?asOf=:date
  *
@@ -332,6 +439,22 @@ export async function listVouchers(params?: ListParams & {
   const query = params ? `?${toQueryString(params)}` : '';
   const response = await apiClient.get<Voucher[]>(`/voucher/index.json${query}`);
   return response.data;
+}
+
+/**
+ * Added (SOUPFIN-163): one server-side page of vouchers plus the filtered total.
+ * `from`/`to` filter on the voucher's ledger transaction date.
+ */
+export async function listVouchersPage(params: ListParams & {
+  from?: string;
+  to?: string;
+  voucherType?: VoucherType;
+}): Promise<PagedResult<Voucher>> {
+  const max = params.max ?? 10;
+  const offset = params.offset ?? 0;
+  const response = await apiClient.get<Voucher[]>(`/voucher/index.json?${toQueryString({ ...params, max, offset })}`);
+  const rows = Array.isArray(response.data) ? response.data : [];
+  return toPagedResult(rows, max, offset, response.headers as Record<string, unknown> | undefined);
 }
 
 /**
@@ -476,6 +599,21 @@ export async function listTransactionGroups(params?: ListParams & {
 }
 
 /**
+ * Added (SOUPFIN-163): one server-side page of transaction groups plus the
+ * filtered total. Sort by `transactionDate`: the domain has no `groupDate`
+ * column and sorting on it returns a 500.
+ */
+export async function listTransactionGroupsPage(params: ListParams): Promise<PagedResult<LedgerTransactionGroup>> {
+  const max = params.max ?? 10;
+  const offset = params.offset ?? 0;
+  const response = await apiClient.get<LedgerTransactionGroup[]>(
+    `/ledgerTransactionGroup/index.json?${toQueryString({ ...params, max, offset })}`
+  );
+  const rows = Array.isArray(response.data) ? response.data : [];
+  return toPagedResult(rows, max, offset, response.headers as Record<string, unknown> | undefined);
+}
+
+/**
  * Get single transaction group by ID
  * GET /rest/ledgerTransactionGroup/show/:id.json
  */
@@ -589,7 +727,9 @@ export async function deleteTransactionGroup(id: string): Promise<void> {
 
 /**
  * Get ledger transactions for a specific account
- * GET /rest/ledgerTransaction/byAccount/:accountId.json
+ *
+ * Fix (SOUPFIN-163): there is no `byAccount` action on LedgerTransactionController
+ * (the old URL 404'd). The index action filters by account through `ledgerAccount`.
  *
  * Note: Named differently from reports.getAccountTransactions to avoid export conflict
  */
@@ -597,7 +737,5 @@ export async function getLedgerTransactionsByAccount(accountId: string, params?:
   startDate?: string;
   endDate?: string;
 }): Promise<LedgerTransaction[]> {
-  const query = params ? `?${toQueryString(params)}` : '';
-  const response = await apiClient.get<LedgerTransaction[]>(`/ledgerTransaction/byAccount/${accountId}.json${query}`);
-  return response.data;
+  return listLedgerTransactions({ ...params, accountId });
 }

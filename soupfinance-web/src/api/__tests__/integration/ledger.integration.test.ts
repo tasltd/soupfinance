@@ -362,7 +362,8 @@ describe('Ledger API Integration', () => {
       const result = await listLedgerTransactions();
 
       // Assert
-      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/ledgerTransaction/index.json');
+      // Changed (SOUPFIN-163): pages explicitly; max=10 is the backend's own default
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/ledgerTransaction/index.json?max=10&offset=0');
       expect(result).toHaveLength(2);
     });
 
@@ -382,8 +383,10 @@ describe('Ledger API Integration', () => {
 
       // Assert
       const callUrl = mockAxiosInstance.get.mock.calls[0][0] as string;
-      expect(callUrl).toContain('startDate=2026-01-01');
-      expect(callUrl).toContain('endDate=2026-01-31');
+      // Fix (SOUPFIN-163): the backend reads from/to, not startDate/endDate
+      expect(callUrl).toContain('from=2026-01-01');
+      expect(callUrl).toContain('to=2026-01-31');
+      expect(callUrl).not.toContain('startDate');
       expect(callUrl).toContain('max=100');
     });
 
@@ -399,7 +402,9 @@ describe('Ledger API Integration', () => {
 
       // Assert
       const callUrl = mockAxiosInstance.get.mock.calls[0][0] as string;
-      expect(callUrl).toContain('accountId=acc-uuid-789');
+      // Fix (SOUPFIN-163): the backend reads ledgerAccount, not accountId
+      expect(callUrl).toContain('ledgerAccount=acc-uuid-789');
+      expect(callUrl).not.toContain('accountId');
     });
   });
 

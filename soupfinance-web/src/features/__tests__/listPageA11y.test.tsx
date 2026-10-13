@@ -24,6 +24,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ToastProvider } from '../../components/feedback';
 
 vi.mock('../../api', async () => {
   const actual = await vi.importActual<typeof import('../../api')>('../../api');
@@ -32,14 +33,15 @@ vi.mock('../../api', async () => {
 vi.mock('../../api/endpoints/ledger', async () => {
   const actual =
     await vi.importActual<typeof import('../../api/endpoints/ledger')>('../../api/endpoints/ledger');
-  return { ...actual, listLedgerTransactions: vi.fn(), listLedgerAccounts: vi.fn() };
+  // Changed (SOUPFIN-163): the page loads one server page via listLedgerTransactionsPage
+  return { ...actual, listLedgerTransactions: vi.fn(), listLedgerTransactionsPage: vi.fn(), listLedgerAccounts: vi.fn() };
 });
 vi.mock('../../api/endpoints/settings', () => ({
   agentApi: { list: vi.fn(), delete: vi.fn() },
 }));
 
 import { listClients, listVendors } from '../../api';
-import { listLedgerTransactions, listLedgerAccounts } from '../../api/endpoints/ledger';
+import { listLedgerTransactions, listLedgerTransactionsPage, listLedgerAccounts } from '../../api/endpoints/ledger';
 import { agentApi } from '../../api/endpoints/settings';
 
 import { ClientListPage } from '../clients/ClientListPage';
@@ -112,7 +114,10 @@ function renderPage(ui: React.ReactElement) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter>{ui}</MemoryRouter>
+      {/* Added (SOUPFIN-163): the ledger page's CSV export uses toasts */}
+      <ToastProvider>
+        <MemoryRouter>{ui}</MemoryRouter>
+      </ToastProvider>
     </QueryClientProvider>
   );
 }
@@ -124,6 +129,7 @@ describe('List page form controls are labelled and identifiable (SOUPFIN-33 #6)'
     vi.mocked(listVendors).mockResolvedValue([]);
     vi.mocked(listLedgerAccounts).mockResolvedValue([]);
     vi.mocked(listLedgerTransactions).mockResolvedValue([]);
+    vi.mocked(listLedgerTransactionsPage).mockResolvedValue({ rows: [], total: 0, hasMore: false });
     vi.mocked(agentApi.list).mockResolvedValue([]);
   });
 
@@ -180,6 +186,7 @@ describe('The date filters are never anonymous zero spinbuttons (SOUPFIN-33 #1)'
     vi.clearAllMocks();
     vi.mocked(listLedgerAccounts).mockResolvedValue([]);
     vi.mocked(listLedgerTransactions).mockResolvedValue([]);
+    vi.mocked(listLedgerTransactionsPage).mockResolvedValue({ rows: [], total: 0, hasMore: false });
   });
 
   it.each([

@@ -92,6 +92,19 @@ describe('ChartOfAccountsPage (SOUPFIN-142)', () => {
     expect(listLedgerAccounts).not.toHaveBeenCalled();
   });
 
+  // Added (SOUPFIN-163): each account name opens that account's ledger
+  it('links every account name to its account ledger', async () => {
+    vi.mocked(listAllLedgerAccounts).mockResolvedValue([
+      account({ id: 'cash', code: '1000', name: 'Cash', ledgerGroup: 'ASSET' }),
+      account({ id: 'rent', code: '5200', name: 'Rent', ledgerGroup: 'EXPENSE' }),
+    ]);
+    renderPage();
+    const cash = await screen.findByTestId('coa-ledger-link-cash');
+    expect(cash).toHaveAttribute('href', '/ledger/accounts/cash');
+    expect(cash).toHaveTextContent('Cash');
+    expect(screen.getByTestId('coa-ledger-link-rent')).toHaveAttribute('href', '/ledger/accounts/rent');
+  });
+
   it('shows accounts with no derivable group under Uncategorised, after the known groups', async () => {
     vi.mocked(listAllLedgerAccounts).mockResolvedValue([
       account({ id: 'cash', code: '1000', name: 'Cash', ledgerGroup: 'ASSET' }),

@@ -65,6 +65,8 @@ import { PaymentFormPage } from './features/payments/PaymentFormPage';
 // Ledger
 import { ChartOfAccountsPage } from './features/ledger/ChartOfAccountsPage';
 import { LedgerTransactionsPage } from './features/ledger/LedgerTransactionsPage';
+// Added (SOUPFIN-163): one account's ledger with running balance
+import { AccountLedgerPage } from './features/ledger/AccountLedgerPage';
 
 // Added: Accounting Transactions (Journals, Vouchers)
 import { JournalEntryPage } from './features/accounting/JournalEntryPage';
@@ -299,6 +301,7 @@ export default function App() {
 
             {/* Ledger */}
             <Route path="/ledger/accounts" element={<ChartOfAccountsPage />} />
+            <Route path="/ledger/accounts/:id" element={<AccountLedgerPage />} />
             <Route path="/ledger/transactions" element={<LedgerTransactionsPage />} />
 
             {/* Added: Accounting Transactions */}

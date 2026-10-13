@@ -7,7 +7,9 @@
  * - Development: Use real API, fall back to mock on API error only
  */
 import { useQuery } from '@tanstack/react-query';
-import { listTransactionGroups, listVouchers } from '../api/endpoints/ledger';
+import { listTransactionGroupsPage, listVouchersPage } from '../api/endpoints/ledger';
+// Added (SOUPFIN-163): walk every server page instead of one capped request
+import { fetchAllPages } from '../api/paging';
 import type { LedgerTransactionGroup, Voucher } from '../types';
 
 // Added: Unified transaction type for display in Transaction Register
@@ -288,18 +290,57 @@ function transformVoucher(voucher: Voucher): UnifiedTransaction[] {
 }
 
 /**
- * Fetch and combine transactions from API
+ * Added (SOUPFIN-163): the register's date range, pushed to the server where
+ * the backend filters on the right column.
  */
-async function fetchTransactions(): Promise<UnifiedTransaction[]> {
+export interface TransactionRangeFilter {
+  startDate?: string;
+  endDate?: string;
+}
+
+/** Added (SOUPFIN-163): what the register loaded, and whether it is all of it. */
+export interface TransactionRegisterData {
+  rows: UnifiedTransaction[];
+  /** True when a source had more rows than the page cap allows. */
+  truncated: boolean;
+}
+
+// Added (SOUPFIN-163): pages of 1000 rows per source; 50 pages is 50,000 rows.
+export const REGISTER_MAX_PAGES = 50;
+
+/**
+ * Fetch and combine transactions from API
+ *
+ * Fix (SOUPFIN-163): this used to ask for `max: 500` of each source, so rows
+ * past 500 vanished from the register and from its CSV export with no sign.
+ * It now walks every server page (1000 rows each, stopping at the filtered
+ * `totalCount`) and reports `truncated` if the page cap is ever reached.
+ *
+ * Vouchers take the date range server-side (`from`/`to` filter the voucher's
+ * transaction date). Groups do not: their index filters `from`/`to` on
+ * dateCreated, not the entry date, so the page filters them by date instead.
+ */
+async function fetchTransactions(range: TransactionRangeFilter = {}): Promise<TransactionRegisterData> {
   // Added: Fetch both transaction groups (journal entries) and vouchers (payments/receipts) in parallel
   const [groups, vouchers] = await Promise.all([
-    listTransactionGroups({ max: 500 }),
-    listVouchers({ max: 500 }),
+    fetchAllPages(
+      (offset, max) => listTransactionGroupsPage({ max, offset, sort: 'transactionDate', order: 'desc' }),
+      { maxPages: REGISTER_MAX_PAGES }
+    ),
+    fetchAllPages(
+      (offset, max) => listVouchersPage({
+        max,
+        offset,
+        from: range.startDate || undefined,
+        to: range.endDate || undefined,
+      }),
+      { maxPages: REGISTER_MAX_PAGES }
+    ),
   ]);
 
   // Added: Transform API responses to unified format
-  const journalEntries = groups.flatMap(transformTransactionGroup);
-  const voucherEntries = vouchers.flatMap(transformVoucher);
+  const journalEntries = groups.rows.flatMap(transformTransactionGroup);
+  const voucherEntries = vouchers.rows.flatMap(transformVoucher);
 
   // Added: Combine and sort by date descending
   const allTransactions = [...journalEntries, ...voucherEntries];
@@ -309,31 +350,36 @@ async function fetchTransactions(): Promise<UnifiedTransaction[]> {
     return dateB - dateA; // Descending order
   });
 
-  return allTransactions;
+  return { rows: allTransactions, truncated: groups.truncated || vouchers.truncated };
 }
 
 /**
  * Custom hook for fetching unified transactions
  * Changed: Returns transactions from API, fails on error, empty if no data
  * Mock data only when VITE_USE_MOCK_DATA=true
+ * Changed (SOUPFIN-163): `data` is every row; `truncated` says if any were left behind.
  */
-export function useTransactions() {
-  return useQuery({
-    queryKey: ['transactions'],
-    queryFn: async () => {
+export function useTransactions(range: TransactionRangeFilter = {}) {
+  const query = useQuery({
+    queryKey: ['transactions', range.startDate ?? '', range.endDate ?? ''],
+    queryFn: async (): Promise<TransactionRegisterData> => {
       // Changed: Only use mock data when explicitly enabled
       if (USE_MOCK_DATA) {
         console.info('[useTransactions] Using mock data (VITE_USE_MOCK_DATA=true)');
-        return MOCK_TRANSACTIONS;
+        return { rows: MOCK_TRANSACTIONS, truncated: false };
       }
 
       // Changed: Always use real API, let errors propagate, return empty if no data
-      return await fetchTransactions();
+      return await fetchTransactions(range);
     },
     staleTime: 2 * 60 * 1000, // 2 minutes (transactions update frequently)
     gcTime: 10 * 60 * 1000, // 10 minutes
   });
+  return { ...query, data: query.data?.rows, truncated: query.data?.truncated ?? false };
 }
+
+/** Added (SOUPFIN-163): exported for tests of the paging walk. */
+export { fetchTransactions };
 
 /**
  * Get mock transactions directly (for testing)

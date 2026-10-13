@@ -6,13 +6,19 @@
  * Added: Filter by account, date range, and status
  * Added: Loading, error, and empty states
  * Added: data-testid attributes for E2E testing
+ * Added (SOUPFIN-163): server-side paging (max/offset, total from the rows'
+ *   totalCount), account links to the account ledger, and a CSV export that
+ *   walks every page of the filtered list, not just the one on screen.
  */
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { listLedgerTransactions, listLedgerAccounts } from '../../api/endpoints/ledger';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { listLedgerTransactionsPage, listAllLedgerTransactions, listLedgerAccounts } from '../../api/endpoints/ledger';
 import { useFormatCurrency } from '../../stores';
-import { ApiErrorState } from '../../components/feedback';
+import { ApiErrorState, useToast } from '../../components/feedback';
+import { getApiErrorMessage } from '../../api/errors';
+import { toCsv, downloadCsv } from '../../utils/csv';
+import { getTodayIsoDate } from '../../utils/date';
 // Fix (SOUPFIN-33 #1/#6): labelled date filter — supplies id/name/label association
 // and an explicit "no date selected" description (see DateFilterField).
 import { DateFilterField } from '../../components/forms';
@@ -23,14 +29,30 @@ import { HelpLink } from '../../components/help';
 // Added: Transaction status type for filtering
 type TransactionStatus = 'DRAFT' | 'PENDING' | 'POSTED' | 'REVERSED' | '';
 
+// Added (SOUPFIN-163): rows per server page
+export const LEDGER_PAGE_SIZES = [25, 50, 100] as const;
+export const DEFAULT_LEDGER_PAGE_SIZE = 50;
+
+const numberFormat = new Intl.NumberFormat('en-US');
+
 export function LedgerTransactionsPage() {
   const formatCurrency = useFormatCurrency();
+  const { showToast } = useToast();
 
   // Added: Filter state
-  const [accountId, setAccountId] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  // Changed (SOUPFIN-163): filter setters also return to page 1
+  const [accountId, setAccountIdState] = useState('');
+  const [startDate, setStartDateState] = useState('');
+  const [endDate, setEndDateState] = useState('');
   const [statusFilter, setStatusFilter] = useState<TransactionStatus>('');
+  // Added (SOUPFIN-163): server page (1-based) and page size
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number>(DEFAULT_LEDGER_PAGE_SIZE);
+  const [exporting, setExporting] = useState(false);
+
+  const setAccountId = (v: string) => { setAccountIdState(v); setPage(1); };
+  const setStartDate = (v: string) => { setStartDateState(v); setPage(1); };
+  const setEndDate = (v: string) => { setEndDateState(v); setPage(1); };
 
   // Added: Fetch ledger accounts for filter dropdown
   const { data: accounts } = useQuery({
@@ -40,27 +62,80 @@ export function LedgerTransactionsPage() {
 
   // Added: Fetch transactions with filters
   // NOTE: do not retry on 403 — module-disabled is permanent until admin enables it
-  const { data: transactions, isLoading, error, refetch } = useQuery({
-    queryKey: ['ledger-transactions', accountId, startDate, endDate, statusFilter],
-    queryFn: () => listLedgerTransactions({
-      max: 100,
+  // Changed (SOUPFIN-163): one server page at a time. Status is not in the key:
+  // the index action cannot filter on it (plans/soupfin-163-ledger-paging-backend.md),
+  // so it is applied to the loaded page below.
+  const filters = {
+    accountId: accountId || undefined,
+    startDate: startDate || undefined,
+    endDate: endDate || undefined,
+  };
+  const { data: pageData, isLoading, error, refetch, isFetching } = useQuery({
+    queryKey: ['ledger-transactions', accountId, startDate, endDate, page, pageSize],
+    queryFn: () => listLedgerTransactionsPage({
+      ...filters,
+      max: pageSize,
+      offset: (page - 1) * pageSize,
       sort: 'transactionDate',
       order: 'desc',
-      accountId: accountId || undefined,
-      startDate: startDate || undefined,
-      endDate: endDate || undefined,
     }),
+    placeholderData: keepPreviousData,
     retry: (failureCount, err) => {
       const status = (err as { response?: { status?: number } })?.response?.status;
       if (status === 403 || status === 401) return false;
       return failureCount < 2;
     },
   });
+  const transactions = pageData?.rows;
+  const total = pageData?.total ?? null;
+  const hasMore = pageData?.hasMore ?? false;
+  const pageCount = total !== null ? Math.max(1, Math.ceil(total / pageSize)) : null;
+  const firstRow = (page - 1) * pageSize + 1;
+  const lastRow = (page - 1) * pageSize + (transactions?.length ?? 0);
+  const onePage = page === 1 && !hasMore;
 
   // Added: Filter transactions by status client-side (API may not support status filter)
-  const filteredTransactions = statusFilter
-    ? transactions?.filter((tx) => tx.status === statusFilter)
-    : transactions;
+  const matchesStatus = (tx: LedgerTransaction) => !statusFilter || tx.status === statusFilter;
+  const filteredTransactions = statusFilter ? transactions?.filter(matchesStatus) : transactions;
+
+  // Added (SOUPFIN-163): export every filtered row, fetched a server page at a time
+  const handleExport = async () => {
+    if (exporting) return;
+    setExporting(true);
+    try {
+      const all = await listAllLedgerTransactions({ ...filters, sort: 'transactionDate', order: 'desc' });
+      const rows = all.rows.filter(matchesStatus);
+      if (rows.length === 0) {
+        showToast({ variant: 'warning', message: 'Nothing to export: no transactions match these filters.' });
+        return;
+      }
+      const header = ['Date', 'Reference', 'Account #', 'Account Name', 'Description', 'Debit', 'Credit', 'Status'];
+      const csv = toCsv(header, rows.map((tx) => [
+        tx.transactionDate?.slice(0, 10) ?? '',
+        tx.transactionNumber || tx.reference || '',
+        tx.ledgerAccount?.code ?? '',
+        tx.ledgerAccount?.name ?? '',
+        tx.description ?? '',
+        tx.transactionState === 'DEBIT' ? (tx.amount || 0).toFixed(2) : '0.00',
+        tx.transactionState === 'CREDIT' ? (tx.amount || 0).toFixed(2) : '0.00',
+        tx.status || '',
+      ]));
+      downloadCsv(`ledger-transactions-${getTodayIsoDate()}.csv`, csv);
+      if (all.truncated) {
+        showToast({
+          variant: 'warning',
+          message: `Exported the first ${numberFormat.format(rows.length)} transactions. Narrow the dates to export the rest.`,
+          duration: 7000,
+        });
+      } else {
+        showToast({ variant: 'success', message: `Exported ${numberFormat.format(rows.length)} transaction(s) to CSV.` });
+      }
+    } catch (err) {
+      showToast({ variant: 'error', message: `Export failed: ${getApiErrorMessage(err)}`, duration: 7000 });
+    } finally {
+      setExporting(false);
+    }
+  };
 
   // Added: Get status badge styling
   const getStatusStyle = (status?: string): string => {
@@ -89,6 +164,7 @@ export function LedgerTransactionsPage() {
     setStartDate('');
     setEndDate('');
     setStatusFilter('');
+    setPage(1);
   };
 
   const hasFilters = accountId || startDate || endDate || statusFilter;
@@ -104,14 +180,27 @@ export function LedgerTransactionsPage() {
           <p className="text-subtle-text">View all journal entries and transactions</p>
           <HelpLink section="ledger-transactions" className="mt-1 self-start" />
         </div>
-        <Link
-          to="/accounting/journal-entry/new"
-          className="flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90"
-          data-testid="new-journal-entry-button"
-        >
-          <span className="material-symbols-outlined text-lg">add</span>
-          New Journal Entry
-        </Link>
+        <div className="flex flex-wrap gap-3">
+          {/* Added (SOUPFIN-163): CSV export of every filtered row */}
+          <button
+            type="button"
+            onClick={handleExport}
+            disabled={exporting || !!error}
+            className="flex items-center gap-2 h-10 px-4 rounded-lg border border-primary text-primary font-bold text-sm hover:bg-primary/10 disabled:opacity-50 disabled:cursor-not-allowed"
+            data-testid="ledger-export-button"
+          >
+            <span className="material-symbols-outlined text-lg">download</span>
+            {exporting ? 'Exporting' : 'Export CSV'}
+          </button>
+          <Link
+            to="/accounting/journal-entry/new"
+            className="flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90"
+            data-testid="new-journal-entry-button"
+          >
+            <span className="material-symbols-outlined text-lg">add</span>
+            New Journal Entry
+          </Link>
+        </div>
       </div>
 
       {/* Filters */}
@@ -270,19 +359,24 @@ export function LedgerTransactionsPage() {
                       className="border-b border-border-light dark:border-border-dark hover:bg-primary/5"
                       data-testid={`ledger-row-${tx.id}`}
                     >
-                      <td className="px-6 py-4 text-text-light dark:text-text-dark">
-                        {tx.transactionDate}
+                      <td className="px-6 py-4 text-text-light dark:text-text-dark whitespace-nowrap">
+                        {tx.transactionDate?.slice(0, 10)}
                       </td>
                       <td className="px-6 py-4">
                         <span className="font-mono text-primary">{tx.transactionNumber || tx.reference || '-'}</span>
                       </td>
                       <td className="px-6 py-4 text-text-light dark:text-text-dark">
                         {tx.ledgerAccount ? (
-                          <span>
+                          // Added (SOUPFIN-163): open the account's ledger
+                          <Link
+                            to={`/ledger/accounts/${tx.ledgerAccount.id}`}
+                            className="hover:text-primary hover:underline"
+                            data-testid={`ledger-account-link-${tx.id}`}
+                          >
                             <span className="font-mono text-subtle-text">{tx.ledgerAccount.code}</span>
                             {' '}
                             {tx.ledgerAccount.name}
-                          </span>
+                          </Link>
                         ) : (
                           '-'
                         )}
@@ -318,11 +412,12 @@ export function LedgerTransactionsPage() {
         <div className="flex justify-between items-center text-sm text-subtle-text" data-testid="ledger-summary">
           <span>
             Showing {filteredTransactions.length} transaction{filteredTransactions.length !== 1 ? 's' : ''}
+            {statusFilter && !onePage ? ' on this page' : ''}
             {hasFilters && ' (filtered)'}
           </span>
           <div className="flex gap-6">
             <span>
-              Total Debits:{' '}
+              {onePage ? 'Total Debits' : 'Debits on this page'}:{' '}
               <span className="font-medium text-text-light dark:text-text-dark">
                 {formatCurrency(filteredTransactions
                   .filter((tx: LedgerTransaction) => tx.transactionState === 'DEBIT')
@@ -330,7 +425,7 @@ export function LedgerTransactionsPage() {
               </span>
             </span>
             <span>
-              Total Credits:{' '}
+              {onePage ? 'Total Credits' : 'Credits on this page'}:{' '}
               <span className="font-medium text-info">
                 {formatCurrency(filteredTransactions
                   .filter((tx: LedgerTransaction) => tx.transactionState === 'CREDIT')
@@ -339,6 +434,57 @@ export function LedgerTransactionsPage() {
             </span>
           </div>
         </div>
+      )}
+
+      {/* Added (SOUPFIN-163): server-side pagination */}
+      {!error && transactions && (transactions.length > 0 || page > 1) && (
+        <nav
+          aria-label="Pagination"
+          className="flex flex-wrap items-center justify-between gap-4 border-t border-border-light dark:border-border-dark pt-4"
+          data-testid="ledger-pagination"
+        >
+          <p className="text-sm text-subtle-text" data-testid="ledger-pagination-range">
+            {transactions.length > 0
+              ? <>Rows {numberFormat.format(firstRow)}–{numberFormat.format(lastRow)}</>
+              : <>No rows on this page</>}
+            {total !== null && <> of {numberFormat.format(total)}</>}
+          </p>
+          <div className="flex items-center gap-3">
+            <label htmlFor="ledger-page-size" className="text-sm text-subtle-text">Rows per page</label>
+            <select
+              id="ledger-page-size"
+              value={pageSize}
+              onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
+              className="h-9 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-2 text-sm text-text-light dark:text-text-dark"
+              data-testid="ledger-page-size"
+            >
+              {LEDGER_PAGE_SIZES.map((size) => (
+                <option key={size} value={size}>{size}</option>
+              ))}
+            </select>
+            <span className="text-sm text-text-light dark:text-text-dark" data-testid="ledger-page-indicator">
+              Page {numberFormat.format(page)}{pageCount !== null && <> of {numberFormat.format(pageCount)}</>}
+            </span>
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1 || isFetching}
+              className="h-9 px-3 rounded-lg border border-border-light dark:border-border-dark text-sm text-text-light dark:text-text-dark hover:bg-primary/5 disabled:opacity-50 disabled:cursor-not-allowed"
+              data-testid="ledger-pagination-prev"
+            >
+              Previous
+            </button>
+            <button
+              type="button"
+              onClick={() => setPage((p) => p + 1)}
+              disabled={!hasMore || isFetching}
+              className="h-9 px-3 rounded-lg border border-border-light dark:border-border-dark text-sm text-text-light dark:text-text-dark hover:bg-primary/5 disabled:opacity-50 disabled:cursor-not-allowed"
+              data-testid="ledger-pagination-next"
+            >
+              Next
+            </button>
+          </div>
+        </nav>
       )}
     </div>
   );

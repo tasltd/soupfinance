@@ -14,6 +14,7 @@
  */
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { listAllLedgerAccounts } from '../../api/endpoints/ledger';
 import { useFormatCurrency } from '../../stores';
@@ -250,7 +251,14 @@ export function ChartOfAccountsPage() {
                               <td className="px-6 py-4 font-mono text-text-light dark:text-text-dark">{account.code}</td>
                               <td className="px-6 py-4 text-text-light dark:text-text-dark">
                                 <div>
-                                  {account.name}
+                                  {/* Added (SOUPFIN-163): open this account's ledger */}
+                                  <Link
+                                    to={`/ledger/accounts/${account.id}`}
+                                    className="font-medium hover:text-primary hover:underline"
+                                    data-testid={`coa-ledger-link-${account.id}`}
+                                  >
+                                    {account.name}
+                                  </Link>
                                   {/* Added: Show parent account if exists */}
                                   {account.parentAccount?.name && (
                                     <span className="text-xs text-subtle-text ml-1">

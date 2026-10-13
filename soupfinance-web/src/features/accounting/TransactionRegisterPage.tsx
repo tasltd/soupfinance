@@ -87,9 +87,6 @@ export function TransactionRegisterPage() {
   // Added (SOUPFIN-9): toast for action feedback (Post/Reverse/Delete/Export)
   const { showToast } = useToast();
 
-  // Added: Fetch transactions from API
-  const { data: transactions, isLoading, isError, error, refetch } = useTransactions();
-
   // Added: State for selected transaction IDs (for batch actions)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
@@ -98,6 +95,14 @@ export function TransactionRegisterPage() {
 
   // Added: Filter state
   const [filters, setFilters] = useState<FilterState>(defaultFilters);
+
+  // Added: Fetch transactions from API
+  // Changed (SOUPFIN-163): loads every page (no 500-row cap); the date range
+  // narrows the server query, and `truncated` flags a register past the cap.
+  const { data: transactions, isLoading, isError, error, refetch, truncated } = useTransactions({
+    startDate: filters.startDate || undefined,
+    endDate: filters.endDate || undefined,
+  });
 
   // Added: Filter panel visibility state (for future mobile toggle)
   // const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(true);
@@ -484,6 +489,12 @@ export function TransactionRegisterPage() {
                 View and manage all accounting transactions
               </p>
               <HelpLink section="transaction-register" className="mt-1 self-start" />
+              {/* Added (SOUPFIN-163): say so when the register stopped at the page cap */}
+              {truncated && (
+                <p className="mt-2 text-sm text-warning" data-testid="register-truncated">
+                  Showing the newest transactions only. Narrow the dates to see the rest.
+                </p>
+              )}
             </div>
             <div className="flex flex-1 gap-3 flex-wrap justify-start sm:justify-end">
               {/* Added: New Journal Entry button */}
