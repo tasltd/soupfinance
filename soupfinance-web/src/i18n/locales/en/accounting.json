@@ -9,7 +9,7 @@
     "entryDate": "Entry Date",
     "reference": "Reference",
     "description": "Description",
-    "descriptionPlaceholder": "Describe the purpose of this entry...",
+    "descriptionPlaceholder": "Describe the purpose of this journal entry...",
     "memo": "Memo",
     "memoPlaceholder": "Additional notes...",
     "debitAccount": "Debit Account",
@@ -17,14 +17,47 @@
     "amount": "Amount",
     "selectAccount": "Select an account",
     "addLine": "Add Line",
-    "removeLine": "Remove Line",
+    "removeLine": "Remove line",
     "totalDebits": "Total Debits",
     "totalCredits": "Total Credits",
     "difference": "Difference",
     "balanced": "Balanced",
     "unbalanced": "Unbalanced",
     "postEntry": "Post Entry",
-    "saveDraft": "Save as Draft"
+    "saveDraft": "Save Draft",
+    "loading": "Loading journal entry...",
+    "subtitleReadOnly": "This entry has been posted and cannot be modified",
+    "subtitleEdit": "Modify this accounting transaction",
+    "subtitleNew": "Record a multi-line accounting transaction",
+    "saveAndPost": "Save & Post",
+    "updateAndPost": "Update & Post",
+    "moduleContext": "Account selection is unavailable until the module is enabled.",
+    "readOnlyBanner": "This journal entry has been {{status}} and cannot be modified.",
+    "entryDetails": "Entry Details",
+    "referencePlaceholder": "e.g., JE-2024-001",
+    "lineItems": "Line Items",
+    "columns": {
+      "account": "Account",
+      "debit": "Debit",
+      "credit": "Credit",
+      "description": "Description"
+    },
+    "selectAccountPlaceholder": "Select account...",
+    "lineDebitAria": "Line {{line}} debit amount",
+    "lineCreditAria": "Line {{line}} credit amount",
+    "lineDescriptionPlaceholder": "Line description (optional)",
+    "minLinesHint": "Minimum 2 lines required",
+    "outOfBalance": "Out of Balance",
+    "differenceAmount": "Difference: {{amount}}",
+    "validation": {
+      "accountRequired": "Account is required",
+      "notNegative": "Cannot be negative",
+      "entryDateRequired": "Entry date is required",
+      "descriptionRequired": "Description is required",
+      "minLines": "At least 2 lines are required",
+      "debitOrCredit": "Each line must have either a debit or credit amount (not both)",
+      "mustBalance": "Total debits must equal total credits"
+    }
   },
   "voucher": {
     "title": "Voucher",
@@ -56,11 +89,115 @@
       "rejected": "Rejected",
       "posted": "Posted",
       "cancelled": "Cancelled"
+    },
+    "typeOptions": {
+      "PAYMENT": "Payment Voucher",
+      "RECEIPT": "Receipt Voucher",
+      "DEPOSIT": "Deposit Voucher"
+    },
+    "partyTypes": {
+      "CLIENT": "Client",
+      "VENDOR": "Vendor",
+      "STAFF": "Staff",
+      "OTHER": "Other"
+    },
+    "editTitle": "Edit {{type}}",
+    "newPayment": "New Payment Voucher",
+    "newReceipt": "New Receipt Voucher",
+    "newDeposit": "New Deposit Voucher",
+    "subtitles": {
+      "details": "Voucher details",
+      "payment": "Record a payment made to a beneficiary",
+      "receipt": "Record money received from a payer",
+      "deposit": "Record a deposit into an account",
+      "default": "Create a financial voucher"
+    },
+    "loading": "Loading voucher",
+    "saveChanges": "Save Changes",
+    "saveDraft": "Save Draft",
+    "approveAndPost": "Approve & Post",
+    "loadError": "This voucher could not be loaded. {{reason}}",
+    "lockedBanner": "This voucher is {{status}}, so it can no longer be edited.",
+    "moduleContext": "Bank/Cash, Expense, and Income account dropdowns are unavailable until the module is enabled.",
+    "sections": {
+      "details": "Voucher Details",
+      "accounts": "Account Selection",
+      "summary": "Transaction Summary"
+    },
+    "fields": {
+      "transactionDate": "Transaction Date",
+      "referenceNumber": "Reference Number",
+      "referencePlaceholder": "e.g., PV-2024-001",
+      "paymentMethod": "Payment Method",
+      "selectMethod": "Select method...",
+      "notes": "Notes",
+      "notesPlaceholder": "Describe the purpose of this voucher...",
+      "clientLabel": "Client ({{party}})",
+      "clientPlaceholder": "Search or enter client name...",
+      "clientHelp": "Start typing to search existing clients",
+      "vendorLabel": "Vendor ({{party}})",
+      "vendorPlaceholder": "Search or enter vendor name...",
+      "vendorHelp": "Start typing to search existing vendors",
+      "staffLabel": "Staff Member ({{party}})",
+      "staffPlaceholder": "Search or enter staff name...",
+      "staffHelp": "Start typing to search staff members",
+      "cashAccount": "Bank/Cash Account",
+      "selectAccount": "Select account...",
+      "cashAccountHelp": "Account used for payment or receipt",
+      "expenseAccount": "Expense Account",
+      "selectExpenseAccount": "Select expense account...",
+      "expenseAccountHelp": "Account to debit for this expense",
+      "incomeAccount": "Income Account",
+      "selectIncomeAccount": "Select income account...",
+      "incomeAccountHelp": "Account to credit for this income",
+      "currency": "Currency",
+      "defaultCurrency": "Default (Account Currency)",
+      "exchangeRate": "Exchange Rate",
+      "exchangeRateHelp": "Rate to convert to base currency"
+    },
+    "party": {
+      "beneficiary": "Beneficiary",
+      "payer": "Payer"
+    },
+    "partyInfo": {
+      "beneficiary": "Beneficiary Information",
+      "payer": "Payer Information"
+    },
+    "partyType": {
+      "beneficiary": "Beneficiary Type",
+      "payer": "Payer Type"
+    },
+    "partyName": {
+      "beneficiary": "Beneficiary Name",
+      "payer": "Payer Name"
+    },
+    "partyNamePlaceholder": {
+      "beneficiary": "Enter beneficiary name...",
+      "payer": "Enter payer name..."
+    },
+    "moneyOut": "Money Out",
+    "moneyIn": "Money In",
+    "journalPreview": "Journal Entry Preview:",
+    "columns": {
+      "account": "Account",
+      "debit": "Debit",
+      "credit": "Credit"
+    },
+    "total": "Total",
+    "validation": {
+      "typeRequired": "Voucher type is required",
+      "dateRequired": "Date is required",
+      "descriptionRequired": "Description is required",
+      "partyTypeRequired": "Beneficiary/Payer type is required",
+      "cashAccountRequired": "Bank/Cash account is required",
+      "amountPositive": "Amount must be greater than 0",
+      "expenseRequired": "Expense account is required for payment vouchers",
+      "incomeRequired": "Income account is required for receipt vouchers"
     }
   },
   "transactions": {
     "title": "Transaction Register",
-    "subtitle": "View all accounting transactions",
+    "subtitle": "View and manage all accounting transactions",
     "transactionId": "Transaction ID",
     "date": "Date",
     "type": "Type",
@@ -86,6 +223,98 @@
       "receipt": "Receipt",
       "journal": "Journal Entry",
       "adjustment": "Adjustment"
+    },
+    "newJournalEntry": "New Journal Entry",
+    "newPayment": "New Payment",
+    "newReceipt": "New Receipt",
+    "searchAria": "Search transactions by ID, description, or amount",
+    "searchPlaceholder": "Search by Transaction ID, Description, or Amount...",
+    "filterBar": {
+      "from": "From:",
+      "fromAria": "Filter transactions from date",
+      "to": "To:",
+      "toAria": "Filter transactions to date",
+      "status": "Status:",
+      "statusAria": "Filter transactions by status",
+      "type": "Type:",
+      "typeAria": "Filter transactions by type",
+      "account": "Account:",
+      "accountAria": "Filter transactions by account code",
+      "accountPlaceholder": "e.g., 1010"
+    },
+    "statusOptions": {
+      "ALL": "All",
+      "DRAFT": "Draft",
+      "PENDING": "Pending",
+      "POSTED": "Posted",
+      "REVERSED": "Reversed"
+    },
+    "typeOptions": {
+      "ALL": "All Types",
+      "JOURNAL_ENTRY": "Journal Entry",
+      "PAYMENT": "Payment",
+      "RECEIPT": "Receipt"
+    },
+    "statusBadges": {
+      "DRAFT": "DRAFT",
+      "PENDING": "PENDING",
+      "POSTED": "POSTED",
+      "REVERSED": "REVERSED"
+    },
+    "selected_one": "{{count}} transaction selected",
+    "selected_other": "{{count}} transactions selected",
+    "postSelected": "Post Selected",
+    "deleteSelected": "Delete Selected",
+    "loading": "Loading transactions...",
+    "columns": {
+      "date": "Date",
+      "transactionId": "Transaction ID",
+      "description": "Description",
+      "accountNumber": "Account #",
+      "accountName": "Account Name",
+      "debit": "Debit",
+      "credit": "Credit",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "emptyTitle": "No transactions found",
+    "emptyFiltered": "Try adjusting your search or filter criteria",
+    "emptyBody": "Create your first transaction to get started",
+    "createJournalEntry": "Create Journal Entry",
+    "rowActions": "Actions for {{id}}",
+    "paginationAria": "Pagination",
+    "paginationSummary": "Showing <b>{{from}}</b> to <b>{{to}}</b> of <b>{{total}}</b> results",
+    "panel": {
+      "title": "Advanced Filters",
+      "dateRange": "Date Range",
+      "status": "Status",
+      "type": "Transaction Type",
+      "accountNumber": "Account Number",
+      "reporting": "Reporting",
+      "trialBalance": "Generate Trial Balance",
+      "journalReport": "Journal Report",
+      "profitAndLoss": "Profit & Loss Statement"
+    },
+    "toasts": {
+      "posted": "Transaction {{id}} posted.",
+      "reversed": "Transaction {{id}} reversed.",
+      "deleted": "Transaction {{id}} deleted.",
+      "batchPosted": "{{count}} transaction(s) posted.",
+      "batchDeleted": "{{count}} transaction(s) deleted.",
+      "exportBlocked": "Cannot export — {{reason}}",
+      "exportEmpty": "Nothing to export — the current view is empty.",
+      "exported": "Exported {{count}} transaction(s) to CSV.",
+      "exportFailed": "Export failed. Please try again."
+    },
+    "confirm": {
+      "deleteTitle": "Delete transaction {{id}}?",
+      "deleteMessage": "This transaction will be deleted for good. You cannot undo this.",
+      "batchDeleteTitle_one": "Delete {{count}} transaction?",
+      "batchDeleteTitle_other": "Delete {{count}} transactions?",
+      "batchDeleteMessage_one": "The selected transaction will be deleted for good. You cannot undo this.",
+      "batchDeleteMessage_other": "The {{count}} selected transactions will be deleted for good. You cannot undo this.",
+      "reverseTitle": "Reverse transaction {{id}}?",
+      "reverseMessage": "Reversing cancels the effect of this transaction on your balances. The original stays in the register for your records."
     }
   },
   "messages": {
@@ -99,5 +328,14 @@
     "voucherRejected": "Voucher rejected",
     "mustBalance": "Debits and credits must be equal",
     "atLeastTwoLines": "Journal entry must have at least two lines"
+  },
+  "statusInline": {
+    "posted": "posted",
+    "reversed": "reversed",
+    "cancelled": "cancelled",
+    "draft": "draft",
+    "pending": "pending",
+    "approved": "approved",
+    "rejected": "rejected"
   }
 }

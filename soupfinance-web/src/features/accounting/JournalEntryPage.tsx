@@ -5,8 +5,12 @@
  *
  * Changed: Now fetches ledger accounts from API via useLedgerAccounts hook
  * Changed: Added edit mode - loads existing LedgerTransactionGroup when :id param present
+ * Changed (SOUPFIN-164): every visible string, validation messages included, comes
+ *   from the `accounting` namespace.
  */
 import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
@@ -25,29 +29,32 @@ import { useLedgerAccounts } from '../../hooks/useLedgerAccounts';
 import { useFormatCurrency } from '../../stores';
 // Added (SOUPFIN-9): explain disabled module + parse submit errors
 import { ModuleDisabledBanner } from '../../components/feedback';
-import { getApiErrorMessage, getPeriodLockError } from '../../api/errors';
+import { getPeriodLockError } from '../../api/errors';
+import { getTranslatedApiErrorMessage } from '../../i18n/translateApiError';
 import type { CreateJournalEntryRequest } from '../../types';
 // Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
 import { HelpLink } from '../../components/help';
 
+// Changed (SOUPFIN-164): the schemas are built with `t` so their messages follow
+// the user's language. The shape is unchanged.
 // Added: Zod schema for journal entry line item validation
 // Fix: Using number().default(0) instead of coerce.number() for proper TypeScript inference
-const journalLineSchema = z.object({
-  accountId: z.string().min(1, 'Account is required'),
+const buildJournalLineSchema = (t: TFunction<['accounting', 'common']>) => z.object({
+  accountId: z.string().min(1, t('journalEntry.validation.accountRequired')),
   accountName: z.string().optional(),
-  debitAmount: z.number().min(0, 'Cannot be negative').default(0),
-  creditAmount: z.number().min(0, 'Cannot be negative').default(0),
+  debitAmount: z.number().min(0, t('journalEntry.validation.notNegative')).default(0),
+  creditAmount: z.number().min(0, t('journalEntry.validation.notNegative')).default(0),
   description: z.string().optional(),
 });
 
 // Added: Zod schema for the entire journal entry form
 // Validates that total debits equal total credits
-const journalEntrySchema = z.object({
-  entryDate: z.string().min(1, 'Entry date is required'),
+const buildJournalEntrySchema = (t: TFunction<['accounting', 'common']>) => z.object({
+  entryDate: z.string().min(1, t('journalEntry.validation.entryDateRequired')),
   reference: z.string().optional(),
-  description: z.string().min(1, 'Description is required'),
-  lines: z.array(journalLineSchema)
-    .min(2, 'At least 2 lines are required')
+  description: z.string().min(1, t('journalEntry.validation.descriptionRequired')),
+  lines: z.array(buildJournalLineSchema(t))
+    .min(2, t('journalEntry.validation.minLines'))
     .refine(
       (lines) => {
         // Added: Each line must have either a debit OR credit amount (not both, not neither)
@@ -56,7 +63,7 @@ const journalEntrySchema = z.object({
           (line.creditAmount > 0 && line.debitAmount === 0)
         );
       },
-      { message: 'Each line must have either a debit or credit amount (not both)' }
+      { message: t('journalEntry.validation.debitOrCredit') }
     )
     .refine(
       (lines) => {
@@ -65,12 +72,12 @@ const journalEntrySchema = z.object({
         const totalCredit = lines.reduce((sum, line) => sum + (line.creditAmount || 0), 0);
         return Math.abs(totalDebit - totalCredit) < 0.01; // Allow small floating point difference
       },
-      { message: 'Total debits must equal total credits' }
+      { message: t('journalEntry.validation.mustBalance') }
     ),
 });
 
 // Added: Type inference from schema
-type JournalEntryFormData = z.infer<typeof journalEntrySchema>;
+type JournalEntryFormData = z.infer<ReturnType<typeof buildJournalEntrySchema>>;
 
 // Added: Empty line template for adding new rows
 const createEmptyLine = () => ({
@@ -92,6 +99,9 @@ const createEmptyLine = () => ({
  */
 export function JournalEntryPage() {
   const navigate = useNavigate();
+  const { t } = useTranslation(['accounting', 'common']);
+  // Added (SOUPFIN-164): rebuilt when the language changes, so messages follow it
+  const journalEntrySchema = useMemo(() => buildJournalEntrySchema(t), [t]);
   const { id: entryId } = useParams<{ id: string }>();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -252,7 +262,7 @@ export function JournalEntryPage() {
       }
       // Changed (SOUPFIN-9): use parseApiError so 403 ("module disabled")
       // shows a useful message instead of raw axios "Request failed..." text.
-      setSubmitError(getApiErrorMessage(error));
+      setSubmitError(getTranslatedApiErrorMessage(error));
     } finally {
       setIsSubmitting(false);
     }
@@ -273,7 +283,7 @@ export function JournalEntryPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] gap-4" data-testid="journal-entry-page">
         <span className="material-symbols-outlined text-4xl text-primary animate-spin">progress_activity</span>
-        <p className="text-subtle-text">Loading journal entry...</p>
+        <p className="text-subtle-text">{t('journalEntry.loading')}</p>
       </div>
     );
   }
@@ -288,14 +298,14 @@ export function JournalEntryPage() {
             data-testid="journal-entry-heading"
           >
             {/* Changed (SOUPFIN-154): a posted entry opened from View is not being edited */}
-            {!isEditMode ? 'New Journal Entry' : isReadOnly ? 'Journal Entry' : 'Edit Journal Entry'}
+            {!isEditMode ? t('journalEntry.newEntry') : isReadOnly ? t('journalEntry.title') : t('journalEntry.editEntry')}
           </h1>
           <p className="text-subtle-text">
             {isReadOnly
-              ? 'This entry has been posted and cannot be modified'
+              ? t('journalEntry.subtitleReadOnly')
               : isEditMode
-                ? 'Modify this accounting transaction'
-                : 'Record a multi-line accounting transaction'}
+                ? t('journalEntry.subtitleEdit')
+                : t('journalEntry.subtitleNew')}
           </p>
           <HelpLink section="journal-entry" className="mt-1 self-start" />
         </div>
@@ -308,7 +318,7 @@ export function JournalEntryPage() {
             className="h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm hover:bg-primary/5"
             data-testid="journal-entry-cancel-button"
           >
-            {isReadOnly ? 'Back' : 'Cancel'}
+            {isReadOnly ? t('common:actions.back') : t('common:actions.cancel')}
           </button>
           {!isReadOnly && (
             <>
@@ -319,7 +329,7 @@ export function JournalEntryPage() {
                 className="h-10 px-4 rounded-lg bg-primary/20 text-primary font-bold text-sm hover:bg-primary/30 disabled:opacity-50 disabled:cursor-not-allowed"
                 data-testid="journal-entry-save-draft-button"
               >
-                Save Draft
+                {t('journalEntry.saveDraft')}
               </button>
               <button
                 type="button"
@@ -331,7 +341,7 @@ export function JournalEntryPage() {
                 {isSubmitting && (
                   <span className="material-symbols-outlined animate-spin text-base">progress_activity</span>
                 )}
-                {isEditMode ? 'Update & Post' : 'Save & Post'}
+                {isEditMode ? t('journalEntry.updateAndPost') : t('journalEntry.saveAndPost')}
               </button>
             </>
           )}
@@ -343,7 +353,7 @@ export function JournalEntryPage() {
       {accountsError && (
         <ModuleDisabledBanner
           error={accountsError}
-          context="Account selection is unavailable until the module is enabled."
+          context={t('journalEntry.moduleContext')}
           testId="journal-entry-module-disabled"
         />
       )}
@@ -355,7 +365,11 @@ export function JournalEntryPage() {
           data-testid="journal-entry-readonly-banner"
         >
           <span className="material-symbols-outlined text-xl">lock</span>
-          This journal entry has been {existingGroup?.status?.toLowerCase()} and cannot be modified.
+          {t('journalEntry.readOnlyBanner', {
+            status: t(`statusInline.${String(existingGroup?.status ?? '').toLowerCase()}` as 'statusInline.posted', {
+              defaultValue: String(existingGroup?.status ?? '').toLowerCase(),
+            }),
+          })}
         </div>
       )}
 
@@ -376,12 +390,12 @@ export function JournalEntryPage() {
         data-testid="journal-entry-header-section"
       >
         <div className="px-6 py-4 border-b border-border-light dark:border-border-dark">
-          <h2 className="text-lg font-bold text-text-light dark:text-text-dark">Entry Details</h2>
+          <h2 className="text-lg font-bold text-text-light dark:text-text-dark">{t('journalEntry.entryDetails')}</h2>
         </div>
         <div className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <DatePicker
-              label="Entry Date"
+              label={t('journalEntry.entryDate')}
               required
               disabled={isReadOnly}
               {...register('entryDate')}
@@ -389,8 +403,8 @@ export function JournalEntryPage() {
               data-testid="journal-entry-date-input"
             />
             <Input
-              label="Reference"
-              placeholder="e.g., JE-2024-001"
+              label={t('journalEntry.reference')}
+              placeholder={t('journalEntry.referencePlaceholder')}
               disabled={isReadOnly}
               {...register('reference')}
               error={errors.reference?.message}
@@ -402,9 +416,9 @@ export function JournalEntryPage() {
           </div>
           <div className="mt-6">
             <Textarea
-              label="Description"
+              label={t('journalEntry.description')}
               required
-              placeholder="Describe the purpose of this journal entry..."
+              placeholder={t('journalEntry.descriptionPlaceholder')}
               rows={2}
               disabled={isReadOnly}
               {...register('description')}
@@ -421,7 +435,7 @@ export function JournalEntryPage() {
         data-testid="journal-entry-lines-section"
       >
         <div className="px-6 py-4 border-b border-border-light dark:border-border-dark flex justify-between items-center">
-          <h2 className="text-lg font-bold text-text-light dark:text-text-dark">Line Items</h2>
+          <h2 className="text-lg font-bold text-text-light dark:text-text-dark">{t('journalEntry.lineItems')}</h2>
           {!isReadOnly && (
             <button
               type="button"
@@ -430,7 +444,7 @@ export function JournalEntryPage() {
               data-testid="journal-entry-add-line-button"
             >
               <span className="material-symbols-outlined text-lg">add</span>
-              Add Line
+              {t('journalEntry.addLine')}
             </button>
           )}
         </div>
@@ -444,10 +458,10 @@ export function JournalEntryPage() {
           <table className="w-full min-w-[860px] text-sm" data-testid="journal-entry-lines-table">
             <thead className="text-xs text-subtle-text uppercase bg-background-light dark:bg-background-dark">
               <tr>
-                <th className="px-4 py-3 text-left font-semibold w-[32%]">Account</th>
-                <th className="px-4 py-3 text-right font-semibold w-[19%]">Debit</th>
-                <th className="px-4 py-3 text-right font-semibold w-[19%]">Credit</th>
-                <th className="px-4 py-3 text-left font-semibold w-[25%]">Description</th>
+                <th className="px-4 py-3 text-left font-semibold w-[32%]">{t('journalEntry.columns.account')}</th>
+                <th className="px-4 py-3 text-right font-semibold w-[19%]">{t('journalEntry.columns.debit')}</th>
+                <th className="px-4 py-3 text-right font-semibold w-[19%]">{t('journalEntry.columns.credit')}</th>
+                <th className="px-4 py-3 text-left font-semibold w-[25%]">{t('journalEntry.columns.description')}</th>
                 <th className="px-4 py-3 text-center font-semibold w-[5%]"></th>
               </tr>
             </thead>
@@ -462,7 +476,7 @@ export function JournalEntryPage() {
                   <td className="px-4 py-3">
                     <Select
                       options={accountOptions}
-                      placeholder="Select account..."
+                      placeholder={t('journalEntry.selectAccountPlaceholder')}
                       disabled={isReadOnly}
                       {...register(`lines.${index}.accountId`)}
                       error={errors.lines?.[index]?.accountId?.message}
@@ -478,7 +492,7 @@ export function JournalEntryPage() {
                   <td className="px-4 py-3">
                     <MoneyInput
                       placeholder="0.00"
-                      aria-label={`Line ${index + 1} debit amount`}
+                      aria-label={t('journalEntry.lineDebitAria', { line: index + 1 })}
                       disabled={isReadOnly}
                       {...register(`lines.${index}.debitAmount`, { valueAsNumber: true })}
                       data-testid={`journal-entry-line-${index}-debit`}
@@ -489,7 +503,7 @@ export function JournalEntryPage() {
                   <td className="px-4 py-3">
                     <MoneyInput
                       placeholder="0.00"
-                      aria-label={`Line ${index + 1} credit amount`}
+                      aria-label={t('journalEntry.lineCreditAria', { line: index + 1 })}
                       disabled={isReadOnly}
                       {...register(`lines.${index}.creditAmount`, { valueAsNumber: true })}
                       data-testid={`journal-entry-line-${index}-credit`}
@@ -500,7 +514,7 @@ export function JournalEntryPage() {
                   <td className="px-4 py-3">
                     <input
                       type="text"
-                      placeholder="Line description (optional)"
+                      placeholder={t('journalEntry.lineDescriptionPlaceholder')}
                       disabled={isReadOnly}
                       {...register(`lines.${index}.description`)}
                       className="w-full h-12 px-4 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark placeholder:text-subtle-text focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed"
@@ -516,7 +530,7 @@ export function JournalEntryPage() {
                         onClick={() => handleRemoveLine(index)}
                         disabled={fields.length <= 2}
                         className="flex items-center justify-center size-10 rounded-full text-subtle-text hover:text-danger hover:bg-danger/10 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-subtle-text disabled:hover:bg-transparent"
-                        title={fields.length <= 2 ? 'Minimum 2 lines required' : 'Remove line'}
+                        title={fields.length <= 2 ? t('journalEntry.minLinesHint') : t('journalEntry.removeLine')}
                         data-testid={`journal-entry-line-${index}-remove`}
                       >
                         <span className="material-symbols-outlined text-xl">delete</span>
@@ -549,7 +563,7 @@ export function JournalEntryPage() {
           <div className="flex flex-wrap justify-end items-center gap-6">
             {/* Total Debits */}
             <div className="text-right">
-              <p className="text-sm text-subtle-text font-medium">Total Debits</p>
+              <p className="text-sm text-subtle-text font-medium">{t('journalEntry.totalDebits')}</p>
               <p
                 className="text-xl font-bold text-text-light dark:text-text-dark"
                 data-testid="journal-entry-total-debit"
@@ -560,7 +574,7 @@ export function JournalEntryPage() {
 
             {/* Total Credits */}
             <div className="text-right">
-              <p className="text-sm text-subtle-text font-medium">Total Credits</p>
+              <p className="text-sm text-subtle-text font-medium">{t('journalEntry.totalCredits')}</p>
               <p
                 className="text-xl font-bold text-text-light dark:text-text-dark"
                 data-testid="journal-entry-total-credit"
@@ -588,11 +602,11 @@ export function JournalEntryPage() {
                 </span>
                 <div>
                   <p className={`text-sm font-medium ${isBalanced ? 'text-success' : 'text-danger'}`}>
-                    {isBalanced ? 'Balanced' : 'Out of Balance'}
+                    {isBalanced ? t('journalEntry.balanced') : t('journalEntry.outOfBalance')}
                   </p>
                   {!isBalanced && (
                     <p className="text-xs text-danger">
-                      Difference: {formatCurrency(difference)}
+                      {t('journalEntry.differenceAmount', { amount: formatCurrency(difference) })}
                     </p>
                   )}
                 </div>

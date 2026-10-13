@@ -4,9 +4,13 @@
  * Reference: soupfinance-designs/general-ledger-entries/, design-system.md
  *
  * Changed: Now fetches transactions from API via useTransactions hook
+ * Changed (SOUPFIN-164): every visible string comes from the `accounting` namespace,
+ *   and Delete, batch Delete and Reverse ask through ConfirmDialog instead of
+ *   window.confirm.
  */
 import { useState, useMemo, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { Trans, useTranslation } from 'react-i18next';
 // Added: Import useTransactions hook for API data fetching
 import { useTransactions, type UnifiedTransaction } from '../../hooks/useTransactions';
 // Added: API imports for transaction actions
@@ -22,8 +26,9 @@ import {
 } from '../../api/endpoints/ledger';
 import { useQueryClient } from '@tanstack/react-query';
 // Added (SOUPFIN-9): parse 403/network errors into user-friendly messages
-import { parseApiError, getApiErrorMessage } from '../../api/errors';
-import { ApiErrorState, useToast } from '../../components/feedback';
+import { parseApiError } from '../../api/errors';
+import { translateApiError, getTranslatedApiErrorMessage } from '../../i18n/translateApiError';
+import { ApiErrorState, ConfirmDialog, useToast } from '../../components/feedback';
 // SOUPFIN-20: route the raw date filter inputs through the same sanitiser the
 // shared DatePicker uses (SOUPFIN-19) so a null/sentinel/malformed value never
 // renders as the confusing "0/0/0" placeholder the user reported.
@@ -53,6 +58,19 @@ interface FilterState {
   minAmount: string;
   maxAmount: string;
 }
+
+// Added (SOUPFIN-164): option values for the status and type filters; labels are translated
+const STATUS_OPTIONS = ['ALL', 'DRAFT', 'PENDING', 'POSTED', 'REVERSED'] as const;
+const TYPE_OPTIONS = ['ALL', 'JOURNAL_ENTRY', 'PAYMENT', 'RECEIPT'] as const;
+type BadgeStatus = Exclude<(typeof STATUS_OPTIONS)[number], 'ALL'>;
+const isBadgeStatus = (status: string): status is BadgeStatus =>
+  (STATUS_OPTIONS as readonly string[]).includes(status) && status !== 'ALL';
+
+// Added (SOUPFIN-164): the action waiting for the user to confirm it
+type PendingConfirmation =
+  | { kind: 'delete'; tx: UnifiedTransaction }
+  | { kind: 'reverse'; tx: UnifiedTransaction }
+  | { kind: 'batchDelete'; count: number };
 
 // Added: Default filter values
 const defaultFilters: FilterState = {
@@ -86,6 +104,11 @@ export function TransactionRegisterPage() {
   const queryClient = useQueryClient();
   // Added (SOUPFIN-9): toast for action feedback (Post/Reverse/Delete/Export)
   const { showToast } = useToast();
+  const { t } = useTranslation(['accounting', 'common']);
+
+  // Added (SOUPFIN-164): confirmation modal state (replaces window.confirm)
+  const [pendingConfirmation, setPendingConfirmation] = useState<PendingConfirmation | null>(null);
+  const [isConfirming, setIsConfirming] = useState(false);
 
   // Added: Fetch transactions from API
   const { data: transactions, isLoading, isError, error, refetch } = useTransactions();
@@ -274,16 +297,17 @@ export function TransactionRegisterPage() {
         await postVoucher(tx.sourceId);
       }
       await queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      showToast({ variant: 'success', message: `Transaction ${tx.transactionId} posted.` });
+      showToast({ variant: 'success', message: t('transactions.toasts.posted', { id: tx.transactionId }) });
     } catch (err) {
       console.error('[TransactionRegister] Failed to post transaction:', err);
-      showToast({ variant: 'error', message: getApiErrorMessage(err) });
+      showToast({ variant: 'error', message: getTranslatedApiErrorMessage(err) });
     }
     setOpenActionDropdown(null);
-  }, [queryClient, showToast]);
+  }, [queryClient, showToast, t]);
 
   // Changed (SOUPFIN-9): Reverse transaction with toast feedback
-  const handleReverse = useCallback(async (tx: UnifiedTransaction) => {
+  // Changed (SOUPFIN-164): runs only after the user confirms in ConfirmDialog
+  const performReverse = useCallback(async (tx: UnifiedTransaction) => {
     try {
       if (tx.type === 'JOURNAL_ENTRY') {
         await reverseTransactionGroup(tx.sourceId);
@@ -291,21 +315,16 @@ export function TransactionRegisterPage() {
         await cancelVoucher(tx.sourceId);
       }
       await queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      showToast({ variant: 'success', message: `Transaction ${tx.transactionId} reversed.` });
+      showToast({ variant: 'success', message: t('transactions.toasts.reversed', { id: tx.transactionId }) });
     } catch (err) {
       console.error('[TransactionRegister] Failed to reverse transaction:', err);
-      showToast({ variant: 'error', message: getApiErrorMessage(err) });
+      showToast({ variant: 'error', message: getTranslatedApiErrorMessage(err) });
     }
-    setOpenActionDropdown(null);
-  }, [queryClient, showToast]);
+  }, [queryClient, showToast, t]);
 
   // Changed (SOUPFIN-9): Delete transaction with toast feedback
-  const handleDelete = useCallback(async (tx: UnifiedTransaction) => {
-    if (!window.confirm(`Are you sure you want to delete transaction ${tx.transactionId}?`)) {
-      setOpenActionDropdown(null);
-      return;
-    }
-
+  // Changed (SOUPFIN-164): runs only after the user confirms in ConfirmDialog
+  const performDelete = useCallback(async (tx: UnifiedTransaction) => {
     try {
       if (tx.type === 'JOURNAL_ENTRY') {
         await deleteTransactionGroup(tx.sourceId);
@@ -313,13 +332,23 @@ export function TransactionRegisterPage() {
         await deleteVoucher(tx.sourceId);
       }
       await queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      showToast({ variant: 'success', message: `Transaction ${tx.transactionId} deleted.` });
+      showToast({ variant: 'success', message: t('transactions.toasts.deleted', { id: tx.transactionId }) });
     } catch (err) {
       console.error('[TransactionRegister] Failed to delete transaction:', err);
-      showToast({ variant: 'error', message: getApiErrorMessage(err) });
+      showToast({ variant: 'error', message: getTranslatedApiErrorMessage(err) });
     }
+  }, [queryClient, showToast, t]);
+
+  // Added (SOUPFIN-164): row actions open the confirmation modal
+  const handleReverse = useCallback((tx: UnifiedTransaction) => {
     setOpenActionDropdown(null);
-  }, [queryClient, showToast]);
+    setPendingConfirmation({ kind: 'reverse', tx });
+  }, []);
+
+  const handleDelete = useCallback((tx: UnifiedTransaction) => {
+    setOpenActionDropdown(null);
+    setPendingConfirmation({ kind: 'delete', tx });
+  }, []);
 
   // Changed (SOUPFIN-9): Batch post with summary toast
   const handleBatchPost = useCallback(async () => {
@@ -338,21 +367,23 @@ export function TransactionRegisterPage() {
         })
       );
       await queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      showToast({ variant: 'success', message: `${selectedTxs.length} transaction(s) posted.` });
+      showToast({ variant: 'success', message: t('transactions.toasts.batchPosted', { count: selectedTxs.length }) });
     } catch (err) {
       console.error('[TransactionRegister] Batch post failed:', err);
-      showToast({ variant: 'error', message: getApiErrorMessage(err) });
+      showToast({ variant: 'error', message: getTranslatedApiErrorMessage(err) });
     }
     setSelectedIds(new Set());
-  }, [selectedIds, transactions, queryClient, showToast]);
+  }, [selectedIds, transactions, queryClient, showToast, t]);
 
   // Changed (SOUPFIN-9): Batch delete with summary toast
-  const handleBatchDelete = useCallback(async () => {
+  // Changed (SOUPFIN-164): asks through ConfirmDialog, then performBatchDelete runs
+  const handleBatchDelete = useCallback(() => {
     if (selectedIds.size === 0 || !transactions) return;
+    setPendingConfirmation({ kind: 'batchDelete', count: selectedIds.size });
+  }, [selectedIds, transactions]);
 
-    if (!window.confirm(`Are you sure you want to delete ${selectedIds.size} transaction(s)?`)) {
-      return;
-    }
+  const performBatchDelete = useCallback(async () => {
+    if (selectedIds.size === 0 || !transactions) return;
 
     const selectedTxs = transactions.filter(tx => selectedIds.has(tx.id));
 
@@ -367,13 +398,29 @@ export function TransactionRegisterPage() {
         })
       );
       await queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      showToast({ variant: 'success', message: `${selectedTxs.length} transaction(s) deleted.` });
+      showToast({ variant: 'success', message: t('transactions.toasts.batchDeleted', { count: selectedTxs.length }) });
     } catch (err) {
       console.error('[TransactionRegister] Batch delete failed:', err);
-      showToast({ variant: 'error', message: getApiErrorMessage(err) });
+      showToast({ variant: 'error', message: getTranslatedApiErrorMessage(err) });
     }
     setSelectedIds(new Set());
-  }, [selectedIds, transactions, queryClient, showToast]);
+  }, [selectedIds, transactions, queryClient, showToast, t]);
+
+  // Added (SOUPFIN-164): the confirmed action runs, then the modal closes
+  const handleConfirm = useCallback(async () => {
+    if (!pendingConfirmation) return;
+    setIsConfirming(true);
+    try {
+      if (pendingConfirmation.kind === 'delete') await performDelete(pendingConfirmation.tx);
+      else if (pendingConfirmation.kind === 'reverse') await performReverse(pendingConfirmation.tx);
+      else await performBatchDelete();
+    } finally {
+      setIsConfirming(false);
+      setPendingConfirmation(null);
+    }
+  }, [pendingConfirmation, performDelete, performReverse, performBatchDelete]);
+
+  const handleCancelConfirm = useCallback(() => setPendingConfirmation(null), []);
 
   // Changed (SOUPFIN-9): Export now gives explicit feedback instead of silent console.log.
   // If the transactions query failed (e.g. 403 Accounting module disabled), the
@@ -381,17 +428,17 @@ export function TransactionRegisterPage() {
   // Otherwise we generate a CSV from the in-memory data and trigger a download.
   const handleExport = useCallback(() => {
     if (isError) {
-      const parsed = parseApiError(error);
+      const parsed = translateApiError(parseApiError(error));
       showToast({
         variant: 'error',
-        message: `Cannot export — ${parsed.message}`,
+        message: t('transactions.toasts.exportBlocked', { reason: parsed.message }),
         duration: 7000,
       });
       return;
     }
     const rows = filteredTransactions;
     if (!rows || rows.length === 0) {
-      showToast({ variant: 'warning', message: 'Nothing to export — the current view is empty.' });
+      showToast({ variant: 'warning', message: t('transactions.toasts.exportEmpty') });
       return;
     }
     try {
@@ -421,12 +468,12 @@ export function TransactionRegisterPage() {
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-      showToast({ variant: 'success', message: `Exported ${rows.length} transaction(s) to CSV.` });
+      showToast({ variant: 'success', message: t('transactions.toasts.exported', { count: rows.length }) });
     } catch (err) {
       console.error('[TransactionRegister] Export failed:', err);
-      showToast({ variant: 'error', message: 'Export failed. Please try again.' });
+      showToast({ variant: 'error', message: t('transactions.toasts.exportFailed') });
     }
-  }, [filteredTransactions, isError, error, showToast]);
+  }, [filteredTransactions, isError, error, showToast, t]);
 
   // Added: Status badge color helper
   const getStatusBadgeClass = (status: string): string => {
@@ -478,10 +525,10 @@ export function TransactionRegisterPage() {
                 className="text-text-light dark:text-text-dark text-3xl lg:text-4xl font-black leading-tight tracking-[-0.033em]"
                 data-testid="transaction-register-heading"
               >
-                Transaction Register
+                {t('transactions.title')}
               </h1>
               <p className="text-subtle-text dark:text-subtle-text-dark text-base mt-1">
-                View and manage all accounting transactions
+                {t('transactions.subtitle')}
               </p>
               <HelpLink section="transaction-register" className="mt-1 self-start" />
             </div>
@@ -494,7 +541,7 @@ export function TransactionRegisterPage() {
                 data-testid="new-journal-entry-button"
               >
                 <span className="material-symbols-outlined text-lg mr-2">add</span>
-                <span className="truncate">New Journal Entry</span>
+                <span className="truncate">{t('transactions.newJournalEntry')}</span>
               </button>
               {/* Added: New Payment button */}
               <button
@@ -504,7 +551,7 @@ export function TransactionRegisterPage() {
                 data-testid="new-payment-button"
               >
                 <span className="material-symbols-outlined text-lg mr-2">payments</span>
-                <span className="truncate">New Payment</span>
+                <span className="truncate">{t('transactions.newPayment')}</span>
               </button>
               {/* Added: New Receipt button */}
               <button
@@ -514,7 +561,7 @@ export function TransactionRegisterPage() {
                 data-testid="new-receipt-button"
               >
                 <span className="material-symbols-outlined text-lg mr-2">receipt</span>
-                <span className="truncate">New Receipt</span>
+                <span className="truncate">{t('transactions.newReceipt')}</span>
               </button>
               {/* Added: Export button */}
               <button
@@ -524,7 +571,7 @@ export function TransactionRegisterPage() {
                 data-testid="export-button"
               >
                 <span className="material-symbols-outlined text-lg mr-2">download</span>
-                <span className="truncate">Export</span>
+                <span className="truncate">{t('common:actions.export')}</span>
               </button>
             </div>
           </div>
@@ -542,11 +589,11 @@ export function TransactionRegisterPage() {
                   type="search"
                   id="transaction-search"
                   name="transaction-search"
-                  aria-label="Search transactions by ID, description, or amount"
+                  aria-label={t('transactions.searchAria')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-r-lg text-text-light dark:text-text-dark focus:outline-0 focus:ring-1 focus:ring-primary border-none bg-surface-light dark:bg-surface-dark h-full placeholder:text-subtle-text dark:placeholder:text-subtle-text-dark px-4 pl-2 text-base font-normal leading-normal border border-l-0 border-border-light dark:border-border-dark"
-                  placeholder="Search by Transaction ID, Description, or Amount..."
+                  placeholder={t('transactions.searchPlaceholder')}
                   data-testid="transaction-search-input"
                 />
               </div>
@@ -559,8 +606,9 @@ export function TransactionRegisterPage() {
             {/* Fix (SOUPFIN-33 #1/#6): the sibling <label> had no htmlFor and the input no
                 id, leaving the empty native picker unnamed (reported as "0/0/0"). */}
             <DateFilterField
-              label="From:"
-              ariaLabel="Filter transactions from date"
+              label={t('transactions.filterBar.from')}
+              ariaLabel={t('transactions.filterBar.fromAria')}
+              emptyHint={t('common:dateFilter.emptyHint')}
               id="register-start-date"
               value={filters.startDate}
               onChange={(v) => handleFilterChange('startDate', v)}
@@ -570,8 +618,9 @@ export function TransactionRegisterPage() {
               data-testid="filter-start-date"
             />
             <DateFilterField
-              label="To:"
-              ariaLabel="Filter transactions to date"
+              label={t('transactions.filterBar.to')}
+              ariaLabel={t('transactions.filterBar.toAria')}
+              emptyHint={t('common:dateFilter.emptyHint')}
               id="register-end-date"
               value={filters.endDate}
               onChange={(v) => handleFilterChange('endDate', v)}
@@ -583,54 +632,51 @@ export function TransactionRegisterPage() {
 
             {/* Status Filter */}
             <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-text-light dark:text-subtle-text-dark" htmlFor="register-status-filter">Status:</label>
+              <label className="text-sm font-medium text-text-light dark:text-subtle-text-dark" htmlFor="register-status-filter">{t('transactions.filterBar.status')}</label>
               <select
                 id="register-status-filter"
                 name="register-status-filter"
-                aria-label="Filter transactions by status"
+                aria-label={t('transactions.filterBar.statusAria')}
                 value={filters.status}
                 onChange={(e) => handleFilterChange('status', e.target.value)}
                 className="form-select h-9 px-3 rounded-lg border border-border-light dark:border-border-dark bg-transparent dark:bg-surface-dark text-sm dark:text-text-dark"
                 data-testid="filter-status"
               >
-                <option value="ALL">All</option>
-                <option value="DRAFT">Draft</option>
-                <option value="PENDING">Pending</option>
-                <option value="POSTED">Posted</option>
-                <option value="REVERSED">Reversed</option>
+                {STATUS_OPTIONS.map((status) => (
+                  <option key={status} value={status}>{t(`transactions.statusOptions.${status}`)}</option>
+                ))}
               </select>
             </div>
 
             {/* Type Filter */}
             <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-text-light dark:text-subtle-text-dark" htmlFor="register-type-filter">Type:</label>
+              <label className="text-sm font-medium text-text-light dark:text-subtle-text-dark" htmlFor="register-type-filter">{t('transactions.filterBar.type')}</label>
               <select
                 id="register-type-filter"
                 name="register-type-filter"
-                aria-label="Filter transactions by type"
+                aria-label={t('transactions.filterBar.typeAria')}
                 value={filters.type}
                 onChange={(e) => handleFilterChange('type', e.target.value)}
                 className="form-select h-9 px-3 rounded-lg border border-border-light dark:border-border-dark bg-transparent dark:bg-surface-dark text-sm dark:text-text-dark"
                 data-testid="filter-type"
               >
-                <option value="ALL">All Types</option>
-                <option value="JOURNAL_ENTRY">Journal Entry</option>
-                <option value="PAYMENT">Payment</option>
-                <option value="RECEIPT">Receipt</option>
+                {TYPE_OPTIONS.map((type) => (
+                  <option key={type} value={type}>{t(`transactions.typeOptions.${type}`)}</option>
+                ))}
               </select>
             </div>
 
             {/* Account Filter */}
             <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-text-light dark:text-subtle-text-dark" htmlFor="register-account-filter">Account:</label>
+              <label className="text-sm font-medium text-text-light dark:text-subtle-text-dark" htmlFor="register-account-filter">{t('transactions.filterBar.account')}</label>
               <input
                 type="text"
                 id="register-account-filter"
                 name="register-account-filter"
-                aria-label="Filter transactions by account code"
+                aria-label={t('transactions.filterBar.accountAria')}
                 value={filters.accountId}
                 onChange={(e) => handleFilterChange('accountId', e.target.value)}
-                placeholder="e.g., 1010"
+                placeholder={t('transactions.filterBar.accountPlaceholder')}
                 className="form-input h-9 w-24 px-3 rounded-lg border border-border-light dark:border-border-dark bg-transparent dark:bg-surface-dark text-sm dark:text-text-dark"
                 data-testid="filter-account"
               />
@@ -644,7 +690,7 @@ export function TransactionRegisterPage() {
               data-testid="clear-filters-button"
             >
               <span className="material-symbols-outlined text-lg">filter_list_off</span>
-              Clear
+              {t('common:actions.clear')}
             </button>
           </div>
 
@@ -655,7 +701,7 @@ export function TransactionRegisterPage() {
               data-testid="batch-action-bar"
             >
               <span className="text-sm font-medium text-text-light dark:text-text-dark">
-                {selectedIds.size} transaction{selectedIds.size > 1 ? 's' : ''} selected
+                {t('transactions.selected', { count: selectedIds.size })}
               </span>
               <div className="flex gap-3">
                 <button
@@ -665,7 +711,7 @@ export function TransactionRegisterPage() {
                   data-testid="batch-post-button"
                 >
                   <span className="material-symbols-outlined text-lg">check_circle</span>
-                  Post Selected
+                  {t('transactions.postSelected')}
                 </button>
                 <button
                   type="button"
@@ -674,7 +720,7 @@ export function TransactionRegisterPage() {
                   data-testid="batch-delete-button"
                 >
                   <span className="material-symbols-outlined text-lg">delete</span>
-                  Delete Selected
+                  {t('transactions.deleteSelected')}
                 </button>
                 <button
                   type="button"
@@ -682,7 +728,7 @@ export function TransactionRegisterPage() {
                   className="flex items-center gap-2 h-9 px-4 rounded-lg bg-transparent text-text-light dark:text-text-dark text-sm font-bold hover:bg-black/10"
                   data-testid="clear-selection-button"
                 >
-                  Cancel
+                  {t('common:actions.cancel')}
                 </button>
               </div>
             </div>
@@ -695,7 +741,7 @@ export function TransactionRegisterPage() {
                 <span className="material-symbols-outlined text-4xl text-primary animate-spin mb-4">
                   progress_activity
                 </span>
-                <p className="text-subtle-text dark:text-subtle-text-dark text-sm">Loading transactions...</p>
+                <p className="text-subtle-text dark:text-subtle-text-dark text-sm">{t('transactions.loading')}</p>
               </div>
             </div>
           )}
@@ -731,31 +777,31 @@ export function TransactionRegisterPage() {
                       />
                     </th>
                     <th className="px-4 py-3 text-left text-text-light dark:text-subtle-text-dark text-sm font-medium leading-normal">
-                      Date
+                      {t('transactions.columns.date')}
                     </th>
                     <th className="px-4 py-3 text-left text-text-light dark:text-subtle-text-dark text-sm font-medium leading-normal">
-                      Transaction ID
+                      {t('transactions.columns.transactionId')}
                     </th>
                     <th className="px-4 py-3 text-left text-text-light dark:text-subtle-text-dark text-sm font-medium leading-normal">
-                      Description
+                      {t('transactions.columns.description')}
                     </th>
                     <th className="px-4 py-3 text-left text-text-light dark:text-subtle-text-dark text-sm font-medium leading-normal">
-                      Account #
+                      {t('transactions.columns.accountNumber')}
                     </th>
                     <th className="px-4 py-3 text-left text-text-light dark:text-subtle-text-dark text-sm font-medium leading-normal">
-                      Account Name
+                      {t('transactions.columns.accountName')}
                     </th>
                     <th className="px-4 py-3 text-right text-text-light dark:text-subtle-text-dark text-sm font-medium leading-normal">
-                      Debit
+                      {t('transactions.columns.debit')}
                     </th>
                     <th className="px-4 py-3 text-right text-text-light dark:text-subtle-text-dark text-sm font-medium leading-normal">
-                      Credit
+                      {t('transactions.columns.credit')}
                     </th>
                     <th className="px-4 py-3 text-center text-text-light dark:text-subtle-text-dark text-sm font-medium leading-normal">
-                      Status
+                      {t('transactions.columns.status')}
                     </th>
                     <th className="px-4 py-3 text-center text-text-light dark:text-subtle-text-dark text-sm font-medium leading-normal">
-                      Actions
+                      {t('transactions.columns.actions')}
                     </th>
                   </tr>
                 </thead>
@@ -771,12 +817,12 @@ export function TransactionRegisterPage() {
                             className="text-lg font-bold text-text-light dark:text-text-dark mb-1"
                             data-testid="empty-state-heading"
                           >
-                            No transactions found
+                            {t('transactions.emptyTitle')}
                           </h3>
                           <p className="text-subtle-text dark:text-subtle-text-dark text-sm mb-4">
                             {searchQuery || filters.status !== 'ALL' || filters.type !== 'ALL'
-                              ? 'Try adjusting your search or filter criteria'
-                              : 'Create your first transaction to get started'}
+                              ? t('transactions.emptyFiltered')
+                              : t('transactions.emptyBody')}
                           </p>
                           {!searchQuery && filters.status === 'ALL' && filters.type === 'ALL' && (
                             <button
@@ -786,7 +832,7 @@ export function TransactionRegisterPage() {
                               data-testid="empty-state-cta"
                             >
                               <span className="material-symbols-outlined text-lg">add</span>
-                              Create Journal Entry
+                              {t('transactions.createJournalEntry')}
                             </button>
                           )}
                         </div>
@@ -853,7 +899,8 @@ export function TransactionRegisterPage() {
                             className={`inline-flex items-center justify-center rounded-full px-3 py-1 text-xs font-medium ${getStatusBadgeClass(tx.status)}`}
                             data-testid={`transaction-status-${tx.id}`}
                           >
-                            {tx.status}
+                            {/* Changed (SOUPFIN-164): translated badge; an unknown status shows as sent */}
+                            {isBadgeStatus(tx.status) ? t(`transactions.statusBadges.${tx.status}`) : tx.status}
                           </span>
                         </td>
                         {/* Added: Actions dropdown column */}
@@ -863,6 +910,7 @@ export function TransactionRegisterPage() {
                             onClick={(e) => handleToggleActionDropdown(tx.id, e)}
                             className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
                             data-testid={`transaction-actions-${tx.id}`}
+                            aria-label={t('transactions.rowActions', { id: tx.transactionId })}
                           >
                             <span className="material-symbols-outlined text-subtle-text dark:text-subtle-text-dark">
                               more_vert
@@ -887,7 +935,7 @@ export function TransactionRegisterPage() {
                                     className="flex items-center gap-2 w-full px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-800"
                                   >
                                     <span className="material-symbols-outlined text-lg">visibility</span>
-                                    View
+                                    {t('common:actions.view')}
                                   </button>
                                   {(tx.status === 'DRAFT' || tx.status === 'PENDING') && (
                                     <button
@@ -896,7 +944,7 @@ export function TransactionRegisterPage() {
                                       className="flex items-center gap-2 w-full px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-800"
                                     >
                                       <span className="material-symbols-outlined text-lg">edit</span>
-                                      Edit
+                                      {t('common:actions.edit')}
                                     </button>
                                   )}
                                   {(tx.status === 'DRAFT' || tx.status === 'PENDING') && (
@@ -906,7 +954,7 @@ export function TransactionRegisterPage() {
                                       className="flex items-center gap-2 w-full px-4 py-2 text-sm text-green-600 dark:text-green-400 hover:bg-gray-100 dark:hover:bg-gray-800"
                                     >
                                       <span className="material-symbols-outlined text-lg">check_circle</span>
-                                      Post
+                                      {t('common:actions.post')}
                                     </button>
                                   )}
                                   {tx.status === 'POSTED' && (
@@ -916,7 +964,7 @@ export function TransactionRegisterPage() {
                                       className="flex items-center gap-2 w-full px-4 py-2 text-sm text-orange-600 dark:text-orange-400 hover:bg-gray-100 dark:hover:bg-gray-800"
                                     >
                                       <span className="material-symbols-outlined text-lg">undo</span>
-                                      Reverse
+                                      {t('common:actions.reverse')}
                                     </button>
                                   )}
                                   {(tx.status === 'DRAFT' || tx.status === 'PENDING') && (
@@ -926,7 +974,7 @@ export function TransactionRegisterPage() {
                                       className="flex items-center gap-2 w-full px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-800"
                                     >
                                       <span className="material-symbols-outlined text-lg">delete</span>
-                                      Delete
+                                      {t('common:actions.delete')}
                                     </button>
                                   )}
                                 </div>
@@ -946,21 +994,23 @@ export function TransactionRegisterPage() {
           {/* Added: Pagination Controls */}
           {filteredTransactions.length > 0 && (
             <nav
-              aria-label="Pagination"
+              aria-label={t('transactions.paginationAria')}
               className="flex items-center justify-between border-t border-gray-200 dark:border-gray-800 px-4 sm:px-0 pt-4"
               data-testid="pagination"
             >
               <div className="hidden sm:block">
                 <p className="text-sm text-gray-700 dark:text-gray-400">
-                  Showing{' '}
-                  <span className="font-medium">{(currentPage - 1) * pageSize + 1}</span>{' '}
-                  to{' '}
-                  <span className="font-medium">
-                    {Math.min(currentPage * pageSize, filteredTransactions.length)}
-                  </span>{' '}
-                  of{' '}
-                  <span className="font-medium">{filteredTransactions.length}</span>{' '}
-                  results
+                  {/* Changed (SOUPFIN-164): one translated sentence, numbers still in bold */}
+                  <Trans
+                    t={t}
+                    i18nKey="transactions.paginationSummary"
+                    values={{
+                      from: (currentPage - 1) * pageSize + 1,
+                      to: Math.min(currentPage * pageSize, filteredTransactions.length),
+                      total: filteredTransactions.length,
+                    }}
+                    components={{ b: <span className="font-medium" /> }}
+                  />
                 </p>
               </div>
               <div className="flex flex-1 justify-between sm:justify-end gap-3">
@@ -971,7 +1021,7 @@ export function TransactionRegisterPage() {
                   className="relative inline-flex items-center rounded-md border border-border-light dark:border-border-dark bg-white dark:bg-transparent px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
                   data-testid="pagination-prev"
                 >
-                  Previous
+                  {t('common:pagination.previous')}
                 </button>
                 <button
                   type="button"
@@ -980,7 +1030,7 @@ export function TransactionRegisterPage() {
                   className="relative inline-flex items-center rounded-md border border-border-light dark:border-border-dark bg-white dark:bg-transparent px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
                   data-testid="pagination-next"
                 >
-                  Next
+                  {t('common:pagination.next')}
                 </button>
               </div>
             </nav>
@@ -994,7 +1044,7 @@ export function TransactionRegisterPage() {
         data-testid="advanced-filters-panel"
       >
         <div className="flex flex-col gap-6">
-          <h2 className="text-xl font-bold text-text-light dark:text-text-dark">Advanced Filters</h2>
+          <h2 className="text-xl font-bold text-text-light dark:text-text-dark">{t('transactions.panel.title')}</h2>
           <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
             {/* Date Range */}
             <div>
@@ -1002,12 +1052,13 @@ export function TransactionRegisterPage() {
                 className="block text-sm font-medium text-gray-700 dark:text-gray-300"
                 htmlFor="panel-date-range-start"
               >
-                Date Range
+                {t('transactions.panel.dateRange')}
               </label>
               <div className="flex gap-2 mt-1">
                 <input
                   type="date"
                   id="panel-date-range-start"
+                  aria-label={t('transactions.filterBar.fromAria')}
                   value={sanitizeDateInputValue(filters.startDate)}
                   onChange={(e) => handleFilterChange('startDate', e.target.value)}
                   className="block w-full rounded-md border-border-light dark:border-border-dark shadow-sm focus:border-primary focus:ring-primary sm:text-sm bg-transparent dark:text-text-dark dark:bg-surface-dark"
@@ -1016,6 +1067,7 @@ export function TransactionRegisterPage() {
                 <input
                   type="date"
                   id="panel-date-range-end"
+                  aria-label={t('transactions.filterBar.toAria')}
                   value={sanitizeDateInputValue(filters.endDate)}
                   onChange={(e) => handleFilterChange('endDate', e.target.value)}
                   className="block w-full rounded-md border-border-light dark:border-border-dark shadow-sm focus:border-primary focus:ring-primary sm:text-sm bg-transparent dark:text-text-dark dark:bg-surface-dark"
@@ -1030,7 +1082,7 @@ export function TransactionRegisterPage() {
                 className="block text-sm font-medium text-gray-700 dark:text-gray-300"
                 htmlFor="panel-status-filter"
               >
-                Status
+                {t('transactions.panel.status')}
               </label>
               <select
                 id="panel-status-filter"
@@ -1039,11 +1091,9 @@ export function TransactionRegisterPage() {
                 className="mt-1 block w-full rounded-md border-border-light dark:border-border-dark py-2 pl-3 pr-10 text-base focus:border-primary focus:outline-none focus:ring-primary sm:text-sm bg-transparent dark:text-text-dark dark:bg-background-dark"
                 data-testid="panel-filter-status"
               >
-                <option value="ALL">All</option>
-                <option value="DRAFT">Draft</option>
-                <option value="PENDING">Pending</option>
-                <option value="POSTED">Posted</option>
-                <option value="REVERSED">Reversed</option>
+                {STATUS_OPTIONS.map((status) => (
+                  <option key={status} value={status}>{t(`transactions.statusOptions.${status}`)}</option>
+                ))}
               </select>
             </div>
 
@@ -1053,7 +1103,7 @@ export function TransactionRegisterPage() {
                 className="block text-sm font-medium text-gray-700 dark:text-gray-300"
                 htmlFor="panel-type-filter"
               >
-                Transaction Type
+                {t('transactions.panel.type')}
               </label>
               <select
                 id="panel-type-filter"
@@ -1062,10 +1112,9 @@ export function TransactionRegisterPage() {
                 className="mt-1 block w-full rounded-md border-border-light dark:border-border-dark py-2 pl-3 pr-10 text-base focus:border-primary focus:outline-none focus:ring-primary sm:text-sm bg-transparent dark:text-text-dark dark:bg-background-dark"
                 data-testid="panel-filter-type"
               >
-                <option value="ALL">All Types</option>
-                <option value="JOURNAL_ENTRY">Journal Entry</option>
-                <option value="PAYMENT">Payment</option>
-                <option value="RECEIPT">Receipt</option>
+                {TYPE_OPTIONS.map((type) => (
+                  <option key={type} value={type}>{t(`transactions.typeOptions.${type}`)}</option>
+                ))}
               </select>
             </div>
 
@@ -1075,14 +1124,14 @@ export function TransactionRegisterPage() {
                 className="block text-sm font-medium text-gray-700 dark:text-gray-300"
                 htmlFor="panel-account-number"
               >
-                Account Number
+                {t('transactions.panel.accountNumber')}
               </label>
               <input
                 type="text"
                 id="panel-account-number"
                 value={filters.accountId}
                 onChange={(e) => handleFilterChange('accountId', e.target.value)}
-                placeholder="e.g., 1010"
+                placeholder={t('transactions.filterBar.accountPlaceholder')}
                 className="mt-1 block w-full rounded-md border-border-light dark:border-border-dark shadow-sm focus:border-primary focus:ring-primary sm:text-sm bg-transparent dark:text-text-dark"
                 data-testid="panel-filter-account"
               />
@@ -1095,7 +1144,7 @@ export function TransactionRegisterPage() {
                   className="block text-sm font-medium text-gray-700 dark:text-gray-300"
                   htmlFor="panel-amount-min"
                 >
-                  Min Amount
+                  {t('transactions.filters.minAmount')}
                 </label>
                 <input
                   type="number"
@@ -1112,7 +1161,7 @@ export function TransactionRegisterPage() {
                   className="block text-sm font-medium text-gray-700 dark:text-gray-300"
                   htmlFor="panel-amount-max"
                 >
-                  Max Amount
+                  {t('transactions.filters.maxAmount')}
                 </label>
                 <input
                   type="number"
@@ -1134,14 +1183,14 @@ export function TransactionRegisterPage() {
                 className="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-transparent text-text-light dark:text-text-dark text-sm font-bold leading-normal tracking-[0.015em] hover:bg-gray-100 dark:hover:bg-gray-800"
                 data-testid="panel-clear-button"
               >
-                <span className="truncate">Clear</span>
+                <span className="truncate">{t('common:actions.clear')}</span>
               </button>
               <button
                 type="button"
                 className="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-primary text-white text-sm font-bold leading-normal tracking-[0.015em] hover:bg-primary/90"
                 data-testid="panel-apply-button"
               >
-                <span className="truncate">Apply</span>
+                <span className="truncate">{t('common:actions.apply')}</span>
               </button>
             </div>
           </form>
@@ -1150,7 +1199,7 @@ export function TransactionRegisterPage() {
 
           {/* Added: Reporting Quick Links */}
           <div className="flex flex-col gap-4">
-            <h2 className="text-xl font-bold text-text-light dark:text-text-dark">Reporting</h2>
+            <h2 className="text-xl font-bold text-text-light dark:text-text-dark">{t('transactions.panel.reporting')}</h2>
             <div className="space-y-3">
               <Link
                 to="/reports/trial-balance"
@@ -1158,7 +1207,7 @@ export function TransactionRegisterPage() {
               >
                 <span className="material-symbols-outlined text-gray-500 dark:text-gray-400">summarize</span>
                 <span className="text-sm font-medium text-gray-800 dark:text-gray-300">
-                  Generate Trial Balance
+                  {t('transactions.panel.trialBalance')}
                 </span>
               </Link>
               <Link
@@ -1168,7 +1217,7 @@ export function TransactionRegisterPage() {
                 <span className="material-symbols-outlined text-gray-500 dark:text-gray-400">
                   account_balance_wallet
                 </span>
-                <span className="text-sm font-medium text-gray-800 dark:text-gray-300">Journal Report</span>
+                <span className="text-sm font-medium text-gray-800 dark:text-gray-300">{t('transactions.panel.journalReport')}</span>
               </Link>
               <Link
                 to="/reports/pnl"
@@ -1176,13 +1225,41 @@ export function TransactionRegisterPage() {
               >
                 <span className="material-symbols-outlined text-gray-500 dark:text-gray-400">monitoring</span>
                 <span className="text-sm font-medium text-gray-800 dark:text-gray-300">
-                  Profit &amp; Loss Statement
+                  {t('transactions.panel.profitAndLoss')}
                 </span>
               </Link>
             </div>
           </div>
         </div>
       </aside>
+
+      {/* Added (SOUPFIN-164): confirmation for Delete, batch Delete and Reverse */}
+      <ConfirmDialog
+        open={pendingConfirmation !== null}
+        tone={pendingConfirmation?.kind === 'reverse' ? 'warning' : 'danger'}
+        icon={pendingConfirmation?.kind === 'reverse' ? 'undo' : 'delete'}
+        title={
+          pendingConfirmation?.kind === 'reverse'
+            ? t('transactions.confirm.reverseTitle', { id: pendingConfirmation.tx.transactionId })
+            : pendingConfirmation?.kind === 'delete'
+              ? t('transactions.confirm.deleteTitle', { id: pendingConfirmation.tx.transactionId })
+              : t('transactions.confirm.batchDeleteTitle', { count: pendingConfirmation?.count ?? 0 })
+        }
+        message={
+          pendingConfirmation?.kind === 'reverse'
+            ? t('transactions.confirm.reverseMessage')
+            : pendingConfirmation?.kind === 'delete'
+              ? t('transactions.confirm.deleteMessage')
+              : t('transactions.confirm.batchDeleteMessage', { count: pendingConfirmation?.count ?? 0 })
+        }
+        confirmLabel={
+          pendingConfirmation?.kind === 'reverse' ? t('common:actions.reverse') : t('common:actions.delete')
+        }
+        isPending={isConfirming}
+        onConfirm={handleConfirm}
+        onCancel={handleCancelConfirm}
+        testId="transaction-confirm-dialog"
+      />
     </div>
   );
 }

@@ -9,7 +9,10 @@
  * The `module_disabled` variant (SOUPFIN-9) intentionally hides the Retry
  * button — retrying will not change the backend tenant configuration.
  */
+import { useTranslation } from 'react-i18next';
 import { parseApiError, type ApiErrorKind } from '../../api/errors';
+// Added (SOUPFIN-164): render the error copy in the user's language
+import { translateApiError } from '../../i18n/translateApiError';
 // Added (SOUPFIN-81): link to the guide's "module is not enabled" answer
 import { HelpLink } from '../help';
 
@@ -36,7 +39,8 @@ const ICON_BY_KIND: Record<ApiErrorKind, string> = {
 };
 
 export function ApiErrorState({ error, onRetry, testId }: ApiErrorStateProps) {
-  const parsed = parseApiError(error);
+  const { t } = useTranslation('common');
+  const parsed = translateApiError(parseApiError(error));
   const icon = ICON_BY_KIND[parsed.kind];
 
   // module_disabled cannot be fixed by retry — surface the action hint instead.
@@ -84,7 +88,7 @@ export function ApiErrorState({ error, onRetry, testId }: ApiErrorStateProps) {
           data-testid={testId ? `${testId}-retry` : 'api-error-retry'}
         >
           <span className="material-symbols-outlined text-lg">refresh</span>
-          Retry
+          {t('actions.retry')}
         </button>
       )}
     </div>

@@ -3,7 +3,7 @@
   "subtitle": "Rekeningschema en grootboektransacties",
   "chartOfAccounts": {
     "title": "Rekeningschema",
-    "subtitle": "Beheer uw rekeningstructuur",
+    "subtitle": "Beheer uw grootboekrekeningen",
     "newAccount": "Nieuwe rekening",
     "editAccount": "Rekening bewerken",
     "accountCode": "Rekeningcode",
@@ -64,7 +64,26 @@
       "applied_one": "{{count}} rekening toegevoegd uit het sjabloon {{template}}.",
       "applied_other": "{{count}} rekeningen toegevoegd uit het sjabloon {{template}}.",
       "applyError": "Uw rekeningschema kon niet worden ingesteld."
-    }
+    },
+    "loading": "Rekeningen laden...",
+    "groups": {
+      "ASSET": "Activa",
+      "LIABILITY": "Passiva",
+      "EQUITY": "Eigen vermogen",
+      "INCOME": "Opbrengsten",
+      "REVENUE": "Omzet",
+      "EXPENSE": "Kosten",
+      "UNCATEGORISED": "Zonder categorie"
+    },
+    "uncategorisedNote": "Geef deze rekeningen een categorie om ze in rapporten op te nemen.",
+    "columns": {
+      "code": "Nummer",
+      "name": "Naam",
+      "currency": "Valuta",
+      "balance": "Saldo",
+      "status": "Status"
+    },
+    "underParent": "(onder {{parent}})"
   },
   "accountTypes": {
     "asset": "Activa",
@@ -86,7 +105,7 @@
   },
   "transactions": {
     "title": "Grootboektransacties",
-    "subtitle": "Bekijk rekeningactiviteit",
+    "subtitle": "Bekijk alle memoriaalboekingen en transacties",
     "transactionDate": "Datum",
     "description": "Omschrijving",
     "debit": "Debet",
@@ -94,7 +113,46 @@
     "balance": "Saldo",
     "reference": "Referentie",
     "source": "Bron",
-    "noTransactions": "Geen transacties gevonden"
+    "noTransactions": "Geen transacties gevonden",
+    "newJournalEntry": "Nieuwe memoriaalboeking",
+    "account": "Rekening",
+    "status": "Status",
+    "filters": {
+      "account": "Rekening",
+      "accountAria": "Transacties filteren op rekening",
+      "from": "Van",
+      "fromAria": "Transacties filteren vanaf datum",
+      "to": "Tot",
+      "toAria": "Transacties filteren tot datum",
+      "status": "Status",
+      "statusAria": "Transacties filteren op status",
+      "allStatus": "Alle statussen"
+    },
+    "statuses": {
+      "DRAFT": "Concept",
+      "PENDING": "In behandeling",
+      "POSTED": "Geboekt",
+      "REVERSED": "Teruggeboekt"
+    },
+    "statusBadges": {
+      "DRAFT": "CONCEPT",
+      "PENDING": "IN BEHANDELING",
+      "POSTED": "GEBOEKT",
+      "REVERSED": "TERUGGEBOEKT"
+    },
+    "loading": "Transacties laden...",
+    "emptyTitle": "Nog geen transacties",
+    "emptyFilteredTitle": "Geen overeenkomende transacties",
+    "emptyBody": "Maak uw eerste memoriaalboeking om te beginnen.",
+    "emptyFilteredBody": "Pas uw filters aan om transacties te vinden.",
+    "createJournalEntry": "Memoriaalboeking maken",
+    "summary": {
+      "showing_one": "{{count}} transactie getoond",
+      "showing_other": "{{count}} transacties getoond",
+      "filtered": "(gefilterd)",
+      "totalDebits": "Totaal debet:",
+      "totalCredits": "Totaal credit:"
+    }
   },
   "filters": {
     "all": "Alle rekeningen",

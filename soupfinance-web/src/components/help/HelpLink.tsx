@@ -6,6 +6,7 @@
  * half-filled invoice or journal entry is never lost to a help lookup, and it
  * works on the sign-in pages too, where the /help route is not reachable.
  */
+import { useTranslation } from 'react-i18next';
 import { helpUrl, type HelpSection } from './helpSections';
 
 interface HelpLinkProps {
@@ -17,6 +18,8 @@ interface HelpLinkProps {
 }
 
 export function HelpLink({ section, className = '', testId }: HelpLinkProps) {
+  // Added (SOUPFIN-164): the link text follows the user's language
+  const { t } = useTranslation('common');
   return (
     <a
       href={helpUrl(section)}
@@ -27,8 +30,8 @@ export function HelpLink({ section, className = '', testId }: HelpLinkProps) {
       className={`inline-flex items-center gap-1 rounded text-sm font-medium text-primary hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${className}`}
     >
       <span aria-hidden="true" className="material-symbols-outlined text-base">help</span>
-      <span>Need Help?</span>
-      <span className="sr-only"> (opens the user guide in a new tab)</span>
+      <span>{t('help.needHelp')}</span>
+      <span className="sr-only"> {t('help.opensInNewTab')}</span>
     </a>
   );
 }

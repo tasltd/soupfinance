@@ -21,7 +21,12 @@
     "print": "Drucken",
     "send": "Senden",
     "approve": "Genehmigen",
-    "reject": "Ablehnen"
+    "reject": "Ablehnen",
+    "retry": "Erneut versuchen",
+    "clear": "Zurücksetzen",
+    "apply": "Anwenden",
+    "post": "Buchen",
+    "reverse": "Stornieren"
   },
   "status": {
     "active": "Aktiv",
@@ -81,5 +86,67 @@
   "currency": {
     "symbol": "€",
     "code": "EUR"
+  },
+  "help": {
+    "needHelp": "Hilfe?",
+    "opensInNewTab": "(öffnet das Benutzerhandbuch in einem neuen Tab)"
+  },
+  "dateFilter": {
+    "emptyHint": "Kein Datum ausgewählt. Alle Daten sind enthalten."
+  },
+  "apiError": {
+    "network": {
+      "title": "Verbindungsproblem",
+      "message": "Der Server ist nicht erreichbar. Prüfen Sie Ihre Internetverbindung und versuchen Sie es erneut.",
+      "hint": "Wenn das Problem bestehen bleibt, wenden Sie sich an Ihren Administrator."
+    },
+    "periodLocked": {
+      "title": "Dieser Zeitraum ist abgeschlossen",
+      "message": "Dieses Datum liegt in einem abgeschlossenen Zeitraum. Wählen Sie ein späteres Datum.",
+      "messageWithDate": "Die Bücher sind bis zum {{date}} abgeschlossen. Wählen Sie ein Datum nach diesem Tag.",
+      "hint": "Wählen Sie ein späteres Datum oder bitten Sie Ihren Administrator, das Sperrdatum zu verschieben."
+    },
+    "unauthorized": {
+      "title": "Sitzung abgelaufen",
+      "message": "Ihre Sitzung ist beendet. Bitte melden Sie sich erneut an, um fortzufahren."
+    },
+    "moduleDisabled": {
+      "title": "Das Modul {{module}} ist nicht verfügbar",
+      "titleGeneric": "Modul ist nicht verfügbar",
+      "message": "Ihr Konto hat noch keinen Zugriff auf das Modul {{module}}. Für diese Funktion muss das Modul {{module}} für Ihren Mandanten aktiviert sein.",
+      "messageGeneric": "Für diese Funktion ist ein Modul erforderlich, das für Ihren Mandanten nicht aktiviert ist.",
+      "hint": "Bitten Sie Ihren Administrator, dieses Modul für Ihre Organisation zu aktivieren."
+    },
+    "forbidden": {
+      "title": "Keine Berechtigung",
+      "message": "Ihr Konto ist nicht berechtigt, diese Aktion auszuführen.",
+      "messageModule": "Ihr Konto ist nicht berechtigt, {{module}} zu verwenden.",
+      "hint": "Wenn Sie dies für einen Fehler halten, wenden Sie sich an Ihren Administrator.",
+      "roleHint": "Bitten Sie Ihren Administrator, Ihrem Konto Zugriff zu gewähren."
+    },
+    "notFound": {
+      "title": "Nicht gefunden",
+      "message": "Der gesuchte Eintrag wurde nicht gefunden."
+    },
+    "serverError": {
+      "title": "Serverfehler",
+      "message": "Bei uns ist etwas schiefgelaufen. Bitte versuchen Sie es gleich noch einmal.",
+      "hint": "Wenn das wiederholt auftritt, wenden Sie sich an Ihren Administrator."
+    },
+    "requestFailed": {
+      "title": "Anfrage fehlgeschlagen",
+      "message": "Ihre Anfrage konnte nicht abgeschlossen werden.",
+      "hint": "Bitte versuchen Sie es erneut."
+    },
+    "unknown": {
+      "title": "Etwas ist schiefgelaufen",
+      "message": "Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es erneut.",
+      "messageShort": "Ein unerwarteter Fehler ist aufgetreten."
+    },
+    "modules": {
+      "Ledger": "Hauptbuch",
+      "Accounting": "Buchhaltung",
+      "Finance": "Finanzen"
+    }
   }
 }

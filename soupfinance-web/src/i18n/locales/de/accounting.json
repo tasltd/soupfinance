@@ -9,7 +9,7 @@
     "entryDate": "Buchungsdatum",
     "reference": "Referenz",
     "description": "Beschreibung",
-    "descriptionPlaceholder": "Beschreiben Sie den Zweck dieser Buchung...",
+    "descriptionPlaceholder": "Beschreiben Sie den Zweck dieses Buchungssatzes...",
     "memo": "Notiz",
     "memoPlaceholder": "Zusätzliche Hinweise...",
     "debitAccount": "Sollkonto",
@@ -24,7 +24,40 @@
     "balanced": "Ausgeglichen",
     "unbalanced": "Nicht ausgeglichen",
     "postEntry": "Buchung buchen",
-    "saveDraft": "Als Entwurf speichern"
+    "saveDraft": "Entwurf speichern",
+    "loading": "Buchungssatz wird geladen...",
+    "subtitleReadOnly": "Dieser Buchungssatz wurde gebucht und kann nicht geändert werden",
+    "subtitleEdit": "Diesen Buchungsvorgang bearbeiten",
+    "subtitleNew": "Einen mehrzeiligen Buchungsvorgang erfassen",
+    "saveAndPost": "Speichern & buchen",
+    "updateAndPost": "Aktualisieren & buchen",
+    "moduleContext": "Die Kontoauswahl ist erst verfügbar, wenn das Modul aktiviert ist.",
+    "readOnlyBanner": "Dieser Buchungssatz ist {{status}} und kann nicht geändert werden.",
+    "entryDetails": "Buchungsdetails",
+    "referencePlaceholder": "z. B. JE-2024-001",
+    "lineItems": "Positionen",
+    "columns": {
+      "account": "Konto",
+      "debit": "Soll",
+      "credit": "Haben",
+      "description": "Beschreibung"
+    },
+    "selectAccountPlaceholder": "Konto auswählen...",
+    "lineDebitAria": "Zeile {{line}} Soll-Betrag",
+    "lineCreditAria": "Zeile {{line}} Haben-Betrag",
+    "lineDescriptionPlaceholder": "Zeilenbeschreibung (optional)",
+    "minLinesHint": "Mindestens 2 Zeilen erforderlich",
+    "outOfBalance": "Nicht ausgeglichen",
+    "differenceAmount": "Differenz: {{amount}}",
+    "validation": {
+      "accountRequired": "Konto ist erforderlich",
+      "notNegative": "Darf nicht negativ sein",
+      "entryDateRequired": "Buchungsdatum ist erforderlich",
+      "descriptionRequired": "Beschreibung ist erforderlich",
+      "minLines": "Mindestens 2 Zeilen sind erforderlich",
+      "debitOrCredit": "Jede Zeile braucht entweder einen Soll- oder einen Haben-Betrag (nicht beides)",
+      "mustBalance": "Summe Soll muss gleich Summe Haben sein"
+    }
   },
   "voucher": {
     "title": "Beleg",
@@ -56,11 +89,115 @@
       "rejected": "Abgelehnt",
       "posted": "Gebucht",
       "cancelled": "Storniert"
+    },
+    "typeOptions": {
+      "PAYMENT": "Zahlungsbeleg",
+      "RECEIPT": "Einnahmebeleg",
+      "DEPOSIT": "Einzahlungsbeleg"
+    },
+    "partyTypes": {
+      "CLIENT": "Kunde",
+      "VENDOR": "Lieferant",
+      "STAFF": "Mitarbeiter",
+      "OTHER": "Sonstige"
+    },
+    "editTitle": "{{type}} bearbeiten",
+    "newPayment": "Neuer Zahlungsbeleg",
+    "newReceipt": "Neuer Einnahmebeleg",
+    "newDeposit": "Neuer Einzahlungsbeleg",
+    "subtitles": {
+      "details": "Belegdetails",
+      "payment": "Eine Zahlung an einen Empfänger erfassen",
+      "receipt": "Einen Geldeingang von einem Zahler erfassen",
+      "deposit": "Eine Einzahlung auf ein Konto erfassen",
+      "default": "Einen Finanzbeleg erstellen"
+    },
+    "loading": "Beleg wird geladen",
+    "saveChanges": "Änderungen speichern",
+    "saveDraft": "Entwurf speichern",
+    "approveAndPost": "Genehmigen & buchen",
+    "loadError": "Dieser Beleg konnte nicht geladen werden. {{reason}}",
+    "lockedBanner": "Dieser Beleg ist {{status}} und kann daher nicht mehr bearbeitet werden.",
+    "moduleContext": "Die Auswahllisten für Bank-/Kassen-, Aufwands- und Ertragskonten sind erst verfügbar, wenn das Modul aktiviert ist.",
+    "sections": {
+      "details": "Belegdetails",
+      "accounts": "Kontenauswahl",
+      "summary": "Buchungsübersicht"
+    },
+    "fields": {
+      "transactionDate": "Buchungsdatum",
+      "referenceNumber": "Referenznummer",
+      "referencePlaceholder": "z. B. PV-2024-001",
+      "paymentMethod": "Zahlungsart",
+      "selectMethod": "Zahlungsart auswählen...",
+      "notes": "Notizen",
+      "notesPlaceholder": "Beschreiben Sie den Zweck dieses Belegs...",
+      "clientLabel": "Kunde ({{party}})",
+      "clientPlaceholder": "Kundennamen suchen oder eingeben...",
+      "clientHelp": "Tippen Sie, um bestehende Kunden zu suchen",
+      "vendorLabel": "Lieferant ({{party}})",
+      "vendorPlaceholder": "Lieferantennamen suchen oder eingeben...",
+      "vendorHelp": "Tippen Sie, um bestehende Lieferanten zu suchen",
+      "staffLabel": "Mitarbeiter ({{party}})",
+      "staffPlaceholder": "Mitarbeiternamen suchen oder eingeben...",
+      "staffHelp": "Tippen Sie, um Mitarbeiter zu suchen",
+      "cashAccount": "Bank-/Kassenkonto",
+      "selectAccount": "Konto auswählen...",
+      "cashAccountHelp": "Konto für die Zahlung oder den Eingang",
+      "expenseAccount": "Aufwandskonto",
+      "selectExpenseAccount": "Aufwandskonto auswählen...",
+      "expenseAccountHelp": "Konto, das für diesen Aufwand belastet wird",
+      "incomeAccount": "Ertragskonto",
+      "selectIncomeAccount": "Ertragskonto auswählen...",
+      "incomeAccountHelp": "Konto, dem dieser Ertrag gutgeschrieben wird",
+      "currency": "Währung",
+      "defaultCurrency": "Standard (Kontowährung)",
+      "exchangeRate": "Wechselkurs",
+      "exchangeRateHelp": "Kurs zur Umrechnung in die Basiswährung"
+    },
+    "party": {
+      "beneficiary": "Empfänger",
+      "payer": "Zahler"
+    },
+    "partyInfo": {
+      "beneficiary": "Angaben zum Empfänger",
+      "payer": "Angaben zum Zahler"
+    },
+    "partyType": {
+      "beneficiary": "Art des Empfängers",
+      "payer": "Art des Zahlers"
+    },
+    "partyName": {
+      "beneficiary": "Name des Empfängers",
+      "payer": "Name des Zahlers"
+    },
+    "partyNamePlaceholder": {
+      "beneficiary": "Namen des Empfängers eingeben...",
+      "payer": "Namen des Zahlers eingeben..."
+    },
+    "moneyOut": "Geldausgang",
+    "moneyIn": "Geldeingang",
+    "journalPreview": "Vorschau des Buchungssatzes:",
+    "columns": {
+      "account": "Konto",
+      "debit": "Soll",
+      "credit": "Haben"
+    },
+    "total": "Summe",
+    "validation": {
+      "typeRequired": "Belegart ist erforderlich",
+      "dateRequired": "Datum ist erforderlich",
+      "descriptionRequired": "Beschreibung ist erforderlich",
+      "partyTypeRequired": "Art des Empfängers/Zahlers ist erforderlich",
+      "cashAccountRequired": "Bank-/Kassenkonto ist erforderlich",
+      "amountPositive": "Der Betrag muss größer als 0 sein",
+      "expenseRequired": "Für Zahlungsbelege ist ein Aufwandskonto erforderlich",
+      "incomeRequired": "Für Einnahmebelege ist ein Ertragskonto erforderlich"
     }
   },
   "transactions": {
     "title": "Transaktionsregister",
-    "subtitle": "Alle Buchhaltungstransaktionen anzeigen",
+    "subtitle": "Alle Buchungsvorgänge anzeigen und verwalten",
     "transactionId": "Transaktions-ID",
     "date": "Datum",
     "type": "Typ",
@@ -86,6 +223,98 @@
       "receipt": "Eingang",
       "journal": "Buchungssatz",
       "adjustment": "Anpassung"
+    },
+    "newJournalEntry": "Neuer Buchungssatz",
+    "newPayment": "Neue Zahlung",
+    "newReceipt": "Neue Einnahme",
+    "searchAria": "Transaktionen nach ID, Beschreibung oder Betrag suchen",
+    "searchPlaceholder": "Nach Transaktions-ID, Beschreibung oder Betrag suchen...",
+    "filterBar": {
+      "from": "Von:",
+      "fromAria": "Transaktionen ab Datum filtern",
+      "to": "Bis:",
+      "toAria": "Transaktionen bis Datum filtern",
+      "status": "Status:",
+      "statusAria": "Transaktionen nach Status filtern",
+      "type": "Art:",
+      "typeAria": "Transaktionen nach Art filtern",
+      "account": "Konto:",
+      "accountAria": "Transaktionen nach Kontonummer filtern",
+      "accountPlaceholder": "z. B. 1010"
+    },
+    "statusOptions": {
+      "ALL": "Alle",
+      "DRAFT": "Entwurf",
+      "PENDING": "Ausstehend",
+      "POSTED": "Gebucht",
+      "REVERSED": "Storniert"
+    },
+    "typeOptions": {
+      "ALL": "Alle Arten",
+      "JOURNAL_ENTRY": "Buchungssatz",
+      "PAYMENT": "Zahlung",
+      "RECEIPT": "Einnahme"
+    },
+    "statusBadges": {
+      "DRAFT": "ENTWURF",
+      "PENDING": "AUSSTEHEND",
+      "POSTED": "GEBUCHT",
+      "REVERSED": "STORNIERT"
+    },
+    "selected_one": "{{count}} Transaktion ausgewählt",
+    "selected_other": "{{count}} Transaktionen ausgewählt",
+    "postSelected": "Auswahl buchen",
+    "deleteSelected": "Auswahl löschen",
+    "loading": "Transaktionen werden geladen...",
+    "columns": {
+      "date": "Datum",
+      "transactionId": "Transaktions-ID",
+      "description": "Beschreibung",
+      "accountNumber": "Konto-Nr.",
+      "accountName": "Kontoname",
+      "debit": "Soll",
+      "credit": "Haben",
+      "status": "Status",
+      "actions": "Aktionen"
+    },
+    "emptyTitle": "Keine Transaktionen gefunden",
+    "emptyFiltered": "Passen Sie Suche oder Filter an",
+    "emptyBody": "Erfassen Sie Ihre erste Transaktion, um zu beginnen",
+    "createJournalEntry": "Buchungssatz anlegen",
+    "rowActions": "Aktionen für {{id}}",
+    "paginationAria": "Seitennavigation",
+    "paginationSummary": "<b>{{from}}</b> bis <b>{{to}}</b> von <b>{{total}}</b> Ergebnissen",
+    "panel": {
+      "title": "Erweiterte Filter",
+      "dateRange": "Zeitraum",
+      "status": "Status",
+      "type": "Transaktionsart",
+      "accountNumber": "Kontonummer",
+      "reporting": "Berichte",
+      "trialBalance": "Summen- und Saldenliste erstellen",
+      "journalReport": "Journalbericht",
+      "profitAndLoss": "Gewinn- und Verlustrechnung"
+    },
+    "toasts": {
+      "posted": "Transaktion {{id}} gebucht.",
+      "reversed": "Transaktion {{id}} storniert.",
+      "deleted": "Transaktion {{id}} gelöscht.",
+      "batchPosted": "{{count}} Transaktion(en) gebucht.",
+      "batchDeleted": "{{count}} Transaktion(en) gelöscht.",
+      "exportBlocked": "Export nicht möglich: {{reason}}",
+      "exportEmpty": "Nichts zu exportieren: Die aktuelle Ansicht ist leer.",
+      "exported": "{{count}} Transaktion(en) als CSV exportiert.",
+      "exportFailed": "Export fehlgeschlagen. Bitte versuchen Sie es erneut."
+    },
+    "confirm": {
+      "deleteTitle": "Transaktion {{id}} löschen?",
+      "deleteMessage": "Diese Transaktion wird endgültig gelöscht. Das lässt sich nicht rückgängig machen.",
+      "batchDeleteTitle_one": "{{count}} Transaktion löschen?",
+      "batchDeleteTitle_other": "{{count}} Transaktionen löschen?",
+      "batchDeleteMessage_one": "Die ausgewählte Transaktion wird endgültig gelöscht. Das lässt sich nicht rückgängig machen.",
+      "batchDeleteMessage_other": "Die {{count}} ausgewählten Transaktionen werden endgültig gelöscht. Das lässt sich nicht rückgängig machen.",
+      "reverseTitle": "Transaktion {{id}} stornieren?",
+      "reverseMessage": "Die Stornierung hebt die Wirkung dieser Transaktion auf Ihre Salden auf. Das Original bleibt zur Nachverfolgung im Journal."
     }
   },
   "messages": {
@@ -99,5 +328,14 @@
     "voucherRejected": "Beleg abgelehnt",
     "mustBalance": "Soll und Haben müssen ausgeglichen sein",
     "atLeastTwoLines": "Buchungssatz muss mindestens zwei Zeilen haben"
+  },
+  "statusInline": {
+    "posted": "gebucht",
+    "reversed": "storniert",
+    "cancelled": "storniert",
+    "draft": "ein Entwurf",
+    "pending": "ausstehend",
+    "approved": "genehmigt",
+    "rejected": "abgelehnt"
   }
 }

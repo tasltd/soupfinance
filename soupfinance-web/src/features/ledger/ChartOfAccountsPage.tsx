@@ -11,6 +11,7 @@
  *   rendering nothing, and give the empty state a way forward.
  * Added (SOUPFIN-147): the empty state's call to action opens the template picker
  *   (coaTemplate/index + applyTemplate), and a banner reports what was added.
+ * Changed (SOUPFIN-164): every visible string comes from the `ledger` namespace.
  */
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -25,13 +26,14 @@ import { logger } from '../../utils/logger';
 import { CoaTemplatePicker } from './CoaTemplatePicker';
 
 // Added: Group configuration with colors and icons
-const GROUP_CONFIG: Record<LedgerGroup, { label: string; icon: string; colorClass: string }> = {
-  ASSET: { label: 'Assets', icon: 'account_balance', colorClass: 'text-info bg-info/10' },
-  LIABILITY: { label: 'Liabilities', icon: 'credit_card', colorClass: 'text-danger bg-danger/10' },
-  EQUITY: { label: 'Equity', icon: 'balance', colorClass: 'text-purple-600 dark:text-purple-400 bg-purple-100 dark:bg-purple-900/30' },
-  INCOME: { label: 'Income', icon: 'trending_up', colorClass: 'text-success bg-success/10' },
-  REVENUE: { label: 'Revenue', icon: 'trending_up', colorClass: 'text-success bg-success/10' },
-  EXPENSE: { label: 'Expenses', icon: 'trending_down', colorClass: 'text-warning bg-warning/10' },
+// Changed (SOUPFIN-164): labels moved to ledger:chartOfAccounts.groups
+const GROUP_CONFIG: Record<LedgerGroup, { icon: string; colorClass: string }> = {
+  ASSET: { icon: 'account_balance', colorClass: 'text-info bg-info/10' },
+  LIABILITY: { icon: 'credit_card', colorClass: 'text-danger bg-danger/10' },
+  EQUITY: { icon: 'balance', colorClass: 'text-purple-600 dark:text-purple-400 bg-purple-100 dark:bg-purple-900/30' },
+  INCOME: { icon: 'trending_up', colorClass: 'text-success bg-success/10' },
+  REVENUE: { icon: 'trending_up', colorClass: 'text-success bg-success/10' },
+  EXPENSE: { icon: 'trending_down', colorClass: 'text-warning bg-warning/10' },
 };
 
 // Added: Order for displaying groups
@@ -42,19 +44,18 @@ const GROUP_ORDER: LedgerGroup[] = ['ASSET', 'LIABILITY', 'EQUITY', 'INCOME', 'R
 const UNCATEGORISED = 'UNCATEGORISED' as const;
 type DisplayGroup = LedgerGroup | typeof UNCATEGORISED;
 const DISPLAY_ORDER: DisplayGroup[] = [...GROUP_ORDER, UNCATEGORISED];
-const DISPLAY_CONFIG: Record<DisplayGroup, { label: string; icon: string; colorClass: string; note?: string }> = {
+const DISPLAY_CONFIG: Record<DisplayGroup, { icon: string; colorClass: string; hasNote?: boolean }> = {
   ...GROUP_CONFIG,
   UNCATEGORISED: {
-    label: 'Uncategorised',
     icon: 'help',
     colorClass: 'text-subtle-text bg-subtle-text/10',
-    note: 'Give these accounts a category to include them in reports.',
+    hasNote: true,
   },
 };
 
 export function ChartOfAccountsPage() {
   const formatCurrency = useFormatCurrency();
-  const { t } = useTranslation('ledger');
+  const { t } = useTranslation(['ledger', 'common']);
 
   // Added (SOUPFIN-147): template picker and the result of the last apply
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -116,9 +117,9 @@ export function ChartOfAccountsPage() {
       <div className="flex flex-wrap justify-between items-center gap-4">
         <div>
           <h1 className="text-3xl font-black tracking-tight text-text-light dark:text-text-dark" data-testid="coa-heading">
-            Chart of Accounts
+            {t('chartOfAccounts.title')}
           </h1>
-          <p className="text-subtle-text">Manage your ledger accounts</p>
+          <p className="text-subtle-text">{t('chartOfAccounts.subtitle')}</p>
           <HelpLink section="chart-of-accounts" className="mt-1 self-start" />
         </div>
       </div>
@@ -148,7 +149,7 @@ export function ChartOfAccountsPage() {
       {/* Content */}
       {isLoading ? (
         <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-8 text-center text-subtle-text" data-testid="coa-loading">
-          Loading accounts...
+          {t('chartOfAccounts.loading')}
         </div>
       ) : error ? (
         <ApiErrorState
@@ -212,10 +213,10 @@ export function ChartOfAccountsPage() {
                       {config.icon}
                     </span>
                     <div className="text-left">
-                      <h2 className="text-lg font-bold text-text-light dark:text-text-dark">{config.label}</h2>
-                      <p className="text-sm text-subtle-text">{groupAccounts.length} account{groupAccounts.length !== 1 ? 's' : ''}</p>
-                      {config.note && (
-                        <p className="text-xs text-subtle-text" data-testid={`coa-group-note-${group.toLowerCase()}`}>{config.note}</p>
+                      <h2 className="text-lg font-bold text-text-light dark:text-text-dark">{t(`chartOfAccounts.groups.${group}`)}</h2>
+                      <p className="text-sm text-subtle-text">{t('chartOfAccounts.setup.accountCount', { count: groupAccounts.length })}</p>
+                      {config.hasNote && (
+                        <p className="text-xs text-subtle-text" data-testid={`coa-group-note-${group.toLowerCase()}`}>{t('chartOfAccounts.uncategorisedNote')}</p>
                       )}
                     </div>
                   </div>
@@ -231,11 +232,11 @@ export function ChartOfAccountsPage() {
                       {/* Changed: Added currency and parent account columns */}
                       <thead className="text-xs text-subtle-text uppercase bg-background-light dark:bg-background-dark">
                         <tr>
-                          <th className="px-6 py-3 text-left">Code</th>
-                          <th className="px-6 py-3 text-left">Name</th>
-                          <th className="px-6 py-3 text-left">Currency</th>
-                          <th className="px-6 py-3 text-right">Balance</th>
-                          <th className="px-6 py-3 text-center">Status</th>
+                          <th className="px-6 py-3 text-left">{t('chartOfAccounts.columns.code')}</th>
+                          <th className="px-6 py-3 text-left">{t('chartOfAccounts.columns.name')}</th>
+                          <th className="px-6 py-3 text-left">{t('chartOfAccounts.columns.currency')}</th>
+                          <th className="px-6 py-3 text-right">{t('chartOfAccounts.columns.balance')}</th>
+                          <th className="px-6 py-3 text-center">{t('chartOfAccounts.columns.status')}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -254,7 +255,7 @@ export function ChartOfAccountsPage() {
                                   {/* Added: Show parent account if exists */}
                                   {account.parentAccount?.name && (
                                     <span className="text-xs text-subtle-text ml-1">
-                                      (under {account.parentAccount.name})
+                                      {t('chartOfAccounts.underParent', { parent: account.parentAccount.name })}
                                     </span>
                                   )}
                                 </div>
@@ -268,7 +269,7 @@ export function ChartOfAccountsPage() {
                               </td>
                               <td className="px-6 py-4 text-center">
                                 <span className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${account.isActive ? 'bg-success/10 text-success' : 'bg-subtle-text/10 text-subtle-text'}`}>
-                                  {account.isActive ? 'Active' : 'Inactive'}
+                                  {account.isActive ? t('common:status.active') : t('common:status.inactive')}
                                 </span>
                               </td>
                             </tr>

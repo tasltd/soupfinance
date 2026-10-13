@@ -3,7 +3,7 @@
   "subtitle": "Kontenplan und Hauptbuchtransaktionen",
   "chartOfAccounts": {
     "title": "Kontenplan",
-    "subtitle": "Kontostruktur verwalten",
+    "subtitle": "Verwalten Sie Ihre Sachkonten",
     "newAccount": "Neues Konto",
     "editAccount": "Konto bearbeiten",
     "accountCode": "Kontonummer",
@@ -64,7 +64,26 @@
       "applied_one": "{{count}} Konto aus der Vorlage {{template}} hinzugefügt.",
       "applied_other": "{{count}} Konten aus der Vorlage {{template}} hinzugefügt.",
       "applyError": "Ihr Kontenplan konnte nicht eingerichtet werden."
-    }
+    },
+    "loading": "Konten werden geladen...",
+    "groups": {
+      "ASSET": "Aktiva",
+      "LIABILITY": "Verbindlichkeiten",
+      "EQUITY": "Eigenkapital",
+      "INCOME": "Erträge",
+      "REVENUE": "Umsatzerlöse",
+      "EXPENSE": "Aufwendungen",
+      "UNCATEGORISED": "Ohne Kategorie"
+    },
+    "uncategorisedNote": "Ordnen Sie diesen Konten eine Kategorie zu, damit sie in Berichten erscheinen.",
+    "columns": {
+      "code": "Nummer",
+      "name": "Name",
+      "currency": "Währung",
+      "balance": "Saldo",
+      "status": "Status"
+    },
+    "underParent": "(unter {{parent}})"
   },
   "accountTypes": {
     "asset": "Aktiva",
@@ -86,7 +105,7 @@
   },
   "transactions": {
     "title": "Hauptbuchtransaktionen",
-    "subtitle": "Kontobewegungen anzeigen",
+    "subtitle": "Alle Buchungssätze und Transaktionen anzeigen",
     "transactionDate": "Datum",
     "description": "Beschreibung",
     "debit": "Soll",
@@ -94,7 +113,46 @@
     "balance": "Saldo",
     "reference": "Referenz",
     "source": "Quelle",
-    "noTransactions": "Keine Transaktionen gefunden"
+    "noTransactions": "Keine Transaktionen gefunden",
+    "newJournalEntry": "Neuer Buchungssatz",
+    "account": "Konto",
+    "status": "Status",
+    "filters": {
+      "account": "Konto",
+      "accountAria": "Transaktionen nach Konto filtern",
+      "from": "Von",
+      "fromAria": "Transaktionen ab Datum filtern",
+      "to": "Bis",
+      "toAria": "Transaktionen bis Datum filtern",
+      "status": "Status",
+      "statusAria": "Transaktionen nach Status filtern",
+      "allStatus": "Alle Status"
+    },
+    "statuses": {
+      "DRAFT": "Entwurf",
+      "PENDING": "Ausstehend",
+      "POSTED": "Gebucht",
+      "REVERSED": "Storniert"
+    },
+    "statusBadges": {
+      "DRAFT": "ENTWURF",
+      "PENDING": "AUSSTEHEND",
+      "POSTED": "GEBUCHT",
+      "REVERSED": "STORNIERT"
+    },
+    "loading": "Transaktionen werden geladen...",
+    "emptyTitle": "Noch keine Transaktionen",
+    "emptyFilteredTitle": "Keine passenden Transaktionen",
+    "emptyBody": "Legen Sie Ihren ersten Buchungssatz an, um zu beginnen.",
+    "emptyFilteredBody": "Passen Sie die Filter an, um Transaktionen zu finden.",
+    "createJournalEntry": "Buchungssatz anlegen",
+    "summary": {
+      "showing_one": "{{count}} Transaktion",
+      "showing_other": "{{count}} Transaktionen",
+      "filtered": "(gefiltert)",
+      "totalDebits": "Summe Soll:",
+      "totalCredits": "Summe Haben:"
+    }
   },
   "filters": {
     "all": "Alle Konten",

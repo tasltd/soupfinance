@@ -11,3 +11,5 @@ export { ApiErrorState } from './ApiErrorState';
 export { ModuleDisabledBanner } from './ModuleDisabledBanner';
 // Added (SOUPFIN-55): dashboard entry point into the KYC onboarding wizard
 export { KycOnboardingBanner } from './KycOnboardingBanner';
+// Added (SOUPFIN-164): shared confirmation modal (replaces window.confirm)
+export { ConfirmDialog, type ConfirmDialogProps, type ConfirmDialogTone } from './ConfirmDialog';

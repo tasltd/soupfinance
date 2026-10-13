@@ -24,7 +24,40 @@
     "balanced": "Équilibré",
     "unbalanced": "Non équilibré",
     "postEntry": "Comptabiliser",
-    "saveDraft": "Enregistrer comme brouillon"
+    "saveDraft": "Enregistrer le brouillon",
+    "loading": "Chargement de l'écriture...",
+    "subtitleReadOnly": "Cette écriture a été comptabilisée et ne peut pas être modifiée",
+    "subtitleEdit": "Modifier cette opération comptable",
+    "subtitleNew": "Enregistrer une opération comptable sur plusieurs lignes",
+    "saveAndPost": "Enregistrer et comptabiliser",
+    "updateAndPost": "Mettre à jour et comptabiliser",
+    "moduleContext": "La sélection des comptes n'est pas disponible tant que le module n'est pas activé.",
+    "readOnlyBanner": "Cette écriture est {{status}} et ne peut pas être modifiée.",
+    "entryDetails": "Détails de l'écriture",
+    "referencePlaceholder": "p. ex. JE-2024-001",
+    "lineItems": "Lignes",
+    "columns": {
+      "account": "Compte",
+      "debit": "Débit",
+      "credit": "Crédit",
+      "description": "Description"
+    },
+    "selectAccountPlaceholder": "Sélectionner un compte...",
+    "lineDebitAria": "Montant au débit de la ligne {{line}}",
+    "lineCreditAria": "Montant au crédit de la ligne {{line}}",
+    "lineDescriptionPlaceholder": "Description de la ligne (facultatif)",
+    "minLinesHint": "Au moins 2 lignes requises",
+    "outOfBalance": "Non équilibrée",
+    "differenceAmount": "Écart : {{amount}}",
+    "validation": {
+      "accountRequired": "Le compte est obligatoire",
+      "notNegative": "Ne peut pas être négatif",
+      "entryDateRequired": "La date de l'écriture est obligatoire",
+      "descriptionRequired": "La description est obligatoire",
+      "minLines": "Au moins 2 lignes sont requises",
+      "debitOrCredit": "Chaque ligne doit avoir un montant au débit ou au crédit (pas les deux)",
+      "mustBalance": "Le total des débits doit être égal au total des crédits"
+    }
   },
   "voucher": {
     "title": "Bon",
@@ -56,11 +89,115 @@
       "rejected": "Rejeté",
       "posted": "Comptabilisé",
       "cancelled": "Annulé"
+    },
+    "typeOptions": {
+      "PAYMENT": "Pièce de paiement",
+      "RECEIPT": "Pièce d'encaissement",
+      "DEPOSIT": "Pièce de dépôt"
+    },
+    "partyTypes": {
+      "CLIENT": "Client",
+      "VENDOR": "Fournisseur",
+      "STAFF": "Employé",
+      "OTHER": "Autre"
+    },
+    "editTitle": "Modifier : {{type}}",
+    "newPayment": "Nouvelle pièce de paiement",
+    "newReceipt": "Nouvelle pièce d'encaissement",
+    "newDeposit": "Nouvelle pièce de dépôt",
+    "subtitles": {
+      "details": "Détails de la pièce",
+      "payment": "Enregistrer un paiement versé à un bénéficiaire",
+      "receipt": "Enregistrer un montant reçu d'un payeur",
+      "deposit": "Enregistrer un dépôt sur un compte",
+      "default": "Créer une pièce comptable"
+    },
+    "loading": "Chargement de la pièce",
+    "saveChanges": "Enregistrer les modifications",
+    "saveDraft": "Enregistrer le brouillon",
+    "approveAndPost": "Approuver et comptabiliser",
+    "loadError": "Impossible de charger cette pièce. {{reason}}",
+    "lockedBanner": "Cette pièce est {{status}} et ne peut donc plus être modifiée.",
+    "moduleContext": "Les listes des comptes de banque/caisse, de charges et de produits ne sont pas disponibles tant que le module n'est pas activé.",
+    "sections": {
+      "details": "Détails de la pièce",
+      "accounts": "Choix des comptes",
+      "summary": "Récapitulatif de l'opération"
+    },
+    "fields": {
+      "transactionDate": "Date de l'opération",
+      "referenceNumber": "Numéro de référence",
+      "referencePlaceholder": "p. ex. PV-2024-001",
+      "paymentMethod": "Mode de paiement",
+      "selectMethod": "Sélectionner un mode...",
+      "notes": "Notes",
+      "notesPlaceholder": "Décrivez l'objet de cette pièce...",
+      "clientLabel": "Client ({{party}})",
+      "clientPlaceholder": "Rechercher ou saisir un client...",
+      "clientHelp": "Commencez à taper pour rechercher un client existant",
+      "vendorLabel": "Fournisseur ({{party}})",
+      "vendorPlaceholder": "Rechercher ou saisir un fournisseur...",
+      "vendorHelp": "Commencez à taper pour rechercher un fournisseur existant",
+      "staffLabel": "Employé ({{party}})",
+      "staffPlaceholder": "Rechercher ou saisir un employé...",
+      "staffHelp": "Commencez à taper pour rechercher un employé",
+      "cashAccount": "Compte de banque/caisse",
+      "selectAccount": "Sélectionner un compte...",
+      "cashAccountHelp": "Compte utilisé pour le paiement ou l'encaissement",
+      "expenseAccount": "Compte de charges",
+      "selectExpenseAccount": "Sélectionner un compte de charges...",
+      "expenseAccountHelp": "Compte à débiter pour cette charge",
+      "incomeAccount": "Compte de produits",
+      "selectIncomeAccount": "Sélectionner un compte de produits...",
+      "incomeAccountHelp": "Compte à créditer pour ce produit",
+      "currency": "Devise",
+      "defaultCurrency": "Par défaut (devise du compte)",
+      "exchangeRate": "Taux de change",
+      "exchangeRateHelp": "Taux de conversion vers la devise de base"
+    },
+    "party": {
+      "beneficiary": "bénéficiaire",
+      "payer": "payeur"
+    },
+    "partyInfo": {
+      "beneficiary": "Informations sur le bénéficiaire",
+      "payer": "Informations sur le payeur"
+    },
+    "partyType": {
+      "beneficiary": "Type de bénéficiaire",
+      "payer": "Type de payeur"
+    },
+    "partyName": {
+      "beneficiary": "Nom du bénéficiaire",
+      "payer": "Nom du payeur"
+    },
+    "partyNamePlaceholder": {
+      "beneficiary": "Saisir le nom du bénéficiaire...",
+      "payer": "Saisir le nom du payeur..."
+    },
+    "moneyOut": "Sortie",
+    "moneyIn": "Entrée",
+    "journalPreview": "Aperçu de l'écriture :",
+    "columns": {
+      "account": "Compte",
+      "debit": "Débit",
+      "credit": "Crédit"
+    },
+    "total": "Total",
+    "validation": {
+      "typeRequired": "Le type de pièce est obligatoire",
+      "dateRequired": "La date est obligatoire",
+      "descriptionRequired": "La description est obligatoire",
+      "partyTypeRequired": "Le type de bénéficiaire/payeur est obligatoire",
+      "cashAccountRequired": "Le compte de banque/caisse est obligatoire",
+      "amountPositive": "Le montant doit être supérieur à 0",
+      "expenseRequired": "Un compte de charges est obligatoire pour les pièces de paiement",
+      "incomeRequired": "Un compte de produits est obligatoire pour les pièces d'encaissement"
     }
   },
   "transactions": {
     "title": "Registre des transactions",
-    "subtitle": "Voir toutes les transactions comptables",
+    "subtitle": "Consultez et gérez toutes les opérations comptables",
     "transactionId": "ID de transaction",
     "date": "Date",
     "type": "Type",
@@ -86,6 +223,98 @@
       "receipt": "Encaissement",
       "journal": "Écriture comptable",
       "adjustment": "Ajustement"
+    },
+    "newJournalEntry": "Nouvelle écriture",
+    "newPayment": "Nouveau paiement",
+    "newReceipt": "Nouvel encaissement",
+    "searchAria": "Rechercher des transactions par identifiant, description ou montant",
+    "searchPlaceholder": "Rechercher par identifiant, description ou montant...",
+    "filterBar": {
+      "from": "Du :",
+      "fromAria": "Filtrer les transactions à partir d'une date",
+      "to": "Au :",
+      "toAria": "Filtrer les transactions jusqu'à une date",
+      "status": "Statut :",
+      "statusAria": "Filtrer les transactions par statut",
+      "type": "Type :",
+      "typeAria": "Filtrer les transactions par type",
+      "account": "Compte :",
+      "accountAria": "Filtrer les transactions par numéro de compte",
+      "accountPlaceholder": "p. ex. 1010"
+    },
+    "statusOptions": {
+      "ALL": "Tous",
+      "DRAFT": "Brouillon",
+      "PENDING": "En attente",
+      "POSTED": "Comptabilisée",
+      "REVERSED": "Extournée"
+    },
+    "typeOptions": {
+      "ALL": "Tous les types",
+      "JOURNAL_ENTRY": "Écriture",
+      "PAYMENT": "Paiement",
+      "RECEIPT": "Encaissement"
+    },
+    "statusBadges": {
+      "DRAFT": "BROUILLON",
+      "PENDING": "EN ATTENTE",
+      "POSTED": "COMPTABILISÉE",
+      "REVERSED": "EXTOURNÉE"
+    },
+    "selected_one": "{{count}} transaction sélectionnée",
+    "selected_other": "{{count}} transactions sélectionnées",
+    "postSelected": "Comptabiliser la sélection",
+    "deleteSelected": "Supprimer la sélection",
+    "loading": "Chargement des transactions...",
+    "columns": {
+      "date": "Date",
+      "transactionId": "Identifiant",
+      "description": "Description",
+      "accountNumber": "N° de compte",
+      "accountName": "Nom du compte",
+      "debit": "Débit",
+      "credit": "Crédit",
+      "status": "Statut",
+      "actions": "Actions"
+    },
+    "emptyTitle": "Aucune transaction trouvée",
+    "emptyFiltered": "Modifiez votre recherche ou vos filtres",
+    "emptyBody": "Créez votre première transaction pour commencer",
+    "createJournalEntry": "Créer une écriture",
+    "rowActions": "Actions pour {{id}}",
+    "paginationAria": "Pagination",
+    "paginationSummary": "<b>{{from}}</b> à <b>{{to}}</b> sur <b>{{total}}</b> résultats",
+    "panel": {
+      "title": "Filtres avancés",
+      "dateRange": "Période",
+      "status": "Statut",
+      "type": "Type de transaction",
+      "accountNumber": "Numéro de compte",
+      "reporting": "Rapports",
+      "trialBalance": "Générer la balance",
+      "journalReport": "Rapport du journal",
+      "profitAndLoss": "Compte de résultat"
+    },
+    "toasts": {
+      "posted": "Transaction {{id}} comptabilisée.",
+      "reversed": "Transaction {{id}} extournée.",
+      "deleted": "Transaction {{id}} supprimée.",
+      "batchPosted": "{{count}} transaction(s) comptabilisée(s).",
+      "batchDeleted": "{{count}} transaction(s) supprimée(s).",
+      "exportBlocked": "Export impossible : {{reason}}",
+      "exportEmpty": "Rien à exporter : la vue actuelle est vide.",
+      "exported": "{{count}} transaction(s) exportée(s) en CSV.",
+      "exportFailed": "L'export a échoué. Veuillez réessayer."
+    },
+    "confirm": {
+      "deleteTitle": "Supprimer la transaction {{id}} ?",
+      "deleteMessage": "Cette transaction sera supprimée définitivement. Cette action est irréversible.",
+      "batchDeleteTitle_one": "Supprimer {{count}} transaction ?",
+      "batchDeleteTitle_other": "Supprimer {{count}} transactions ?",
+      "batchDeleteMessage_one": "La transaction sélectionnée sera supprimée définitivement. Cette action est irréversible.",
+      "batchDeleteMessage_other": "Les {{count}} transactions sélectionnées seront supprimées définitivement. Cette action est irréversible.",
+      "reverseTitle": "Extourner la transaction {{id}} ?",
+      "reverseMessage": "L'extourne annule l'effet de cette transaction sur vos soldes. L'original reste dans le registre pour vos archives."
     }
   },
   "messages": {
@@ -99,5 +328,14 @@
     "voucherRejected": "Bon rejeté",
     "mustBalance": "Les débits et crédits doivent être égaux",
     "atLeastTwoLines": "L'écriture comptable doit avoir au moins deux lignes"
+  },
+  "statusInline": {
+    "posted": "comptabilisée",
+    "reversed": "extournée",
+    "cancelled": "annulée",
+    "draft": "à l’état de brouillon",
+    "pending": "en attente",
+    "approved": "approuvée",
+    "rejected": "rejetée"
   }
 }

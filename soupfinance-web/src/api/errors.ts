@@ -38,6 +38,21 @@ export interface ParsedApiError {
   actionHint?: string;
   /** Raw HTTP status if available — useful for telemetry/tests. */
   status?: number;
+  /**
+   * Added (SOUPFIN-164): translation keys (`common` namespace) for the English copy
+   * above, so ApiErrorState and the pages can render it in the user's language.
+   * `message` is absent when the message came from the server: that text is shown
+   * as sent, because there is nothing to translate it from.
+   */
+  i18n?: ApiErrorI18n;
+}
+
+/** Added (SOUPFIN-164): keys and interpolation values for a ParsedApiError. */
+export interface ApiErrorI18n {
+  title: string;
+  message?: string;
+  actionHint?: string;
+  params?: Record<string, string>;
 }
 
 // Endpoints whose backing module can be disabled per tenant. A 403 here means
@@ -242,6 +257,7 @@ export function parseApiError(error: unknown): ParsedApiError {
         title: 'Connection problem',
         message: 'We could not reach the server. Check your internet connection and try again.',
         actionHint: 'If the problem persists, contact your administrator.',
+        i18n: { title: 'apiError.network.title', message: 'apiError.network.message', actionHint: 'apiError.network.hint' },
       };
     }
 
@@ -255,6 +271,7 @@ export function parseApiError(error: unknown): ParsedApiError {
         message: periodLock.message,
         actionHint: 'Choose a later date, or ask your administrator to move the lock date.',
         status,
+        i18n: { ...periodLockI18n(periodLock, serverMessage), title: 'apiError.periodLocked.title', actionHint: 'apiError.periodLocked.hint' },
       };
     }
 
@@ -264,6 +281,7 @@ export function parseApiError(error: unknown): ParsedApiError {
         title: 'Session expired',
         message: 'Your session has ended. Please sign in again to continue.',
         status,
+        i18n: { title: 'apiError.unauthorized.title', message: 'apiError.unauthorized.message' },
       };
     }
 
@@ -283,6 +301,18 @@ export function parseApiError(error: unknown): ParsedApiError {
             : 'This feature requires a module that is not enabled for your tenant.',
           actionHint: 'Contact your administrator to enable this module for your organisation.',
           status,
+          i18n: moduleName
+            ? {
+                title: 'apiError.moduleDisabled.title',
+                message: 'apiError.moduleDisabled.message',
+                actionHint: 'apiError.moduleDisabled.hint',
+                params: { module: moduleName },
+              }
+            : {
+                title: 'apiError.moduleDisabled.titleGeneric',
+                message: 'apiError.moduleDisabled.messageGeneric',
+                actionHint: 'apiError.moduleDisabled.hint',
+              },
         };
       }
       // Changed (SOUPFIN-150): a role denial gets the "ask your admin" copy. Spring's
@@ -296,16 +326,28 @@ export function parseApiError(error: unknown): ParsedApiError {
             : 'Your account does not have permission to perform this action.',
           actionHint: 'Ask your administrator to give your account access.',
           status,
+          i18n: urlModule
+            ? {
+                title: 'apiError.forbidden.title',
+                message: 'apiError.forbidden.messageModule',
+                actionHint: 'apiError.forbidden.roleHint',
+                params: { module: urlModule },
+              }
+            : { title: 'apiError.forbidden.title', message: 'apiError.forbidden.message', actionHint: 'apiError.forbidden.roleHint' },
         };
       }
+      const usefulServerMessage = serverMessage && !isGenericAuthFailure(serverMessage) ? serverMessage : null;
       return {
         kind: 'forbidden',
         title: 'You do not have permission',
-        message:
-          (serverMessage && !isGenericAuthFailure(serverMessage) ? serverMessage : null) ||
-          'Your account does not have permission to perform this action.',
+        message: usefulServerMessage || 'Your account does not have permission to perform this action.',
         actionHint: 'If you believe this is a mistake, contact your administrator.',
         status,
+        i18n: {
+          title: 'apiError.forbidden.title',
+          message: usefulServerMessage ? undefined : 'apiError.forbidden.message',
+          actionHint: 'apiError.forbidden.hint',
+        },
       };
     }
 
@@ -315,6 +357,7 @@ export function parseApiError(error: unknown): ParsedApiError {
         title: 'Not found',
         message: serverMessage || 'The item you are looking for could not be found.',
         status,
+        i18n: { title: 'apiError.notFound.title', message: serverMessage ? undefined : 'apiError.notFound.message' },
       };
     }
 
@@ -327,6 +370,11 @@ export function parseApiError(error: unknown): ParsedApiError {
           'Something went wrong on our side. Please try again in a moment.',
         actionHint: 'If this keeps happening, contact your administrator.',
         status,
+        i18n: {
+          title: 'apiError.serverError.title',
+          message: serverMessage ? undefined : 'apiError.serverError.message',
+          actionHint: 'apiError.serverError.hint',
+        },
       };
     }
 
@@ -337,6 +385,11 @@ export function parseApiError(error: unknown): ParsedApiError {
       message: serverMessage || 'We could not complete your request.',
       actionHint: 'Please try again.',
       status,
+      i18n: {
+        title: 'apiError.requestFailed.title',
+        message: serverMessage ? undefined : 'apiError.requestFailed.message',
+        actionHint: 'apiError.requestFailed.hint',
+      },
     };
   }
 
@@ -346,6 +399,7 @@ export function parseApiError(error: unknown): ParsedApiError {
       kind: 'unknown',
       title: 'Something went wrong',
       message: error.message || 'An unexpected error occurred.',
+      i18n: { title: 'apiError.unknown.title', message: error.message ? undefined : 'apiError.unknown.messageShort' },
     };
   }
 
@@ -354,7 +408,23 @@ export function parseApiError(error: unknown): ParsedApiError {
     kind: 'unknown',
     title: 'Something went wrong',
     message: 'An unexpected error occurred. Please try again.',
+    i18n: { title: 'apiError.unknown.title', message: 'apiError.unknown.message' },
   };
+}
+
+/**
+ * Added (SOUPFIN-164): message keys for a locked-period rejection. The server's own
+ * text is shown as sent; only the two fallbacks built here can be translated.
+ */
+function periodLockI18n(lock: PeriodLockError, serverMessage: string | null): Pick<ApiErrorI18n, 'message' | 'params'> {
+  if (serverMessage) return {};
+  if (lock.lockDate) {
+    return {
+      message: 'apiError.periodLocked.messageWithDate',
+      params: { date: formatDisplayDate(lock.lockDate) || lock.lockDate },
+    };
+  }
+  return { message: 'apiError.periodLocked.message' };
 }
 
 /**

@@ -21,7 +21,12 @@
     "print": "Afdrukken",
     "send": "Versturen",
     "approve": "Goedkeuren",
-    "reject": "Afwijzen"
+    "reject": "Afwijzen",
+    "retry": "Opnieuw proberen",
+    "clear": "Wissen",
+    "apply": "Toepassen",
+    "post": "Boeken",
+    "reverse": "Terugboeken"
   },
   "status": {
     "active": "Actief",
@@ -81,5 +86,67 @@
   "currency": {
     "symbol": "€",
     "code": "EUR"
+  },
+  "help": {
+    "needHelp": "Hulp nodig?",
+    "opensInNewTab": "(opent de gebruikershandleiding in een nieuw tabblad)"
+  },
+  "dateFilter": {
+    "emptyHint": "Geen datum gekozen. Alle datums worden meegenomen."
+  },
+  "apiError": {
+    "network": {
+      "title": "Verbindingsprobleem",
+      "message": "We konden de server niet bereiken. Controleer uw internetverbinding en probeer het opnieuw.",
+      "hint": "Neem contact op met uw beheerder als het probleem aanhoudt."
+    },
+    "periodLocked": {
+      "title": "Deze periode is afgesloten",
+      "message": "Deze datum valt in een afgesloten periode. Kies een latere datum.",
+      "messageWithDate": "De boeken zijn afgesloten tot en met {{date}}. Kies een datum na die dag.",
+      "hint": "Kies een latere datum of vraag uw beheerder de vergrendeldatum te verplaatsen."
+    },
+    "unauthorized": {
+      "title": "Sessie verlopen",
+      "message": "Uw sessie is beëindigd. Meld u opnieuw aan om verder te gaan."
+    },
+    "moduleDisabled": {
+      "title": "De module {{module}} is niet beschikbaar",
+      "titleGeneric": "Module is niet beschikbaar",
+      "message": "Uw account heeft nog geen toegang tot de module {{module}}. Voor deze functie moet de module {{module}} voor uw organisatie zijn ingeschakeld.",
+      "messageGeneric": "Voor deze functie is een module nodig die voor uw organisatie niet is ingeschakeld.",
+      "hint": "Vraag uw beheerder deze module voor uw organisatie in te schakelen."
+    },
+    "forbidden": {
+      "title": "U hebt geen toestemming",
+      "message": "Uw account heeft geen toestemming voor deze actie.",
+      "messageModule": "Uw account heeft geen toestemming om {{module}} te gebruiken.",
+      "hint": "Neem contact op met uw beheerder als u denkt dat dit een vergissing is.",
+      "roleHint": "Vraag uw beheerder uw account toegang te geven."
+    },
+    "notFound": {
+      "title": "Niet gevonden",
+      "message": "Het item dat u zoekt is niet gevonden."
+    },
+    "serverError": {
+      "title": "Serverfout",
+      "message": "Er ging aan onze kant iets mis. Probeer het zo meteen opnieuw.",
+      "hint": "Neem contact op met uw beheerder als dit blijft gebeuren."
+    },
+    "requestFailed": {
+      "title": "Verzoek mislukt",
+      "message": "We konden uw verzoek niet afronden.",
+      "hint": "Probeer het opnieuw."
+    },
+    "unknown": {
+      "title": "Er ging iets mis",
+      "message": "Er is een onverwachte fout opgetreden. Probeer het opnieuw.",
+      "messageShort": "Er is een onverwachte fout opgetreden."
+    },
+    "modules": {
+      "Ledger": "Grootboek",
+      "Accounting": "Boekhouding",
+      "Finance": "Financiën"
+    }
   }
 }

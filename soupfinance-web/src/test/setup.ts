@@ -4,6 +4,9 @@
  */
 import '@testing-library/jest-dom'
 import { vi, beforeEach, afterEach } from 'vitest'
+// Added (SOUPFIN-164): initialise i18next for every test file, so components that
+// call useTranslation() render their English copy rather than the raw keys
+import i18n from '../i18n'
 
 // Mock axios globally to prevent URL issues in jsdom.
 // Added isAxiosError helper (SOUPFIN-2) so utilities like normalizeApiError
@@ -79,7 +82,9 @@ Object.defineProperty(window, 'location', {
 })
 
 // Reset mocks before each test
-beforeEach(() => {
+beforeEach(async () => {
+  // Added (SOUPFIN-164): a test that switched language must not leak it into the next
+  if (i18n.language !== 'en') await i18n.changeLanguage('en')
   localStorageMock.clear()
   vi.clearAllMocks()
   locationMock.href = '/'

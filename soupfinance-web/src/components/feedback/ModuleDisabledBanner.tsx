@@ -7,7 +7,10 @@
  * are empty and points at the admin instead of letting them submit a form
  * that will fail with 403.
  */
+import { useTranslation } from 'react-i18next';
 import { parseApiError } from '../../api/errors';
+// Added (SOUPFIN-164): render the banner copy in the user's language
+import { translateApiError } from '../../i18n/translateApiError';
 // Added (SOUPFIN-81): link to the guide's "module is not enabled" answer
 import { HelpLink } from '../help';
 
@@ -24,7 +27,9 @@ export function ModuleDisabledBanner({
   context,
   testId,
 }: ModuleDisabledBannerProps) {
-  const parsed = parseApiError(error);
+  // Re-render on a language change; translateApiError reads the current language.
+  useTranslation('common');
+  const parsed = translateApiError(parseApiError(error));
 
   // Only render for module_disabled — other errors are surfaced inside
   // the field components themselves to avoid double-messaging.

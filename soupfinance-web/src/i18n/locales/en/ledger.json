@@ -3,7 +3,7 @@
   "subtitle": "Chart of accounts and ledger transactions",
   "chartOfAccounts": {
     "title": "Chart of Accounts",
-    "subtitle": "Manage your account structure",
+    "subtitle": "Manage your ledger accounts",
     "newAccount": "New Account",
     "editAccount": "Edit Account",
     "accountCode": "Account Code",
@@ -64,7 +64,26 @@
       "applied_one": "{{count}} account added from the {{template}} template.",
       "applied_other": "{{count}} accounts added from the {{template}} template.",
       "applyError": "We could not set up your chart of accounts."
-    }
+    },
+    "loading": "Loading accounts...",
+    "groups": {
+      "ASSET": "Assets",
+      "LIABILITY": "Liabilities",
+      "EQUITY": "Equity",
+      "INCOME": "Income",
+      "REVENUE": "Revenue",
+      "EXPENSE": "Expenses",
+      "UNCATEGORISED": "Uncategorised"
+    },
+    "uncategorisedNote": "Give these accounts a category to include them in reports.",
+    "columns": {
+      "code": "Code",
+      "name": "Name",
+      "currency": "Currency",
+      "balance": "Balance",
+      "status": "Status"
+    },
+    "underParent": "(under {{parent}})"
   },
   "accountTypes": {
     "asset": "Asset",
@@ -86,7 +105,7 @@
   },
   "transactions": {
     "title": "Ledger Transactions",
-    "subtitle": "View account activity",
+    "subtitle": "View all journal entries and transactions",
     "transactionDate": "Date",
     "description": "Description",
     "debit": "Debit",
@@ -94,7 +113,46 @@
     "balance": "Balance",
     "reference": "Reference",
     "source": "Source",
-    "noTransactions": "No transactions found"
+    "noTransactions": "No transactions found",
+    "newJournalEntry": "New Journal Entry",
+    "account": "Account",
+    "status": "Status",
+    "filters": {
+      "account": "Account",
+      "accountAria": "Filter transactions by account",
+      "from": "From",
+      "fromAria": "Filter transactions from date",
+      "to": "To",
+      "toAria": "Filter transactions to date",
+      "status": "Status",
+      "statusAria": "Filter transactions by status",
+      "allStatus": "All Status"
+    },
+    "statuses": {
+      "DRAFT": "Draft",
+      "PENDING": "Pending",
+      "POSTED": "Posted",
+      "REVERSED": "Reversed"
+    },
+    "statusBadges": {
+      "DRAFT": "DRAFT",
+      "PENDING": "PENDING",
+      "POSTED": "POSTED",
+      "REVERSED": "REVERSED"
+    },
+    "loading": "Loading transactions...",
+    "emptyTitle": "No transactions yet",
+    "emptyFilteredTitle": "No matching transactions",
+    "emptyBody": "Create your first journal entry to get started.",
+    "emptyFilteredBody": "Try adjusting your filters to find transactions.",
+    "createJournalEntry": "Create Journal Entry",
+    "summary": {
+      "showing_one": "Showing {{count}} transaction",
+      "showing_other": "Showing {{count}} transactions",
+      "filtered": "(filtered)",
+      "totalDebits": "Total Debits:",
+      "totalCredits": "Total Credits:"
+    }
   },
   "filters": {
     "all": "All Accounts",

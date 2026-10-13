@@ -9,7 +9,7 @@
     "entryDate": "Datum",
     "reference": "Referentie",
     "description": "Omschrijving",
-    "descriptionPlaceholder": "Beschrijf het doel van deze post...",
+    "descriptionPlaceholder": "Beschrijf het doel van deze memoriaalboeking...",
     "memo": "Memo",
     "memoPlaceholder": "Aanvullende opmerkingen...",
     "debitAccount": "Debetrekening",
@@ -24,7 +24,40 @@
     "balanced": "In balans",
     "unbalanced": "Niet in balans",
     "postEntry": "Boeken",
-    "saveDraft": "Opslaan als concept"
+    "saveDraft": "Concept opslaan",
+    "loading": "Memoriaalboeking laden...",
+    "subtitleReadOnly": "Deze boeking is geboekt en kan niet worden gewijzigd",
+    "subtitleEdit": "Deze boekhoudtransactie wijzigen",
+    "subtitleNew": "Een boekhoudtransactie met meerdere regels vastleggen",
+    "saveAndPost": "Opslaan en boeken",
+    "updateAndPost": "Bijwerken en boeken",
+    "moduleContext": "Rekeningen kiezen kan pas als de module is ingeschakeld.",
+    "readOnlyBanner": "Deze memoriaalboeking is {{status}} en kan niet worden gewijzigd.",
+    "entryDetails": "Boekingsgegevens",
+    "referencePlaceholder": "bijv. JE-2024-001",
+    "lineItems": "Regels",
+    "columns": {
+      "account": "Rekening",
+      "debit": "Debet",
+      "credit": "Credit",
+      "description": "Omschrijving"
+    },
+    "selectAccountPlaceholder": "Rekening kiezen...",
+    "lineDebitAria": "Debetbedrag regel {{line}}",
+    "lineCreditAria": "Creditbedrag regel {{line}}",
+    "lineDescriptionPlaceholder": "Regelomschrijving (optioneel)",
+    "minLinesHint": "Minimaal 2 regels vereist",
+    "outOfBalance": "Niet in balans",
+    "differenceAmount": "Verschil: {{amount}}",
+    "validation": {
+      "accountRequired": "Rekening is verplicht",
+      "notNegative": "Mag niet negatief zijn",
+      "entryDateRequired": "Boekingsdatum is verplicht",
+      "descriptionRequired": "Omschrijving is verplicht",
+      "minLines": "Er zijn minimaal 2 regels nodig",
+      "debitOrCredit": "Elke regel moet een debet- of een creditbedrag hebben (niet beide)",
+      "mustBalance": "Totaal debet moet gelijk zijn aan totaal credit"
+    }
   },
   "voucher": {
     "title": "Bon",
@@ -56,11 +89,115 @@
       "rejected": "Afgewezen",
       "posted": "Geboekt",
       "cancelled": "Geannuleerd"
+    },
+    "typeOptions": {
+      "PAYMENT": "Betalingsbewijs",
+      "RECEIPT": "Ontvangstbewijs",
+      "DEPOSIT": "Stortingsbewijs"
+    },
+    "partyTypes": {
+      "CLIENT": "Klant",
+      "VENDOR": "Leverancier",
+      "STAFF": "Medewerker",
+      "OTHER": "Overig"
+    },
+    "editTitle": "{{type}} bewerken",
+    "newPayment": "Nieuw betalingsbewijs",
+    "newReceipt": "Nieuw ontvangstbewijs",
+    "newDeposit": "Nieuw stortingsbewijs",
+    "subtitles": {
+      "details": "Gegevens van het bewijsstuk",
+      "payment": "Een betaling aan een begunstigde vastleggen",
+      "receipt": "Geld ontvangen van een betaler vastleggen",
+      "deposit": "Een storting op een rekening vastleggen",
+      "default": "Een financieel bewijsstuk maken"
+    },
+    "loading": "Bewijsstuk laden",
+    "saveChanges": "Wijzigingen opslaan",
+    "saveDraft": "Concept opslaan",
+    "approveAndPost": "Goedkeuren en boeken",
+    "loadError": "Dit bewijsstuk kon niet worden geladen. {{reason}}",
+    "lockedBanner": "Dit bewijsstuk is {{status}} en kan daarom niet meer worden bewerkt.",
+    "moduleContext": "De keuzelijsten voor bank/kas-, kosten- en opbrengstrekeningen zijn pas beschikbaar als de module is ingeschakeld.",
+    "sections": {
+      "details": "Gegevens van het bewijsstuk",
+      "accounts": "Rekeningen kiezen",
+      "summary": "Overzicht van de transactie"
+    },
+    "fields": {
+      "transactionDate": "Transactiedatum",
+      "referenceNumber": "Referentienummer",
+      "referencePlaceholder": "bijv. PV-2024-001",
+      "paymentMethod": "Betaalmethode",
+      "selectMethod": "Methode kiezen...",
+      "notes": "Notities",
+      "notesPlaceholder": "Beschrijf het doel van dit bewijsstuk...",
+      "clientLabel": "Klant ({{party}})",
+      "clientPlaceholder": "Klantnaam zoeken of invoeren...",
+      "clientHelp": "Begin te typen om bestaande klanten te zoeken",
+      "vendorLabel": "Leverancier ({{party}})",
+      "vendorPlaceholder": "Leveranciersnaam zoeken of invoeren...",
+      "vendorHelp": "Begin te typen om bestaande leveranciers te zoeken",
+      "staffLabel": "Medewerker ({{party}})",
+      "staffPlaceholder": "Naam van medewerker zoeken of invoeren...",
+      "staffHelp": "Begin te typen om medewerkers te zoeken",
+      "cashAccount": "Bank-/kasrekening",
+      "selectAccount": "Rekening kiezen...",
+      "cashAccountHelp": "Rekening voor de betaling of ontvangst",
+      "expenseAccount": "Kostenrekening",
+      "selectExpenseAccount": "Kostenrekening kiezen...",
+      "expenseAccountHelp": "Rekening die voor deze kosten wordt gedebiteerd",
+      "incomeAccount": "Opbrengstrekening",
+      "selectIncomeAccount": "Opbrengstrekening kiezen...",
+      "incomeAccountHelp": "Rekening die voor deze opbrengst wordt gecrediteerd",
+      "currency": "Valuta",
+      "defaultCurrency": "Standaard (valuta van de rekening)",
+      "exchangeRate": "Wisselkoers",
+      "exchangeRateHelp": "Koers voor omrekening naar de basisvaluta"
+    },
+    "party": {
+      "beneficiary": "begunstigde",
+      "payer": "betaler"
+    },
+    "partyInfo": {
+      "beneficiary": "Gegevens begunstigde",
+      "payer": "Gegevens betaler"
+    },
+    "partyType": {
+      "beneficiary": "Soort begunstigde",
+      "payer": "Soort betaler"
+    },
+    "partyName": {
+      "beneficiary": "Naam begunstigde",
+      "payer": "Naam betaler"
+    },
+    "partyNamePlaceholder": {
+      "beneficiary": "Naam van de begunstigde invoeren...",
+      "payer": "Naam van de betaler invoeren..."
+    },
+    "moneyOut": "Geld uit",
+    "moneyIn": "Geld in",
+    "journalPreview": "Voorbeeld van de boeking:",
+    "columns": {
+      "account": "Rekening",
+      "debit": "Debet",
+      "credit": "Credit"
+    },
+    "total": "Totaal",
+    "validation": {
+      "typeRequired": "Soort bewijsstuk is verplicht",
+      "dateRequired": "Datum is verplicht",
+      "descriptionRequired": "Omschrijving is verplicht",
+      "partyTypeRequired": "Soort begunstigde/betaler is verplicht",
+      "cashAccountRequired": "Bank-/kasrekening is verplicht",
+      "amountPositive": "Het bedrag moet groter zijn dan 0",
+      "expenseRequired": "Een kostenrekening is verplicht voor betalingsbewijzen",
+      "incomeRequired": "Een opbrengstrekening is verplicht voor ontvangstbewijzen"
     }
   },
   "transactions": {
     "title": "Transactieregister",
-    "subtitle": "Bekijk alle boekhoukundige transacties",
+    "subtitle": "Bekijk en beheer alle boekhoudtransacties",
     "transactionId": "Transactie-ID",
     "date": "Datum",
     "type": "Type",
@@ -86,6 +223,98 @@
       "receipt": "Ontvangst",
       "journal": "Journaalpost",
       "adjustment": "Correctie"
+    },
+    "newJournalEntry": "Nieuwe memoriaalboeking",
+    "newPayment": "Nieuwe betaling",
+    "newReceipt": "Nieuwe ontvangst",
+    "searchAria": "Transacties zoeken op ID, omschrijving of bedrag",
+    "searchPlaceholder": "Zoeken op transactie-ID, omschrijving of bedrag...",
+    "filterBar": {
+      "from": "Van:",
+      "fromAria": "Transacties filteren vanaf datum",
+      "to": "Tot:",
+      "toAria": "Transacties filteren tot datum",
+      "status": "Status:",
+      "statusAria": "Transacties filteren op status",
+      "type": "Soort:",
+      "typeAria": "Transacties filteren op soort",
+      "account": "Rekening:",
+      "accountAria": "Transacties filteren op rekeningnummer",
+      "accountPlaceholder": "bijv. 1010"
+    },
+    "statusOptions": {
+      "ALL": "Alle",
+      "DRAFT": "Concept",
+      "PENDING": "In behandeling",
+      "POSTED": "Geboekt",
+      "REVERSED": "Teruggeboekt"
+    },
+    "typeOptions": {
+      "ALL": "Alle soorten",
+      "JOURNAL_ENTRY": "Memoriaalboeking",
+      "PAYMENT": "Betaling",
+      "RECEIPT": "Ontvangst"
+    },
+    "statusBadges": {
+      "DRAFT": "CONCEPT",
+      "PENDING": "IN BEHANDELING",
+      "POSTED": "GEBOEKT",
+      "REVERSED": "TERUGGEBOEKT"
+    },
+    "selected_one": "{{count}} transactie geselecteerd",
+    "selected_other": "{{count}} transacties geselecteerd",
+    "postSelected": "Selectie boeken",
+    "deleteSelected": "Selectie verwijderen",
+    "loading": "Transacties laden...",
+    "columns": {
+      "date": "Datum",
+      "transactionId": "Transactie-ID",
+      "description": "Omschrijving",
+      "accountNumber": "Rekeningnr.",
+      "accountName": "Rekeningnaam",
+      "debit": "Debet",
+      "credit": "Credit",
+      "status": "Status",
+      "actions": "Acties"
+    },
+    "emptyTitle": "Geen transacties gevonden",
+    "emptyFiltered": "Pas uw zoekopdracht of filters aan",
+    "emptyBody": "Maak uw eerste transactie om te beginnen",
+    "createJournalEntry": "Memoriaalboeking maken",
+    "rowActions": "Acties voor {{id}}",
+    "paginationAria": "Paginering",
+    "paginationSummary": "<b>{{from}}</b> tot <b>{{to}}</b> van <b>{{total}}</b> resultaten",
+    "panel": {
+      "title": "Geavanceerde filters",
+      "dateRange": "Periode",
+      "status": "Status",
+      "type": "Soort transactie",
+      "accountNumber": "Rekeningnummer",
+      "reporting": "Rapportage",
+      "trialBalance": "Proefbalans maken",
+      "journalReport": "Journaalrapport",
+      "profitAndLoss": "Winst-en-verliesrekening"
+    },
+    "toasts": {
+      "posted": "Transactie {{id}} geboekt.",
+      "reversed": "Transactie {{id}} teruggeboekt.",
+      "deleted": "Transactie {{id}} verwijderd.",
+      "batchPosted": "{{count}} transactie(s) geboekt.",
+      "batchDeleted": "{{count}} transactie(s) verwijderd.",
+      "exportBlocked": "Exporteren niet mogelijk: {{reason}}",
+      "exportEmpty": "Niets te exporteren: de huidige weergave is leeg.",
+      "exported": "{{count}} transactie(s) geëxporteerd naar CSV.",
+      "exportFailed": "Exporteren mislukt. Probeer het opnieuw."
+    },
+    "confirm": {
+      "deleteTitle": "Transactie {{id}} verwijderen?",
+      "deleteMessage": "Deze transactie wordt definitief verwijderd. Dit kunt u niet ongedaan maken.",
+      "batchDeleteTitle_one": "{{count}} transactie verwijderen?",
+      "batchDeleteTitle_other": "{{count}} transacties verwijderen?",
+      "batchDeleteMessage_one": "De geselecteerde transactie wordt definitief verwijderd. Dit kunt u niet ongedaan maken.",
+      "batchDeleteMessage_other": "De {{count}} geselecteerde transacties worden definitief verwijderd. Dit kunt u niet ongedaan maken.",
+      "reverseTitle": "Transactie {{id}} terugboeken?",
+      "reverseMessage": "Terugboeken heft het effect van deze transactie op uw saldi op. Het origineel blijft ter controle in het register staan."
     }
   },
   "messages": {
@@ -99,5 +328,14 @@
     "voucherRejected": "Bon afgewezen",
     "mustBalance": "Debet en credit moeten gelijk zijn",
     "atLeastTwoLines": "Journaalpost moet minimaal twee regels hebben"
+  },
+  "statusInline": {
+    "posted": "geboekt",
+    "reversed": "teruggeboekt",
+    "cancelled": "geannuleerd",
+    "draft": "een concept",
+    "pending": "in behandeling",
+    "approved": "goedgekeurd",
+    "rejected": "afgewezen"
   }
 }

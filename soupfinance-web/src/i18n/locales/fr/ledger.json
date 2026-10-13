@@ -3,7 +3,7 @@
   "subtitle": "Plan comptable et transactions du grand livre",
   "chartOfAccounts": {
     "title": "Plan comptable",
-    "subtitle": "Gérer la structure de vos comptes",
+    "subtitle": "Gérez vos comptes du grand livre",
     "newAccount": "Nouveau compte",
     "editAccount": "Modifier le compte",
     "accountCode": "Code du compte",
@@ -64,7 +64,26 @@
       "applied_one": "{{count}} compte ajouté depuis le modèle {{template}}.",
       "applied_other": "{{count}} comptes ajoutés depuis le modèle {{template}}.",
       "applyError": "Impossible de configurer votre plan comptable."
-    }
+    },
+    "loading": "Chargement des comptes...",
+    "groups": {
+      "ASSET": "Actifs",
+      "LIABILITY": "Passifs",
+      "EQUITY": "Capitaux propres",
+      "INCOME": "Produits",
+      "REVENUE": "Chiffre d'affaires",
+      "EXPENSE": "Charges",
+      "UNCATEGORISED": "Sans catégorie"
+    },
+    "uncategorisedNote": "Attribuez une catégorie à ces comptes pour les inclure dans les rapports.",
+    "columns": {
+      "code": "Numéro",
+      "name": "Nom",
+      "currency": "Devise",
+      "balance": "Solde",
+      "status": "Statut"
+    },
+    "underParent": "(sous {{parent}})"
   },
   "accountTypes": {
     "asset": "Actif",
@@ -86,7 +105,7 @@
   },
   "transactions": {
     "title": "Transactions du grand livre",
-    "subtitle": "Voir l'activité des comptes",
+    "subtitle": "Consultez toutes les écritures et transactions",
     "transactionDate": "Date",
     "description": "Description",
     "debit": "Débit",
@@ -94,7 +113,46 @@
     "balance": "Solde",
     "reference": "Référence",
     "source": "Source",
-    "noTransactions": "Aucune transaction trouvée"
+    "noTransactions": "Aucune transaction trouvée",
+    "newJournalEntry": "Nouvelle écriture",
+    "account": "Compte",
+    "status": "Statut",
+    "filters": {
+      "account": "Compte",
+      "accountAria": "Filtrer les transactions par compte",
+      "from": "Du",
+      "fromAria": "Filtrer les transactions à partir d'une date",
+      "to": "Au",
+      "toAria": "Filtrer les transactions jusqu'à une date",
+      "status": "Statut",
+      "statusAria": "Filtrer les transactions par statut",
+      "allStatus": "Tous les statuts"
+    },
+    "statuses": {
+      "DRAFT": "Brouillon",
+      "PENDING": "En attente",
+      "POSTED": "Comptabilisée",
+      "REVERSED": "Extournée"
+    },
+    "statusBadges": {
+      "DRAFT": "BROUILLON",
+      "PENDING": "EN ATTENTE",
+      "POSTED": "COMPTABILISÉE",
+      "REVERSED": "EXTOURNÉE"
+    },
+    "loading": "Chargement des transactions...",
+    "emptyTitle": "Aucune transaction pour le moment",
+    "emptyFilteredTitle": "Aucune transaction correspondante",
+    "emptyBody": "Créez votre première écriture pour commencer.",
+    "emptyFilteredBody": "Modifiez vos filtres pour trouver des transactions.",
+    "createJournalEntry": "Créer une écriture",
+    "summary": {
+      "showing_one": "{{count}} transaction affichée",
+      "showing_other": "{{count}} transactions affichées",
+      "filtered": "(filtrées)",
+      "totalDebits": "Total débit :",
+      "totalCredits": "Total crédit :"
+    }
   },
   "filters": {
     "all": "Tous les comptes",

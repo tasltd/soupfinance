@@ -21,7 +21,12 @@
     "print": "Imprimer",
     "send": "Envoyer",
     "approve": "Approuver",
-    "reject": "Rejeter"
+    "reject": "Rejeter",
+    "retry": "Réessayer",
+    "clear": "Effacer",
+    "apply": "Appliquer",
+    "post": "Comptabiliser",
+    "reverse": "Extourner"
   },
   "status": {
     "active": "Actif",
@@ -81,5 +86,67 @@
   "currency": {
     "symbol": "€",
     "code": "EUR"
+  },
+  "help": {
+    "needHelp": "Besoin d'aide ?",
+    "opensInNewTab": "(ouvre le guide d'utilisation dans un nouvel onglet)"
+  },
+  "dateFilter": {
+    "emptyHint": "Aucune date sélectionnée. Toutes les dates sont incluses."
+  },
+  "apiError": {
+    "network": {
+      "title": "Problème de connexion",
+      "message": "Impossible de joindre le serveur. Vérifiez votre connexion Internet et réessayez.",
+      "hint": "Si le problème persiste, contactez votre administrateur."
+    },
+    "periodLocked": {
+      "title": "Cette période est clôturée",
+      "message": "Cette date se situe dans une période clôturée. Choisissez une date ultérieure.",
+      "messageWithDate": "Les comptes sont clôturés jusqu'au {{date}}. Choisissez une date postérieure à ce jour.",
+      "hint": "Choisissez une date ultérieure ou demandez à votre administrateur de déplacer la date de verrouillage."
+    },
+    "unauthorized": {
+      "title": "Session expirée",
+      "message": "Votre session a pris fin. Veuillez vous reconnecter pour continuer."
+    },
+    "moduleDisabled": {
+      "title": "Le module {{module}} n'est pas disponible",
+      "titleGeneric": "Module non disponible",
+      "message": "Votre compte n'a pas encore accès au module {{module}}. Cette fonctionnalité nécessite que le module {{module}} soit activé pour votre organisation.",
+      "messageGeneric": "Cette fonctionnalité nécessite un module qui n'est pas activé pour votre organisation.",
+      "hint": "Contactez votre administrateur pour activer ce module pour votre organisation."
+    },
+    "forbidden": {
+      "title": "Vous n'avez pas l'autorisation",
+      "message": "Votre compte n'est pas autorisé à effectuer cette action.",
+      "messageModule": "Votre compte n'est pas autorisé à utiliser {{module}}.",
+      "hint": "Si vous pensez qu'il s'agit d'une erreur, contactez votre administrateur.",
+      "roleHint": "Demandez à votre administrateur de donner accès à votre compte."
+    },
+    "notFound": {
+      "title": "Introuvable",
+      "message": "L'élément recherché est introuvable."
+    },
+    "serverError": {
+      "title": "Erreur du serveur",
+      "message": "Un problème est survenu de notre côté. Veuillez réessayer dans un instant.",
+      "hint": "Si cela se reproduit, contactez votre administrateur."
+    },
+    "requestFailed": {
+      "title": "La requête a échoué",
+      "message": "Votre demande n'a pas pu aboutir.",
+      "hint": "Veuillez réessayer."
+    },
+    "unknown": {
+      "title": "Un problème est survenu",
+      "message": "Une erreur inattendue s'est produite. Veuillez réessayer.",
+      "messageShort": "Une erreur inattendue s'est produite."
+    },
+    "modules": {
+      "Ledger": "Grand livre",
+      "Accounting": "Comptabilité",
+      "Finance": "Finance"
+    }
   }
 }

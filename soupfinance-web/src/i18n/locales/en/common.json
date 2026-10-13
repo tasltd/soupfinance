@@ -21,7 +21,12 @@
     "print": "Print",
     "send": "Send",
     "approve": "Approve",
-    "reject": "Reject"
+    "reject": "Reject",
+    "retry": "Retry",
+    "clear": "Clear",
+    "apply": "Apply",
+    "post": "Post",
+    "reverse": "Reverse"
   },
   "status": {
     "active": "Active",
@@ -81,5 +86,67 @@
   "currency": {
     "symbol": "$",
     "code": "USD"
+  },
+  "help": {
+    "needHelp": "Need Help?",
+    "opensInNewTab": "(opens the user guide in a new tab)"
+  },
+  "dateFilter": {
+    "emptyHint": "No date selected. All dates are included."
+  },
+  "apiError": {
+    "network": {
+      "title": "Connection problem",
+      "message": "We could not reach the server. Check your internet connection and try again.",
+      "hint": "If the problem persists, contact your administrator."
+    },
+    "periodLocked": {
+      "title": "This period is closed",
+      "message": "This date is in a closed period. Choose a later date.",
+      "messageWithDate": "The books are closed up to {{date}}. Choose a date after that day.",
+      "hint": "Choose a later date, or ask your administrator to move the lock date."
+    },
+    "unauthorized": {
+      "title": "Session expired",
+      "message": "Your session has ended. Please sign in again to continue."
+    },
+    "moduleDisabled": {
+      "title": "{{module}} module is not available",
+      "titleGeneric": "Module is not available",
+      "message": "Your account does not have access to the {{module}} module yet. This feature requires the {{module}} module to be enabled for your tenant.",
+      "messageGeneric": "This feature requires a module that is not enabled for your tenant.",
+      "hint": "Contact your administrator to enable this module for your organisation."
+    },
+    "forbidden": {
+      "title": "You do not have permission",
+      "message": "Your account does not have permission to perform this action.",
+      "messageModule": "Your account does not have permission to use {{module}}.",
+      "hint": "If you believe this is a mistake, contact your administrator.",
+      "roleHint": "Ask your administrator to give your account access."
+    },
+    "notFound": {
+      "title": "Not found",
+      "message": "The item you are looking for could not be found."
+    },
+    "serverError": {
+      "title": "Server error",
+      "message": "Something went wrong on our side. Please try again in a moment.",
+      "hint": "If this keeps happening, contact your administrator."
+    },
+    "requestFailed": {
+      "title": "Request failed",
+      "message": "We could not complete your request.",
+      "hint": "Please try again."
+    },
+    "unknown": {
+      "title": "Something went wrong",
+      "message": "An unexpected error occurred. Please try again.",
+      "messageShort": "An unexpected error occurred."
+    },
+    "modules": {
+      "Ledger": "Ledger",
+      "Accounting": "Accounting",
+      "Finance": "Finance"
+    }
   }
 }

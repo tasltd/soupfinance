@@ -190,7 +190,8 @@ i18n
     },
 
     // Debug mode in development
-    debug: import.meta.env.DEV,
+    // Changed (SOUPFIN-164): not under Vitest, where every test file now loads i18n
+    debug: import.meta.env.DEV && import.meta.env.MODE !== 'test',
   });
 
 export default i18n;

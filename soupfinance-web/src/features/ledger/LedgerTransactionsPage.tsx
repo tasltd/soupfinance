@@ -6,8 +6,10 @@
  * Added: Filter by account, date range, and status
  * Added: Loading, error, and empty states
  * Added: data-testid attributes for E2E testing
+ * Changed (SOUPFIN-164): every visible string comes from the `ledger` namespace.
  */
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { listLedgerTransactions, listLedgerAccounts } from '../../api/endpoints/ledger';
@@ -23,8 +25,14 @@ import { HelpLink } from '../../components/help';
 // Added: Transaction status type for filtering
 type TransactionStatus = 'DRAFT' | 'PENDING' | 'POSTED' | 'REVERSED' | '';
 
+// Added (SOUPFIN-164): statuses with a translated label (ledger:transactions.statuses)
+const STATUSES = ['DRAFT', 'PENDING', 'POSTED', 'REVERSED'] as const;
+type KnownStatus = (typeof STATUSES)[number];
+const isKnownStatus = (status: string): status is KnownStatus => (STATUSES as readonly string[]).includes(status);
+
 export function LedgerTransactionsPage() {
   const formatCurrency = useFormatCurrency();
+  const { t } = useTranslation(['ledger', 'common']);
 
   // Added: Filter state
   const [accountId, setAccountId] = useState('');
@@ -99,9 +107,9 @@ export function LedgerTransactionsPage() {
       <div className="flex flex-wrap justify-between items-center gap-4">
         <div>
           <h1 className="text-3xl font-black tracking-tight text-text-light dark:text-text-dark" data-testid="ledger-transactions-heading">
-            Ledger Transactions
+            {t('transactions.title')}
           </h1>
-          <p className="text-subtle-text">View all journal entries and transactions</p>
+          <p className="text-subtle-text">{t('transactions.subtitle')}</p>
           <HelpLink section="ledger-transactions" className="mt-1 self-start" />
         </div>
         <Link
@@ -110,7 +118,7 @@ export function LedgerTransactionsPage() {
           data-testid="new-journal-entry-button"
         >
           <span className="material-symbols-outlined text-lg">add</span>
-          New Journal Entry
+          {t('transactions.newJournalEntry')}
         </Link>
       </div>
 
@@ -124,18 +132,18 @@ export function LedgerTransactionsPage() {
               className="block text-sm font-medium text-text-light dark:text-text-dark mb-1"
               htmlFor="ledger-account-filter"
             >
-              Account
+              {t('transactions.filters.account')}
             </label>
             <select
               id="ledger-account-filter"
               name="ledger-account-filter"
-              aria-label="Filter transactions by account"
+              aria-label={t('transactions.filters.accountAria')}
               value={accountId}
               onChange={(e) => setAccountId(e.target.value)}
               className="w-full h-10 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-3 text-sm text-text-light dark:text-text-dark focus:border-primary focus:ring-1 focus:ring-primary/50"
               data-testid="account-filter"
             >
-              <option value="">All Accounts</option>
+              <option value="">{t('filters.all')}</option>
               {accounts?.map((account: LedgerAccount) => (
                 <option key={account.id} value={account.id}>
                   {account.code} - {account.name}
@@ -149,8 +157,9 @@ export function LedgerTransactionsPage() {
               the raw input lacked, so the empty picker is announced by name instead of as
               three anonymous "0" spinbuttons. */}
           <DateFilterField
-            label="From"
-            ariaLabel="Filter transactions from date"
+            label={t('transactions.filters.from')}
+            ariaLabel={t('transactions.filters.fromAria')}
+            emptyHint={t('common:dateFilter.emptyHint')}
             id="ledger-start-date-filter"
             value={startDate}
             onChange={setStartDate}
@@ -161,8 +170,9 @@ export function LedgerTransactionsPage() {
 
           {/* End Date */}
           <DateFilterField
-            label="To"
-            ariaLabel="Filter transactions to date"
+            label={t('transactions.filters.to')}
+            ariaLabel={t('transactions.filters.toAria')}
+            emptyHint={t('common:dateFilter.emptyHint')}
             id="ledger-end-date-filter"
             value={endDate}
             onChange={setEndDate}
@@ -173,21 +183,20 @@ export function LedgerTransactionsPage() {
 
           {/* Status Filter */}
           <div className="min-w-[140px]">
-            <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1" htmlFor="ledger-status-filter">Status</label>
+            <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1" htmlFor="ledger-status-filter">{t('transactions.filters.status')}</label>
             <select
               id="ledger-status-filter"
               name="ledger-status-filter"
-              aria-label="Filter transactions by status"
+              aria-label={t('transactions.filters.statusAria')}
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as TransactionStatus)}
               className="w-full h-10 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-3 text-sm text-text-light dark:text-text-dark focus:border-primary focus:ring-1 focus:ring-primary/50"
               data-testid="status-filter"
             >
-              <option value="">All Status</option>
-              <option value="DRAFT">Draft</option>
-              <option value="PENDING">Pending</option>
-              <option value="POSTED">Posted</option>
-              <option value="REVERSED">Reversed</option>
+              <option value="">{t('transactions.filters.allStatus')}</option>
+              {STATUSES.map((status) => (
+                <option key={status} value={status}>{t(`transactions.statuses.${status}`)}</option>
+              ))}
             </select>
           </div>
 
@@ -198,7 +207,7 @@ export function LedgerTransactionsPage() {
               className="h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark text-sm hover:bg-primary/5"
               data-testid="clear-filters-button"
             >
-              Clear
+              {t('common:actions.clear')}
             </button>
           )}
         </div>
@@ -208,7 +217,7 @@ export function LedgerTransactionsPage() {
       <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden" data-testid="ledger-table-container">
         {isLoading ? (
           <div className="p-8 text-center text-subtle-text" data-testid="ledger-loading">
-            Loading transactions...
+            {t('transactions.loading')}
           </div>
         ) : error ? (
           <div className="p-2">
@@ -222,12 +231,10 @@ export function LedgerTransactionsPage() {
           <div className="p-12 text-center" data-testid="ledger-empty">
             <span className="material-symbols-outlined text-6xl text-subtle-text/50 mb-4">swap_horiz</span>
             <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">
-              {hasFilters ? 'No matching transactions' : 'No transactions yet'}
+              {hasFilters ? t('transactions.emptyFilteredTitle') : t('transactions.emptyTitle')}
             </h3>
             <p className="text-subtle-text mb-4">
-              {hasFilters
-                ? 'Try adjusting your filters to find transactions.'
-                : 'Create your first journal entry to get started.'}
+              {hasFilters ? t('transactions.emptyFilteredBody') : t('transactions.emptyBody')}
             </p>
             {!hasFilters && (
               <Link
@@ -236,7 +243,7 @@ export function LedgerTransactionsPage() {
                 data-testid="create-first-entry-button"
               >
                 <span className="material-symbols-outlined text-lg">add</span>
-                Create Journal Entry
+                {t('transactions.createJournalEntry')}
               </Link>
             )}
           </div>
@@ -245,13 +252,13 @@ export function LedgerTransactionsPage() {
             <table className="w-full text-sm" data-testid="ledger-table">
               <thead className="text-xs text-subtle-text uppercase bg-background-light dark:bg-background-dark">
                 <tr>
-                  <th className="px-6 py-3 text-left">Date</th>
-                  <th className="px-6 py-3 text-left">Reference</th>
-                  <th className="px-6 py-3 text-left">Account</th>
-                  <th className="px-6 py-3 text-left">Description</th>
-                  <th className="px-6 py-3 text-right">Debit</th>
-                  <th className="px-6 py-3 text-right">Credit</th>
-                  <th className="px-6 py-3 text-center">Status</th>
+                  <th className="px-6 py-3 text-left">{t('transactions.transactionDate')}</th>
+                  <th className="px-6 py-3 text-left">{t('transactions.reference')}</th>
+                  <th className="px-6 py-3 text-left">{t('transactions.account')}</th>
+                  <th className="px-6 py-3 text-left">{t('transactions.description')}</th>
+                  <th className="px-6 py-3 text-right">{t('transactions.debit')}</th>
+                  <th className="px-6 py-3 text-right">{t('transactions.credit')}</th>
+                  <th className="px-6 py-3 text-center">{t('transactions.status')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -301,7 +308,10 @@ export function LedgerTransactionsPage() {
                           className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${getStatusStyle(tx.status)}`}
                           data-testid={`ledger-status-${tx.id}`}
                         >
-                          {tx.status || 'DRAFT'}
+                          {/* Changed (SOUPFIN-164): translated badge; an unknown status shows as sent */}
+                          {isKnownStatus(tx.status || 'DRAFT')
+                            ? t(`transactions.statusBadges.${(tx.status || 'DRAFT') as KnownStatus}`)
+                            : tx.status}
                         </span>
                       </td>
                     </tr>
@@ -317,12 +327,12 @@ export function LedgerTransactionsPage() {
       {filteredTransactions && filteredTransactions.length > 0 && (
         <div className="flex justify-between items-center text-sm text-subtle-text" data-testid="ledger-summary">
           <span>
-            Showing {filteredTransactions.length} transaction{filteredTransactions.length !== 1 ? 's' : ''}
-            {hasFilters && ' (filtered)'}
+            {t('transactions.summary.showing', { count: filteredTransactions.length })}
+            {hasFilters && ` ${t('transactions.summary.filtered')}`}
           </span>
           <div className="flex gap-6">
             <span>
-              Total Debits:{' '}
+              {t('transactions.summary.totalDebits')}{' '}
               <span className="font-medium text-text-light dark:text-text-dark">
                 {formatCurrency(filteredTransactions
                   .filter((tx: LedgerTransaction) => tx.transactionState === 'DEBIT')
@@ -330,7 +340,7 @@ export function LedgerTransactionsPage() {
               </span>
             </span>
             <span>
-              Total Credits:{' '}
+              {t('transactions.summary.totalCredits')}{' '}
               <span className="font-medium text-info">
                 {formatCurrency(filteredTransactions
                   .filter((tx: LedgerTransaction) => tx.transactionState === 'CREDIT')

@@ -9,8 +9,12 @@
  * - DEPOSIT: Same as RECEIPT but different label
  *
  * Changed: Now fetches ledger accounts from API via useLedgerAccounts hook
+ * Changed (SOUPFIN-164): every visible string, validation messages included, comes
+ *   from the `accounting` namespace.
  */
 import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { useNavigate, useSearchParams, useLocation, useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useForm, Controller } from 'react-hook-form';
@@ -34,7 +38,8 @@ import { usePaymentMethods } from '../../hooks/usePaymentMethods';
 import { DEFAULT_CURRENCIES } from '../../api/endpoints/domainData';
 // Added (SOUPFIN-9): module-disabled banner + user-friendly submit errors
 import { ModuleDisabledBanner } from '../../components/feedback';
-import { getApiErrorMessage, getPeriodLockError } from '../../api/errors';
+import { getPeriodLockError } from '../../api/errors';
+import { getTranslatedApiErrorMessage } from '../../i18n/translateApiError';
 import type { CreateVoucherRequest, VoucherType, VoucherTo } from '../../types';
 // Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
 import { HelpLink } from '../../components/help';
@@ -42,27 +47,28 @@ import { HelpLink } from '../../components/help';
 // Added: Zod schema for voucher form validation
 // Changed: Renamed voucherDate→transactionDate, description→notes to match backend domain
 // Note: Zod 4 uses 'message' instead of 'required_error' for enum validation
-const voucherFormSchema = z.object({
+// Changed (SOUPFIN-164): built with `t` so the messages follow the user's language
+const buildVoucherFormSchema = (t: TFunction<['accounting', 'common']>) => z.object({
   voucherType: z.enum(['PAYMENT', 'RECEIPT', 'DEPOSIT'], {
-    message: 'Voucher type is required',
+    message: t('voucher.validation.typeRequired'),
   }),
-  transactionDate: z.string().min(1, 'Date is required'),
+  transactionDate: z.string().min(1, t('voucher.validation.dateRequired')),
   reference: z.string().optional(),
-  notes: z.string().min(1, 'Description is required'),
+  notes: z.string().min(1, t('voucher.validation.descriptionRequired')),
   paymentMethod: z.string().optional(),
   currency: z.string().optional(),
   exchangeRate: z.number().optional(),
   voucherTo: z.enum(['CLIENT', 'VENDOR', 'STAFF', 'OTHER'], {
-    message: 'Beneficiary/Payer type is required',
+    message: t('voucher.validation.partyTypeRequired'),
   }),
   beneficiaryName: z.string().optional(),
   clientId: z.string().optional(),
   vendorId: z.string().optional(),
   staffId: z.string().optional(),
-  cashAccountId: z.string().min(1, 'Bank/Cash account is required'),
+  cashAccountId: z.string().min(1, t('voucher.validation.cashAccountRequired')),
   expenseAccountId: z.string().optional(),
   incomeAccountId: z.string().optional(),
-  amount: z.number().min(0.01, 'Amount must be greater than 0'),
+  amount: z.number().min(0.01, t('voucher.validation.amountPositive')),
 }).refine(
   // Added: Validate expense account required for payment vouchers
   (data) => {
@@ -71,7 +77,7 @@ const voucherFormSchema = z.object({
     }
     return true;
   },
-  { message: 'Expense account is required for payment vouchers', path: ['expenseAccountId'] }
+  { message: t('voucher.validation.expenseRequired'), path: ['expenseAccountId'] }
 ).refine(
   // Added: Validate income account required for receipt/deposit vouchers
   (data) => {
@@ -80,26 +86,19 @@ const voucherFormSchema = z.object({
     }
     return true;
   },
-  { message: 'Income account is required for receipt vouchers', path: ['incomeAccountId'] }
+  { message: t('voucher.validation.incomeRequired'), path: ['incomeAccountId'] }
 );
 
 // Added: Type inference from schema
-type VoucherFormData = z.infer<typeof voucherFormSchema>;
+type VoucherFormData = z.infer<ReturnType<typeof buildVoucherFormSchema>>;
 
 // Added: Voucher type options for tab selection
-const VOUCHER_TYPE_OPTIONS: RadioOption[] = [
-  { value: 'PAYMENT', label: 'Payment Voucher' },
-  { value: 'RECEIPT', label: 'Receipt Voucher' },
-  { value: 'DEPOSIT', label: 'Deposit Voucher' },
-];
+// Changed (SOUPFIN-164): values only; labels come from accounting:voucher.typeOptions
+const VOUCHER_TYPES = ['PAYMENT', 'RECEIPT', 'DEPOSIT'] as const;
 
 // Added: Beneficiary/Payer type options
-const BENEFICIARY_TYPE_OPTIONS: RadioOption[] = [
-  { value: 'CLIENT', label: 'Client' },
-  { value: 'VENDOR', label: 'Vendor' },
-  { value: 'STAFF', label: 'Staff' },
-  { value: 'OTHER', label: 'Other' },
-];
+// Changed (SOUPFIN-164): labels come from accounting:voucher.partyTypes
+const BENEFICIARY_TYPES = ['CLIENT', 'VENDOR', 'STAFF', 'OTHER'] as const;
 
 /**
  * VoucherFormPage - Form for creating payment/receipt/deposit vouchers
@@ -111,6 +110,17 @@ const BENEFICIARY_TYPE_OPTIONS: RadioOption[] = [
  */
 export function VoucherFormPage() {
   const navigate = useNavigate();
+  const { t } = useTranslation(['accounting', 'common']);
+  // Added (SOUPFIN-164): rebuilt when the language changes, so messages follow it
+  const voucherFormSchema = useMemo(() => buildVoucherFormSchema(t), [t]);
+  const voucherTypeOptions: RadioOption[] = useMemo(
+    () => VOUCHER_TYPES.map((value) => ({ value, label: t(`voucher.typeOptions.${value}`) })),
+    [t]
+  );
+  const beneficiaryTypeOptions: RadioOption[] = useMemo(
+    () => BENEFICIARY_TYPES.map((value) => ({ value, label: t(`voucher.partyTypes.${value}`) })),
+    [t]
+  );
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -224,39 +234,39 @@ export function VoucherFormPage() {
   // "Edit" in front when it is open for editing.
   const pageTitle = useMemo(() => {
     if (isExisting) {
-      const typeLabel = VOUCHER_TYPE_OPTIONS.find((o) => o.value === watchedVoucherType)?.label ?? 'Voucher';
-      return isReadOnly ? typeLabel : `Edit ${typeLabel}`;
+      const typeLabel = voucherTypeOptions.find((o) => o.value === watchedVoucherType)?.label ?? t('voucher.title');
+      return isReadOnly ? typeLabel : t('voucher.editTitle', { type: typeLabel });
     }
     switch (watchedVoucherType) {
       case 'PAYMENT':
-        return 'New Payment Voucher';
+        return t('voucher.newPayment');
       case 'RECEIPT':
-        return 'New Receipt Voucher';
+        return t('voucher.newReceipt');
       case 'DEPOSIT':
-        return 'New Deposit Voucher';
+        return t('voucher.newDeposit');
       default:
-        return 'New Voucher';
+        return t('voucher.newVoucher');
     }
-  }, [watchedVoucherType, isExisting, isReadOnly]);
+  }, [watchedVoucherType, isExisting, isReadOnly, voucherTypeOptions, t]);
 
   // Added: Dynamic subtitle based on voucher type
   const pageSubtitle = useMemo(() => {
     if (isExisting) {
       const number = existingVoucher?.voucherNumber;
       const status = existingVoucher?.status;
-      return [number, status].filter(Boolean).join(' · ') || 'Voucher details';
+      return [number, status].filter(Boolean).join(' · ') || t('voucher.subtitles.details');
     }
     switch (watchedVoucherType) {
       case 'PAYMENT':
-        return 'Record a payment made to a beneficiary';
+        return t('voucher.subtitles.payment');
       case 'RECEIPT':
-        return 'Record money received from a payer';
+        return t('voucher.subtitles.receipt');
       case 'DEPOSIT':
-        return 'Record a deposit into an account';
+        return t('voucher.subtitles.deposit');
       default:
-        return 'Create a financial voucher';
+        return t('voucher.subtitles.default');
     }
-  }, [watchedVoucherType, isExisting, existingVoucher]);
+  }, [watchedVoucherType, isExisting, existingVoucher, t]);
 
   // Changed: Filter accounts by ledger group for bank/cash selection (ASSET accounts)
   const cashAccountOptions: SelectOption[] = useMemo(() =>
@@ -372,7 +382,7 @@ export function VoucherFormPage() {
       }
       // Changed (SOUPFIN-9): use parseApiError so 403 ("module disabled")
       // shows a useful message instead of raw axios "Request failed..." text.
-      setSubmitError(getApiErrorMessage(error));
+      setSubmitError(getTranslatedApiErrorMessage(error));
     } finally {
       setIsSubmitting(false);
     }
@@ -390,14 +400,16 @@ export function VoucherFormPage() {
   const formatCurrency = useFormatCurrency();
 
   // Added: Get dynamic label for beneficiary/payer based on voucher type
-  const beneficiaryLabel = isPaymentType ? 'Beneficiary' : 'Payer';
+  // Changed (SOUPFIN-164): one key per party, since languages inflect the noun differently
+  const party = isPaymentType ? 'beneficiary' : 'payer';
+  const partyNoun = t(`voucher.party.${party}`);
 
   // Added (SOUPFIN-154): loading state while an existing voucher is fetched
   if (isExisting && isLoadingVoucher) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] gap-4" data-testid="voucher-form-page">
         <span className="material-symbols-outlined animate-spin text-4xl text-primary">progress_activity</span>
-        <p className="text-subtle-text">Loading voucher</p>
+        <p className="text-subtle-text">{t('voucher.loading')}</p>
       </div>
     );
   }
@@ -427,7 +439,7 @@ export function VoucherFormPage() {
             className="h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm hover:bg-primary/5"
             data-testid="voucher-form-cancel-button"
           >
-            {isReadOnly ? 'Back' : 'Cancel'}
+            {isReadOnly ? t('common:actions.back') : t('common:actions.cancel')}
           </button>
           {/* Added (SOUPFIN-154): an editable voucher shown read-only offers Edit */}
           {isReadOnly && canEditVoucher && (
@@ -437,7 +449,7 @@ export function VoucherFormPage() {
               data-testid="voucher-form-edit-button"
             >
               <span className="material-symbols-outlined text-base">edit</span>
-              Edit
+              {t('common:actions.edit')}
             </Link>
           )}
           {!isReadOnly && (
@@ -448,7 +460,7 @@ export function VoucherFormPage() {
             className="h-10 px-4 rounded-lg bg-primary/20 text-primary font-bold text-sm hover:bg-primary/30 disabled:opacity-50 disabled:cursor-not-allowed"
             data-testid="voucher-form-save-draft-button"
           >
-            {isExisting ? 'Save Changes' : 'Save Draft'}
+            {isExisting ? t('voucher.saveChanges') : t('voucher.saveDraft')}
           </button>
           )}
           {/* Changed (SOUPFIN-154): posting an existing voucher is a register
@@ -464,7 +476,7 @@ export function VoucherFormPage() {
             {isSubmitting && (
               <span className="material-symbols-outlined animate-spin text-base">progress_activity</span>
             )}
-            Approve & Post
+            {t('voucher.approveAndPost')}
           </button>
           )}
         </div>
@@ -477,7 +489,7 @@ export function VoucherFormPage() {
           data-testid="voucher-form-load-error"
         >
           <span className="material-symbols-outlined text-xl">error</span>
-          {`This voucher could not be loaded. ${getApiErrorMessage(voucherLoadError)}`}
+          {t('voucher.loadError', { reason: getTranslatedApiErrorMessage(voucherLoadError) })}
         </div>
       )}
 
@@ -488,7 +500,11 @@ export function VoucherFormPage() {
           data-testid="voucher-form-readonly-banner"
         >
           <span className="material-symbols-outlined text-xl text-primary">lock</span>
-          {`This voucher is ${existingVoucher.status?.toLowerCase()}, so it can no longer be edited.`}
+          {t('voucher.lockedBanner', {
+            status: t(`statusInline.${String(existingVoucher.status ?? '').toLowerCase()}` as 'statusInline.posted', {
+              defaultValue: String(existingVoucher.status ?? '').toLowerCase(),
+            }),
+          })}
         </div>
       )}
 
@@ -499,7 +515,7 @@ export function VoucherFormPage() {
       {accountsError && (
         <ModuleDisabledBanner
           error={accountsError}
-          context="Bank/Cash, Expense, and Income account dropdowns are unavailable until the module is enabled."
+          context={t('voucher.moduleContext')}
           testId="voucher-form-module-disabled"
         />
       )}
@@ -528,7 +544,7 @@ export function VoucherFormPage() {
         data-testid="voucher-type-section"
       >
         <div className="px-6 py-4 border-b border-border-light dark:border-border-dark">
-          <h2 className="text-lg font-bold text-text-light dark:text-text-dark">Voucher Type</h2>
+          <h2 className="text-lg font-bold text-text-light dark:text-text-dark">{t('voucher.voucherType')}</h2>
         </div>
         <div className="p-6">
           {/* Added: Tab-style voucher type selector */}
@@ -537,7 +553,7 @@ export function VoucherFormPage() {
             control={control}
             render={({ field }) => (
               <div className="flex flex-wrap gap-2" data-testid="voucher-type-tabs">
-                {VOUCHER_TYPE_OPTIONS.map((option) => (
+                {voucherTypeOptions.map((option) => (
                   <button
                     key={option.value}
                     type="button"
@@ -577,30 +593,30 @@ export function VoucherFormPage() {
         data-testid="voucher-details-section"
       >
         <div className="px-6 py-4 border-b border-border-light dark:border-border-dark">
-          <h2 className="text-lg font-bold text-text-light dark:text-text-dark">Voucher Details</h2>
+          <h2 className="text-lg font-bold text-text-light dark:text-text-dark">{t('voucher.sections.details')}</h2>
         </div>
         <div className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Changed: voucherDate → transactionDate to match backend */}
             <DatePicker
-              label="Transaction Date"
+              label={t('voucher.fields.transactionDate')}
               required
               {...register('transactionDate')}
               error={errors.transactionDate?.message}
               data-testid="voucher-date-input"
             />
             <Input
-              label="Reference Number"
-              placeholder="e.g., PV-2024-001"
+              label={t('voucher.fields.referenceNumber')}
+              placeholder={t('voucher.fields.referencePlaceholder')}
               {...register('reference')}
               error={errors.reference?.message}
               data-testid="voucher-reference-input"
             />
             {/* Changed: Payment method dropdown from backend domain records (not hardcoded enum) */}
             <Select
-              label="Payment Method"
+              label={t('voucher.fields.paymentMethod')}
               options={paymentMethodOptions}
-              placeholder="Select method..."
+              placeholder={t('voucher.fields.selectMethod')}
               {...register('paymentMethod')}
               error={errors.paymentMethod?.message}
               data-testid="voucher-payment-method-select"
@@ -609,9 +625,9 @@ export function VoucherFormPage() {
           <div className="mt-6">
             {/* Changed: description → notes to match backend */}
             <Textarea
-              label="Notes"
+              label={t('voucher.fields.notes')}
               required
-              placeholder="Describe the purpose of this voucher..."
+              placeholder={t('voucher.fields.notesPlaceholder')}
               rows={2}
               {...register('notes')}
               error={errors.notes?.message}
@@ -628,7 +644,7 @@ export function VoucherFormPage() {
       >
         <div className="px-6 py-4 border-b border-border-light dark:border-border-dark">
           <h2 className="text-lg font-bold text-text-light dark:text-text-dark">
-            {beneficiaryLabel} Information
+            {t(`voucher.partyInfo.${party}`)}
           </h2>
         </div>
         <div className="p-6">
@@ -640,8 +656,8 @@ export function VoucherFormPage() {
               render={({ field }) => (
                 <Radio
                   name="voucherTo"
-                  label={`${beneficiaryLabel} Type`}
-                  options={BENEFICIARY_TYPE_OPTIONS}
+                  label={t(`voucher.partyType.${party}`)}
+                  options={beneficiaryTypeOptions}
                   value={field.value}
                   onChange={(e) => {
                     handleVoucherToChange(e.target.value);
@@ -658,38 +674,38 @@ export function VoucherFormPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {watchedVoucherTo === 'CLIENT' && (
               <Input
-                label={isPaymentType ? 'Client (Beneficiary)' : 'Client (Payer)'}
-                placeholder="Search or enter client name..."
+                label={t('voucher.fields.clientLabel', { party: partyNoun })}
+                placeholder={t('voucher.fields.clientPlaceholder')}
                 {...register('clientId')}
                 error={errors.clientId?.message}
-                helperText="Start typing to search existing clients"
+                helperText={t('voucher.fields.clientHelp')}
                 data-testid="voucher-client-input"
               />
             )}
             {watchedVoucherTo === 'VENDOR' && (
               <Input
-                label={isPaymentType ? 'Vendor (Beneficiary)' : 'Vendor (Payer)'}
-                placeholder="Search or enter vendor name..."
+                label={t('voucher.fields.vendorLabel', { party: partyNoun })}
+                placeholder={t('voucher.fields.vendorPlaceholder')}
                 {...register('vendorId')}
                 error={errors.vendorId?.message}
-                helperText="Start typing to search existing vendors"
+                helperText={t('voucher.fields.vendorHelp')}
                 data-testid="voucher-vendor-input"
               />
             )}
             {watchedVoucherTo === 'STAFF' && (
               <Input
-                label={isPaymentType ? 'Staff Member (Beneficiary)' : 'Staff Member (Payer)'}
-                placeholder="Search or enter staff name..."
+                label={t('voucher.fields.staffLabel', { party: partyNoun })}
+                placeholder={t('voucher.fields.staffPlaceholder')}
                 {...register('staffId')}
                 error={errors.staffId?.message}
-                helperText="Start typing to search staff members"
+                helperText={t('voucher.fields.staffHelp')}
                 data-testid="voucher-staff-input"
               />
             )}
             {watchedVoucherTo === 'OTHER' && (
               <Input
-                label={`${beneficiaryLabel} Name`}
-                placeholder={`Enter ${beneficiaryLabel.toLowerCase()} name...`}
+                label={t(`voucher.partyName.${party}`)}
+                placeholder={t(`voucher.partyNamePlaceholder.${party}`)}
                 {...register('beneficiaryName')}
                 error={errors.beneficiaryName?.message}
                 data-testid="voucher-beneficiary-name-input"
@@ -705,32 +721,32 @@ export function VoucherFormPage() {
         data-testid="voucher-accounts-section"
       >
         <div className="px-6 py-4 border-b border-border-light dark:border-border-dark">
-          <h2 className="text-lg font-bold text-text-light dark:text-text-dark">Account Selection</h2>
+          <h2 className="text-lg font-bold text-text-light dark:text-text-dark">{t('voucher.sections.accounts')}</h2>
         </div>
         <div className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Added: Bank/Cash account selector (required for all types) */}
             <Select
-              label="Bank/Cash Account"
+              label={t('voucher.fields.cashAccount')}
               required
               options={cashAccountOptions}
-              placeholder="Select account..."
+              placeholder={t('voucher.fields.selectAccount')}
               {...register('cashAccountId')}
               error={errors.cashAccountId?.message}
-              helperText="Account used for payment or receipt"
+              helperText={t('voucher.fields.cashAccountHelp')}
               data-testid="voucher-cash-account-select"
             />
 
             {/* Added: Expense account selector (only for payment vouchers) */}
             {isPaymentType && (
               <Select
-                label="Expense Account"
+                label={t('voucher.fields.expenseAccount')}
                 required
                 options={expenseAccountOptions}
-                placeholder="Select expense account..."
+                placeholder={t('voucher.fields.selectExpenseAccount')}
                 {...register('expenseAccountId')}
                 error={errors.expenseAccountId?.message}
-                helperText="Account to debit for this expense"
+                helperText={t('voucher.fields.expenseAccountHelp')}
                 data-testid="voucher-expense-account-select"
               />
             )}
@@ -738,13 +754,13 @@ export function VoucherFormPage() {
             {/* Added: Income account selector (only for receipt/deposit vouchers) */}
             {isReceiptType && (
               <Select
-                label="Income Account"
+                label={t('voucher.fields.incomeAccount')}
                 required
                 options={incomeAccountOptions}
-                placeholder="Select income account..."
+                placeholder={t('voucher.fields.selectIncomeAccount')}
                 {...register('incomeAccountId')}
                 error={errors.incomeAccountId?.message}
-                helperText="Account to credit for this income"
+                helperText={t('voucher.fields.incomeAccountHelp')}
                 data-testid="voucher-income-account-select"
               />
             )}
@@ -758,7 +774,7 @@ export function VoucherFormPage() {
         data-testid="voucher-amount-section"
       >
         <div className="px-6 py-4 border-b border-border-light dark:border-border-dark">
-          <h2 className="text-lg font-bold text-text-light dark:text-text-dark">Amount</h2>
+          <h2 className="text-lg font-bold text-text-light dark:text-text-dark">{t('voucher.amount')}</h2>
         </div>
         <div className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -767,7 +783,7 @@ export function VoucherFormPage() {
                 currency symbol rather than a hardcoded "$", and rejects the
                 letter/sign keys a bare <input type="number"> accepts. */}
             <MoneyInput
-              label="Amount"
+              label={t('voucher.amount')}
               required
               placeholder="0.00"
               inputClassName="text-lg font-bold"
@@ -798,7 +814,7 @@ export function VoucherFormPage() {
                   </span>
                   <div>
                     <p className="text-sm text-subtle-text font-medium">
-                      {isPaymentType ? 'Money Out' : 'Money In'}
+                      {isPaymentType ? t('voucher.moneyOut') : t('voucher.moneyIn')}
                     </p>
                     <p
                       className={`text-xl font-bold ${
@@ -816,13 +832,13 @@ export function VoucherFormPage() {
           {/* Added: Currency and exchange rate fields */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium text-text-light dark:text-text-dark">Currency</label>
+              <label className="text-sm font-medium text-text-light dark:text-text-dark">{t('voucher.fields.currency')}</label>
               <select
                 {...register('currency')}
                 className="h-12 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark px-4 text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none"
                 data-testid="voucher-currency-select"
               >
-                <option value="">Default (Account Currency)</option>
+                <option value="">{t('voucher.fields.defaultCurrency')}</option>
                 {DEFAULT_CURRENCIES.map((c) => (
                   <option key={c.code} value={c.code}>
                     {c.code} - {c.label}
@@ -832,13 +848,13 @@ export function VoucherFormPage() {
             </div>
             {watch('currency') && (
               <Input
-                label="Exchange Rate"
+                label={t('voucher.fields.exchangeRate')}
                 type="number"
                 step="0.0001"
                 placeholder="1.0000"
                 {...register('exchangeRate', { valueAsNumber: true })}
                 error={errors.exchangeRate?.message}
-                helperText="Rate to convert to base currency"
+                helperText={t('voucher.fields.exchangeRateHelp')}
                 data-testid="voucher-exchange-rate-input"
               />
             )}
@@ -852,18 +868,18 @@ export function VoucherFormPage() {
         data-testid="voucher-summary-section"
       >
         <div className="px-6 py-4 border-b border-border-light dark:border-border-dark">
-          <h2 className="text-lg font-bold text-text-light dark:text-text-dark">Transaction Summary</h2>
+          <h2 className="text-lg font-bold text-text-light dark:text-text-dark">{t('voucher.sections.summary')}</h2>
         </div>
         <div className="p-6">
           <div className="rounded-lg bg-background-light dark:bg-background-dark p-4">
-            <p className="text-sm text-subtle-text mb-2">Journal Entry Preview:</p>
+            <p className="text-sm text-subtle-text mb-2">{t('voucher.journalPreview')}</p>
             <div className="overflow-x-auto">
               <table className="w-full text-sm" data-testid="voucher-journal-preview">
                 <thead className="text-xs text-subtle-text uppercase">
                   <tr>
-                    <th className="px-4 py-2 text-left font-semibold">Account</th>
-                    <th className="px-4 py-2 text-right font-semibold">Debit</th>
-                    <th className="px-4 py-2 text-right font-semibold">Credit</th>
+                    <th className="px-4 py-2 text-left font-semibold">{t('voucher.columns.account')}</th>
+                    <th className="px-4 py-2 text-right font-semibold">{t('voucher.columns.debit')}</th>
+                    <th className="px-4 py-2 text-right font-semibold">{t('voucher.columns.credit')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -873,8 +889,8 @@ export function VoucherFormPage() {
                       <tr className="border-t border-border-light dark:border-border-dark">
                         <td className="px-4 py-2 text-text-light dark:text-text-dark">
                           {watch('expenseAccountId')
-                            ? expenseAccountOptions.find(o => o.value === watch('expenseAccountId'))?.label || 'Expense Account'
-                            : 'Expense Account'
+                            ? expenseAccountOptions.find(o => o.value === watch('expenseAccountId'))?.label || t('voucher.fields.expenseAccount')
+                            : t('voucher.fields.expenseAccount')
                           }
                         </td>
                         <td className="px-4 py-2 text-right font-medium text-text-light dark:text-text-dark">
@@ -885,8 +901,8 @@ export function VoucherFormPage() {
                       <tr className="border-t border-border-light dark:border-border-dark">
                         <td className="px-4 py-2 text-text-light dark:text-text-dark">
                           {watch('cashAccountId')
-                            ? cashAccountOptions.find(o => o.value === watch('cashAccountId'))?.label || 'Bank/Cash Account'
-                            : 'Bank/Cash Account'
+                            ? cashAccountOptions.find(o => o.value === watch('cashAccountId'))?.label || t('voucher.fields.cashAccount')
+                            : t('voucher.fields.cashAccount')
                           }
                         </td>
                         <td className="px-4 py-2 text-right text-subtle-text">-</td>
@@ -901,8 +917,8 @@ export function VoucherFormPage() {
                       <tr className="border-t border-border-light dark:border-border-dark">
                         <td className="px-4 py-2 text-text-light dark:text-text-dark">
                           {watch('cashAccountId')
-                            ? cashAccountOptions.find(o => o.value === watch('cashAccountId'))?.label || 'Bank/Cash Account'
-                            : 'Bank/Cash Account'
+                            ? cashAccountOptions.find(o => o.value === watch('cashAccountId'))?.label || t('voucher.fields.cashAccount')
+                            : t('voucher.fields.cashAccount')
                           }
                         </td>
                         <td className="px-4 py-2 text-right font-medium text-text-light dark:text-text-dark">
@@ -913,8 +929,8 @@ export function VoucherFormPage() {
                       <tr className="border-t border-border-light dark:border-border-dark">
                         <td className="px-4 py-2 text-text-light dark:text-text-dark">
                           {watch('incomeAccountId')
-                            ? incomeAccountOptions.find(o => o.value === watch('incomeAccountId'))?.label || 'Income Account'
-                            : 'Income Account'
+                            ? incomeAccountOptions.find(o => o.value === watch('incomeAccountId'))?.label || t('voucher.fields.incomeAccount')
+                            : t('voucher.fields.incomeAccount')
                           }
                         </td>
                         <td className="px-4 py-2 text-right text-subtle-text">-</td>
@@ -927,7 +943,7 @@ export function VoucherFormPage() {
                 </tbody>
                 <tfoot className="border-t-2 border-border-light dark:border-border-dark font-bold">
                   <tr>
-                    <td className="px-4 py-2 text-text-light dark:text-text-dark">Total</td>
+                    <td className="px-4 py-2 text-text-light dark:text-text-dark">{t('voucher.total')}</td>
                     <td className="px-4 py-2 text-right text-text-light dark:text-text-dark">
                       {formatCurrency(watch('amount') || 0)}
                     </td>
