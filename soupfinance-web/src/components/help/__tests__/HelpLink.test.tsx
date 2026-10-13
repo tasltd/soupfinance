@@ -232,6 +232,8 @@ describe('Every page header carries a "Need Help?" link', () => {
     'bills/BillDetailPage.tsx': ['bills', 'record-payment'],
     'payments/PaymentListPage.tsx': ['payments'],
     'payments/PaymentFormPage.tsx': ['record-payment'],
+    // Added (SOUPFIN-178): receive one payment against many invoices / pay many bills
+    'payments/PaymentAllocationPage.tsx': ['record-payment'],
     'ledger/ChartOfAccountsPage.tsx': ['chart-of-accounts'],
     'ledger/LedgerTransactionsPage.tsx': ['ledger-transactions'],
     'accounting/TransactionRegisterPage.tsx': ['transaction-register'],

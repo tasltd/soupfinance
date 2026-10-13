@@ -62,6 +62,8 @@ import { ClientListPage, ClientFormPage, ClientDetailPage } from './features/cli
 import { PaymentListPage } from './features/payments/PaymentListPage';
 import { PaymentFormPage } from './features/payments/PaymentFormPage';
 import { PaymentDetailPage } from './features/payments/PaymentDetailPage';
+// Added (SOUPFIN-178): one payment applied across many invoices or bills
+import { ReceivePaymentPage, PayBillsPage } from './features/payments/PaymentAllocationPage';
 
 // Ledger
 import { ChartOfAccountsPage } from './features/ledger/ChartOfAccountsPage';
@@ -297,6 +299,8 @@ export default function App() {
             {/* Payments */}
             <Route path="/payments" element={<PaymentListPage />} />
             <Route path="/payments/new" element={<PaymentFormPage />} />
+            <Route path="/payments/receive" element={<ReceivePaymentPage />} />
+            <Route path="/payments/make" element={<PayBillsPage />} />
             {/* Added (SOUPFIN-177): one payment; :type is "invoice" or "bill" */}
             <Route path="/payments/:type/:id" element={<PaymentDetailPage />} />
 

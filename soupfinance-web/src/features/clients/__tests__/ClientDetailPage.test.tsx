@@ -61,6 +61,18 @@ function renderPage(id = 'client-123') {
   );
 }
 
+// Added (SOUPFIN-178): entry point to receive one payment against several invoices
+describe('ClientDetailPage receive payment (SOUPFIN-178)', () => {
+  it('links to the allocation screen with this client preselected', async () => {
+    vi.mocked(getClient).mockResolvedValue(createMockClient({ id: 'client-123', name: 'Acme' }));
+    renderPage();
+
+    const link = await screen.findByTestId('client-receive-payment');
+    expect(link).toHaveTextContent('Receive Payment');
+    expect(link).toHaveAttribute('href', '/payments/receive?clientId=client-123');
+  });
+});
+
 describe('ClientDetailPage delete flow (SOUP-1929)', () => {
   beforeEach(() => {
     vi.clearAllMocks();

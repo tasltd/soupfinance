@@ -65,6 +65,18 @@ describe('PaymentListPage', () => {
       await waitFor(() => expect(screen.getByTestId('payment-list-empty')).toBeInTheDocument());
     });
 
+    // Added (SOUPFIN-178): entry points to the multi-invoice / multi-bill allocation screen
+    it('offers Receive payment and Pay bills next to Record Payment', async () => {
+      vi.mocked(listAllInvoicePayments).mockResolvedValue([]);
+      vi.mocked(listAllBillPayments).mockResolvedValue([]);
+
+      renderPage();
+
+      expect(await screen.findByTestId('receive-payment-button')).toHaveAttribute('href', '/payments/receive');
+      expect(screen.getByTestId('pay-bills-button')).toHaveAttribute('href', '/payments/make');
+      expect(screen.getByTestId('receive-payment-button')).not.toHaveAttribute('aria-disabled', 'true');
+    });
+
     it('shows the generic error state when only one endpoint fails with 403 (not full module-disabled)', async () => {
       // Only ONE endpoint returns 403 — the module is enabled, this is a transient
       // permission glitch on just the bills side. We should fall back to the
@@ -115,6 +127,15 @@ describe('PaymentListPage', () => {
       const recordButton = screen.getByTestId('record-payment-button');
       expect(recordButton).toHaveAttribute('aria-disabled', 'true');
       expect(recordButton.className).toMatch(/pointer-events-none/);
+    });
+
+    // Added (SOUPFIN-178)
+    it('disables Receive payment and Pay bills too', async () => {
+      renderPage();
+      await screen.findByTestId('payment-module-disabled');
+      for (const id of ['receive-payment-button', 'pay-bills-button']) {
+        expect(screen.getByTestId(id)).toHaveAttribute('aria-disabled', 'true');
+      }
     });
 
     it('offers a Back to Dashboard escape hatch', async () => {
