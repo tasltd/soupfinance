@@ -5,12 +5,31 @@
  */
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { listVendors, deleteVendor } from '../../api';
 // Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
 import { HelpLink } from '../../components/help';
 // Added (SOUPFIN-160): module-aware error card instead of a generic message
 import { ApiErrorState } from '../../components/feedback';
+
+// Added (SOUPFIN-182): rows per server page (PRD: 20 per page)
+export const VENDOR_PAGE_SIZE = 20;
+
+type VendorStatus = 'active' | 'archived';
+
+// Added (SOUPFIN-182): compact page list — first, last, and two either side of
+// current (same shape as PaymentListPage)
+function visiblePages(current: number, total: number): Array<number | 'gap'> {
+  const pages: Array<number | 'gap'> = [];
+  for (let p = 1; p <= total; p++) {
+    if (p === 1 || p === total || Math.abs(p - current) <= 2) {
+      pages.push(p);
+    } else if (pages[pages.length - 1] !== 'gap') {
+      pages.push('gap');
+    }
+  }
+  return pages;
+}
 
 // Added: Delete confirmation state interface
 interface DeleteState {
@@ -25,6 +44,11 @@ export function VendorListPage() {
   // Added: Search state for filtering vendors
   const [searchTerm, setSearchTerm] = useState('');
 
+  // Added (SOUPFIN-182): active/archived filter and current page. Both reset the
+  // page so a filter change never lands on a page past the end.
+  const [status, setStatus] = useState<VendorStatus>('active');
+  const [page, setPage] = useState(1);
+
   // Added: Delete confirmation modal state
   const [deleteState, setDeleteState] = useState<DeleteState>({
     isOpen: false,
@@ -33,10 +57,35 @@ export function VendorListPage() {
   });
 
   // Changed: Added error state handling for API failures
+  // Changed (SOUPFIN-182): one server page at a time instead of a flat max: 50.
+  // Key stays under ['vendors'] so existing invalidations still refresh it.
   const { data: vendors, isLoading, error, refetch } = useQuery({
-    queryKey: ['vendors', searchTerm],
-    queryFn: () => listVendors({ max: 50, sort: 'name', order: 'asc', search: searchTerm || undefined }),
+    queryKey: ['vendors', { status, search: searchTerm, page }],
+    queryFn: () =>
+      listVendors({
+        max: VENDOR_PAGE_SIZE,
+        offset: (page - 1) * VENDOR_PAGE_SIZE,
+        sort: 'name',
+        order: 'asc',
+        search: searchTerm || undefined,
+        archived: status === 'archived' || undefined,
+      }),
+    placeholderData: keepPreviousData,
   });
+
+  // Added (SOUPFIN-182): every row carries the unpaged totalCount. An offset past
+  // the end returns [] with no row to read it from; report what is known.
+  const rowCount = vendors?.length ?? 0;
+  const total = vendors?.[0]?.totalCount ?? (rowCount > 0 ? (page - 1) * VENDOR_PAGE_SIZE + rowCount : 0);
+  const totalPages = Math.max(1, Math.ceil(total / VENDOR_PAGE_SIZE));
+  const rangeStart = rowCount === 0 ? 0 : (page - 1) * VENDOR_PAGE_SIZE + 1;
+  const rangeEnd = (page - 1) * VENDOR_PAGE_SIZE + rowCount;
+  const goToPage = (target: number) => setPage(Math.min(Math.max(1, target), totalPages));
+
+  const changeStatus = (next: VendorStatus) => {
+    setStatus(next);
+    setPage(1);
+  };
 
   // Added: Delete mutation with cache invalidation
   const deleteMutation = useMutation({
@@ -88,6 +137,32 @@ export function VendorListPage() {
         </Link>
       </div>
 
+      {/* Added (SOUPFIN-182): active / archived filter */}
+      <div
+        role="tablist"
+        aria-label="Vendor status"
+        className="flex gap-1 border-b border-border-light dark:border-border-dark"
+        data-testid="vendor-status-tabs"
+      >
+        {(['active', 'archived'] as const).map((tab) => (
+          <button
+            key={tab}
+            type="button"
+            role="tab"
+            aria-selected={status === tab}
+            onClick={() => changeStatus(tab)}
+            className={`px-4 py-2 -mb-px border-b-2 text-sm font-bold transition-colors ${
+              status === tab
+                ? 'border-primary text-primary'
+                : 'border-transparent text-subtle-text hover:text-text-light dark:hover:text-text-dark'
+            }`}
+            data-testid={`vendor-tab-${tab}`}
+          >
+            {tab === 'active' ? 'Active' : 'Archived'}
+          </button>
+        ))}
+      </div>
+
       {/* Search Input */}
       <div className="relative max-w-md" data-testid="vendor-search-container">
         <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-subtle-text text-xl">
@@ -101,7 +176,10 @@ export function VendorListPage() {
           aria-label="Search vendors"
           placeholder="Search vendors..."
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={(e) => {
+            setSearchTerm(e.target.value);
+            setPage(1);
+          }}
           className="w-full h-10 pl-10 pr-4 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark placeholder:text-subtle-text focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none"
           data-testid="vendor-search-input"
         />
@@ -176,20 +254,45 @@ export function VendorListPage() {
                         >
                           <span className="material-symbols-outlined text-lg">edit</span>
                         </Link>
-                        <button
-                          onClick={() => handleDeleteClick(vendor.id, vendor.name)}
-                          className="p-1.5 rounded hover:bg-danger/10 text-subtle-text hover:text-danger transition-colors"
-                          title="Delete"
-                          data-testid={`vendor-delete-${vendor.id}`}
-                        >
-                          <span className="material-symbols-outlined text-lg">delete</span>
-                        </button>
+                        {/* Changed (SOUPFIN-182): delete archives, so an archived row has nothing to delete */}
+                        {status === 'active' && (
+                          <button
+                            onClick={() => handleDeleteClick(vendor.id, vendor.name)}
+                            className="p-1.5 rounded hover:bg-danger/10 text-subtle-text hover:text-danger transition-colors"
+                            title="Delete"
+                            data-testid={`vendor-delete-${vendor.id}`}
+                          >
+                            <span className="material-symbols-outlined text-lg">delete</span>
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+          </div>
+        ) : page > 1 ? (
+          // Added (SOUPFIN-182): rows were removed elsewhere and this page no longer exists
+          <div className="p-12 text-center" data-testid="vendor-list-page-empty">
+            <p className="text-subtle-text mb-4">Page {page} has no vendors.</p>
+            <button
+              type="button"
+              onClick={() => setPage(1)}
+              className="inline-flex items-center gap-2 h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm hover:bg-primary/5"
+              data-testid="vendor-list-first-page"
+            >
+              Go to the first page
+            </button>
+          </div>
+        ) : status === 'archived' ? (
+          // Added (SOUPFIN-182)
+          <div className="p-12 text-center" data-testid="vendor-list-archived-empty">
+            <span className="material-symbols-outlined text-6xl text-subtle-text/50 mb-4 block">inventory_2</span>
+            <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">No archived vendors</h3>
+            <p className="text-subtle-text">
+              {searchTerm ? 'No archived vendor matches your search.' : 'Vendors you archive appear here.'}
+            </p>
           </div>
         ) : (
           <div className="p-12 text-center" data-testid="vendor-list-empty">
@@ -209,6 +312,60 @@ export function VendorListPage() {
           </div>
         )}
       </div>
+
+      {/* Added (SOUPFIN-182): range + server pagination */}
+      {rowCount > 0 && (
+        <div className="flex flex-wrap justify-between items-center gap-4 text-sm text-subtle-text" data-testid="vendor-pagination-summary">
+          <span data-testid="vendor-pagination-range">
+            Showing {rangeStart} to {rangeEnd} of {total} {status === 'archived' ? 'archived ' : ''}
+            {total === 1 ? 'vendor' : 'vendors'}
+          </span>
+          {totalPages > 1 && (
+            <nav className="flex items-center" aria-label="Vendor pages" data-testid="vendor-pagination">
+              <button
+                type="button"
+                onClick={() => goToPage(page - 1)}
+                disabled={page <= 1}
+                className="flex size-9 items-center justify-center rounded-lg text-subtle-text hover:bg-primary/10 disabled:opacity-40 disabled:cursor-not-allowed"
+                aria-label="Previous page"
+                data-testid="vendor-pagination-prev"
+              >
+                <span className="material-symbols-outlined">chevron_left</span>
+              </button>
+              {visiblePages(page, totalPages).map((p, i) =>
+                p === 'gap' ? (
+                  <span key={`gap-${i}`} className="flex size-9 items-center justify-center">
+                    …
+                  </span>
+                ) : (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => goToPage(p)}
+                    aria-current={p === page ? 'page' : undefined}
+                    className={`flex size-9 items-center justify-center rounded-lg text-sm ${
+                      p === page ? 'bg-primary font-bold text-white' : 'text-subtle-text hover:bg-primary/10'
+                    }`}
+                    data-testid={`vendor-pagination-page-${p}`}
+                  >
+                    {p}
+                  </button>
+                )
+              )}
+              <button
+                type="button"
+                onClick={() => goToPage(page + 1)}
+                disabled={page >= totalPages}
+                className="flex size-9 items-center justify-center rounded-lg text-subtle-text hover:bg-primary/10 disabled:opacity-40 disabled:cursor-not-allowed"
+                aria-label="Next page"
+                data-testid="vendor-pagination-next"
+              >
+                <span className="material-symbols-outlined">chevron_right</span>
+              </button>
+            </nav>
+          )}
+        </div>
+      )}
 
       {/* Delete Confirmation Modal */}
       {deleteState.isOpen && (

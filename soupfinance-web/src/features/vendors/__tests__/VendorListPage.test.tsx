@@ -556,11 +556,14 @@ describe('VendorListPage', () => {
 
       await screen.findByTestId('vendor-list-page');
 
+      // Changed (SOUPFIN-182): first page of 20, active vendors
       expect(listVendors).toHaveBeenCalledWith({
-        max: 50,
+        max: 20,
+        offset: 0,
         sort: 'name',
         order: 'asc',
         search: undefined,
+        archived: undefined,
       });
     });
 
@@ -633,6 +636,142 @@ describe('VendorListPage', () => {
 
       await waitFor(() => expect(screen.queryByTestId('vendor-list-error')).not.toBeInTheDocument());
       expect(vi.mocked(listVendors)).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  // Added (SOUPFIN-182): archived filter and 20-row server pagination
+  describe('archived filter and pagination (SOUPFIN-182)', () => {
+    function pageOf(count: number, totalCount: number, prefix = 'v') {
+      return Array.from({ length: count }, (_, i) =>
+        createMockVendor({ id: `${prefix}-${i}`, name: `${prefix} Vendor ${i}`, totalCount })
+      );
+    }
+
+    it('starts on the Active tab and switches to archived.json results', async () => {
+      const user = userEvent.setup();
+      vi.mocked(listVendors).mockImplementation(async (params) =>
+        params?.archived
+          ? [createMockVendor({ id: 'gone-1', name: 'Old Supplier', archived: true, totalCount: 1 })]
+          : [createMockVendor({ id: 'live-1', name: 'Live Supplier', totalCount: 1 })]
+      );
+
+      renderVendorListPage();
+
+      expect(await screen.findByText('Live Supplier')).toBeInTheDocument();
+      expect(screen.getByTestId('vendor-tab-active')).toHaveAttribute('aria-selected', 'true');
+      expect(screen.getByTestId('vendor-delete-live-1')).toBeInTheDocument();
+
+      await user.click(screen.getByTestId('vendor-tab-archived'));
+
+      expect(await screen.findByText('Old Supplier')).toBeInTheDocument();
+      expect(screen.queryByText('Live Supplier')).not.toBeInTheDocument();
+      expect(screen.getByTestId('vendor-tab-archived')).toHaveAttribute('aria-selected', 'true');
+      expect(listVendors).toHaveBeenLastCalledWith(expect.objectContaining({ archived: true, offset: 0 }));
+      // Delete archives; an archived row has nothing left to delete
+      expect(screen.queryByTestId('vendor-delete-gone-1')).not.toBeInTheDocument();
+      expect(screen.getByTestId('vendor-edit-gone-1')).toHaveAttribute('href', '/vendors/gone-1/edit');
+      expect(screen.getByTestId('vendor-pagination-range')).toHaveTextContent('Showing 1 to 1 of 1 archived vendor');
+    });
+
+    it('shows an archived empty state, not the "add your first vendor" prompt (zero rows)', async () => {
+      const user = userEvent.setup();
+      vi.mocked(listVendors).mockImplementation(async (params) =>
+        params?.archived ? [] : [createMockVendor({ totalCount: 1 })]
+      );
+
+      renderVendorListPage();
+      await screen.findByTestId('vendor-list-table');
+      await user.click(screen.getByTestId('vendor-tab-archived'));
+
+      expect(await screen.findByTestId('vendor-list-archived-empty')).toHaveTextContent('No archived vendors');
+      expect(screen.queryByTestId('vendor-list-empty')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('vendor-pagination-summary')).not.toBeInTheDocument();
+    });
+
+    it('hides the pager when everything fits on one page', async () => {
+      vi.mocked(listVendors).mockResolvedValue(pageOf(20, 20));
+
+      renderVendorListPage();
+
+      expect(await screen.findByTestId('vendor-pagination-range')).toHaveTextContent('Showing 1 to 20 of 20 vendors');
+      expect(screen.queryByTestId('vendor-pagination')).not.toBeInTheDocument();
+    });
+
+    it('pages through the server with offset and reads the total from totalCount', async () => {
+      const user = userEvent.setup();
+      vi.mocked(listVendors).mockImplementation(async (params) => {
+        const offset = Number(params?.offset ?? 0);
+        return offset === 0 ? pageOf(20, 45, 'p1') : offset === 20 ? pageOf(20, 45, 'p2') : pageOf(5, 45, 'p3');
+      });
+
+      renderVendorListPage();
+
+      expect(await screen.findByText('p1 Vendor 0')).toBeInTheDocument();
+      expect(screen.getAllByTestId(/^vendor-row-/)).toHaveLength(20);
+      expect(screen.getByTestId('vendor-pagination-range')).toHaveTextContent('Showing 1 to 20 of 45 vendors');
+      expect(screen.getByTestId('vendor-pagination-prev')).toBeDisabled();
+
+      await user.click(screen.getByTestId('vendor-pagination-page-3'));
+      expect(await screen.findByText('p3 Vendor 0')).toBeInTheDocument();
+      expect(screen.getAllByTestId(/^vendor-row-/)).toHaveLength(5);
+      expect(listVendors).toHaveBeenLastCalledWith(expect.objectContaining({ max: 20, offset: 40 }));
+      expect(screen.getByTestId('vendor-pagination-range')).toHaveTextContent('Showing 41 to 45 of 45 vendors');
+      expect(screen.getByTestId('vendor-pagination-next')).toBeDisabled();
+      expect(screen.getByTestId('vendor-pagination-page-3')).toHaveAttribute('aria-current', 'page');
+
+      await user.click(screen.getByTestId('vendor-pagination-prev'));
+      expect(await screen.findByText('p2 Vendor 0')).toBeInTheDocument();
+      expect(listVendors).toHaveBeenLastCalledWith(expect.objectContaining({ offset: 20 }));
+    });
+
+    it('collapses a large page list with gaps (overflow: 2,000 vendors = 100 pages)', async () => {
+      vi.mocked(listVendors).mockResolvedValue(pageOf(20, 2000));
+
+      renderVendorListPage();
+
+      await screen.findByTestId('vendor-pagination');
+      const pageButtons = screen.getAllByTestId(/^vendor-pagination-page-/).map((b) => b.textContent);
+      expect(pageButtons).toEqual(['1', '2', '3', '100']);
+      expect(screen.getByTestId('vendor-pagination-range')).toHaveTextContent('Showing 1 to 20 of 2000 vendors');
+    });
+
+    it('returns to page 1 when the filter or the search changes', async () => {
+      const user = userEvent.setup();
+      vi.mocked(listVendors).mockImplementation(async (params) =>
+        pageOf(params?.offset ? 5 : 20, 25, params?.offset ? 'second' : 'first')
+      );
+
+      renderVendorListPage();
+      await screen.findByTestId('vendor-pagination');
+      await user.click(screen.getByTestId('vendor-pagination-next'));
+      expect(await screen.findByText('second Vendor 0')).toBeInTheDocument();
+
+      await user.click(screen.getByTestId('vendor-tab-archived'));
+      await waitFor(() =>
+        expect(listVendors).toHaveBeenLastCalledWith(expect.objectContaining({ archived: true, offset: 0 }))
+      );
+
+      await user.click(screen.getByTestId('vendor-pagination-next'));
+      await waitFor(() => expect(listVendors).toHaveBeenLastCalledWith(expect.objectContaining({ offset: 20 })));
+      await user.type(screen.getByTestId('vendor-search-input'), 'a');
+      await waitFor(() =>
+        expect(listVendors).toHaveBeenLastCalledWith(expect.objectContaining({ search: 'a', offset: 0, archived: true }))
+      );
+    });
+
+    it('offers a way back when a page past the end comes back empty', async () => {
+      const user = userEvent.setup();
+      // Page 1 says 25 exist; by the time page 2 loads, the rows were removed elsewhere
+      vi.mocked(listVendors).mockImplementation(async (params) => (params?.offset ? [] : pageOf(20, 25)));
+
+      renderVendorListPage();
+      await screen.findByTestId('vendor-pagination');
+      await user.click(screen.getByTestId('vendor-pagination-next'));
+
+      expect(await screen.findByTestId('vendor-list-page-empty')).toHaveTextContent('Page 2 has no vendors.');
+      expect(screen.queryByTestId('vendor-list-empty')).not.toBeInTheDocument();
+      await user.click(screen.getByTestId('vendor-list-first-page'));
+      expect(await screen.findByText('v Vendor 0')).toBeInTheDocument();
     });
   });
 });
