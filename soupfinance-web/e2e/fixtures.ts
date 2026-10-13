@@ -53,7 +53,10 @@ export const backendTestUsers = {
   // Primary admin account - soup.support (soupmarkets-web seed data)
   // This user should work across tenants
   admin: {
-    username: 'soup.support',
+    // Changed (SOUPFIN-169): the LXC backend now runs on soupbroker_dev, where
+    // soup.support no longer has the seed password. Point the suite at another
+    // ROLE_ADMIN with E2E_ADMIN_USERNAME + E2E_ADMIN_PASSWORD instead of editing specs.
+    username: process.env.E2E_ADMIN_USERNAME ?? 'soup.support',
     password: process.env.E2E_ADMIN_PASSWORD ?? 'secret',
     email: 'soup.support',
     roles: ['ROLE_ADMIN', 'ROLE_USER'],

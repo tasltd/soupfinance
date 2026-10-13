@@ -291,7 +291,10 @@ export function ClientDetailPage() {
                       role="alert"
                       data-testid="client-delete-error"
                     >
-                      Could not delete this client. Please try again.
+                      {/* Fix (SOUPFIN-169): a blocked delete is not a retryable failure. */}
+                      {deleteMutation.error?.name === 'ClientDeleteBlockedError'
+                        ? 'This client was not deleted. It still has linked contacts or accounts, so the server kept it.'
+                        : 'Could not delete this client. Please try again.'}
                     </p>
                   )}
                 </div>
