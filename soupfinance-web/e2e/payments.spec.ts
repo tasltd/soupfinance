@@ -1094,4 +1094,35 @@ test.describe('SOUPFIN-177: payment history, detail and void', () => {
     await expect(page.getByTestId('payment-list-empty')).toContainText('No outgoing payments');
     await shot177(page, 'payments-outgoing-after-void');
   });
+
+  // Added (SOUPFIN-177): the detail page and void dialog follow the app language
+  test('reads the payment and voids it in German', async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem('soupfinance_language', 'de'));
+    const state = await openPaymentsFromSidebar(page);
+
+    await page.getByTestId('payment-view-ip-e2e-0').click();
+    await expect(page).toHaveURL(/\/payments\/invoice\/ip-e2e-0$/);
+    await expect(page.getByTestId('payment-detail-heading')).toHaveText('Zahlung erhalten');
+    await expect(page.getByTestId('payment-detail-back')).toHaveText(/Zurück zu eingehenden Zahlungen/);
+    const card = page.getByTestId('payment-detail-card');
+    for (const label of ['Betrag', 'Zahlungsdatum', 'Zahlungsart', 'Eingezahlt auf', 'Referenz', 'Notizen']) {
+      await expect(card).toContainText(label);
+    }
+    await expect(page.getByTestId('payment-detail-page')).not.toContainText(/Payment date|Deposited to|Void payment/);
+    await shot177(page, 'payment-detail-german');
+
+    await page.getByTestId('payment-void-button').click();
+    const dialog = page.getByTestId('payment-void-dialog');
+    await expect(dialog).toContainText('Diese Zahlung stornieren?');
+    await expect(dialog).toContainText('Invoice #2026100');
+    await expect(page.getByTestId('payment-void-cancel')).toHaveText('Zahlung behalten');
+    await shot177(page, 'payment-void-confirm-german');
+
+    await page.getByTestId('payment-void-confirm').click();
+    await expect(page).toHaveURL(/\/payments$/);
+    await expect(page.getByText('Zahlung storniert.')).toBeVisible();
+    expect(state.deletes).toEqual(['invoicePayment:ip-e2e-0']);
+    expect(state.invoicePayments).toHaveLength(44);
+    await expect(page.getByTestId('payment-row-ip-e2e-0')).toHaveCount(0);
+  });
 });

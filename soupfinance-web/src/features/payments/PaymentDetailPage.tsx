@@ -6,8 +6,11 @@
  * Added (SOUPFIN-177): route /payments/:type/:id where type is "invoice" or "bill".
  * Voiding calls the payment's DELETE endpoint, then refreshes every query that
  * shows the payment or its parent document so amountDue and status update.
+ * Changed (SOUPFIN-177): every string comes from the `payments` namespace (detail.*)
  */
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { getInvoicePayment, deleteInvoicePayment } from '../../api/endpoints/invoices';
@@ -33,18 +36,20 @@ function isPaymentType(value: string | undefined): value is PaymentType {
 }
 
 /** Message shown in the void dialog when the backend did not delete. */
-function voidErrorMessage(error: unknown): string {
+function voidErrorMessage(error: unknown, t: TFunction<'payments'>): string {
   if (error instanceof DeletePendingApprovalError) {
-    return 'Your request to void this payment was sent to an administrator. The payment stays in place until they approve it.';
+    return t('detail.voidPending');
   }
   if (error instanceof DeleteBlockedError) {
-    const modules = error.relatedModules.length ? ` (${error.relatedModules.join(', ')})` : '';
-    return `This payment was not voided because other records still use it${modules}.`;
+    return error.relatedModules.length
+      ? t('detail.voidBlockedModules', { modules: error.relatedModules.join(', ') })
+      : t('detail.voidBlocked');
   }
   return getApiErrorMessage(error);
 }
 
 export function PaymentDetailPage() {
+  const { t } = useTranslation('payments');
   const { type: typeParam, id } = useParams<{ type: string; id: string }>();
   const type = isPaymentType(typeParam) ? typeParam : undefined;
   const navigate = useNavigate();
@@ -55,7 +60,6 @@ export function PaymentDetailPage() {
   const [showVoidDialog, setShowVoidDialog] = useState(false);
   const cancelButtonRef = useRef<HTMLButtonElement>(null);
 
-  const listTab = type === 'bill' ? 'outgoing' : 'incoming';
   const backPath = type === 'bill' ? '/payments?tab=outgoing' : '/payments';
 
   const {
@@ -93,7 +97,7 @@ export function PaymentDetailPage() {
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
       queryClient.removeQueries({ queryKey: [type === 'bill' ? 'bill-payment' : 'invoice-payment', id] });
       setShowVoidDialog(false);
-      showToast({ variant: 'success', message: 'Payment voided.' });
+      showToast({ variant: 'success', message: t('detail.voided') });
       navigate(backPath);
     },
   });
@@ -121,7 +125,7 @@ export function PaymentDetailPage() {
       data-testid="payment-detail-back"
     >
       <span className="material-symbols-outlined text-lg">arrow_back</span>
-      Back to {listTab} payments
+      {type === 'bill' ? t('detail.backOutgoing') : t('detail.backIncoming')}
     </Link>
   );
 
@@ -130,8 +134,8 @@ export function PaymentDetailPage() {
       <div className="flex flex-col gap-6" data-testid="payment-detail-page">
         {backLink}
         <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-12 text-center" data-testid="payment-detail-not-found">
-          <h2 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">Payment not found</h2>
-          <p className="text-subtle-text">This link does not point to an invoice or bill payment.</p>
+          <h2 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">{t('detail.notFoundTitle')}</h2>
+          <p className="text-subtle-text">{t('detail.notFoundBody')}</p>
         </div>
       </div>
     );
@@ -142,7 +146,7 @@ export function PaymentDetailPage() {
       <div className="flex flex-col gap-6" data-testid="payment-detail-page">
         {backLink}
         <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-8 text-center text-subtle-text" data-testid="payment-detail-loading">
-          Loading payment...
+          {t('detail.loading')}
         </div>
       </div>
     );
@@ -154,9 +158,9 @@ export function PaymentDetailPage() {
         {backLink}
         <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-12 text-center" data-testid="payment-detail-error">
           <span className="material-symbols-outlined text-6xl text-danger/50 mb-4">error</span>
-          <h2 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">Could not load this payment</h2>
+          <h2 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">{t('detail.loadErrorTitle')}</h2>
           <p className="text-subtle-text">
-            {error ? getApiErrorMessage(error) : 'The payment may have been voided already.'}
+            {error ? getApiErrorMessage(error) : t('detail.loadErrorMissing')}
           </p>
         </div>
       </div>
@@ -174,9 +178,9 @@ export function PaymentDetailPage() {
   const methodName = getPaymentMethodName(payment.paymentMethod, paymentMethods);
 
   const fields: Array<{ label: string; value: ReactNode; testId: string }> = [
-    { label: 'Payment date', value: payment.paymentDate || '-', testId: 'payment-detail-date' },
+    { label: t('detail.paymentDate'), value: payment.paymentDate || '-', testId: 'payment-detail-date' },
     {
-      label: 'Method',
+      label: t('detail.method'),
       value: (
         <span className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${getPaymentMethodBadgeStyle(payment.paymentMethod)}`}>
           {methodName}
@@ -185,14 +189,14 @@ export function PaymentDetailPage() {
       testId: 'payment-detail-method',
     },
     {
-      label: isIncoming ? 'Deposited to' : 'Paid from',
+      label: isIncoming ? t('detail.depositedTo') : t('detail.paidFrom'),
       value: account || '-',
       testId: 'payment-detail-account',
     },
-    { label: 'Reference', value: reference || '-', testId: 'payment-detail-reference' },
-    { label: 'Currency', value: payment.currency || '-', testId: 'payment-detail-currency' },
+    { label: t('detail.reference'), value: reference || '-', testId: 'payment-detail-reference' },
+    { label: t('detail.currency'), value: payment.currency || '-', testId: 'payment-detail-currency' },
     {
-      label: 'Recorded',
+      label: t('detail.recorded'),
       value: payment.dateCreated ? payment.dateCreated.slice(0, 10) : '-',
       testId: 'payment-detail-recorded',
     },
@@ -207,20 +211,20 @@ export function PaymentDetailPage() {
         <div className="flex flex-col gap-1">
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-3xl font-black tracking-tight text-text-light dark:text-text-dark" data-testid="payment-detail-heading">
-              {isIncoming ? 'Payment received' : 'Payment made'}
+              {isIncoming ? t('detail.headingIncoming') : t('detail.headingOutgoing')}
             </h1>
             <span
               className={`px-2.5 py-0.5 text-xs font-bold uppercase rounded-full ${
                 isIncoming ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'
               }`}
             >
-              {isIncoming ? 'Incoming' : 'Outgoing'}
+              {isIncoming ? t('detail.badgeIncoming') : t('detail.badgeOutgoing')}
             </span>
           </div>
           <p className="text-subtle-text">
-            Recorded against{' '}
-            {doc.label}
-            {doc.party ? ` · ${doc.party}` : ''}
+            {t('detail.recordedAgainst', {
+              document: doc.party ? `${doc.label} · ${doc.party}` : doc.label,
+            })}
           </p>
           <HelpLink section="payments" className="mt-1 self-start" />
         </div>
@@ -231,7 +235,7 @@ export function PaymentDetailPage() {
           data-testid="payment-void-button"
         >
           <span className="material-symbols-outlined text-lg">block</span>
-          Void payment
+          {t('detail.voidButton')}
         </button>
       </div>
 
@@ -240,7 +244,7 @@ export function PaymentDetailPage() {
         <div className="flex flex-wrap justify-between gap-6 pb-6 border-b border-border-light dark:border-border-dark">
           <div className="flex flex-col gap-1">
             <p className="text-xs font-medium uppercase tracking-wide text-subtle-text">
-              {isIncoming ? 'Invoice' : 'Bill'}
+              {isIncoming ? t('detail.invoice') : t('detail.bill')}
             </p>
             {documentId ? (
               <Link
@@ -260,7 +264,7 @@ export function PaymentDetailPage() {
             )}
           </div>
           <div className="flex flex-col gap-1 text-right">
-            <p className="text-xs font-medium uppercase tracking-wide text-subtle-text">Amount</p>
+            <p className="text-xs font-medium uppercase tracking-wide text-subtle-text">{t('detail.amount')}</p>
             <p
               className={`text-3xl font-black ${isIncoming ? 'text-success' : 'text-danger'}`}
               data-testid="payment-detail-amount"
@@ -282,7 +286,7 @@ export function PaymentDetailPage() {
         </dl>
         {payment.notes && (
           <div className="pt-6 mt-6 border-t border-border-light dark:border-border-dark">
-            <p className="text-sm text-subtle-text mb-1">Notes</p>
+            <p className="text-sm text-subtle-text mb-1">{t('detail.notes')}</p>
             <p className="text-sm text-text-light dark:text-text-dark whitespace-pre-wrap" data-testid="payment-detail-notes">
               {payment.notes}
             </p>
@@ -301,26 +305,28 @@ export function PaymentDetailPage() {
           >
             <div className="flex items-center justify-between border-b border-border-light dark:border-border-dark p-6">
               <h2 id="payment-void-title" className="text-xl font-bold text-text-light dark:text-text-dark">
-                Void this payment?
+                {t('detail.voidTitle')}
               </h2>
               <button
                 type="button"
                 onClick={() => setShowVoidDialog(false)}
                 disabled={voidMutation.isPending}
                 className="flex size-8 items-center justify-center rounded-full text-subtle-text hover:bg-black/10 dark:hover:bg-white/10"
-                aria-label="Close"
+                aria-label={t('detail.close')}
               >
                 <span className="material-symbols-outlined text-2xl">close</span>
               </button>
             </div>
             <div className="p-6 flex flex-col gap-4 text-sm text-text-light dark:text-text-dark">
               <p>
-                This removes the {formatCurrency(payment.amount)} payment from {doc.label}. The{' '}
-                {isIncoming ? 'invoice' : 'bill'} will show this amount as due again. You cannot undo this.
+                {t(isIncoming ? 'detail.voidBodyInvoice' : 'detail.voidBodyBill', {
+                  amount: formatCurrency(payment.amount),
+                  document: doc.label,
+                })}
               </p>
               {voidMutation.isError && (
                 <p className="rounded-lg bg-danger/10 text-danger p-3" role="alert" data-testid="payment-void-error">
-                  {voidErrorMessage(voidMutation.error)}
+                  {voidErrorMessage(voidMutation.error, t)}
                 </p>
               )}
             </div>
@@ -333,7 +339,7 @@ export function PaymentDetailPage() {
                 className="h-10 px-4 rounded-lg text-sm font-bold text-text-light dark:text-text-dark ring-1 ring-border-light dark:ring-border-dark hover:bg-black/5 dark:hover:bg-white/5"
                 data-testid="payment-void-cancel"
               >
-                Keep payment
+                {t('detail.keepPayment')}
               </button>
               <button
                 type="button"
@@ -343,7 +349,7 @@ export function PaymentDetailPage() {
                 data-testid="payment-void-confirm"
               >
                 <span className="material-symbols-outlined text-lg">block</span>
-                {voidMutation.isPending ? 'Voiding...' : 'Void payment'}
+                {voidMutation.isPending ? t('detail.voiding') : t('detail.voidButton')}
               </button>
             </div>
           </div>

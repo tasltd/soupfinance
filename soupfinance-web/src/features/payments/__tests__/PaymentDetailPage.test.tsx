@@ -8,6 +8,11 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PaymentDetailPage } from '../PaymentDetailPage';
 import { DeleteBlockedError, DeletePendingApprovalError } from '../../../api/endpoints/deleteOutcome';
+import i18n from '../../../i18n';
+import enPayments from '../../../i18n/locales/en/payments.json';
+import dePayments from '../../../i18n/locales/de/payments.json';
+import frPayments from '../../../i18n/locales/fr/payments.json';
+import nlPayments from '../../../i18n/locales/nl/payments.json';
 
 vi.mock('../../../api/endpoints/invoices', () => ({
   getInvoicePayment: vi.fn(),
@@ -228,5 +233,94 @@ describe('PaymentDetailPage (SOUPFIN-177)', () => {
     await userEvent.click(screen.getByTestId('payment-void-confirm'));
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent(/^\/payments$/));
     expect(deleteInvoicePayment).toHaveBeenCalledTimes(2);
+  });
+
+  it('a refused void that names no module gives the plain explanation', async () => {
+    vi.mocked(deleteInvoicePayment).mockRejectedValue(new DeleteBlockedError([]));
+    renderAt('/payments/invoice/ip-1');
+
+    await userEvent.click(await screen.findByTestId('payment-void-button'));
+    await userEvent.click(screen.getByTestId('payment-void-confirm'));
+
+    expect(await screen.findByTestId('payment-void-error')).toHaveTextContent(
+      /^This payment was not voided because other records still use it\.$/
+    );
+  });
+
+  // Added (SOUPFIN-177): the detail page and void dialog read in every app language
+  describe('translations', () => {
+    it('every locale has the same detail keys and placeholders as English', () => {
+      const placeholders = (v: string) => (v.match(/{{\w+}}/g) ?? []).sort().join(',');
+      const en = enPayments.detail as Record<string, string>;
+      for (const locale of [dePayments, frPayments, nlPayments]) {
+        const other = locale.detail as Record<string, string>;
+        expect(Object.keys(other).sort()).toEqual(Object.keys(en).sort());
+        for (const key of Object.keys(en)) {
+          expect(other[key].trim()).not.toBe('');
+          expect(placeholders(other[key])).toBe(placeholders(en[key]));
+        }
+      }
+    });
+
+    it.each([
+      ['de', 'Zahlung erhalten', 'Zahlung stornieren', 'Diese Zahlung stornieren?', 'Zahlung behalten'],
+      ['fr', 'Paiement reçu', 'Annuler le paiement', 'Annuler ce paiement ?', 'Conserver le paiement'],
+      ['nl', 'Betaling ontvangen', 'Betaling ongedaan maken', 'Deze betaling ongedaan maken?', 'Betaling behouden'],
+    ])('renders the detail page and void dialog in %s', async (lang, heading, voidLabel, dialogTitle, keepLabel) => {
+      await i18n.changeLanguage(lang);
+      try {
+        renderAt('/payments/invoice/ip-1');
+
+        expect(await screen.findByTestId('payment-detail-heading')).toHaveTextContent(heading);
+        expect(screen.getByTestId('payment-void-button')).toHaveTextContent(voidLabel);
+
+        await userEvent.click(screen.getByTestId('payment-void-button'));
+        const dialog = screen.getByTestId('payment-void-dialog');
+        expect(dialog).toHaveTextContent(dialogTitle);
+        // the amount and the invoice are interpolated, not dropped
+        expect(dialog).toHaveTextContent('$1,990.00');
+        expect(dialog).toHaveTextContent('Invoice #2025001');
+        expect(screen.getByTestId('payment-void-cancel')).toHaveTextContent(keepLabel);
+
+        // no raw key and no English left behind
+        expect(screen.getByTestId('payment-detail-page')).not.toHaveTextContent(/detail\.\w+/);
+        expect(screen.getByTestId('payment-detail-page')).not.toHaveTextContent(/Void|Payment date|Keep payment/);
+      } finally {
+        await i18n.changeLanguage('en');
+      }
+    });
+
+    it('a refused void in German names the modules and stays on the page', async () => {
+      vi.mocked(deleteInvoicePayment).mockRejectedValue(new DeleteBlockedError(['finance', 'ledger']));
+      await i18n.changeLanguage('de');
+      try {
+        renderAt('/payments/invoice/ip-1');
+        await userEvent.click(await screen.findByTestId('payment-void-button'));
+        await userEvent.click(screen.getByTestId('payment-void-confirm'));
+
+        expect(await screen.findByTestId('payment-void-error')).toHaveTextContent(
+          'Diese Zahlung wurde nicht storniert, weil andere Datensätze sie noch verwenden (finance, ledger).'
+        );
+        expect(screen.getByTestId('location')).toHaveTextContent('/payments/invoice/ip-1');
+      } finally {
+        await i18n.changeLanguage('en');
+      }
+    });
+
+    it('a successful void toasts in the active language', async () => {
+      vi.mocked(deleteBillPayment).mockResolvedValue(undefined);
+      await i18n.changeLanguage('fr');
+      try {
+        renderAt('/payments/bill/bp-1');
+        await userEvent.click(await screen.findByTestId('payment-void-button'));
+        expect(screen.getByTestId('payment-detail-back')).toHaveTextContent('Retour aux paiements sortants');
+        expect(screen.getByTestId('payment-void-dialog')).toHaveTextContent('La facture fournisseur');
+        await userEvent.click(screen.getByTestId('payment-void-confirm'));
+
+        await waitFor(() => expect(showToast).toHaveBeenCalledWith({ variant: 'success', message: 'Paiement annulé.' }));
+      } finally {
+        await i18n.changeLanguage('en');
+      }
+    });
   });
 });
