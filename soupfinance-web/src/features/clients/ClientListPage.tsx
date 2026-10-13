@@ -7,6 +7,8 @@
  * Supports both INDIVIDUAL and CORPORATE client types.
  */
 import { useState } from 'react';
+// Added (SOUPFIN-167): every visible string comes from the clients namespace
+import { Trans, useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { listClients, deleteClient } from '../../api';
@@ -26,6 +28,7 @@ interface DeleteState {
 }
 
 export function ClientListPage() {
+  const { t } = useTranslation('clients');
   const queryClient = useQueryClient();
 
   // Search and filter state
@@ -108,7 +111,7 @@ export function ClientListPage() {
   // Fix (SOUPFIN-14 / SOUP-1929): name fallback now lives in the shared
   // getClientDisplayName helper so the table column AND the delete dialog use the
   // exact same never-blank resolution.
-  const getDisplayName = getClientDisplayName;
+  const getDisplayName = (client: Client) => getClientDisplayName(client, t('unnamed'));
 
   return (
     <div className="flex flex-col gap-6" data-testid="client-list-page">
@@ -119,9 +122,9 @@ export function ClientListPage() {
             className="text-3xl font-black tracking-tight text-text-light dark:text-text-dark"
             data-testid="client-list-heading"
           >
-            Clients
+            {t('title')}
           </h1>
-          <p className="text-subtle-text">Manage your customers and billing contacts</p>
+          <p className="text-subtle-text">{t('subtitle')}</p>
           <HelpLink section="clients" className="mt-1 self-start" />
         </div>
         <Link
@@ -130,7 +133,7 @@ export function ClientListPage() {
           data-testid="client-new-button"
         >
           <span className="material-symbols-outlined text-lg">add</span>
-          New Client
+          {t('newClient')}
         </Link>
       </div>
 
@@ -150,8 +153,8 @@ export function ClientListPage() {
                form field" / "should have an id or name attribute"). */
             id="client-search"
             name="client-search"
-            aria-label="Search clients"
-            placeholder="Search clients..."
+            aria-label={t('list.searchLabel')}
+            placeholder={t('list.searchPlaceholder')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full h-10 pl-10 pr-4 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark placeholder:text-subtle-text focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none"
@@ -164,7 +167,7 @@ export function ClientListPage() {
           /* Fix (SOUPFIN-30 #6): id/name + aria-label for the unlabelled filter. */
           id="client-type-filter"
           name="client-type-filter"
-          aria-label="Filter clients by type"
+          aria-label={t('list.typeFilterLabel')}
           value={typeFilter}
           onChange={(e) => setTypeFilter(e.target.value as ClientType | '')}
           className={`h-10 px-4 rounded-lg border bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark focus:ring-2 focus:ring-primary/20 focus:outline-none ${
@@ -174,9 +177,9 @@ export function ClientListPage() {
           }`}
           data-testid="client-type-filter"
         >
-          <option value="">All Types</option>
-          <option value="INDIVIDUAL">Individual</option>
-          <option value="CORPORATE">Corporate</option>
+          <option value="">{t('types.all')}</option>
+          <option value="INDIVIDUAL">{t('types.individual')}</option>
+          <option value="CORPORATE">{t('types.corporate')}</option>
         </select>
 
         {/* Refetch spinner — visible while filter/search is being applied. */}
@@ -188,7 +191,7 @@ export function ClientListPage() {
             aria-live="polite"
           >
             <span className="material-symbols-outlined text-lg animate-spin">progress_activity</span>
-            Filtering…
+            {t('list.filtering')}
           </span>
         )}
 
@@ -204,7 +207,7 @@ export function ClientListPage() {
             data-testid="client-filters-clear"
           >
             <span className="material-symbols-outlined text-lg">filter_alt_off</span>
-            Clear filters
+            {t('actions.clearFilters')}
           </button>
         )}
       </div>
@@ -216,19 +219,19 @@ export function ClientListPage() {
       >
         {isLoading ? (
           <div className="p-8 text-center text-subtle-text" data-testid="client-list-loading">
-            Loading clients...
+            {t('list.loading')}
           </div>
         ) : error ? (
           <div className="p-12 text-center" data-testid="client-list-error">
             <span className="material-symbols-outlined text-6xl text-danger/50 mb-4 block">error</span>
-            <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">Failed to load clients</h3>
-            <p className="text-subtle-text mb-4">There was an error loading your clients. Please try again.</p>
+            <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">{t('list.errorTitle')}</h3>
+            <p className="text-subtle-text mb-4">{t('list.errorBody')}</p>
             <button
               onClick={() => window.location.reload()}
               className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm"
             >
               <span className="material-symbols-outlined text-lg">refresh</span>
-              Retry
+              {t('actions.retry')}
             </button>
           </div>
         ) : clients?.length ? (
@@ -236,11 +239,11 @@ export function ClientListPage() {
             <table className="w-full text-sm" data-testid="client-list-table">
               <thead className="text-xs text-subtle-text uppercase bg-background-light dark:bg-background-dark">
                 <tr>
-                  <th className="px-6 py-3 text-left">Name</th>
-                  <th className="px-6 py-3 text-left">Type</th>
-                  <th className="px-6 py-3 text-left">Email</th>
-                  <th className="px-6 py-3 text-left">Phone</th>
-                  <th className="px-6 py-3 text-center">Actions</th>
+                  <th className="px-6 py-3 text-left">{t('fields.name')}</th>
+                  <th className="px-6 py-3 text-left">{t('fields.type')}</th>
+                  <th className="px-6 py-3 text-left">{t('fields.email')}</th>
+                  <th className="px-6 py-3 text-left">{t('fields.phone')}</th>
+                  <th className="px-6 py-3 text-center">{t('list.actionsColumn')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -264,12 +267,12 @@ export function ClientListPage() {
                         {client.clientType === 'INDIVIDUAL' ? (
                           <>
                             <span className="material-symbols-outlined text-sm mr-1">person</span>
-                            Individual
+                            {t('types.individual')}
                           </>
                         ) : (
                           <>
                             <span className="material-symbols-outlined text-sm mr-1">business</span>
-                            Corporate
+                            {t('types.corporate')}
                           </>
                         )}
                       </span>
@@ -285,7 +288,8 @@ export function ClientListPage() {
                         <Link
                           to={`/clients/${client.id}`}
                           className="p-1.5 rounded hover:bg-primary/10 text-subtle-text hover:text-primary transition-colors"
-                          title="View"
+                          title={t('actions.view')}
+                          aria-label={t('actions.view')}
                           data-testid={`client-view-${client.id}`}
                         >
                           <span className="material-symbols-outlined text-lg">visibility</span>
@@ -293,7 +297,8 @@ export function ClientListPage() {
                         <Link
                           to={`/clients/${client.id}/edit`}
                           className="p-1.5 rounded hover:bg-primary/10 text-subtle-text hover:text-primary transition-colors"
-                          title="Edit"
+                          title={t('actions.edit')}
+                          aria-label={t('actions.edit')}
                           data-testid={`client-edit-${client.id}`}
                         >
                           <span className="material-symbols-outlined text-lg">edit</span>
@@ -304,7 +309,8 @@ export function ClientListPage() {
                           // confirmation never renders "delete ?" with a blank identifier.
                           onClick={() => handleDeleteClick(client.id, getDisplayName(client))}
                           className="p-1.5 rounded hover:bg-danger/10 text-subtle-text hover:text-danger transition-colors"
-                          title="Delete"
+                          title={t('actions.delete')}
+                          aria-label={t('actions.delete')}
                           data-testid={`client-delete-${client.id}`}
                         >
                           <span className="material-symbols-outlined text-lg">delete</span>
@@ -326,14 +332,20 @@ export function ClientListPage() {
               search_off
             </span>
             <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">
-              No clients match your filters
+              {t('list.noResultsTitle')}
             </h3>
             <p className="text-subtle-text mb-4">
+              {/* Changed (SOUPFIN-167): one whole sentence per case, so each
+                  language can inflect "individual"/"corporate" its own way */}
               {searchTerm && typeFilter
-                ? `No ${typeFilter === 'INDIVIDUAL' ? 'individual' : 'corporate'} clients match "${searchTerm}". Try broadening your search or removing filters.`
+                ? typeFilter === 'INDIVIDUAL'
+                  ? t('list.noResultsSearchIndividual', { search: searchTerm })
+                  : t('list.noResultsSearchCorporate', { search: searchTerm })
                 : searchTerm
-                  ? `No clients match "${searchTerm}". Try a different search term.`
-                  : `No ${typeFilter === 'INDIVIDUAL' ? 'individual' : 'corporate'} clients found. Try a different type or clear the filter.`}
+                  ? t('list.noResultsSearch', { search: searchTerm })
+                  : typeFilter === 'INDIVIDUAL'
+                    ? t('list.noResultsIndividual')
+                    : t('list.noResultsCorporate')}
             </p>
             <button
               type="button"
@@ -345,7 +357,7 @@ export function ClientListPage() {
               data-testid="client-list-clear-filters-button"
             >
               <span className="material-symbols-outlined text-lg">filter_alt_off</span>
-              Clear filters
+              {t('actions.clearFilters')}
             </button>
           </div>
         ) : (
@@ -353,15 +365,15 @@ export function ClientListPage() {
             <span className="material-symbols-outlined text-6xl text-subtle-text/50 mb-4 block">
               people
             </span>
-            <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">No clients yet</h3>
-            <p className="text-subtle-text mb-4">Add your first client to start creating invoices.</p>
+            <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">{t('list.emptyTitle')}</h3>
+            <p className="text-subtle-text mb-4">{t('list.emptyBody')}</p>
             <Link
               to="/clients/new"
               className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm"
               data-testid="client-create-first-button"
             >
               <span className="material-symbols-outlined text-lg">add</span>
-              Add Client
+              {t('actions.addClient')}
             </Link>
           </div>
         )}
@@ -376,11 +388,12 @@ export function ClientListPage() {
           <div className="relative w-full max-w-md rounded-xl bg-surface-light dark:bg-surface-dark shadow-2xl overflow-hidden">
             {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-border-light dark:border-border-dark p-6">
-              <p className="text-xl font-bold text-text-light dark:text-text-dark">Delete Client</p>
+              <p className="text-xl font-bold text-text-light dark:text-text-dark">{t('deleteDialog.title')}</p>
               <button
                 onClick={handleCancelDelete}
                 className="flex size-8 items-center justify-center rounded-full hover:bg-black/10 dark:hover:bg-white/10"
                 data-testid="client-delete-modal-close"
+                aria-label={t('actions.close')}
               >
                 <span className="material-symbols-outlined text-2xl text-subtle-text">close</span>
               </button>
@@ -394,12 +407,15 @@ export function ClientListPage() {
                 </div>
                 <div>
                   <p className="text-text-light dark:text-text-dark">
-                    Are you sure you want to delete{' '}
-                    <span className="font-semibold">{deleteState.clientName}</span>?
+                    <Trans
+                      t={t}
+                      i18nKey="deleteDialog.confirm"
+                      values={{ name: deleteState.clientName }}
+                      components={{ bold: <span className="font-semibold" /> }}
+                    />
                   </p>
                   <p className="text-subtle-text mt-2 text-sm">
-                    This action cannot be undone. Invoices associated with this client will remain
-                    but the client reference will be removed.
+                    {t('deleteDialog.body')}
                   </p>
                   {/* Fix (SOUP-1929): surface delete failures instead of stalling silently. */}
                   {deleteMutation.isError && (
@@ -408,7 +424,7 @@ export function ClientListPage() {
                       role="alert"
                       data-testid="client-delete-error"
                     >
-                      Could not delete this client. Please try again.
+                      {t('deleteDialog.error')}
                     </p>
                   )}
                 </div>
@@ -422,7 +438,7 @@ export function ClientListPage() {
                 className="h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm hover:bg-primary/5"
                 data-testid="delete-cancel-button"
               >
-                Cancel
+                {t('actions.cancel')}
               </button>
               <button
                 onClick={handleConfirmDelete}
@@ -430,7 +446,7 @@ export function ClientListPage() {
                 className="h-10 px-4 rounded-lg bg-danger text-white font-bold text-sm hover:bg-danger/90 disabled:opacity-50"
                 data-testid="delete-confirm-button"
               >
-                {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
+                {deleteMutation.isPending ? t('actions.deleting') : t('actions.delete')}
               </button>
             </div>
           </div>

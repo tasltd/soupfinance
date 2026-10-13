@@ -11,6 +11,9 @@
  * Updated: Frontend PDF generation and email sending
  */
 import { useState } from 'react';
+// Added (SOUPFIN-167): every visible string comes from the invoices namespace
+import { Trans, useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -23,12 +26,17 @@ import { useFormatCurrency } from '../../stores';
 import { usePdf, useEmailSend } from '../../hooks';
 // Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
 import { HelpLink } from '../../components/help';
+import { formatLocaleDate } from '../../utils/date';
+import { InvoiceStatusBadge } from './InvoiceStatusBadge';
 
 export function InvoiceDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const formatCurrency = useFormatCurrency();
+  const { t, i18n } = useTranslation('invoices');
+  // Added (SOUPFIN-167): amounts and dates follow the reader's language
+  const formatCurrency = useFormatCurrency(i18n.language);
+  const formatDate = (value?: string | null) => formatLocaleDate(value, i18n.language) || '-';
   const { generateInvoice, isGenerating: isPdfGenerating } = usePdf();
   const { sendInvoice: sendInvoiceEmail, isSending: isEmailSending, error: emailError, success: emailSuccess, reset: resetEmailState } = useEmailSend();
 
@@ -71,7 +79,7 @@ export function InvoiceDetailPage() {
 
   // Added: Handle delete with confirmation
   const handleDelete = () => {
-    if (window.confirm('Are you sure you want to delete this invoice? This action cannot be undone.')) {
+    if (window.confirm(t('detail.confirmDelete'))) {
       deleteMutation.mutate();
     }
   };
@@ -98,7 +106,7 @@ export function InvoiceDetailPage() {
 
   // Added: Handle cancel with confirmation
   const handleCancel = () => {
-    if (window.confirm('Are you sure you want to cancel this invoice?')) {
+    if (window.confirm(t('detail.confirmCancel'))) {
       cancelMutation.mutate();
     }
   };
@@ -107,7 +115,7 @@ export function InvoiceDetailPage() {
     return (
       <div className="flex flex-col gap-6" data-testid="invoice-detail-page">
         <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-8 text-center text-subtle-text" data-testid="invoice-detail-loading">
-          Loading invoice details...
+          {t('detail.loading')}
         </div>
       </div>
     );
@@ -117,17 +125,17 @@ export function InvoiceDetailPage() {
     return (
       <div className="flex flex-col gap-6" data-testid="invoice-detail-page">
         <div className="flex flex-wrap justify-between items-center gap-4">
-          <h1 className="text-3xl font-black tracking-tight text-text-light dark:text-text-dark">Invoice Details</h1>
+          <h1 className="text-3xl font-black tracking-tight text-text-light dark:text-text-dark">{t('invoiceDetails')}</h1>
           <Link to="/invoices" className="h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm flex items-center">
-            Back to Invoices
+            {t('actions.backToList')}
           </Link>
         </div>
         <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-12 text-center" data-testid="invoice-detail-error">
           <span className="material-symbols-outlined text-6xl text-danger/50 mb-4">error</span>
-          <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">Failed to load invoice</h3>
-          <p className="text-subtle-text mb-4">The invoice could not be found or there was an error loading it.</p>
+          <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">{t('detail.loadErrorTitle')}</h3>
+          <p className="text-subtle-text mb-4">{t('detail.loadErrorBody')}</p>
           <Link to="/invoices" className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm">
-            Back to Invoices
+            {t('actions.backToList')}
           </Link>
         </div>
       </div>
@@ -146,19 +154,18 @@ export function InvoiceDetailPage() {
       <div className="flex flex-wrap justify-between items-center gap-4">
         <div>
           <h1 className="text-3xl font-black tracking-tight text-text-light dark:text-text-dark" data-testid="invoice-detail-heading">
-            Invoice {String(invoice.number)}
+            {t('detail.heading', { number: String(invoice.number) })}
           </h1>
           <p className="text-subtle-text mt-1">
             {/* Fix: invoice.status is optional, default to DRAFT */}
-            <span className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${getStatusStyle(invoice.status || 'DRAFT')}`} data-testid="invoice-detail-status">
-              {invoice.status || 'DRAFT'}
-            </span>
+            {/* Changed (SOUPFIN-167): translated label, not the raw enum */}
+            <InvoiceStatusBadge status={invoice.status} data-testid="invoice-detail-status" />
           </p>
           <HelpLink section="view-invoice" className="mt-1 self-start" />
         </div>
         <div className="flex flex-wrap gap-3">
           <Link to="/invoices" className="h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm flex items-center hover:bg-primary/5">
-            Back
+            {t('actions.back')}
           </Link>
           <button
             onClick={() => generateInvoice(invoice)}
@@ -167,7 +174,7 @@ export function InvoiceDetailPage() {
             data-testid="invoice-download-pdf-button"
           >
             <span className="material-symbols-outlined text-lg mr-2">download</span>
-            {isPdfGenerating ? 'Generating...' : 'Download PDF'}
+            {isPdfGenerating ? t('actions.generatingPdf') : t('actions.download')}
           </button>
           {canSend && (
             <button
@@ -176,7 +183,7 @@ export function InvoiceDetailPage() {
               data-testid="invoice-send-button"
             >
               <span className="material-symbols-outlined text-lg mr-2">send</span>
-              Send
+              {t('actions.sendShort')}
             </button>
           )}
           {canEdit && (
@@ -186,7 +193,7 @@ export function InvoiceDetailPage() {
               data-testid="invoice-edit-button"
             >
               <span className="material-symbols-outlined text-lg mr-2">edit</span>
-              Edit
+              {t('actions.edit')}
             </Link>
           )}
           {canCancel && (
@@ -197,7 +204,7 @@ export function InvoiceDetailPage() {
               data-testid="invoice-cancel-button"
             >
               <span className="material-symbols-outlined text-lg mr-2">cancel</span>
-              {cancelMutation.isPending ? 'Cancelling...' : 'Cancel'}
+              {cancelMutation.isPending ? t('actions.cancelling') : t('actions.cancel')}
             </button>
           )}
           {canEdit && (
@@ -208,7 +215,7 @@ export function InvoiceDetailPage() {
               data-testid="invoice-delete-button"
             >
               <span className="material-symbols-outlined text-lg mr-2">delete</span>
-              {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
+              {deleteMutation.isPending ? t('actions.deleting') : t('actions.delete')}
             </button>
           )}
         </div>
@@ -219,41 +226,41 @@ export function InvoiceDetailPage() {
         {/* Invoice Info */}
         <div className="lg:col-span-2 bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark" data-testid="invoice-info-card">
           <div className="px-6 py-4 border-b border-border-light dark:border-border-dark">
-            <h2 className="text-lg font-bold text-text-light dark:text-text-dark">Invoice Information</h2>
+            <h2 className="text-lg font-bold text-text-light dark:text-text-dark">{t('detail.infoTitle')}</h2>
           </div>
           <div className="p-6 grid grid-cols-2 gap-4">
             <div>
-              <p className="text-sm text-subtle-text">Invoice Number</p>
+              <p className="text-sm text-subtle-text">{t('fields.invoiceNumber')}</p>
               <p className="font-medium text-text-light dark:text-text-dark" data-testid="invoice-number">{String(invoice.number)}</p>
             </div>
             <div>
               {/* Changed: Label from Account to Client */}
-              <p className="text-sm text-subtle-text">Client</p>
-              <p className="font-medium text-text-light dark:text-text-dark" data-testid="invoice-client">{invoice.accountServices?.serialised || 'N/A'}</p>
+              <p className="text-sm text-subtle-text">{t('fields.client')}</p>
+              <p className="font-medium text-text-light dark:text-text-dark" data-testid="invoice-client">{invoice.accountServices?.serialised || t('notAvailable')}</p>
             </div>
             <div>
-              <p className="text-sm text-subtle-text">Invoice Date</p>
-              <p className="font-medium text-text-light dark:text-text-dark" data-testid="invoice-date">{invoice.invoiceDate}</p>
+              <p className="text-sm text-subtle-text">{t('fields.invoiceDate')}</p>
+              <p className="font-medium text-text-light dark:text-text-dark" data-testid="invoice-date">{formatDate(invoice.invoiceDate)}</p>
             </div>
             <div>
-              <p className="text-sm text-subtle-text">Due Date</p>
-              <p className="font-medium text-text-light dark:text-text-dark" data-testid="invoice-due-date">{invoice.paymentDate}</p>
+              <p className="text-sm text-subtle-text">{t('fields.dueDate')}</p>
+              <p className="font-medium text-text-light dark:text-text-dark" data-testid="invoice-due-date">{formatDate(invoice.paymentDate)}</p>
             </div>
             {invoice.purchaseOrderNumber && (
               <div>
-                <p className="text-sm text-subtle-text">PO Number</p>
+                <p className="text-sm text-subtle-text">{t('fields.poNumber')}</p>
                 <p className="font-medium text-text-light dark:text-text-dark">{invoice.purchaseOrderNumber}</p>
               </div>
             )}
             {invoice.currency && (
               <div>
-                <p className="text-sm text-subtle-text">Currency</p>
+                <p className="text-sm text-subtle-text">{t('fields.currency')}</p>
                 <p className="font-medium text-text-light dark:text-text-dark">{invoice.currency}</p>
               </div>
             )}
             {invoice.notes && (
               <div className="col-span-2">
-                <p className="text-sm text-subtle-text">Notes</p>
+                <p className="text-sm text-subtle-text">{t('fields.notes')}</p>
                 <p className="font-medium text-text-light dark:text-text-dark">{invoice.notes}</p>
               </div>
             )}
@@ -263,33 +270,33 @@ export function InvoiceDetailPage() {
         {/* Amount Summary */}
         <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark" data-testid="invoice-amount-card">
           <div className="px-6 py-4 border-b border-border-light dark:border-border-dark">
-            <h2 className="text-lg font-bold text-text-light dark:text-text-dark">Amount Summary</h2>
+            <h2 className="text-lg font-bold text-text-light dark:text-text-dark">{t('detail.amountSummary')}</h2>
           </div>
           <div className="p-6 space-y-3">
             <div className="flex justify-between">
-              <p className="text-subtle-text">Subtotal</p>
+              <p className="text-subtle-text">{t('fields.subtotal')}</p>
               <p className="font-medium text-text-light dark:text-text-dark" data-testid="invoice-subtotal">{formatCurrency(invoice.subtotal)}</p>
             </div>
             {(invoice.discountAmount || 0) > 0 && (
               <div className="flex justify-between">
-                <p className="text-subtle-text">Discount</p>
+                <p className="text-subtle-text">{t('fields.discountAmount')}</p>
                 <p className="font-medium text-danger" data-testid="invoice-discount">-{formatCurrency(invoice.discountAmount)}</p>
               </div>
             )}
             <div className="flex justify-between">
-              <p className="text-subtle-text">Tax</p>
+              <p className="text-subtle-text">{t('fields.tax')}</p>
               <p className="font-medium text-text-light dark:text-text-dark" data-testid="invoice-tax">{formatCurrency(invoice.taxAmount)}</p>
             </div>
             <div className="flex justify-between border-t border-border-light dark:border-border-dark pt-3">
-              <p className="font-bold text-text-light dark:text-text-dark">Total</p>
+              <p className="font-bold text-text-light dark:text-text-dark">{t('fields.total')}</p>
               <p className="font-bold text-text-light dark:text-text-dark" data-testid="invoice-total">{formatCurrency(invoice.totalAmount)}</p>
             </div>
             <div className="flex justify-between">
-              <p className="text-subtle-text">Amount Paid</p>
+              <p className="text-subtle-text">{t('fields.amountPaid')}</p>
               <p className="font-medium text-success" data-testid="invoice-paid">{formatCurrency(invoice.amountPaid)}</p>
             </div>
             <div className="flex justify-between bg-primary/10 -mx-6 px-6 py-3 mt-3">
-              <p className="font-bold text-primary">Balance Due</p>
+              <p className="font-bold text-primary">{t('fields.balanceDue')}</p>
               <p className="font-bold text-primary" data-testid="invoice-balance-due">{formatCurrency(invoice.amountDue)}</p>
             </div>
           </div>
@@ -299,17 +306,17 @@ export function InvoiceDetailPage() {
       {/* Line Items */}
       <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden" data-testid="invoice-items-card">
         <div className="px-6 py-4 border-b border-border-light dark:border-border-dark">
-          <h2 className="text-lg font-bold text-text-light dark:text-text-dark">Line Items</h2>
+          <h2 className="text-lg font-bold text-text-light dark:text-text-dark">{t('lineItems.title')}</h2>
         </div>
         {invoice.invoiceItemList && invoice.invoiceItemList.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full text-sm" data-testid="invoice-items-table">
               <thead className="text-xs text-subtle-text uppercase bg-background-light dark:bg-background-dark">
                 <tr>
-                  <th className="px-6 py-3 text-left">Description</th>
-                  <th className="px-6 py-3 text-right">Qty</th>
-                  <th className="px-6 py-3 text-right">Unit Price</th>
-                  <th className="px-6 py-3 text-right">Amount</th>
+                  <th className="px-6 py-3 text-left">{t('lineItems.description')}</th>
+                  <th className="px-6 py-3 text-right">{t('lineItems.quantity')}</th>
+                  <th className="px-6 py-3 text-right">{t('lineItems.unitPrice')}</th>
+                  <th className="px-6 py-3 text-right">{t('lineItems.amount')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -326,7 +333,7 @@ export function InvoiceDetailPage() {
           </div>
         ) : (
           <div className="p-8 text-center text-subtle-text" data-testid="invoice-items-empty">
-            No line items
+            {t('lineItems.noItems')}
           </div>
         )}
       </div>
@@ -334,7 +341,7 @@ export function InvoiceDetailPage() {
       {/* Payment History */}
       <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden" data-testid="invoice-payments-card">
         <div className="px-6 py-4 border-b border-border-light dark:border-border-dark flex justify-between items-center gap-4">
-          <h2 className="text-lg font-bold text-text-light dark:text-text-dark">Payment History</h2>
+          <h2 className="text-lg font-bold text-text-light dark:text-text-dark">{t('detail.paymentHistory')}</h2>
           {/* Added (SOUPFIN-81): how recording a payment works */}
           <HelpLink section="record-payment" className="ml-auto" />
           {canRecordPayment && (
@@ -344,7 +351,7 @@ export function InvoiceDetailPage() {
               data-testid="record-payment-button"
             >
               <span className="material-symbols-outlined text-base mr-1">add</span>
-              Record Payment
+              {t('actions.recordPayment')}
             </Link>
           )}
         </div>
@@ -353,19 +360,19 @@ export function InvoiceDetailPage() {
             <table className="w-full text-sm" data-testid="invoice-payments-table">
               <thead className="text-xs text-subtle-text uppercase bg-background-light dark:bg-background-dark">
                 <tr>
-                  <th className="px-6 py-3 text-left">Date</th>
-                  <th className="px-6 py-3 text-left">Method</th>
-                  <th className="px-6 py-3 text-left">Reference</th>
-                  <th className="px-6 py-3 text-right">Amount</th>
+                  <th className="px-6 py-3 text-left">{t('detail.paymentColumns.date')}</th>
+                  <th className="px-6 py-3 text-left">{t('detail.paymentColumns.method')}</th>
+                  <th className="px-6 py-3 text-left">{t('detail.paymentColumns.reference')}</th>
+                  <th className="px-6 py-3 text-right">{t('detail.paymentColumns.amount')}</th>
                 </tr>
               </thead>
               <tbody>
                 {payments.map((payment) => (
                   <tr key={payment.id} className="border-b border-border-light dark:border-border-dark">
-                    <td className="px-6 py-4 text-text-light dark:text-text-dark">{payment.paymentDate}</td>
+                    <td className="px-6 py-4 text-text-light dark:text-text-dark">{formatDate(payment.paymentDate)}</td>
                     <td className="px-6 py-4 text-text-light dark:text-text-dark">
                       <span className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${getPaymentMethodStyle(payment.paymentMethod?.name || '')}`}>
-                        {getPaymentMethodLabel(payment.paymentMethod?.name || '')}
+                        {getPaymentMethodLabel(payment.paymentMethod?.name || '', t)}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-subtle-text">{payment.reference || '-'}</td>
@@ -377,7 +384,7 @@ export function InvoiceDetailPage() {
           </div>
         ) : (
           <div className="p-8 text-center text-subtle-text" data-testid="invoice-payments-empty">
-            No payments recorded yet
+            {t('detail.noPayments')}
           </div>
         )}
       </div>
@@ -387,28 +394,34 @@ export function InvoiceDetailPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" data-testid="send-invoice-dialog">
           <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark w-full max-w-md mx-4 shadow-xl">
             <div className="px-6 py-4 border-b border-border-light dark:border-border-dark flex justify-between items-center">
-              <h3 className="text-lg font-bold text-text-light dark:text-text-dark">Send Invoice</h3>
+              <h3 className="text-lg font-bold text-text-light dark:text-text-dark">{t('sendDialog.title')}</h3>
               <button
                 onClick={() => setShowSendDialog(false)}
                 className="text-subtle-text hover:text-text-light dark:hover:text-text-dark"
+                aria-label={t('sendDialog.close')}
               >
                 <span className="material-symbols-outlined">close</span>
               </button>
             </div>
             <div className="p-6 space-y-4">
               <p className="text-sm text-subtle-text">
-                Send invoice <strong>{String(invoice?.number)}</strong> with a frontend-generated PDF attachment.
+                <Trans
+                  t={t}
+                  i18nKey="sendDialog.intro"
+                  values={{ number: String(invoice?.number) }}
+                  components={{ strong: <strong /> }}
+                />
               </p>
 
               <div>
                 <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                  Recipient Name
+                  {t('sendDialog.recipientName')}
                 </label>
                 <input
                   type="text"
                   value={recipientName}
                   onChange={(e) => setRecipientName(e.target.value)}
-                  placeholder="Client Name"
+                  placeholder={t('sendDialog.recipientNamePlaceholder')}
                   className="w-full h-10 px-3 rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark"
                   data-testid="send-recipient-name"
                 />
@@ -416,13 +429,13 @@ export function InvoiceDetailPage() {
 
               <div>
                 <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                  Recipient Email <span className="text-danger">*</span>
+                  {t('sendDialog.recipientEmail')} <span className="text-danger">*</span>
                 </label>
                 <input
                   type="email"
                   value={recipientEmail}
                   onChange={(e) => setRecipientEmail(e.target.value)}
-                  placeholder="client@example.com"
+                  placeholder={t('sendDialog.recipientEmailPlaceholder')}
                   required
                   className="w-full h-10 px-3 rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark"
                   data-testid="send-recipient-email"
@@ -437,7 +450,7 @@ export function InvoiceDetailPage() {
 
               {emailSuccess && (
                 <div className="p-3 rounded-lg bg-success/10 text-success text-sm" data-testid="send-success">
-                  Invoice sent successfully!
+                  {t('sendDialog.success')}
                 </div>
               )}
             </div>
@@ -446,7 +459,7 @@ export function InvoiceDetailPage() {
                 onClick={() => setShowSendDialog(false)}
                 className="h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm"
               >
-                Cancel
+                {t('actions.cancel')}
               </button>
               <button
                 onClick={handleSendInvoice}
@@ -457,12 +470,12 @@ export function InvoiceDetailPage() {
                 {isEmailSending ? (
                   <>
                     <span className="material-symbols-outlined text-lg mr-2 animate-spin">progress_activity</span>
-                    Sending...
+                    {t('sendDialog.sending')}
                   </>
                 ) : (
                   <>
                     <span className="material-symbols-outlined text-lg mr-2">send</span>
-                    Send Invoice
+                    {t('actions.send')}
                   </>
                 )}
               </button>
@@ -474,30 +487,20 @@ export function InvoiceDetailPage() {
   );
 }
 
-// Added: Status badge styling helper
-function getStatusStyle(status: string): string {
-  const styles: Record<string, string> = {
-    PAID: 'bg-success/10 text-success',
-    SENT: 'bg-info/10 text-info',
-    VIEWED: 'bg-info/10 text-info',
-    PARTIAL: 'bg-warning/10 text-warning',
-    OVERDUE: 'bg-danger/10 text-danger',
-    DRAFT: 'bg-subtle-text/10 text-subtle-text',
-    CANCELLED: 'bg-subtle-text/10 text-subtle-text',
-  };
-  return styles[status] || styles.DRAFT;
-}
-
 // Added: Payment method label helper
-function getPaymentMethodLabel(method: string): string {
-  const labels: Record<string, string> = {
-    CASH: 'Cash',
-    BANK_TRANSFER: 'Bank Transfer',
-    CHEQUE: 'Cheque',
-    CARD: 'Card',
-    OTHER: 'Other',
-  };
-  return labels[method] || method;
+// Changed (SOUPFIN-167): labels come from the invoices namespace. Methods the
+// backend names differently (it is a domain class, not an enum) show as sent.
+const PAYMENT_METHOD_KEYS = {
+  CASH: 'paymentMethods.cash',
+  BANK_TRANSFER: 'paymentMethods.bankTransfer',
+  CHEQUE: 'paymentMethods.cheque',
+  CARD: 'paymentMethods.card',
+  OTHER: 'paymentMethods.other',
+} as const;
+
+function getPaymentMethodLabel(method: string, t: TFunction<'invoices'>): string {
+  const key = PAYMENT_METHOD_KEYS[method as keyof typeof PAYMENT_METHOD_KEYS];
+  return key ? t(key) : method;
 }
 
 // Added: Payment method badge styling helper

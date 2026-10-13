@@ -2,7 +2,7 @@
  * Unit tests for InvoiceListPage component
  * Tests rendering, loading/error/empty states, data display, and navigation
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -23,6 +23,12 @@ vi.mock('../../../stores', () => ({
 }));
 
 import { listInvoices } from '../../../api';
+// Added (SOUPFIN-167): the pages render through i18n; pin English for these assertions
+import i18n from '../../../i18n';
+
+beforeAll(async () => {
+  await i18n.changeLanguage('en');
+});
 
 // ============================================================================
 // Test Helpers
@@ -244,8 +250,9 @@ describe('InvoiceListPage', () => {
       expect(within(row).getByText('Tech Solutions Inc')).toBeInTheDocument();
 
       // Check dates (invoiceDate and paymentDate)
-      expect(within(row).getByText('2024-03-01')).toBeInTheDocument();
-      expect(within(row).getByText('2024-03-31')).toBeInTheDocument();
+      // Changed (SOUPFIN-167): dates render in the reader's language, not raw ISO
+      expect(within(row).getByText('Mar 1, 2024')).toBeInTheDocument();
+      expect(within(row).getByText('Mar 31, 2024')).toBeInTheDocument();
 
       // Check amount - formatted with $ and .00
       expect(within(row).getByText('$2,500.50')).toBeInTheDocument();
@@ -281,13 +288,14 @@ describe('InvoiceListPage', () => {
   });
 
   describe('status badges', () => {
+    // Changed (SOUPFIN-167): the badge shows the translated label, not the enum
     it.each([
-      ['PAID', 'bg-success'],
-      ['SENT', 'bg-info'],
-      ['PENDING', 'bg-warning'],
-      ['OVERDUE', 'bg-danger'],
-      ['DRAFT', 'bg-subtle-text'],
-    ] as const)('renders %s status with correct styling', async (status, expectedClass) => {
+      ['PAID', 'Paid', 'bg-success'],
+      ['SENT', 'Sent', 'bg-info'],
+      ['PENDING', 'Pending', 'bg-warning'],
+      ['OVERDUE', 'Overdue', 'bg-danger'],
+      ['DRAFT', 'Draft', 'bg-subtle-text'],
+    ] as const)('renders %s status with correct styling', async (status, label, expectedClass) => {
       const mockInvoice = createMockInvoice({
         id: `inv-${status.toLowerCase()}`,
         status: status as InvoiceStatus,
@@ -297,7 +305,8 @@ describe('InvoiceListPage', () => {
       renderInvoiceListPage();
 
       const statusBadge = await screen.findByTestId(`invoice-status-inv-${status.toLowerCase()}`);
-      expect(statusBadge).toHaveTextContent(status);
+      expect(statusBadge).toHaveTextContent(label);
+      expect(statusBadge).toHaveAttribute('data-status', status);
       expect(statusBadge.className).toContain(expectedClass);
     });
 
@@ -308,7 +317,8 @@ describe('InvoiceListPage', () => {
       renderInvoiceListPage();
 
       const statusBadge = await screen.findByTestId('invoice-status-inv-test');
-      expect(statusBadge).toHaveTextContent('PAID');
+      expect(statusBadge).toHaveTextContent('Paid');
+      expect(statusBadge).not.toHaveTextContent('PAID');
     });
   });
 

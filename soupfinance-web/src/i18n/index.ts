@@ -3,7 +3,7 @@
  * Supports: English (en), German (de), French (fr), Dutch (nl)
  * Uses browser language detection with fallback to English
  *
- * Namespaces (12 total):
+ * Namespaces (13 total):
  * - common: Shared UI elements
  * - auth: Authentication/login
  * - navigation: Menu and nav items
@@ -16,6 +16,7 @@
  * - vendors: Vendor management
  * - dashboard: Dashboard overview
  * - corporate: KYC onboarding
+ * - clients: Invoice clients (customers)
  */
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
@@ -34,6 +35,7 @@ import enLedger from './locales/en/ledger.json';
 import enVendors from './locales/en/vendors.json';
 import enDashboard from './locales/en/dashboard.json';
 import enCorporate from './locales/en/corporate.json';
+import enClients from './locales/en/clients.json';
 
 // Import translation files - German
 import deCommon from './locales/de/common.json';
@@ -48,6 +50,7 @@ import deLedger from './locales/de/ledger.json';
 import deVendors from './locales/de/vendors.json';
 import deDashboard from './locales/de/dashboard.json';
 import deCorporate from './locales/de/corporate.json';
+import deClients from './locales/de/clients.json';
 
 // Import translation files - French
 import frCommon from './locales/fr/common.json';
@@ -62,6 +65,7 @@ import frLedger from './locales/fr/ledger.json';
 import frVendors from './locales/fr/vendors.json';
 import frDashboard from './locales/fr/dashboard.json';
 import frCorporate from './locales/fr/corporate.json';
+import frClients from './locales/fr/clients.json';
 
 // Import translation files - Dutch
 import nlCommon from './locales/nl/common.json';
@@ -76,6 +80,7 @@ import nlLedger from './locales/nl/ledger.json';
 import nlVendors from './locales/nl/vendors.json';
 import nlDashboard from './locales/nl/dashboard.json';
 import nlCorporate from './locales/nl/corporate.json';
+import nlClients from './locales/nl/clients.json';
 
 // Supported languages
 export const supportedLanguages = {
@@ -87,7 +92,7 @@ export const supportedLanguages = {
 
 export type SupportedLanguage = keyof typeof supportedLanguages;
 
-// Namespaces used in the app (12 total)
+// Namespaces used in the app (13 total)
 // Note: 'accounting' is a core feature for integrations
 export const namespaces = [
   'common',
@@ -102,6 +107,7 @@ export const namespaces = [
   'vendors',     // Vendor management
   'dashboard',   // Dashboard overview
   'corporate',   // KYC onboarding
+  'clients',     // Invoice clients (SOUPFIN-167)
 ] as const;
 export type Namespace = (typeof namespaces)[number];
 
@@ -120,6 +126,7 @@ const resources = {
     vendors: enVendors,
     dashboard: enDashboard,
     corporate: enCorporate,
+    clients: enClients,
   },
   de: {
     common: deCommon,
@@ -134,6 +141,7 @@ const resources = {
     vendors: deVendors,
     dashboard: deDashboard,
     corporate: deCorporate,
+    clients: deClients,
   },
   fr: {
     common: frCommon,
@@ -148,6 +156,7 @@ const resources = {
     vendors: frVendors,
     dashboard: frDashboard,
     corporate: frCorporate,
+    clients: frClients,
   },
   nl: {
     common: nlCommon,
@@ -162,6 +171,7 @@ const resources = {
     vendors: nlVendors,
     dashboard: nlDashboard,
     corporate: nlCorporate,
+    clients: nlClients,
   },
 };
 

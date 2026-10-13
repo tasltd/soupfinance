@@ -16,13 +16,14 @@ import ledger from './locales/en/ledger.json';
 import vendors from './locales/en/vendors.json';
 import dashboard from './locales/en/dashboard.json';
 import corporate from './locales/en/corporate.json';
+import clients from './locales/en/clients.json';
 
 // Define the resources structure based on English translations (source of truth)
 declare module 'i18next' {
   interface CustomTypeOptions {
     // Enable type-safe translations
     defaultNS: 'common';
-    // Define resource types from actual JSON files (12 namespaces)
+    // Define resource types from actual JSON files (13 namespaces)
     resources: {
       common: typeof common;
       auth: typeof auth;
@@ -36,6 +37,7 @@ declare module 'i18next' {
       vendors: typeof vendors;        // Vendor management
       dashboard: typeof dashboard;    // Dashboard overview
       corporate: typeof corporate;    // KYC onboarding
+      clients: typeof clients;        // Invoice clients (SOUPFIN-167)
     };
   }
 }
@@ -53,7 +55,8 @@ export type TranslationNamespace =
   | 'ledger'
   | 'vendors'
   | 'dashboard'
-  | 'corporate';
+  | 'corporate'
+  | 'clients';
 
 // Utility type for extracting translation keys from a namespace
 export type TranslationKeys<NS extends TranslationNamespace> =
@@ -69,4 +72,5 @@ export type TranslationKeys<NS extends TranslationNamespace> =
   NS extends 'vendors' ? keyof typeof vendors :
   NS extends 'dashboard' ? keyof typeof dashboard :
   NS extends 'corporate' ? keyof typeof corporate :
+  NS extends 'clients' ? keyof typeof clients :
   never;

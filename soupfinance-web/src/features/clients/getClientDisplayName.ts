@@ -11,16 +11,19 @@
  * Fallback order: name → firstName + lastName → companyName → email → placeholder.
  * Pure function so it can be reused by ClientListPage + ClientDetailPage and unit
  * tested in isolation.
+ *
+ * Changed (SOUPFIN-167): pages pass the translated placeholder
+ * (`t('clients:unnamed')`); the English default keeps non-React callers working.
  */
 import type { Client } from '../../types';
 
-export function getClientDisplayName(client: Pick<
-  Client,
-  'name' | 'firstName' | 'lastName' | 'companyName' | 'email'
->): string {
+export function getClientDisplayName(
+  client: Pick<Client, 'name' | 'firstName' | 'lastName' | 'companyName' | 'email'>,
+  unnamedLabel = 'Unnamed client'
+): string {
   if (client.name?.trim()) return client.name.trim();
   const fullName = `${client.firstName ?? ''} ${client.lastName ?? ''}`.trim();
   if (fullName) return fullName;
   if (client.companyName?.trim()) return client.companyName.trim();
-  return client.email?.trim() || 'Unnamed client';
+  return client.email?.trim() || unnamedLabel;
 }

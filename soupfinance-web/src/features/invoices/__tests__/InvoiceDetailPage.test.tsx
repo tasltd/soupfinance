@@ -2,7 +2,7 @@
  * Unit tests for InvoiceDetailPage component
  * Tests rendering, loading/error states, data display, conditional actions, and mutations
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
 import { render, screen, within, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
@@ -47,6 +47,12 @@ import {
   listInvoicePayments,
   cancelInvoice,
 } from '../../../api/endpoints/invoices';
+// Added (SOUPFIN-167): the pages render through i18n; pin English for these assertions
+import i18n from '../../../i18n';
+
+beforeAll(async () => {
+  await i18n.changeLanguage('en');
+});
 
 // Mock useNavigate
 const mockNavigate = vi.fn();
@@ -230,7 +236,8 @@ describe('InvoiceDetailPage', () => {
       renderInvoiceDetailPage();
 
       const statusBadge = await screen.findByTestId('invoice-detail-status');
-      expect(statusBadge).toHaveTextContent('SENT');
+      // Changed (SOUPFIN-167): translated label, not the raw enum
+      expect(statusBadge).toHaveTextContent('Sent');
     });
 
     it('renders invoice info card with correct data', async () => {
@@ -251,8 +258,9 @@ describe('InvoiceDetailPage', () => {
       // Changed: invoice-account → invoice-client (component shows client label)
       expect(screen.getByTestId('invoice-client')).toHaveTextContent('Test Client Inc');
       // Changed: invoice-issue-date → invoice-date (component uses invoiceDate)
-      expect(screen.getByTestId('invoice-date')).toHaveTextContent('2024-03-01');
-      expect(screen.getByTestId('invoice-due-date')).toHaveTextContent('2024-03-31');
+      // Changed (SOUPFIN-167): dates render in the reader's language, not raw ISO
+      expect(screen.getByTestId('invoice-date')).toHaveTextContent('Mar 1, 2024');
+      expect(screen.getByTestId('invoice-due-date')).toHaveTextContent('Mar 31, 2024');
     });
 
     it('shows N/A when account services is missing', async () => {
@@ -429,7 +437,7 @@ describe('InvoiceDetailPage', () => {
       renderInvoiceDetailPage();
 
       const table = await screen.findByTestId('invoice-payments-table');
-      expect(within(table).getByText('2024-02-01')).toBeInTheDocument();
+      expect(within(table).getByText('Feb 1, 2024')).toBeInTheDocument();
       expect(within(table).getByText('Bank Transfer')).toBeInTheDocument();
       expect(within(table).getByText('TRX-001')).toBeInTheDocument();
       expect(within(table).getByText('$500.00')).toBeInTheDocument();

@@ -22,6 +22,8 @@
  * Changed (2026-02-06): Replaced accountServices dropdown with Client dropdown
  */
 import { useState, useEffect } from 'react';
+// Added (SOUPFIN-167): every visible string comes from the invoices namespace
+import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -82,7 +84,10 @@ export function InvoiceFormPage() {
   // "Create Invoice" quick action so the dropdown pre-selects that client.
   const clientIdParam = searchParams.get('clientId');
   const queryClient = useQueryClient();
-  const formatCurrency = useFormatCurrency();
+  const { t, i18n } = useTranslation('invoices');
+  const { t: tClients } = useTranslation('clients');
+  // Added (SOUPFIN-167): amounts follow the reader's language
+  const formatCurrency = useFormatCurrency(i18n.language);
   const isEdit = !!id;
 
   // Form state — uses backend field names
@@ -260,7 +265,7 @@ export function InvoiceFormPage() {
         setInvoiceDateError(lock.message);
         return;
       }
-      setFormError(error.message || 'Failed to create invoice');
+      setFormError(error.message || t('validation.createFailed'));
     },
   });
 
@@ -285,7 +290,7 @@ export function InvoiceFormPage() {
         setInvoiceDateError(lock.message);
         return;
       }
-      setFormError(error.message || 'Failed to update invoice');
+      setFormError(error.message || t('validation.updateFailed'));
     },
   });
 
@@ -315,7 +320,7 @@ export function InvoiceFormPage() {
         setInvoiceDateError(lock.message);
         return;
       }
-      setFormError(error.message || 'Failed to send invoice');
+      setFormError(error.message || t('validation.sendFailed'));
     },
   });
 
@@ -331,7 +336,7 @@ export function InvoiceFormPage() {
       resetNewClientForm();
     },
     onError: (error: Error) => {
-      setNewClientError(error.message || 'Failed to create client');
+      setNewClientError(error.message || t('validation.clientCreateFailed'));
     },
   });
 
@@ -352,18 +357,18 @@ export function InvoiceFormPage() {
 
     if (newClientType === 'INDIVIDUAL') {
       if (!newClientFirstName.trim() || !newClientLastName.trim()) {
-        setNewClientError('First name and last name are required');
+        setNewClientError(t('validation.clientNamesRequired'));
         return;
       }
     } else {
       if (!newClientCompanyName.trim()) {
-        setNewClientError('Company name is required');
+        setNewClientError(t('validation.clientCompanyRequired'));
         return;
       }
     }
 
     if (!newClientEmail.trim()) {
-      setNewClientError('Email is required');
+      setNewClientError(t('validation.clientEmailRequired'));
       return;
     }
 
@@ -470,29 +475,29 @@ export function InvoiceFormPage() {
   // Changed: Validates client selection and resolves accountServices.id from client
   const buildFormData = () => {
     if (!selectedClientId) {
-      setFormError('Please select a client');
+      setFormError(t('validation.selectClient'));
       return null;
     }
     if (accountServicesResolving) {
       // The portfolio FK fetch is still in flight — ask the user to retry.
-      setFormError('Still loading the client’s account services. Please try again in a moment.');
+      setFormError(t('validation.accountServicesLoading'));
       return null;
     }
     if (!resolvedAccountServicesId) {
       // Edge case: client exists but has no accountServices linked
-      setFormError('Selected client has no account services. Please choose a different client.');
+      setFormError(t('validation.noAccountServices'));
       return null;
     }
     if (!invoiceDate) {
-      setFormError('Please enter an invoice date');
+      setFormError(t('validation.invoiceDateRequired'));
       return null;
     }
     if (!paymentDate) {
-      setFormError('Please enter a due date');
+      setFormError(t('validation.dueDateRequired'));
       return null;
     }
     if (lineItems.length === 0 || lineItems.every((item) => !item.description)) {
-      setFormError('Please add at least one line item');
+      setFormError(t('validation.lineItemRequired'));
       return null;
     }
 
@@ -580,7 +585,7 @@ export function InvoiceFormPage() {
     return (
       <div className="flex flex-col gap-6" data-testid="invoice-form-page">
         <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-8 text-center text-subtle-text" data-testid="invoice-form-loading">
-          Loading invoice...
+          {t('form.loading')}
         </div>
       </div>
     );
@@ -591,10 +596,10 @@ export function InvoiceFormPage() {
       <div className="flex flex-col gap-6" data-testid="invoice-form-page">
         <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-12 text-center" data-testid="invoice-form-error">
           <span className="material-symbols-outlined text-6xl text-danger/50 mb-4">error</span>
-          <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">Failed to load invoice</h3>
-          <p className="text-subtle-text mb-4">The invoice could not be found or there was an error loading it.</p>
+          <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">{t('detail.loadErrorTitle')}</h3>
+          <p className="text-subtle-text mb-4">{t('detail.loadErrorBody')}</p>
           <button onClick={() => navigate('/invoices')} className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm">
-            Back to Invoices
+            {t('actions.backToList')}
           </button>
         </div>
       </div>
@@ -607,10 +612,10 @@ export function InvoiceFormPage() {
       <div className="flex flex-wrap justify-between items-center gap-4">
         <div>
           <h1 className="text-3xl font-black tracking-tight text-text-light dark:text-text-dark" data-testid="invoice-form-heading">
-            {isEdit ? 'Edit Invoice' : 'New Invoice'}
+            {isEdit ? t('editInvoice') : t('newInvoice')}
           </h1>
           <p className="text-subtle-text">
-            {isEdit ? 'Update invoice details' : 'Create a new invoice'}
+            {isEdit ? t('form.subtitleEdit') : t('form.subtitleNew')}
           </p>
           <HelpLink section="create-invoice" className="mt-1 self-start" />
         </div>
@@ -620,7 +625,7 @@ export function InvoiceFormPage() {
             className="h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm hover:bg-primary/5"
             data-testid="invoice-form-cancel-button"
           >
-            Cancel
+            {t('actions.cancel')}
           </button>
           <button
             onClick={handleSaveDraft}
@@ -632,7 +637,7 @@ export function InvoiceFormPage() {
             className="h-10 px-4 rounded-lg bg-primary/20 text-primary font-bold text-sm hover:bg-primary/30 disabled:opacity-50"
             data-testid="invoice-form-save-draft-button"
           >
-            {createMutation.isPending || updateMutation.isPending ? 'Saving...' : 'Save Draft'}
+            {createMutation.isPending || updateMutation.isPending ? t('form.saving') : t('form.saveDraft')}
           </button>
           <button
             onClick={handleSaveAndSend}
@@ -641,7 +646,7 @@ export function InvoiceFormPage() {
             className="h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90 disabled:opacity-50"
             data-testid="invoice-form-save-send-button"
           >
-            {sendMutation.isPending ? 'Sending...' : 'Save & Send'}
+            {sendMutation.isPending ? t('form.sending') : t('form.saveAndSend')}
           </button>
         </div>
       </div>
@@ -658,13 +663,13 @@ export function InvoiceFormPage() {
         {/* Invoice Details Card */}
         <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark" data-testid="invoice-details-card">
           <div className="px-6 py-4 border-b border-border-light dark:border-border-dark">
-            <h2 className="text-lg font-bold text-text-light dark:text-text-dark">Invoice Details</h2>
+            <h2 className="text-lg font-bold text-text-light dark:text-text-dark">{t('invoiceDetails')}</h2>
           </div>
           <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Changed: Client dropdown with inline "New Client" creation */}
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                Client <span className="text-danger">*</span>
+                {t('fields.client')} <span className="text-danger">*</span>
               </label>
               <div className="flex gap-2">
                 <select
@@ -672,18 +677,18 @@ export function InvoiceFormPage() {
                   // properly labelled for assistive tech and DevTools.
                   id="invoice-client"
                   name="clientId"
-                  aria-label="Client"
+                  aria-label={t('fields.client')}
                   value={selectedClientId}
                   onChange={(e) => setSelectedClientId(e.target.value)}
                   className="flex-1 h-12 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-3 text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/50"
                   data-testid="invoice-client-select"
                 >
-                  <option value="">Select a client</option>
+                  <option value="">{t('fields.selectClient')}</option>
                   {/* Fix (SOUPFIN-27 §2): key by client.id and show the client's
                       own name — one option per Client, never per portfolio entry. */}
                   {clients?.map((client) => (
                     <option key={client.id} value={client.id}>
-                      {getClientDisplayName(client)}
+                      {getClientDisplayName(client, tClients('unnamed'))}
                     </option>
                   ))}
                 </select>
@@ -701,23 +706,23 @@ export function InvoiceFormPage() {
                   <span className="material-symbols-outlined text-base">
                     {showNewClientForm ? 'close' : 'person_add'}
                   </span>
-                  {showNewClientForm ? 'Cancel' : 'New Client'}
+                  {showNewClientForm ? t('actions.cancel') : t('form.newClient')}
                 </button>
               </div>
               {/* NOTE: Resolving the FK requires a portfolio fetch — show a
                   neutral hint while it loads, and only warn once it truly can't
                   be resolved (SOUPFIN-27). */}
               {selectedClientId && accountServicesResolving && (
-                <p className="text-xs text-subtle-text mt-1">Resolving account services…</p>
+                <p className="text-xs text-subtle-text mt-1">{t('form.resolvingAccountServices')}</p>
               )}
               {selectedClientId && !accountServicesResolving && !resolvedAccountServicesId && (
-                <p className="text-xs text-danger mt-1">This client has no linked account services.</p>
+                <p className="text-xs text-danger mt-1">{t('form.noAccountServices')}</p>
               )}
 
               {/* Added: Inline client creation form */}
               {showNewClientForm && (
                 <div className="mt-3 p-4 rounded-lg border border-primary/30 bg-primary/5" data-testid="invoice-new-client-form">
-                  <h3 className="text-sm font-bold text-text-light dark:text-text-dark mb-3">Quick Add Client</h3>
+                  <h3 className="text-sm font-bold text-text-light dark:text-text-dark mb-3">{t('quickAddClient.title')}</h3>
 
                   {/* Client type toggle */}
                   <div className="flex gap-2 mb-3">
@@ -732,7 +737,7 @@ export function InvoiceFormPage() {
                       data-testid="new-client-type-individual"
                     >
                       <span className="material-symbols-outlined text-sm">person</span>
-                      Individual
+                      {t('quickAddClient.individual')}
                     </button>
                     <button
                       type="button"
@@ -745,7 +750,7 @@ export function InvoiceFormPage() {
                       data-testid="new-client-type-corporate"
                     >
                       <span className="material-symbols-outlined text-sm">business</span>
-                      Corporate
+                      {t('quickAddClient.corporate')}
                     </button>
                   </div>
 
@@ -757,7 +762,7 @@ export function InvoiceFormPage() {
                           type="text"
                           value={newClientFirstName}
                           onChange={(e) => setNewClientFirstName(e.target.value)}
-                          placeholder="First name *"
+                          placeholder={t('quickAddClient.firstName')}
                           className="h-10 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-3 text-sm text-text-light dark:text-text-dark placeholder:text-subtle-text focus:border-primary focus:ring-1 focus:ring-primary/50"
                           data-testid="new-client-first-name"
                         />
@@ -765,7 +770,7 @@ export function InvoiceFormPage() {
                           type="text"
                           value={newClientLastName}
                           onChange={(e) => setNewClientLastName(e.target.value)}
-                          placeholder="Last name *"
+                          placeholder={t('quickAddClient.lastName')}
                           className="h-10 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-3 text-sm text-text-light dark:text-text-dark placeholder:text-subtle-text focus:border-primary focus:ring-1 focus:ring-primary/50"
                           data-testid="new-client-last-name"
                         />
@@ -775,7 +780,7 @@ export function InvoiceFormPage() {
                         type="text"
                         value={newClientCompanyName}
                         onChange={(e) => setNewClientCompanyName(e.target.value)}
-                        placeholder="Company name *"
+                        placeholder={t('quickAddClient.companyName')}
                         className="w-full h-10 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-3 text-sm text-text-light dark:text-text-dark placeholder:text-subtle-text focus:border-primary focus:ring-1 focus:ring-primary/50"
                         data-testid="new-client-company-name"
                       />
@@ -785,7 +790,7 @@ export function InvoiceFormPage() {
                       type="email"
                       value={newClientEmail}
                       onChange={(e) => setNewClientEmail(e.target.value)}
-                      placeholder="Email address *"
+                      placeholder={t('quickAddClient.email')}
                       className="w-full h-10 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-3 text-sm text-text-light dark:text-text-dark placeholder:text-subtle-text focus:border-primary focus:ring-1 focus:ring-primary/50"
                       data-testid="new-client-email"
                     />
@@ -807,12 +812,12 @@ export function InvoiceFormPage() {
                     {createClientMutation.isPending ? (
                       <>
                         <span className="material-symbols-outlined text-sm animate-spin">progress_activity</span>
-                        Creating...
+                        {t('quickAddClient.creating')}
                       </>
                     ) : (
                       <>
                         <span className="material-symbols-outlined text-sm">add</span>
-                        Create & Select
+                        {t('quickAddClient.create')}
                       </>
                     )}
                   </button>
@@ -824,7 +829,7 @@ export function InvoiceFormPage() {
             {isEdit && invoice?.number && (
               <div>
                 <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                  Invoice Number
+                  {t('fields.invoiceNumber')}
                 </label>
                 <input
                   type="text"
@@ -839,7 +844,7 @@ export function InvoiceFormPage() {
             {/* Invoice Date */}
             <div>
               <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                Invoice Date <span className="text-danger">*</span>
+                {t('fields.invoiceDate')} <span className="text-danger">*</span>
               </label>
               <input
                 type="date"
@@ -860,7 +865,7 @@ export function InvoiceFormPage() {
             {/* Payment Date (Due Date) */}
             <div>
               <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                Due Date <span className="text-danger">*</span>
+                {t('fields.dueDate')} <span className="text-danger">*</span>
               </label>
               <input
                 type="date"
@@ -874,14 +879,14 @@ export function InvoiceFormPage() {
             {/* PO Number */}
             <div>
               <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                PO Number
+                {t('fields.poNumber')}
               </label>
               <input
                 type="text"
                 value={purchaseOrderNumber}
                 onChange={(e) => setPurchaseOrderNumber(e.target.value)}
                 className="w-full h-12 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-3 text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/50"
-                placeholder="Purchase order number"
+                placeholder={t('fields.poNumberPlaceholder')}
                 data-testid="invoice-po-number-input"
               />
             </div>
@@ -889,14 +894,14 @@ export function InvoiceFormPage() {
             {/* Added: Sales Order Number (gap analysis §2.1) */}
             <div>
               <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                SO Number
+                {t('fields.soNumber')}
               </label>
               <input
                 type="text"
                 value={salesOrderNumber}
                 onChange={(e) => setSalesOrderNumber(e.target.value)}
                 className="w-full h-12 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-3 text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/50"
-                placeholder="Sales order number"
+                placeholder={t('fields.soNumberPlaceholder')}
                 data-testid="invoice-so-number-input"
               />
             </div>
@@ -904,14 +909,14 @@ export function InvoiceFormPage() {
             {/* Notes */}
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                Notes
+                {t('fields.notes')}
               </label>
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={3}
                 className="w-full rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark p-3 text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/50"
-                placeholder="Add notes to appear on the invoice..."
+                placeholder={t('fields.notesPlaceholder')}
                 data-testid="invoice-notes-textarea"
               />
             </div>
@@ -927,14 +932,14 @@ export function InvoiceFormPage() {
                 <span className="material-symbols-outlined text-base transition-transform" style={{ transform: showAdvanced ? 'rotate(90deg)' : 'rotate(0)' }}>
                   chevron_right
                 </span>
-                Advanced Options
+                {t('form.advancedOptions')}
               </button>
               {showAdvanced && (
                 <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded-lg border border-border-light dark:border-border-dark bg-background-light/50 dark:bg-background-dark/50" data-testid="invoice-advanced-section">
                   {/* Currency */}
                   <div>
                     <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                      Currency
+                      {t('fields.currency')}
                     </label>
                     <select
                       value={currency}
@@ -942,7 +947,7 @@ export function InvoiceFormPage() {
                       className="w-full h-12 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-3 text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/50"
                       data-testid="invoice-currency-select"
                     >
-                      <option value="">Account default</option>
+                      <option value="">{t('fields.currencyDefault')}</option>
                       {DEFAULT_CURRENCIES.map((c) => (
                         <option key={c.code} value={c.code}>{c.code} - {c.label}</option>
                       ))}
@@ -952,7 +957,7 @@ export function InvoiceFormPage() {
                   {currency && (
                     <div>
                       <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                        Exchange Rate
+                        {t('fields.exchangeRate')}
                       </label>
                       <input
                         type="number"
@@ -969,14 +974,14 @@ export function InvoiceFormPage() {
                   {/* Added: Compliments (optional closing remarks on invoice) */}
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                      Compliments
+                      {t('fields.compliments')}
                     </label>
                     <textarea
                       value={compliments}
                       onChange={(e) => setCompliments(e.target.value)}
                       rows={2}
                       className="w-full rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark p-3 text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/50"
-                      placeholder="Closing remarks or thank you message..."
+                      placeholder={t('fields.complimentsPlaceholder')}
                       data-testid="invoice-compliments-textarea"
                     />
                   </div>
@@ -989,7 +994,7 @@ export function InvoiceFormPage() {
         {/* Line Items Card */}
         <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden" data-testid="invoice-items-card">
           <div className="px-6 py-4 border-b border-border-light dark:border-border-dark flex justify-between items-center">
-            <h2 className="text-lg font-bold text-text-light dark:text-text-dark">Line Items</h2>
+            <h2 className="text-lg font-bold text-text-light dark:text-text-dark">{t('lineItems.title')}</h2>
             <button
               type="button"
               onClick={addLineItem}
@@ -997,7 +1002,7 @@ export function InvoiceFormPage() {
               data-testid="invoice-add-item-button"
             >
               <span className="material-symbols-outlined text-base mr-1">add</span>
-              Add Item
+              {t('lineItems.addItem')}
             </button>
           </div>
           <div className="overflow-x-auto">
@@ -1005,15 +1010,15 @@ export function InvoiceFormPage() {
               <thead className="text-xs text-subtle-text uppercase bg-background-light dark:bg-background-dark">
                 <tr>
                   {/* Added: Service/Product reference dropdown column before Description */}
-                  <th className="px-4 py-3 text-left w-44">Service/Product</th>
-                  <th className="px-4 py-3 text-left">Description</th>
-                  <th className="px-4 py-3 text-right w-20">Qty</th>
-                  <th className="px-4 py-3 text-right w-28">Unit Price</th>
+                  <th className="px-4 py-3 text-left w-44">{t('lineItems.service')}</th>
+                  <th className="px-4 py-3 text-left">{t('lineItems.description')}</th>
+                  <th className="px-4 py-3 text-right w-20">{t('lineItems.quantity')}</th>
+                  <th className="px-4 py-3 text-right w-28">{t('lineItems.unitPrice')}</th>
                   {/* Removed (SOUPFIN-37): "Disc %" — no discount field exists
                       on the backend, so the column promised a reduction the
                       saved invoice never had. */}
-                  <th className="px-4 py-3 text-right w-32">Tax</th>
-                  <th className="px-4 py-3 text-right w-28">Amount</th>
+                  <th className="px-4 py-3 text-right w-32">{t('lineItems.tax')}</th>
+                  <th className="px-4 py-3 text-right w-28">{t('lineItems.amount')}</th>
                   <th className="px-4 py-3 w-14"></th>
                 </tr>
               </thead>
@@ -1031,7 +1036,7 @@ export function InvoiceFormPage() {
                           data-testid={`invoice-item-service-${index}`}
                           defaultValue=""
                         >
-                          <option value="">Select...</option>
+                          <option value="">{t('lineItems.selectService')}</option>
                           {serviceDescriptions?.map((service) => (
                             <option key={service.id} value={service.id}>
                               {service.name}
@@ -1045,7 +1050,7 @@ export function InvoiceFormPage() {
                           value={item.description}
                           onChange={(e) => updateLineItem(index, 'description', e.target.value)}
                           className="w-full h-10 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-3 text-text-light dark:text-text-dark focus:border-primary focus:ring-1 focus:ring-primary/50"
-                          placeholder="Item description"
+                          placeholder={t('lineItems.descriptionPlaceholder')}
                           data-testid={`invoice-item-description-${index}`}
                         />
                       </td>
@@ -1089,7 +1094,7 @@ export function InvoiceFormPage() {
                               </option>
                             ))
                           ) : (
-                            <option value="">No Tax</option>
+                            <option value="">{t('lineItems.noTax')}</option>
                           )}
                         </select>
                       </td>
@@ -1103,6 +1108,8 @@ export function InvoiceFormPage() {
                           disabled={lineItems.length === 1}
                           className="text-danger hover:text-danger/70 disabled:opacity-30 disabled:cursor-not-allowed"
                           data-testid={`invoice-item-remove-${index}`}
+                          aria-label={t('lineItems.removeItem')}
+                          title={t('lineItems.removeItem')}
                         >
                           <span className="material-symbols-outlined text-xl">delete</span>
                         </button>
@@ -1119,7 +1126,7 @@ export function InvoiceFormPage() {
             <div className="flex justify-end">
               <div className="w-64 space-y-2">
                 <div className="flex justify-between text-text-light dark:text-text-dark">
-                  <span className="text-subtle-text">Subtotal</span>
+                  <span className="text-subtle-text">{t('fields.subtotal')}</span>
                   <span data-testid="invoice-subtotal">{formatCurrency(subtotal)}</span>
                 </div>
                 {/* Removed (SOUPFIN-37): the Discount row. It reduced the
@@ -1127,11 +1134,11 @@ export function InvoiceFormPage() {
                     store, so the invoice always saved at the undiscounted
                     figure while the form claimed otherwise. */}
                 <div className="flex justify-between text-text-light dark:text-text-dark">
-                  <span className="text-subtle-text">Tax</span>
+                  <span className="text-subtle-text">{t('fields.tax')}</span>
                   <span data-testid="invoice-tax">{formatCurrency(taxAmount)}</span>
                 </div>
                 <div className="flex justify-between text-lg font-bold text-text-light dark:text-text-dark border-t border-border-light dark:border-border-dark pt-2">
-                  <span>Total</span>
+                  <span>{t('fields.total')}</span>
                   <span data-testid="invoice-total">{formatCurrency(totalAmount)}</span>
                 </div>
               </div>

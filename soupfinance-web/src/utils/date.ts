@@ -114,3 +114,28 @@ export function getCurrentMonthRange(reference: Date = new Date()): {
 export function getFirstDayOfCurrentMonth(reference: Date = new Date()): string {
   return getCurrentMonthRange(reference).from;
 }
+
+/**
+ * Added (SOUPFIN-167): Format a date for display in the user's chosen UI
+ * language, e.g. "Mar 1, 2024" (en), "1. März 2024" (de), "1 mars 2024" (fr).
+ *
+ * Same parsing as `formatDisplayDate()` above — the parts are read manually so
+ * a YYYY-MM-DD value never shifts a day through UTC midnight. Returns '' for
+ * unusable input (null, "0000-00-00", garbage) so callers choose the
+ * placeholder, and falls back to English when the locale tag is not one the
+ * runtime knows.
+ */
+export function formatLocaleDate(value: string | number | null | undefined, locale: string): string {
+  const sanitized = sanitizeDateInputValue(value);
+  if (!sanitized) return '';
+  const [year, month, day] = sanitized.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+  if (Number.isNaN(date.getTime())) return '';
+  const options: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'short', day: 'numeric' };
+  try {
+    return date.toLocaleDateString(locale || 'en', options);
+  } catch {
+    // RangeError: an invalid language tag must not blank the whole page
+    return date.toLocaleDateString('en', options);
+  }
+}

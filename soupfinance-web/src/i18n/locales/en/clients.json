@@ -1,0 +1,112 @@
+{
+  "title": "Clients",
+  "subtitle": "Manage your customers and billing contacts",
+  "newClient": "New Client",
+  "unnamed": "Unnamed client",
+  "types": {
+    "individual": "Individual",
+    "corporate": "Corporate",
+    "all": "All Types"
+  },
+  "fields": {
+    "name": "Name",
+    "type": "Type",
+    "firstName": "First Name",
+    "lastName": "Last Name",
+    "companyName": "Company Name",
+    "contactPerson": "Contact Person",
+    "registrationNumber": "Registration Number",
+    "taxNumber": "Tax Number",
+    "email": "Email",
+    "phone": "Phone",
+    "address": "Address"
+  },
+  "actions": {
+    "view": "View",
+    "edit": "Edit",
+    "delete": "Delete",
+    "deleting": "Deleting...",
+    "cancel": "Cancel",
+    "close": "Close",
+    "retry": "Retry",
+    "clearFilters": "Clear filters",
+    "backToList": "Back to Clients",
+    "addClient": "Add Client",
+    "createInvoice": "Create Invoice"
+  },
+  "list": {
+    "searchLabel": "Search clients",
+    "searchPlaceholder": "Search clients...",
+    "typeFilterLabel": "Filter clients by type",
+    "filtering": "Filtering…",
+    "loading": "Loading clients...",
+    "errorTitle": "Failed to load clients",
+    "errorBody": "There was an error loading your clients. Please try again.",
+    "actionsColumn": "Actions",
+    "noResultsTitle": "No clients match your filters",
+    "noResultsSearchIndividual": "No individual clients match \"{{search}}\". Try broadening your search or removing filters.",
+    "noResultsSearchCorporate": "No corporate clients match \"{{search}}\". Try broadening your search or removing filters.",
+    "noResultsSearch": "No clients match \"{{search}}\". Try a different search term.",
+    "noResultsIndividual": "No individual clients found. Try a different type or clear the filter.",
+    "noResultsCorporate": "No corporate clients found. Try a different type or clear the filter.",
+    "emptyTitle": "No clients yet",
+    "emptyBody": "Add your first client to start creating invoices."
+  },
+  "deleteDialog": {
+    "title": "Delete Client",
+    "confirm": "Are you sure you want to delete <bold>{{name}}</bold>?",
+    "body": "This action cannot be undone. Invoices associated with this client will remain but the client reference will be removed.",
+    "error": "Could not delete this client. Please try again."
+  },
+  "detail": {
+    "loading": "Loading client...",
+    "notFoundTitle": "Client not found",
+    "notFoundBody": "The client you're looking for doesn't exist or has been deleted.",
+    "subtitle": "Client Details",
+    "personalInfo": "Personal Information",
+    "companyInfo": "Company Information",
+    "contactInfo": "Contact Information",
+    "billingAddress": "Billing Address",
+    "notProvided": "Not provided",
+    "quickActions": "Quick Actions"
+  },
+  "form": {
+    "loading": "Loading client...",
+    "headingNew": "New Client",
+    "headingEdit": "Edit Client",
+    "subtitleNew": "Add a new client for invoicing",
+    "subtitleEdit": "Update client information",
+    "saving": "Saving...",
+    "create": "Create Client",
+    "update": "Update Client",
+    "createShort": "Create",
+    "updateShort": "Update",
+    "saveFailed": "Failed to save client",
+    "unexpectedError": "An unexpected error occurred",
+    "clientType": "Client Type",
+    "placeholders": {
+      "firstName": "Enter first name",
+      "lastName": "Enter last name",
+      "companyName": "Enter company name",
+      "contactPerson": "Primary contact name",
+      "registrationNumber": "Company registration number",
+      "taxNumber": "Tax identification number",
+      "email": "client@example.com",
+      "phone": "+1 (555) 123-4567",
+      "address": "Enter billing address"
+    }
+  },
+  "validation": {
+    "emailInvalid": "Invalid email address",
+    "phoneTooLong": "Phone number is too long",
+    "addressTooLong": "Address is too long",
+    "firstNameTooLong": "First name is too long",
+    "lastNameTooLong": "Last name is too long",
+    "companyNameTooLong": "Company name is too long",
+    "contactPersonTooLong": "Contact person is too long",
+    "registrationNumberTooLong": "Registration number is too long",
+    "taxNumberTooLong": "Tax number is too long",
+    "namesRequired": "First name and last name are required for individuals",
+    "companyNameRequired": "Company name is required for corporate clients"
+  }
+}

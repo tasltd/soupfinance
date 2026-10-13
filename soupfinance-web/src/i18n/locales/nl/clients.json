@@ -1,0 +1,112 @@
+{
+  "title": "Klanten",
+  "subtitle": "Beheer uw klanten en factuurcontacten",
+  "newClient": "Nieuwe klant",
+  "unnamed": "Naamloze klant",
+  "types": {
+    "individual": "Particulier",
+    "corporate": "Bedrijf",
+    "all": "Alle typen"
+  },
+  "fields": {
+    "name": "Naam",
+    "type": "Type",
+    "firstName": "Voornaam",
+    "lastName": "Achternaam",
+    "companyName": "Bedrijfsnaam",
+    "contactPerson": "Contactpersoon",
+    "registrationNumber": "KvK-nummer",
+    "taxNumber": "Btw-nummer",
+    "email": "E-mail",
+    "phone": "Telefoon",
+    "address": "Adres"
+  },
+  "actions": {
+    "view": "Bekijken",
+    "edit": "Bewerken",
+    "delete": "Verwijderen",
+    "deleting": "Bezig met verwijderen...",
+    "cancel": "Annuleren",
+    "close": "Sluiten",
+    "retry": "Opnieuw proberen",
+    "clearFilters": "Filters wissen",
+    "backToList": "Terug naar klanten",
+    "addClient": "Klant toevoegen",
+    "createInvoice": "Factuur maken"
+  },
+  "list": {
+    "searchLabel": "Klanten zoeken",
+    "searchPlaceholder": "Klanten zoeken...",
+    "typeFilterLabel": "Klanten filteren op type",
+    "filtering": "Bezig met filteren…",
+    "loading": "Klanten laden...",
+    "errorTitle": "Klanten konden niet worden geladen",
+    "errorBody": "Er is een fout opgetreden bij het laden van uw klanten. Probeer het opnieuw.",
+    "actionsColumn": "Acties",
+    "noResultsTitle": "Geen klanten gevonden met deze filters",
+    "noResultsSearchIndividual": "Geen particuliere klanten gevonden voor \"{{search}}\". Verruim uw zoekopdracht of verwijder filters.",
+    "noResultsSearchCorporate": "Geen zakelijke klanten gevonden voor \"{{search}}\". Verruim uw zoekopdracht of verwijder filters.",
+    "noResultsSearch": "Geen klanten gevonden voor \"{{search}}\". Probeer een andere zoekterm.",
+    "noResultsIndividual": "Geen particuliere klanten gevonden. Kies een ander type of wis het filter.",
+    "noResultsCorporate": "Geen zakelijke klanten gevonden. Kies een ander type of wis het filter.",
+    "emptyTitle": "Nog geen klanten",
+    "emptyBody": "Voeg uw eerste klant toe om facturen te maken."
+  },
+  "deleteDialog": {
+    "title": "Klant verwijderen",
+    "confirm": "Weet u zeker dat u <bold>{{name}}</bold> wilt verwijderen?",
+    "body": "Dit kan niet ongedaan worden gemaakt. Facturen van deze klant blijven bestaan, maar zijn niet langer aan de klant gekoppeld.",
+    "error": "Deze klant kon niet worden verwijderd. Probeer het opnieuw."
+  },
+  "detail": {
+    "loading": "Klant laden...",
+    "notFoundTitle": "Klant niet gevonden",
+    "notFoundBody": "De klant die u zoekt bestaat niet of is verwijderd.",
+    "subtitle": "Klantgegevens",
+    "personalInfo": "Persoonsgegevens",
+    "companyInfo": "Bedrijfsgegevens",
+    "contactInfo": "Contactgegevens",
+    "billingAddress": "Factuuradres",
+    "notProvided": "Niet opgegeven",
+    "quickActions": "Snelle acties"
+  },
+  "form": {
+    "loading": "Klant laden...",
+    "headingNew": "Nieuwe klant",
+    "headingEdit": "Klant bewerken",
+    "subtitleNew": "Voeg een nieuwe klant toe om te factureren",
+    "subtitleEdit": "Werk de klantgegevens bij",
+    "saving": "Bezig met opslaan...",
+    "create": "Klant aanmaken",
+    "update": "Klant bijwerken",
+    "createShort": "Aanmaken",
+    "updateShort": "Bijwerken",
+    "saveFailed": "Klant kon niet worden opgeslagen",
+    "unexpectedError": "Er is een onverwachte fout opgetreden",
+    "clientType": "Type klant",
+    "placeholders": {
+      "firstName": "Voer de voornaam in",
+      "lastName": "Voer de achternaam in",
+      "companyName": "Voer de bedrijfsnaam in",
+      "contactPerson": "Naam van de contactpersoon",
+      "registrationNumber": "KvK-nummer van het bedrijf",
+      "taxNumber": "Fiscaal identificatienummer",
+      "email": "klant@voorbeeld.nl",
+      "phone": "+31 20 123 4567",
+      "address": "Voer het factuuradres in"
+    }
+  },
+  "validation": {
+    "emailInvalid": "Ongeldig e-mailadres",
+    "phoneTooLong": "Het telefoonnummer is te lang",
+    "addressTooLong": "Het adres is te lang",
+    "firstNameTooLong": "De voornaam is te lang",
+    "lastNameTooLong": "De achternaam is te lang",
+    "companyNameTooLong": "De bedrijfsnaam is te lang",
+    "contactPersonTooLong": "De contactpersoon is te lang",
+    "registrationNumberTooLong": "Het KvK-nummer is te lang",
+    "taxNumberTooLong": "Het btw-nummer is te lang",
+    "namesRequired": "Voornaam en achternaam zijn verplicht voor particulieren",
+    "companyNameRequired": "Bedrijfsnaam is verplicht voor zakelijke klanten"
+  }
+}

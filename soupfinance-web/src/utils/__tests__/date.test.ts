@@ -6,7 +6,7 @@
  * locale placeholder rather than a zero date.
  */
 import { describe, it, expect } from 'vitest';
-import { sanitizeDateInputValue, formatDisplayDate } from '../date';
+import { sanitizeDateInputValue, formatDisplayDate, formatLocaleDate } from '../date';
 
 describe('sanitizeDateInputValue (SOUPFIN-19)', () => {
   it('returns "" for null / undefined / empty values', () => {
@@ -66,5 +66,38 @@ describe('formatDisplayDate (SOUPFIN-30 #12)', () => {
     expect(formatDisplayDate('0/0/0')).toBe('');
     expect(formatDisplayDate('not-a-date')).toBe('');
     expect(formatDisplayDate('01/01/2026')).toBe('');
+  });
+});
+
+// Added (SOUPFIN-167)
+describe('formatLocaleDate', () => {
+  it('formats a YYYY-MM-DD date in each supported language', () => {
+    expect(formatLocaleDate('2024-03-01', 'en')).toBe('Mar 1, 2024');
+    expect(formatLocaleDate('2024-03-01', 'de')).toBe('1. März 2024');
+    expect(formatLocaleDate('2024-03-01', 'fr')).toBe('1 mars 2024');
+    expect(formatLocaleDate('2024-03-01', 'nl')).toBe('1 mrt 2024');
+  });
+
+  it('never shifts the day: the first and last day of a year stay put', () => {
+    expect(formatLocaleDate('2026-01-01', 'en')).toBe('Jan 1, 2026');
+    expect(formatLocaleDate('2026-12-31', 'de')).toBe('31. Dez. 2026');
+  });
+
+  it('accepts an ISO datetime and keeps its calendar day', () => {
+    expect(formatLocaleDate('2024-02-29T23:59:59.000Z', 'en')).toBe('Feb 29, 2024');
+  });
+
+  it('returns "" for empty, sentinel and malformed values so callers pick the placeholder', () => {
+    expect(formatLocaleDate(null, 'de')).toBe('');
+    expect(formatLocaleDate(undefined, 'de')).toBe('');
+    expect(formatLocaleDate('', 'de')).toBe('');
+    expect(formatLocaleDate('0000-00-00', 'de')).toBe('');
+    expect(formatLocaleDate('not-a-date', 'de')).toBe('');
+  });
+
+  it('handles far-future years and falls back to English for a rejected locale tag', () => {
+    expect(formatLocaleDate('9999-12-31', 'en')).toBe('Dec 31, 9999');
+    expect(formatLocaleDate('2024-03-01', 'not a locale!')).toBe('Mar 1, 2024');
+    expect(formatLocaleDate('2024-03-01', '')).toBe('Mar 1, 2024');
   });
 });

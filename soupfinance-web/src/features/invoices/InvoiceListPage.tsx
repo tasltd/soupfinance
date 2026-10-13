@@ -4,15 +4,21 @@
  */
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+// Added (SOUPFIN-167): every visible string comes from the invoices namespace
+import { useTranslation } from 'react-i18next';
 import { listInvoices } from '../../api';
 import { useFormatCurrency } from '../../stores';
 // Added: GSAP page entrance animation (SOUP-679)
 import { usePageEntrance } from '../../hooks/useGsapAnimations';
 // Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
 import { HelpLink } from '../../components/help';
+import { formatLocaleDate } from '../../utils/date';
+import { InvoiceStatusBadge } from './InvoiceStatusBadge';
 
 export function InvoiceListPage() {
-  const formatCurrency = useFormatCurrency();
+  const { t, i18n } = useTranslation('invoices');
+  // Added (SOUPFIN-167): amounts and dates follow the reader's language
+  const formatCurrency = useFormatCurrency(i18n.language);
   // Added: GSAP page entrance animation ref (SOUP-679)
   const pageRef = usePageEntrance();
 
@@ -29,9 +35,9 @@ export function InvoiceListPage() {
       <div className="flex flex-wrap justify-between items-center gap-4">
         <div>
           <h1 className="text-3xl font-black tracking-tight text-text-light dark:text-text-dark" data-testid="invoice-list-heading">
-            Invoices
+            {t('title')}
           </h1>
-          <p className="text-subtle-text">Manage and track your invoices</p>
+          <p className="text-subtle-text">{t('subtitle')}</p>
           <HelpLink section="invoices" className="mt-1 self-start" />
         </div>
         <Link
@@ -40,26 +46,26 @@ export function InvoiceListPage() {
           data-testid="invoice-new-button"
         >
           <span className="material-symbols-outlined text-lg">add</span>
-          New Invoice
+          {t('newInvoice')}
         </Link>
       </div>
 
       {/* Invoice Table */}
       <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden" data-testid="invoice-table-container">
         {isLoading ? (
-          <div className="p-8 text-center text-subtle-text" data-testid="invoice-list-loading">Loading invoices...</div>
+          <div className="p-8 text-center text-subtle-text" data-testid="invoice-list-loading">{t('list.loading')}</div>
         ) : error ? (
           // Added: Error state when API fails
           <div className="p-12 text-center" data-testid="invoice-list-error">
             <span className="material-symbols-outlined text-6xl text-danger/50 mb-4">error</span>
-            <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">Failed to load invoices</h3>
-            <p className="text-subtle-text mb-4">There was an error loading your invoices. Please try again.</p>
+            <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">{t('list.errorTitle')}</h3>
+            <p className="text-subtle-text mb-4">{t('list.errorBody')}</p>
             <button
               onClick={() => window.location.reload()}
               className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm"
             >
               <span className="material-symbols-outlined text-lg">refresh</span>
-              Retry
+              {t('actions.retry')}
             </button>
           </div>
         ) : invoices?.length ? (
@@ -68,14 +74,14 @@ export function InvoiceListPage() {
             <table className="w-full min-w-[700px] text-sm" data-testid="invoice-list-table">
               <thead className="text-xs text-subtle-text uppercase bg-background-light dark:bg-background-dark">
                 <tr>
-                  <th className="px-4 sm:px-6 py-3 text-left">Invoice #</th>
+                  <th className="px-4 sm:px-6 py-3 text-left">{t('list.columns.number')}</th>
                   {/* Changed: Label from Account to Client */}
-                  <th className="px-4 sm:px-6 py-3 text-left">Client</th>
-                  <th className="px-4 sm:px-6 py-3 text-left">Invoice Date</th>
-                  <th className="px-4 sm:px-6 py-3 text-left">Due Date</th>
-                  <th className="px-4 sm:px-6 py-3 text-right">Amount</th>
-                  <th className="px-4 sm:px-6 py-3 text-center">Status</th>
-                  <th className="px-4 sm:px-6 py-3 text-center">Actions</th>
+                  <th className="px-4 sm:px-6 py-3 text-left">{t('list.columns.client')}</th>
+                  <th className="px-4 sm:px-6 py-3 text-left">{t('list.columns.invoiceDate')}</th>
+                  <th className="px-4 sm:px-6 py-3 text-left">{t('list.columns.dueDate')}</th>
+                  <th className="px-4 sm:px-6 py-3 text-right">{t('list.columns.amount')}</th>
+                  <th className="px-4 sm:px-6 py-3 text-center">{t('list.columns.status')}</th>
+                  <th className="px-4 sm:px-6 py-3 text-center">{t('list.columns.actions')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -86,21 +92,20 @@ export function InvoiceListPage() {
                         {String(invoice.number)}
                       </Link>
                     </td>
-                    <td className="px-4 sm:px-6 py-4 text-text-light dark:text-text-dark">{invoice.accountServices?.serialised || 'N/A'}</td>
-                    <td className="px-4 sm:px-6 py-4 text-subtle-text">{invoice.invoiceDate}</td>
-                    <td className="px-4 sm:px-6 py-4 text-subtle-text">{invoice.paymentDate}</td>
+                    <td className="px-4 sm:px-6 py-4 text-text-light dark:text-text-dark">{invoice.accountServices?.serialised || t('notAvailable')}</td>
+                    <td className="px-4 sm:px-6 py-4 text-subtle-text">{formatLocaleDate(invoice.invoiceDate, i18n.language) || '-'}</td>
+                    <td className="px-4 sm:px-6 py-4 text-subtle-text">{formatLocaleDate(invoice.paymentDate, i18n.language) || '-'}</td>
                     <td className="px-4 sm:px-6 py-4 text-right font-medium text-text-light dark:text-text-dark">
                       {formatCurrency(invoice.totalAmount)}
                     </td>
                     <td className="px-4 sm:px-6 py-4 text-center">
                       {/* Fix: invoice.status is optional, default to DRAFT */}
-                      <span className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${getStatusStyle(invoice.status || 'DRAFT')}`} data-testid={`invoice-status-${invoice.id}`}>
-                        {invoice.status || 'DRAFT'}
-                      </span>
+                      {/* Changed (SOUPFIN-167): translated label, not the raw enum */}
+                      <InvoiceStatusBadge status={invoice.status} data-testid={`invoice-status-${invoice.id}`} />
                     </td>
                     <td className="px-4 sm:px-6 py-4 text-center">
                       <Link to={`/invoices/${invoice.id}/edit`} className="text-primary hover:underline text-sm" data-testid={`invoice-edit-${invoice.id}`}>
-                        Edit
+                        {t('actions.edit')}
                       </Link>
                     </td>
                   </tr>
@@ -111,26 +116,15 @@ export function InvoiceListPage() {
         ) : (
           <div className="p-12 text-center" data-testid="invoice-list-empty">
             <span className="material-symbols-outlined text-6xl text-subtle-text/50 mb-4">receipt_long</span>
-            <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">No invoices yet</h3>
-            <p className="text-subtle-text mb-4">Create your first invoice to start tracking payments.</p>
+            <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">{t('list.emptyTitle')}</h3>
+            <p className="text-subtle-text mb-4">{t('list.emptyBody')}</p>
             <Link to="/invoices/new" className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm" data-testid="invoice-create-first-button">
               <span className="material-symbols-outlined text-lg">add</span>
-              Create Invoice
+              {t('actions.createInvoice')}
             </Link>
           </div>
         )}
       </div>
     </div>
   );
-}
-
-function getStatusStyle(status: string): string {
-  const styles: Record<string, string> = {
-    PAID: 'bg-success/10 text-success',
-    SENT: 'bg-info/10 text-info',
-    PENDING: 'bg-warning/10 text-warning',
-    OVERDUE: 'bg-danger/10 text-danger',
-    DRAFT: 'bg-subtle-text/10 text-subtle-text',
-  };
-  return styles[status] || styles.DRAFT;
 }

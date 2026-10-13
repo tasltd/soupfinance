@@ -7,6 +7,8 @@
  * - Dynamic form fields based on selected type
  */
 import { useEffect, useState } from 'react';
+// Added (SOUPFIN-167): every visible string comes from the clients namespace
+import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -18,23 +20,30 @@ import type { ClientType } from '../../api/endpoints/clients';
 import { Input, Textarea } from '../../components/forms';
 // Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
 import { HelpLink } from '../../components/help';
+import type enClients from '../../i18n/locales/en/clients.json';
+
+// Changed (SOUPFIN-167): the schema is built once, outside React, so its
+// messages are translation KEYS. The page translates them when it renders an
+// error, which also re-translates a visible error if the user switches language.
+type ValidationKey = `validation.${keyof typeof enClients.validation}`;
+const msg = (key: ValidationKey) => key;
 
 // Validation schema with conditional requirements based on clientType
 const clientSchema = z.object({
   clientType: z.enum(['INDIVIDUAL', 'CORPORATE']),
-  email: z.string().email('Invalid email address'),
-  phone: z.string().max(50, 'Phone number is too long').optional().or(z.literal('')),
-  address: z.string().max(500, 'Address is too long').optional().or(z.literal('')),
+  email: z.string().email(msg('validation.emailInvalid')),
+  phone: z.string().max(50, msg('validation.phoneTooLong')).optional().or(z.literal('')),
+  address: z.string().max(500, msg('validation.addressTooLong')).optional().or(z.literal('')),
 
   // Individual fields
-  firstName: z.string().max(100, 'First name is too long').optional().or(z.literal('')),
-  lastName: z.string().max(100, 'Last name is too long').optional().or(z.literal('')),
+  firstName: z.string().max(100, msg('validation.firstNameTooLong')).optional().or(z.literal('')),
+  lastName: z.string().max(100, msg('validation.lastNameTooLong')).optional().or(z.literal('')),
 
   // Corporate fields
-  companyName: z.string().max(255, 'Company name is too long').optional().or(z.literal('')),
-  contactPerson: z.string().max(200, 'Contact person is too long').optional().or(z.literal('')),
-  registrationNumber: z.string().max(50, 'Registration number is too long').optional().or(z.literal('')),
-  taxNumber: z.string().max(50, 'Tax number is too long').optional().or(z.literal('')),
+  companyName: z.string().max(255, msg('validation.companyNameTooLong')).optional().or(z.literal('')),
+  contactPerson: z.string().max(200, msg('validation.contactPersonTooLong')).optional().or(z.literal('')),
+  registrationNumber: z.string().max(50, msg('validation.registrationNumberTooLong')).optional().or(z.literal('')),
+  taxNumber: z.string().max(50, msg('validation.taxNumberTooLong')).optional().or(z.literal('')),
 }).refine((data) => {
   // Individual requires firstName and lastName
   if (data.clientType === 'INDIVIDUAL') {
@@ -42,7 +51,7 @@ const clientSchema = z.object({
   }
   return true;
 }, {
-  message: 'First name and last name are required for individuals',
+  message: msg('validation.namesRequired'),
   path: ['firstName'],
 }).refine((data) => {
   // Corporate requires companyName
@@ -51,13 +60,17 @@ const clientSchema = z.object({
   }
   return true;
 }, {
-  message: 'Company name is required for corporate clients',
+  message: msg('validation.companyNameRequired'),
   path: ['companyName'],
 });
 
 type ClientFormData = z.infer<typeof clientSchema>;
 
 export function ClientFormPage() {
+  const { t } = useTranslation('clients');
+  // Resolve a schema message key; anything else (a future raw message) shows as-is
+  const errorText = (message?: string) =>
+    message?.startsWith('validation.') ? t(message as ValidationKey) : message;
   const { id } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -224,7 +237,7 @@ export function ClientFormPage() {
     return (
       <div className="flex flex-col gap-6" data-testid="client-form-page">
         <div className="flex items-center justify-center p-12 text-subtle-text">
-          Loading client...
+          {t('form.loading')}
         </div>
       </div>
     );
@@ -242,10 +255,10 @@ export function ClientFormPage() {
             className="text-3xl font-black tracking-tight text-text-light dark:text-text-dark"
             data-testid="client-form-heading"
           >
-            {isEdit ? 'Edit Client' : 'New Client'}
+            {isEdit ? t('form.headingEdit') : t('form.headingNew')}
           </h1>
           <p className="text-subtle-text">
-            {isEdit ? 'Update client information' : 'Add a new client for invoicing'}
+            {isEdit ? t('form.subtitleEdit') : t('form.subtitleNew')}
           </p>
           <HelpLink section="add-client" className="mt-1 self-start" />
         </div>
@@ -255,7 +268,7 @@ export function ClientFormPage() {
             className="h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm hover:bg-primary/5"
             data-testid="client-form-cancel"
           >
-            Cancel
+            {t('actions.cancel')}
           </button>
           <button
             onClick={handleSubmit(onSubmit)}
@@ -263,7 +276,7 @@ export function ClientFormPage() {
             className="h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90 disabled:opacity-50"
             data-testid="client-form-save"
           >
-            {isSaving ? 'Saving...' : isEdit ? 'Update Client' : 'Create Client'}
+            {isSaving ? t('form.saving') : isEdit ? t('form.update') : t('form.create')}
           </button>
         </div>
       </div>
@@ -276,9 +289,9 @@ export function ClientFormPage() {
         >
           <span className="material-symbols-outlined text-xl">error</span>
           <div>
-            <p className="font-medium">Failed to save client</p>
+            <p className="font-medium">{t('form.saveFailed')}</p>
             <p className="text-sm opacity-80">
-              {mutationError instanceof Error ? mutationError.message : 'An unexpected error occurred'}
+              {mutationError instanceof Error ? mutationError.message : t('form.unexpectedError')}
             </p>
           </div>
         </div>
@@ -293,7 +306,7 @@ export function ClientFormPage() {
         {/* Client Type Selection */}
         <div className="p-6 border-b border-border-light dark:border-border-dark">
           <h2 className="text-lg font-bold text-text-light dark:text-text-dark mb-4">
-            Client Type <span className="text-danger">*</span>
+            {t('form.clientType')} <span className="text-danger">*</span>
           </h2>
           {/* Fix (SOUPFIN-30 #14): collapse to a single column when the Corporate
               tab is hidden so the lone Individual tab doesn't stretch oddly. */}
@@ -325,7 +338,7 @@ export function ClientFormPage() {
                 <span className={`font-medium text-sm ${
                   clientType === 'INDIVIDUAL' ? 'text-primary' : 'text-text-light dark:text-text-dark'
                 }`}>
-                  Individual
+                  {t('types.individual')}
                 </span>
               </div>
             </button>
@@ -355,7 +368,7 @@ export function ClientFormPage() {
                 <span className={`font-medium text-sm ${
                   clientType === 'CORPORATE' ? 'text-primary' : 'text-text-light dark:text-text-dark'
                 }`}>
-                  Corporate
+                  {t('types.corporate')}
                 </span>
               </div>
             </button>
@@ -378,22 +391,22 @@ export function ClientFormPage() {
             data-testid="client-form-personal-section"
           >
             <h2 className="text-lg font-bold text-text-light dark:text-text-dark mb-6">
-              Personal Information
+              {t('detail.personalInfo')}
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Input
-                label="First Name"
-                placeholder="Enter first name"
+                label={t('fields.firstName')}
+                placeholder={t('form.placeholders.firstName')}
                 required={clientType === 'INDIVIDUAL'}
-                error={errors.firstName?.message}
+                error={errorText(errors.firstName?.message)}
                 {...register('firstName')}
                 data-testid="client-form-first-name"
               />
               <Input
-                label="Last Name"
-                placeholder="Enter last name"
+                label={t('fields.lastName')}
+                placeholder={t('form.placeholders.lastName')}
                 required={clientType === 'INDIVIDUAL'}
-                error={errors.lastName?.message}
+                error={errorText(errors.lastName?.message)}
                 {...register('lastName')}
                 data-testid="client-form-last-name"
               />
@@ -408,35 +421,35 @@ export function ClientFormPage() {
             data-testid="client-form-company-section"
           >
             <h2 className="text-lg font-bold text-text-light dark:text-text-dark mb-6">
-              Company Information
+              {t('detail.companyInfo')}
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Input
-                label="Company Name"
-                placeholder="Enter company name"
+                label={t('fields.companyName')}
+                placeholder={t('form.placeholders.companyName')}
                 required
-                error={errors.companyName?.message}
+                error={errorText(errors.companyName?.message)}
                 {...register('companyName')}
                 data-testid="client-form-company-name"
               />
               <Input
-                label="Contact Person"
-                placeholder="Primary contact name"
-                error={errors.contactPerson?.message}
+                label={t('fields.contactPerson')}
+                placeholder={t('form.placeholders.contactPerson')}
+                error={errorText(errors.contactPerson?.message)}
                 {...register('contactPerson')}
                 data-testid="client-form-contact-person"
               />
               <Input
-                label="Registration Number"
-                placeholder="Company registration number"
-                error={errors.registrationNumber?.message}
+                label={t('fields.registrationNumber')}
+                placeholder={t('form.placeholders.registrationNumber')}
+                error={errorText(errors.registrationNumber?.message)}
                 {...register('registrationNumber')}
                 data-testid="client-form-registration-number"
               />
               <Input
-                label="Tax Number"
-                placeholder="Tax identification number"
-                error={errors.taxNumber?.message}
+                label={t('fields.taxNumber')}
+                placeholder={t('form.placeholders.taxNumber')}
+                error={errorText(errors.taxNumber?.message)}
                 {...register('taxNumber')}
                 data-testid="client-form-tax-number"
               />
@@ -447,23 +460,23 @@ export function ClientFormPage() {
         {/* Contact Information */}
         <div className="p-6 border-b border-border-light dark:border-border-dark">
           <h2 className="text-lg font-bold text-text-light dark:text-text-dark mb-6">
-            Contact Information
+            {t('detail.contactInfo')}
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Input
-              label="Email"
+              label={t('fields.email')}
               type="email"
-              placeholder="client@example.com"
+              placeholder={t('form.placeholders.email')}
               required
-              error={errors.email?.message}
+              error={errorText(errors.email?.message)}
               {...register('email')}
               data-testid="client-form-email"
             />
             <Input
-              label="Phone"
+              label={t('fields.phone')}
               type="tel"
-              placeholder="+1 (555) 123-4567"
-              error={errors.phone?.message}
+              placeholder={t('form.placeholders.phone')}
+              error={errorText(errors.phone?.message)}
               {...register('phone')}
               data-testid="client-form-phone"
             />
@@ -473,13 +486,13 @@ export function ClientFormPage() {
         {/* Address */}
         <div className="p-6">
           <h2 className="text-lg font-bold text-text-light dark:text-text-dark mb-6">
-            Billing Address
+            {t('detail.billingAddress')}
           </h2>
           <Textarea
-            label="Address"
-            placeholder="Enter billing address"
+            label={t('fields.address')}
+            placeholder={t('form.placeholders.address')}
             rows={3}
-            error={errors.address?.message}
+            error={errorText(errors.address?.message)}
             {...register('address')}
             data-testid="client-form-address"
           />
@@ -493,7 +506,7 @@ export function ClientFormPage() {
           className="flex-1 h-12 px-4 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm hover:bg-primary/5"
           data-testid="client-form-cancel-mobile"
         >
-          Cancel
+          {t('actions.cancel')}
         </button>
         <button
           onClick={handleSubmit(onSubmit)}
@@ -501,7 +514,7 @@ export function ClientFormPage() {
           className="flex-1 h-12 px-4 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90 disabled:opacity-50"
           data-testid="client-form-save-mobile"
         >
-          {isSaving ? 'Saving...' : isEdit ? 'Update' : 'Create'}
+          {isSaving ? t('form.saving') : isEdit ? t('form.updateShort') : t('form.createShort')}
         </button>
       </div>
     </div>

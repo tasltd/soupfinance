@@ -9,6 +9,8 @@ import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getClient, deleteClient } from '../../api';
 import { useState } from 'react';
+// Added (SOUPFIN-167): every visible string comes from the clients namespace
+import { Trans, useTranslation } from 'react-i18next';
 // Fix (SOUP-1929): never-blank display name for the header + delete dialog.
 import { getClientDisplayName } from './getClientDisplayName';
 // Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
@@ -19,6 +21,7 @@ interface DeleteState {
 }
 
 export function ClientDetailPage() {
+  const { t } = useTranslation('clients');
   const { id } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -45,7 +48,7 @@ export function ClientDetailPage() {
     return (
       <div className="flex flex-col gap-6" data-testid="client-detail-page">
         <div className="flex items-center justify-center p-12 text-subtle-text">
-          Loading client...
+          {t('detail.loading')}
         </div>
       </div>
     );
@@ -57,13 +60,13 @@ export function ClientDetailPage() {
       <div className="flex flex-col gap-6" data-testid="client-detail-page">
         <div className="p-12 text-center">
           <span className="material-symbols-outlined text-6xl text-danger/50 mb-4 block">error</span>
-          <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">Client not found</h3>
-          <p className="text-subtle-text mb-4">The client you're looking for doesn't exist or has been deleted.</p>
+          <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">{t('detail.notFoundTitle')}</h3>
+          <p className="text-subtle-text mb-4">{t('detail.notFoundBody')}</p>
           <Link
             to="/clients"
             className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm"
           >
-            Back to Clients
+            {t('actions.backToList')}
           </Link>
         </div>
       </div>
@@ -88,27 +91,27 @@ export function ClientDetailPage() {
             className="inline-flex items-center gap-1 text-sm text-subtle-text hover:text-primary mb-2"
           >
             <span className="material-symbols-outlined text-lg">arrow_back</span>
-            Back to Clients
+            {t('actions.backToList')}
           </Link>
           <div className="flex items-center gap-3">
             <h1 className="text-3xl font-black tracking-tight text-text-light dark:text-text-dark">
-              {getClientDisplayName(client)}
+              {getClientDisplayName(client, t('unnamed'))}
             </h1>
             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getTypeBadge()}`}>
               {client.clientType === 'INDIVIDUAL' ? (
                 <>
                   <span className="material-symbols-outlined text-sm mr-1">person</span>
-                  Individual
+                  {t('types.individual')}
                 </>
               ) : (
                 <>
                   <span className="material-symbols-outlined text-sm mr-1">business</span>
-                  Corporate
+                  {t('types.corporate')}
                 </>
               )}
             </span>
           </div>
-          <p className="text-subtle-text">Client Details</p>
+          <p className="text-subtle-text">{t('detail.subtitle')}</p>
           <HelpLink section="clients" className="mt-1 self-start" />
         </div>
         <div className="flex gap-3">
@@ -120,7 +123,7 @@ export function ClientDetailPage() {
             className="h-10 px-4 rounded-lg border border-danger text-danger font-medium text-sm hover:bg-danger/10"
             data-testid="client-detail-delete"
           >
-            Delete
+            {t('actions.delete')}
           </button>
           <Link
             to={`/clients/${id}/edit`}
@@ -128,7 +131,7 @@ export function ClientDetailPage() {
             data-testid="client-detail-edit"
           >
             <span className="material-symbols-outlined text-lg">edit</span>
-            Edit
+            {t('actions.edit')}
           </Link>
         </div>
       </div>
@@ -139,15 +142,15 @@ export function ClientDetailPage() {
         {client.clientType === 'INDIVIDUAL' && (
           <div className="p-6 border-b border-border-light dark:border-border-dark">
             <h2 className="text-lg font-bold text-text-light dark:text-text-dark mb-4">
-              Personal Information
+              {t('detail.personalInfo')}
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <p className="text-sm text-subtle-text mb-1">First Name</p>
+                <p className="text-sm text-subtle-text mb-1">{t('fields.firstName')}</p>
                 <p className="text-text-light dark:text-text-dark font-medium">{client.firstName}</p>
               </div>
               <div>
-                <p className="text-sm text-subtle-text mb-1">Last Name</p>
+                <p className="text-sm text-subtle-text mb-1">{t('fields.lastName')}</p>
                 <p className="text-text-light dark:text-text-dark font-medium">{client.lastName}</p>
               </div>
             </div>
@@ -158,29 +161,29 @@ export function ClientDetailPage() {
         {client.clientType === 'CORPORATE' && (
           <div className="p-6 border-b border-border-light dark:border-border-dark">
             <h2 className="text-lg font-bold text-text-light dark:text-text-dark mb-4">
-              Company Information
+              {t('detail.companyInfo')}
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <p className="text-sm text-subtle-text mb-1">Company Name</p>
+                <p className="text-sm text-subtle-text mb-1">{t('fields.companyName')}</p>
                 <p className="text-text-light dark:text-text-dark font-medium">{client.companyName}</p>
               </div>
               <div>
-                <p className="text-sm text-subtle-text mb-1">Contact Person</p>
+                <p className="text-sm text-subtle-text mb-1">{t('fields.contactPerson')}</p>
                 <p className="text-text-light dark:text-text-dark">
-                  {client.contactPerson || <span className="text-subtle-text">Not provided</span>}
+                  {client.contactPerson || <span className="text-subtle-text">{t('detail.notProvided')}</span>}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-subtle-text mb-1">Registration Number</p>
+                <p className="text-sm text-subtle-text mb-1">{t('fields.registrationNumber')}</p>
                 <p className="text-text-light dark:text-text-dark">
-                  {client.registrationNumber || <span className="text-subtle-text">Not provided</span>}
+                  {client.registrationNumber || <span className="text-subtle-text">{t('detail.notProvided')}</span>}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-subtle-text mb-1">Tax Number</p>
+                <p className="text-sm text-subtle-text mb-1">{t('fields.taxNumber')}</p>
                 <p className="text-text-light dark:text-text-dark">
-                  {client.taxNumber || <span className="text-subtle-text">Not provided</span>}
+                  {client.taxNumber || <span className="text-subtle-text">{t('detail.notProvided')}</span>}
                 </p>
               </div>
             </div>
@@ -190,30 +193,30 @@ export function ClientDetailPage() {
         {/* Contact Information */}
         <div className="p-6 border-b border-border-light dark:border-border-dark">
           <h2 className="text-lg font-bold text-text-light dark:text-text-dark mb-4">
-            Contact Information
+            {t('detail.contactInfo')}
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <p className="text-sm text-subtle-text mb-1">Email</p>
+              <p className="text-sm text-subtle-text mb-1">{t('fields.email')}</p>
               <p className="text-text-light dark:text-text-dark">
                 {client.email ? (
                   <a href={`mailto:${client.email}`} className="text-primary hover:underline">
                     {client.email}
                   </a>
                 ) : (
-                  <span className="text-subtle-text">Not provided</span>
+                  <span className="text-subtle-text">{t('detail.notProvided')}</span>
                 )}
               </p>
             </div>
             <div>
-              <p className="text-sm text-subtle-text mb-1">Phone</p>
+              <p className="text-sm text-subtle-text mb-1">{t('fields.phone')}</p>
               <p className="text-text-light dark:text-text-dark">
                 {client.phone ? (
                   <a href={`tel:${client.phone}`} className="text-primary hover:underline">
                     {client.phone}
                   </a>
                 ) : (
-                  <span className="text-subtle-text">Not provided</span>
+                  <span className="text-subtle-text">{t('detail.notProvided')}</span>
                 )}
               </p>
             </div>
@@ -223,10 +226,10 @@ export function ClientDetailPage() {
         {/* Billing Address */}
         <div className="p-6">
           <h2 className="text-lg font-bold text-text-light dark:text-text-dark mb-4">
-            Billing Address
+            {t('detail.billingAddress')}
           </h2>
           <p className="text-text-light dark:text-text-dark whitespace-pre-wrap">
-            {client.address || <span className="text-subtle-text">Not provided</span>}
+            {client.address || <span className="text-subtle-text">{t('detail.notProvided')}</span>}
           </p>
         </div>
       </div>
@@ -234,7 +237,7 @@ export function ClientDetailPage() {
       {/* Quick Actions */}
       <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-6">
         <h2 className="text-lg font-bold text-text-light dark:text-text-dark mb-4">
-          Quick Actions
+          {t('detail.quickActions')}
         </h2>
         <div className="flex flex-wrap gap-3">
           <Link
@@ -243,7 +246,7 @@ export function ClientDetailPage() {
             data-testid="client-create-invoice"
           >
             <span className="material-symbols-outlined text-lg">receipt_long</span>
-            Create Invoice
+            {t('actions.createInvoice')}
           </Link>
         </div>
       </div>
@@ -257,13 +260,14 @@ export function ClientDetailPage() {
           <div className="relative w-full max-w-md rounded-xl bg-surface-light dark:bg-surface-dark shadow-2xl overflow-hidden">
             {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-border-light dark:border-border-dark p-6">
-              <p className="text-xl font-bold text-text-light dark:text-text-dark">Delete Client</p>
+              <p className="text-xl font-bold text-text-light dark:text-text-dark">{t('deleteDialog.title')}</p>
               <button
                 onClick={() => {
                   deleteMutation.reset();
                   setDeleteState({ isOpen: false });
                 }}
                 className="flex size-8 items-center justify-center rounded-full hover:bg-black/10 dark:hover:bg-white/10"
+                aria-label={t('actions.close')}
               >
                 <span className="material-symbols-outlined text-2xl text-subtle-text">close</span>
               </button>
@@ -277,12 +281,15 @@ export function ClientDetailPage() {
                 </div>
                 <div>
                   <p className="text-text-light dark:text-text-dark">
-                    Are you sure you want to delete{' '}
-                    <span className="font-semibold">{getClientDisplayName(client)}</span>?
+                    <Trans
+                      t={t}
+                      i18nKey="deleteDialog.confirm"
+                      values={{ name: getClientDisplayName(client, t('unnamed')) }}
+                      components={{ bold: <span className="font-semibold" /> }}
+                    />
                   </p>
                   <p className="text-subtle-text mt-2 text-sm">
-                    This action cannot be undone. Invoices associated with this client will remain
-                    but the client reference will be removed.
+                    {t('deleteDialog.body')}
                   </p>
                   {/* Fix (SOUP-1929): surface delete failures instead of stalling silently. */}
                   {deleteMutation.isError && (
@@ -291,7 +298,7 @@ export function ClientDetailPage() {
                       role="alert"
                       data-testid="client-delete-error"
                     >
-                      Could not delete this client. Please try again.
+                      {t('deleteDialog.error')}
                     </p>
                   )}
                 </div>
@@ -308,7 +315,7 @@ export function ClientDetailPage() {
                 className="h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm hover:bg-primary/5"
                 data-testid="delete-cancel-button"
               >
-                Cancel
+                {t('actions.cancel')}
               </button>
               <button
                 onClick={() => deleteMutation.mutate()}
@@ -316,7 +323,7 @@ export function ClientDetailPage() {
                 className="h-10 px-4 rounded-lg bg-danger text-white font-bold text-sm hover:bg-danger/90 disabled:opacity-50"
                 data-testid="delete-confirm-button"
               >
-                {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
+                {deleteMutation.isPending ? t('actions.deleting') : t('actions.delete')}
               </button>
             </div>
           </div>

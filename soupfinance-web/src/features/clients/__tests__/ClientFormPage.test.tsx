@@ -8,7 +8,7 @@
  *  - The clientType toggle remains enabled while editing, so users can fix
  *    records that were saved with the wrong type.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -22,6 +22,12 @@ vi.mock('../../../api', () => ({
 }));
 
 import { getClient } from '../../../api';
+// Added (SOUPFIN-167): the pages render through i18n; pin English for these assertions
+import i18n from '../../../i18n';
+
+beforeAll(async () => {
+  await i18n.changeLanguage('en');
+});
 
 function createMockClient(overrides: Partial<Client> = {}): Client {
   return {

@@ -1,0 +1,112 @@
+{
+  "title": "Kunden",
+  "subtitle": "Verwalten Sie Ihre Kunden und Rechnungskontakte",
+  "newClient": "Neuer Kunde",
+  "unnamed": "Unbenannter Kunde",
+  "types": {
+    "individual": "Privatperson",
+    "corporate": "Unternehmen",
+    "all": "Alle Typen"
+  },
+  "fields": {
+    "name": "Name",
+    "type": "Typ",
+    "firstName": "Vorname",
+    "lastName": "Nachname",
+    "companyName": "Firmenname",
+    "contactPerson": "Ansprechpartner",
+    "registrationNumber": "Handelsregisternummer",
+    "taxNumber": "Steuernummer",
+    "email": "E-Mail",
+    "phone": "Telefon",
+    "address": "Adresse"
+  },
+  "actions": {
+    "view": "Anzeigen",
+    "edit": "Bearbeiten",
+    "delete": "Löschen",
+    "deleting": "Wird gelöscht...",
+    "cancel": "Abbrechen",
+    "close": "Schließen",
+    "retry": "Erneut versuchen",
+    "clearFilters": "Filter zurücksetzen",
+    "backToList": "Zurück zu den Kunden",
+    "addClient": "Kunde hinzufügen",
+    "createInvoice": "Rechnung erstellen"
+  },
+  "list": {
+    "searchLabel": "Kunden suchen",
+    "searchPlaceholder": "Kunden suchen...",
+    "typeFilterLabel": "Kunden nach Typ filtern",
+    "filtering": "Wird gefiltert…",
+    "loading": "Kunden werden geladen...",
+    "errorTitle": "Kunden konnten nicht geladen werden",
+    "errorBody": "Beim Laden Ihrer Kunden ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.",
+    "actionsColumn": "Aktionen",
+    "noResultsTitle": "Keine Kunden entsprechen Ihren Filtern",
+    "noResultsSearchIndividual": "Keine Privatkunden entsprechen „{{search}}“. Erweitern Sie die Suche oder entfernen Sie Filter.",
+    "noResultsSearchCorporate": "Keine Firmenkunden entsprechen „{{search}}“. Erweitern Sie die Suche oder entfernen Sie Filter.",
+    "noResultsSearch": "Keine Kunden entsprechen „{{search}}“. Versuchen Sie einen anderen Suchbegriff.",
+    "noResultsIndividual": "Keine Privatkunden gefunden. Wählen Sie einen anderen Typ oder setzen Sie den Filter zurück.",
+    "noResultsCorporate": "Keine Firmenkunden gefunden. Wählen Sie einen anderen Typ oder setzen Sie den Filter zurück.",
+    "emptyTitle": "Noch keine Kunden",
+    "emptyBody": "Fügen Sie Ihren ersten Kunden hinzu, um Rechnungen zu erstellen."
+  },
+  "deleteDialog": {
+    "title": "Kunde löschen",
+    "confirm": "Möchten Sie <bold>{{name}}</bold> wirklich löschen?",
+    "body": "Dies kann nicht rückgängig gemacht werden. Rechnungen dieses Kunden bleiben erhalten, verlieren aber den Bezug zum Kunden.",
+    "error": "Der Kunde konnte nicht gelöscht werden. Bitte versuchen Sie es erneut."
+  },
+  "detail": {
+    "loading": "Kunde wird geladen...",
+    "notFoundTitle": "Kunde nicht gefunden",
+    "notFoundBody": "Der gesuchte Kunde existiert nicht oder wurde gelöscht.",
+    "subtitle": "Kundendetails",
+    "personalInfo": "Persönliche Angaben",
+    "companyInfo": "Firmenangaben",
+    "contactInfo": "Kontaktdaten",
+    "billingAddress": "Rechnungsadresse",
+    "notProvided": "Nicht angegeben",
+    "quickActions": "Schnellaktionen"
+  },
+  "form": {
+    "loading": "Kunde wird geladen...",
+    "headingNew": "Neuer Kunde",
+    "headingEdit": "Kunde bearbeiten",
+    "subtitleNew": "Neuen Kunden für die Rechnungsstellung anlegen",
+    "subtitleEdit": "Kundendaten aktualisieren",
+    "saving": "Wird gespeichert...",
+    "create": "Kunde anlegen",
+    "update": "Kunde aktualisieren",
+    "createShort": "Anlegen",
+    "updateShort": "Aktualisieren",
+    "saveFailed": "Kunde konnte nicht gespeichert werden",
+    "unexpectedError": "Ein unerwarteter Fehler ist aufgetreten",
+    "clientType": "Kundentyp",
+    "placeholders": {
+      "firstName": "Vorname eingeben",
+      "lastName": "Nachname eingeben",
+      "companyName": "Firmenname eingeben",
+      "contactPerson": "Name des Ansprechpartners",
+      "registrationNumber": "Handelsregisternummer des Unternehmens",
+      "taxNumber": "Steuer-Identifikationsnummer",
+      "email": "kunde@beispiel.de",
+      "phone": "+49 30 1234567",
+      "address": "Rechnungsadresse eingeben"
+    }
+  },
+  "validation": {
+    "emailInvalid": "Ungültige E-Mail-Adresse",
+    "phoneTooLong": "Die Telefonnummer ist zu lang",
+    "addressTooLong": "Die Adresse ist zu lang",
+    "firstNameTooLong": "Der Vorname ist zu lang",
+    "lastNameTooLong": "Der Nachname ist zu lang",
+    "companyNameTooLong": "Der Firmenname ist zu lang",
+    "contactPersonTooLong": "Der Ansprechpartner ist zu lang",
+    "registrationNumberTooLong": "Die Handelsregisternummer ist zu lang",
+    "taxNumberTooLong": "Die Steuernummer ist zu lang",
+    "namesRequired": "Vor- und Nachname sind für Privatpersonen erforderlich",
+    "companyNameRequired": "Der Firmenname ist für Firmenkunden erforderlich"
+  }
+}

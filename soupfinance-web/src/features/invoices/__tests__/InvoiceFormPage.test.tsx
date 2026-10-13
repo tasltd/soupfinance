@@ -10,7 +10,7 @@
  *   - Client dropdown shows client.name, value is client.id
  *   - System resolves accountServices from selected client automatically
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -91,6 +91,12 @@ import {
 // Changed: Component uses listClients for Client dropdown (not listInvoices)
 import { listClients, getClientPortfolio } from '../../../api/endpoints/clients';
 import { listTaxRates, listInvoiceServices } from '../../../api/endpoints/domainData';
+// Added (SOUPFIN-167): the pages render through i18n; pin English for these assertions
+import i18n from '../../../i18n';
+
+beforeAll(async () => {
+  await i18n.changeLanguage('en');
+});
 
 // ============================================================================
 // Test Helpers

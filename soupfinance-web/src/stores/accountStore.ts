@@ -12,6 +12,7 @@
  * - Each tenant has its own currency and settings
  * - Currency should never be hardcoded - always use this store
  */
+import { useMemo } from 'react';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { AccountSettings } from '../types/settings';
@@ -56,22 +57,34 @@ export const CURRENCIES: Record<string, CurrencyConfig> = {
  * @param amount        the value to format (null/undefined are treated as 0)
  * @param config        the tenant's currency configuration
  * @param includeSymbol false renders the number only (input fields, totals)
+ * @param locale        BCP 47 tag for digit grouping and the decimal mark
+ *                      (Added SOUPFIN-167). The tenant's config still decides the
+ *                      symbol and its position; the user's language only decides
+ *                      "1,234.56" vs "1.234,56". Defaults to en-US.
  */
 export function formatAmountWithConfig(
   amount: number | null | undefined,
   config: CurrencyConfig,
-  includeSymbol = true
+  includeSymbol = true,
+  locale = 'en-US'
 ): string {
   const value = amount ?? 0;
 
   // Changed: format the magnitude, never the signed value
-  const magnitude = Math.abs(value).toLocaleString('en-US', {
+  const numberOptions = {
     minimumFractionDigits: config.decimals,
     maximumFractionDigits: config.decimals,
-  });
+  };
+  let magnitude: string;
+  try {
+    magnitude = Math.abs(value).toLocaleString(locale, numberOptions);
+  } catch {
+    // An unknown locale tag throws RangeError; never blank an amount over it
+    magnitude = Math.abs(value).toLocaleString('en-US', numberOptions);
+  }
 
   // A tiny negative that rounds away to zero must not render as "-$0.00"
-  const roundsToZero = /^[0.,]*$/.test(magnitude);
+  const roundsToZero = /^[0.,\s\u202f]*$/.test(magnitude);
   const sign = value < 0 && !roundsToZero ? '-' : '';
 
   if (!includeSymbol) {
@@ -197,9 +210,21 @@ export function useCurrencySymbol(): string {
 
 /**
  * Hook to get the currency format function
+ *
+ * Changed (SOUPFIN-167): pass the UI language (`i18n.language`) to group digits
+ * the way the reader expects ("1.234,56 €" for a German user). Without a locale
+ * it keeps the store's en-US formatter, so existing callers are unchanged.
  */
-export function useFormatCurrency(): (amount: number | null | undefined) => string {
-  return useAccountStore((state) => state.formatCurrency);
+export function useFormatCurrency(locale?: string): (amount: number | null | undefined) => string {
+  const storeFormatter = useAccountStore((state) => state.formatCurrency);
+  const currencyConfig = useAccountStore((state) => state.currencyConfig);
+  return useMemo(
+    () =>
+      locale
+        ? (amount: number | null | undefined) => formatAmountWithConfig(amount, currencyConfig, true, locale)
+        : storeFormatter,
+    [locale, currencyConfig, storeFormatter]
+  );
 }
 
 /**

@@ -159,9 +159,9 @@ test.describe('Invoice Management', () => {
       await expect(page.getByTestId('invoice-list-loading')).not.toBeVisible({ timeout: 5000 });
 
       // Check status badges
-      await expect(page.getByTestId('invoice-status-inv-001')).toHaveText('SENT');
-      await expect(page.getByTestId('invoice-status-inv-002')).toHaveText('PAID');
-      await expect(page.getByTestId('invoice-status-inv-003')).toHaveText('OVERDUE');
+      await expect(page.getByTestId('invoice-status-inv-001')).toHaveText('Sent');
+      await expect(page.getByTestId('invoice-status-inv-002')).toHaveText('Paid');
+      await expect(page.getByTestId('invoice-status-inv-003')).toHaveText('Overdue');
 
       await takeScreenshot(page, 'invoices-status-badges');
     });

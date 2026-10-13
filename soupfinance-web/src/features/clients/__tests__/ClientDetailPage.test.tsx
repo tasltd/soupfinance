@@ -7,7 +7,7 @@
  *  - The soft-delete proceeds (calls deleteClient) and navigates back on success.
  *  - A failed delete keeps the modal open and surfaces an error.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
@@ -28,6 +28,12 @@ vi.mock('../../../api', () => ({
 }));
 
 import { getClient, deleteClient } from '../../../api';
+// Added (SOUPFIN-167): the pages render through i18n; pin English for these assertions
+import i18n from '../../../i18n';
+
+beforeAll(async () => {
+  await i18n.changeLanguage('en');
+});
 
 function createMockClient(overrides: Partial<Client> = {}): Client {
   return {

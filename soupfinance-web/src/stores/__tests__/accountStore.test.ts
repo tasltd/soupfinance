@@ -152,3 +152,41 @@ describe('accountStore currency formatting', () => {
     expect(useAccountStore.getState().formatCurrency(-1200)).toBe('-$1,200.00')
   })
 })
+
+// Added (SOUPFIN-167): digit grouping follows the reader's language while the
+// tenant's currency still decides the symbol and where it sits.
+describe('formatAmountWithConfig with a locale', () => {
+  it('keeps en-US output when no locale (or English) is given', () => {
+    expect(formatAmountWithConfig(1234.5, USD)).toBe('$1,234.50')
+    expect(formatAmountWithConfig(1234.5, USD, true, 'en')).toBe('$1,234.50')
+  })
+
+  it('groups German and Dutch amounts with dots and a decimal comma', () => {
+    expect(formatAmountWithConfig(1234567.89, USD, true, 'de')).toBe('$1.234.567,89')
+    expect(formatAmountWithConfig(1234567.89, GHS, true, 'nl')).toBe('GH₵1.234.567,89')
+  })
+
+  it('groups French amounts with a narrow space and a decimal comma', () => {
+    expect(formatAmountWithConfig(1234567.89, USD, true, 'fr')).toBe('$1 234 567,89')
+  })
+
+  it('keeps the minus before the symbol and the after-position symbol in every locale', () => {
+    expect(formatAmountWithConfig(-1200, GHS, true, 'de')).toBe('-GH₵1.200,00')
+    expect(formatAmountWithConfig(-1500000, XOF, true, 'fr')).toBe('-1 500 000 CFA')
+  })
+
+  it('renders zero, and a tiny negative that rounds to zero, without a sign', () => {
+    expect(formatAmountWithConfig(0, USD, true, 'de')).toBe('$0,00')
+    expect(formatAmountWithConfig(-0.001, USD, true, 'fr')).toBe('$0,00')
+    expect(formatAmountWithConfig(null, USD, true, 'nl')).toBe('$0,00')
+  })
+
+  it('handles a 13-figure amount and the number-only variant', () => {
+    expect(formatAmountWithConfig(1234567890123.45, USD, true, 'de')).toBe('$1.234.567.890.123,45')
+    expect(formatAmountWithConfig(9876.5, USD, false, 'de')).toBe('9.876,50')
+  })
+
+  it('falls back to en-US for a locale tag the runtime rejects', () => {
+    expect(formatAmountWithConfig(1234.5, USD, true, 'not a locale!')).toBe('$1,234.50')
+  })
+})

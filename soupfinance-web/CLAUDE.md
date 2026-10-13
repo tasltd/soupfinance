@@ -505,13 +505,16 @@ Tailwind v4 uses the Vite plugin (`@tailwindcss/vite`) — there is **no `tailwi
 - Icons: Material Symbols Outlined (`<span className="material-symbols-outlined">icon_name</span>`, use `.fill` class for filled variant)
 
 ### Internationalization (i18n)
-4 languages (`en`, `de`, `fr`, `nl`), 12 namespaces in `src/i18n/locales/{lang}/`:
+4 languages (`en`, `de`, `fr`, `nl`), 13 namespaces in `src/i18n/locales/{lang}/`:
 
-`common` · `navigation` · `auth` · `dashboard` · `invoices` · `bills` · `payments` · `vendors` · `ledger` · `accounting` · `reports` · `corporate`
+`common` · `navigation` · `auth` · `dashboard` · `invoices` · `clients` · `bills` · `payments` · `vendors` · `ledger` · `accounting` · `reports` · `corporate`
 
 - Language detection: `i18next-browser-languagedetector` → localStorage key `soupfinance_language`
 - Fallback: English (`en`)
-- When adding features: add keys to **all 4** language files in the corresponding namespace
+- When adding features: add keys to **all 4** language files in the corresponding namespace. `src/i18n/__tests__/localeParity.test.ts` fails, naming the locale and key, if any file is missing a key, has an extra one, a blank value or different `{{placeholders}}`. A new namespace must also be registered in `src/i18n/index.ts` and `i18next.d.ts`
+- Tests that render a translated page must `import i18n from '../../../i18n'` and `changeLanguage('en')` in `beforeAll`; without it `t()` returns the key (`status.paid`) instead of the text
+- Zod schemas built outside React use translation **keys** as messages and the page translates them on render (`ClientFormPage` `errorText()`), so a visible error re-translates when the language changes
+- Amounts and dates on translated pages: `useFormatCurrency(i18n.language)` (tenant's symbol, reader's digit grouping) and `formatLocaleDate(value, i18n.language)` from `utils/date.ts`. Invoice status badges go through `InvoiceStatusBadge`, never the raw enum
 
 ## Deployment
 

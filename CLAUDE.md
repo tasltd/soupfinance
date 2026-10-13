@@ -46,7 +46,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `docs/` | User journeys, validation reports | Reference documentation |
 | `scripts/` | Utility scripts | `get-issues.sh` (symlink to shared scripts) |
 
-**Tech Stack:** React 19 · TypeScript · Vite 7 · TailwindCSS v4 · Zustand (state) · TanStack Query (data) · React Hook Form + Zod (forms) · Recharts (charts) · Axios (HTTP) · GSAP (cinematic animations) · html2pdf.js (PDF generation) · Vitest + Playwright (tests) · Storybook 10 · i18next (4 languages: en/de/fr/nl, 12 namespaces)
+**Tech Stack:** React 19 · TypeScript · Vite 7 · TailwindCSS v4 · Zustand (state) · TanStack Query (data) · React Hook Form + Zod (forms) · Recharts (charts) · Axios (HTTP) · GSAP (cinematic animations) · html2pdf.js (PDF generation) · Vitest + Playwright (tests) · Storybook 10 · i18next (4 languages: en/de/fr/nl, 13 namespaces)
 
 ---
 
@@ -166,7 +166,7 @@ features/              # Page components by domain (auth, dashboard, invoices, b
 │                      #   payments, ledger, accounting, reports, clients, corporate, settings)
 hooks/                 # usePdf, useEmailSend, useDashboardStats, useLedgerAccounts, useTransactions,
                        #   usePaymentMethods, useGsapAnimations (cinematic entrance/transition animations)
-i18n/                  # 4 languages (en, de, fr, nl), 12 namespaces
+i18n/                  # 4 languages (en, de, fr, nl), 13 namespaces
 schemas/               # Zod runtime validation (dev: throw, prod: log only)
 stores/                # Zustand: authStore, uiStore, accountStore (currency/company settings)
 types/                 # TypeScript interfaces mirroring Grails domains (index.ts + settings.ts)
