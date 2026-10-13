@@ -1,12 +1,16 @@
 /**
  * Vendor Detail Page
- * PURPOSE: Display vendor information in read-only format
- * Reference: soupfinance-designs/vendor-client-management/
+ * PURPOSE: Display vendor information, accounts payable summary and bill history
+ * Reference: soupfinance-designs/vendor-client-management/,
+ *            soupfinance-designs/vendor-payment-analysis/
  */
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getVendor, deleteVendor } from '../../api';
+import { useQuery, useMutation, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
+import { getVendor, deleteVendor, listVendorBills, summariseVendorBills, type VendorBills } from '../../api';
 import { useState } from 'react';
+// Added (SOUPFIN-172): currency formatting + error state for the bill history
+import { useFormatCurrency } from '../../stores';
+import { ApiErrorState } from '../../components/feedback';
 // Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
 import { HelpLink } from '../../components/help';
 
@@ -27,6 +31,15 @@ export function VendorDetailPage() {
     queryFn: () => getVendor(id!),
     enabled: !!id,
   });
+
+  // Added (SOUPFIN-172): the vendor's bills. The AP summary is computed from
+  // these because the backend has no paymentSummary action yet.
+  const billsQuery = useQuery({
+    queryKey: ['vendor-bills', id],
+    queryFn: () => listVendorBills(id!),
+    enabled: !!id,
+  });
+  const formatCurrency = useFormatCurrency();
 
   // Added: Delete mutation
   const deleteMutation = useMutation({
@@ -85,7 +98,16 @@ export function VendorDetailPage() {
           <p className="text-subtle-text">Vendor Details</p>
           <HelpLink section="vendors" className="mt-1 self-start" />
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
+          {/* Added (SOUPFIN-172): start a bill with this vendor already chosen */}
+          <Link
+            to={`/bills/new?vendorId=${encodeURIComponent(id!)}`}
+            className="flex items-center gap-2 h-10 px-4 rounded-lg bg-primary/20 text-primary font-bold text-sm hover:bg-primary/30"
+            data-testid="vendor-detail-create-bill"
+          >
+            <span className="material-symbols-outlined text-lg">add</span>
+            Create bill
+          </Link>
           <button
             onClick={() => setDeleteState({ isOpen: true })}
             className="h-10 px-4 rounded-lg border border-danger text-danger font-medium text-sm hover:bg-danger/10"
@@ -103,6 +125,12 @@ export function VendorDetailPage() {
           </Link>
         </div>
       </div>
+
+      {/* Added (SOUPFIN-172): accounts payable summary (PRD VND-2) */}
+      <VendorBillSummaryCards
+        query={billsQuery}
+        formatCurrency={formatCurrency}
+      />
 
       {/* Vendor Information Card */}
       <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark">
@@ -165,6 +193,13 @@ export function VendorDetailPage() {
         </div>
       </div>
 
+      {/* Added (SOUPFIN-172): bill history */}
+      <VendorBillHistory
+        vendorId={id!}
+        query={billsQuery}
+        formatCurrency={formatCurrency}
+      />
+
       {/* Delete Confirmation Modal */}
       {deleteState.isOpen && (
         <div
@@ -225,4 +260,188 @@ export function VendorDetailPage() {
       )}
     </div>
   );
+}
+
+// =============================================================================
+// Added (SOUPFIN-172): AP summary and bill history
+// =============================================================================
+
+type VendorBillsQuery = UseQueryResult<VendorBills>;
+type FormatCurrency = ReturnType<typeof useFormatCurrency>;
+
+const STAT_CARDS = [
+  { key: 'totalBilled', label: 'Total Billed', testId: 'vendor-summary-total-billed' },
+  { key: 'totalPaid', label: 'Total Paid', testId: 'vendor-summary-total-paid' },
+  { key: 'totalOutstanding', label: 'Outstanding', testId: 'vendor-summary-outstanding' },
+] as const;
+
+function VendorBillSummaryCards({
+  query,
+  formatCurrency,
+}: {
+  query: VendorBillsQuery;
+  formatCurrency: FormatCurrency;
+}) {
+  // The bill history section below owns the error message; showing a second
+  // copy here would only repeat it.
+  if (query.isError) return null;
+
+  const summary = query.data ? summariseVendorBills(query.data.bills) : null;
+
+  return (
+    <div className="flex flex-col gap-2" data-testid="vendor-summary">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {STAT_CARDS.map((card) => (
+          <div
+            key={card.key}
+            className="flex flex-col gap-2 rounded-xl p-6 border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark"
+          >
+            <p className="text-subtle-text text-base font-medium">{card.label}</p>
+            <p
+              className={`tracking-tight text-2xl font-bold ${
+                card.key === 'totalOutstanding' && (summary?.totalOutstanding ?? 0) > 0
+                  ? 'text-primary'
+                  : 'text-text-light dark:text-text-dark'
+              }`}
+              data-testid={card.testId}
+            >
+              {summary ? formatCurrency(summary[card.key]) : '\u2014'}
+            </p>
+          </div>
+        ))}
+      </div>
+      {query.data && !query.data.complete && (
+        <p className="text-sm text-warning" data-testid="vendor-summary-incomplete">
+          These totals may be low. This business has more bills than one request can load,
+          so some of this vendor&apos;s bills may be missing.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function VendorBillHistory({
+  vendorId,
+  query,
+  formatCurrency,
+}: {
+  vendorId: string;
+  query: VendorBillsQuery;
+  formatCurrency: FormatCurrency;
+}) {
+  const bills = query.data?.bills ?? [];
+
+  return (
+    <div
+      className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden"
+      data-testid="vendor-bills"
+    >
+      <div className="flex flex-wrap items-center justify-between gap-2 p-6 border-b border-border-light dark:border-border-dark">
+        <h2 className="text-lg font-bold text-text-light dark:text-text-dark">Bill History</h2>
+        {query.data && (
+          <span className="text-sm text-subtle-text" data-testid="vendor-bills-count">
+            {bills.length === 1 ? '1 bill' : `${bills.length} bills`}
+          </span>
+        )}
+      </div>
+
+      {query.isLoading ? (
+        <div className="p-8 text-center text-subtle-text" data-testid="vendor-bills-loading">
+          Loading bills...
+        </div>
+      ) : query.isError ? (
+        <ApiErrorState
+          error={query.error}
+          onRetry={() => query.refetch()}
+          testId="vendor-bills-error"
+        />
+      ) : bills.length === 0 ? (
+        <div className="p-12 text-center" data-testid="vendor-bills-empty">
+          <span className="material-symbols-outlined text-6xl text-subtle-text/50 mb-4 block">receipt</span>
+          <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">
+            No bills from this vendor yet
+          </h3>
+          <p className="text-subtle-text mb-4">Record a bill to start tracking what you owe them.</p>
+          <Link
+            to={`/bills/new?vendorId=${encodeURIComponent(vendorId)}`}
+            className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm"
+            data-testid="vendor-bills-create-first"
+          >
+            <span className="material-symbols-outlined text-lg">add</span>
+            Create bill
+          </Link>
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[720px] text-sm" data-testid="vendor-bills-table">
+            <thead className="text-xs text-subtle-text uppercase bg-background-light dark:bg-background-dark">
+              <tr>
+                <th className="px-4 sm:px-6 py-3 text-left">Bill #</th>
+                <th className="px-4 sm:px-6 py-3 text-left">Bill Date</th>
+                <th className="px-4 sm:px-6 py-3 text-left">Due Date</th>
+                <th className="px-4 sm:px-6 py-3 text-right">Amount</th>
+                <th className="px-4 sm:px-6 py-3 text-right">Paid</th>
+                <th className="px-4 sm:px-6 py-3 text-right">Balance Due</th>
+                <th className="px-4 sm:px-6 py-3 text-center">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {bills.map((bill) => (
+                <tr
+                  key={bill.id}
+                  className="border-b border-border-light dark:border-border-dark hover:bg-primary/5"
+                  data-testid={`vendor-bill-row-${bill.id}`}
+                >
+                  <td className="px-4 sm:px-6 py-4">
+                    <Link
+                      to={`/bills/${bill.id}`}
+                      className="font-medium text-primary hover:underline break-all"
+                      data-testid={`vendor-bill-link-${bill.id}`}
+                    >
+                      {bill.billNumber || bill.id}
+                    </Link>
+                  </td>
+                  <td className="px-4 sm:px-6 py-4 text-subtle-text">{bill.billDate || '\u2014'}</td>
+                  <td className="px-4 sm:px-6 py-4 text-subtle-text">{bill.paymentDate || '\u2014'}</td>
+                  <td className="px-4 sm:px-6 py-4 text-right font-medium text-text-light dark:text-text-dark">
+                    {formatCurrency(bill.totalAmount)}
+                  </td>
+                  <td className="px-4 sm:px-6 py-4 text-right text-text-light dark:text-text-dark">
+                    {formatCurrency(bill.amountPaid)}
+                  </td>
+                  <td className="px-4 sm:px-6 py-4 text-right font-medium text-text-light dark:text-text-dark">
+                    {formatCurrency(bill.amountDue)}
+                  </td>
+                  <td className="px-4 sm:px-6 py-4 text-center">
+                    <span
+                      className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${getBillStatusStyle(bill.status)}`}
+                      data-testid={`vendor-bill-status-${bill.id}`}
+                    >
+                      {bill.status || 'No status'}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Badge colours for every backend PaymentStatus, plus the frontend-only ones. */
+function getBillStatusStyle(status: string | null | undefined): string {
+  const styles: Record<string, string> = {
+    PAID: 'bg-success/10 text-success',
+    PARTIAL: 'bg-info/10 text-info',
+    PROCESSING: 'bg-info/10 text-info',
+    PENDING: 'bg-warning/10 text-warning',
+    OVERDUE: 'bg-danger/10 text-danger',
+    FAILED: 'bg-danger/10 text-danger',
+    EXPIRED: 'bg-subtle-text/10 text-subtle-text',
+    DRAFT: 'bg-subtle-text/10 text-subtle-text',
+    CANCELLED: 'bg-subtle-text/10 text-subtle-text',
+  };
+  return (status && styles[status]) || styles.DRAFT;
 }

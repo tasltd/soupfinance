@@ -511,3 +511,221 @@ describe('resolveBillItemTaxRate (SOUPFIN-44)', () => {
     ).toBe(0);
   });
 });
+
+// =============================================================================
+// Added (SOUPFIN-172): vendor bill history + AP summary
+// =============================================================================
+describe('listVendorBills / summariseVendorBills (SOUPFIN-172)', () => {
+  let mockGet: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGet = vi.fn();
+    (axios.create as ReturnType<typeof vi.fn>).mockReturnValue({
+      interceptors: { request: { use: vi.fn() }, response: { use: vi.fn() } },
+      get: mockGet,
+      post: vi.fn(),
+      put: vi.fn(),
+      delete: vi.fn(),
+    });
+  });
+
+  /** A raw bill row as `_bill.gson` renders it (backend spellings). */
+  function rawBill(
+    id: string,
+    vendorId: string,
+    over: Record<string, unknown> = {}
+  ): Record<string, unknown> {
+    return {
+      id,
+      billNumber: `B-${id}`,
+      vendor: { id: vendorId, serialised: `(Vendor ${vendorId})[PROVIDER]` },
+      billDate: '2026-01-10T00:00:00Z',
+      paymentDate: '2026-02-10T00:00:00Z',
+      status: 'PENDING',
+      archived: false,
+      subTotal: 100,
+      totalTaxAmount: 0,
+      total: 100,
+      paidAmount: 0,
+      amountDue: 100,
+      ...over,
+    };
+  }
+
+  /** Answer index.json and archived.json with the given rows. */
+  function serve(open: unknown[], closed: unknown[]) {
+    mockGet.mockImplementation((url: string) => {
+      if (url.startsWith('/bill/index.json')) return Promise.resolve({ data: open });
+      if (url.startsWith('/bill/archived.json')) return Promise.resolve({ data: closed });
+      return Promise.reject(new Error(`unexpected GET ${url}`));
+    });
+  }
+
+  it('reads both lists at the backend page cap, newest bill date first', async () => {
+    vi.resetModules();
+    const { listVendorBills, VENDOR_BILLS_PAGE_SIZE } = await import('../bills');
+    serve([], []);
+
+    await listVendorBills('v-1');
+
+    const urls = mockGet.mock.calls.map((c) => c[0] as string).sort();
+    expect(urls).toEqual([
+      `/bill/archived.json?max=${VENDOR_BILLS_PAGE_SIZE}&sort=billDate&order=desc`,
+      `/bill/index.json?max=${VENDOR_BILLS_PAGE_SIZE}&sort=billDate&order=desc`,
+    ]);
+    expect(VENDOR_BILLS_PAGE_SIZE).toBe(1000);
+  });
+
+  it('keeps only this vendor, includes PAID bills from archived.json, drops soft-deleted ones', async () => {
+    vi.resetModules();
+    const { listVendorBills } = await import('../bills');
+    serve(
+      [
+        rawBill('mine-open', 'v-1', { billDate: '2026-03-01T00:00:00Z' }),
+        rawBill('theirs', 'v-2'),
+      ],
+      [
+        rawBill('mine-paid', 'v-1', {
+          status: 'PAID',
+          paidAmount: 100,
+          amountDue: 0,
+          billDate: '2026-04-01T00:00:00Z',
+        }),
+        rawBill('mine-deleted', 'v-1', { archived: true }),
+        rawBill('theirs-paid', 'v-2', { status: 'PAID' }),
+      ]
+    );
+
+    const { bills, complete } = await listVendorBills('v-1');
+
+    expect(bills.map((b) => b.id)).toEqual(['mine-paid', 'mine-open']);
+    expect(complete).toBe(true);
+    // Rows are normalised like every other bill read.
+    expect(bills[0]).toMatchObject({
+      billDate: '2026-04-01',
+      totalAmount: 100,
+      amountPaid: 100,
+      amountDue: 0,
+      vendor: { id: 'v-1', name: 'Vendor v-1' },
+    });
+  });
+
+  it('counts a bill returned by both lists once', async () => {
+    vi.resetModules();
+    const { listVendorBills } = await import('../bills');
+    serve([rawBill('dup', 'v-1')], [rawBill('dup', 'v-1')]);
+
+    const { bills } = await listVendorBills('v-1');
+
+    expect(bills).toHaveLength(1);
+  });
+
+  it('returns an empty, complete history when the vendor has no bills (zero end)', async () => {
+    vi.resetModules();
+    const { listVendorBills, summariseVendorBills } = await import('../bills');
+    serve([rawBill('other', 'v-2')], []);
+
+    const result = await listVendorBills('v-1');
+
+    expect(result).toEqual({ bills: [], complete: true });
+    expect(summariseVendorBills(result.bills)).toEqual({
+      billCount: 0,
+      totalBilled: 0,
+      totalPaid: 0,
+      totalOutstanding: 0,
+    });
+  });
+
+  it('treats null data as no rows', async () => {
+    vi.resetModules();
+    const { listVendorBills } = await import('../bills');
+    serve(null as unknown as unknown[], null as unknown as unknown[]);
+
+    expect(await listVendorBills('v-1')).toEqual({ bills: [], complete: true });
+  });
+
+  it('flags the history incomplete when totalCount exceeds the page (overflow end)', async () => {
+    vi.resetModules();
+    const { listVendorBills } = await import('../bills');
+    // 1000 rows returned out of 4500 matched: other vendors' rows fill the page,
+    // so some of v-1's bills may be on pages never fetched.
+    const page = Array.from({ length: 1000 }, (_, i) =>
+      rawBill(`b-${i}`, i % 10 === 0 ? 'v-1' : `v-other-${i}`, { totalCount: 4500 })
+    );
+    serve(page, []);
+
+    const { bills, complete } = await listVendorBills('v-1');
+
+    expect(bills).toHaveLength(100);
+    expect(complete).toBe(false);
+  });
+
+  it('is complete when totalCount exactly equals the rows returned', async () => {
+    vi.resetModules();
+    const { listVendorBills } = await import('../bills');
+    const page = Array.from({ length: 1000 }, (_, i) =>
+      rawBill(`b-${i}`, 'v-1', { totalCount: 1000 })
+    );
+    serve(page, []);
+
+    const { bills, complete } = await listVendorBills('v-1');
+
+    expect(bills).toHaveLength(1000);
+    expect(complete).toBe(true);
+  });
+
+  it('without totalCount, a full page counts as possibly truncated', async () => {
+    vi.resetModules();
+    const { listVendorBills } = await import('../bills');
+    serve([], Array.from({ length: 1000 }, (_, i) => rawBill(`p-${i}`, 'v-1', { status: 'PAID' })));
+
+    expect((await listVendorBills('v-1')).complete).toBe(false);
+  });
+
+  it('propagates a failed list instead of reporting an empty history', async () => {
+    vi.resetModules();
+    const { listVendorBills } = await import('../bills');
+    mockGet.mockImplementation((url: string) =>
+      url.startsWith('/bill/archived.json')
+        ? Promise.reject(new Error('Request failed with status code 500'))
+        : Promise.resolve({ data: [rawBill('x', 'v-1')] })
+    );
+
+    await expect(listVendorBills('v-1')).rejects.toThrow('500');
+  });
+
+  it('sums billed, paid and outstanding, rounding float drift to cents', async () => {
+    vi.resetModules();
+    const { summariseVendorBills } = await import('../bills');
+    const bills = [
+      { totalAmount: 0.1, amountPaid: 0.1, amountDue: 0 },
+      { totalAmount: 0.2, amountPaid: 0, amountDue: 0.2 },
+      { totalAmount: 1_234_567.89, amountPaid: 1_000_000, amountDue: 234_567.89 },
+    ] as unknown as Parameters<typeof summariseVendorBills>[0];
+
+    expect(summariseVendorBills(bills)).toEqual({
+      billCount: 3,
+      totalBilled: 1_234_568.19,
+      totalPaid: 1_000_000.1,
+      totalOutstanding: 234_568.09,
+    });
+  });
+
+  it('sums 1000 bills without drift and treats missing amounts as 0', async () => {
+    vi.resetModules();
+    const { summariseVendorBills } = await import('../bills');
+    const bills = Array.from({ length: 1000 }, (_, i) =>
+      i === 0
+        ? {}
+        : { totalAmount: 19.99, amountPaid: 9.99, amountDue: 10 }
+    ) as unknown as Parameters<typeof summariseVendorBills>[0];
+
+    expect(summariseVendorBills(bills)).toEqual({
+      billCount: 1000,
+      totalBilled: 19970.01,
+      totalPaid: 9980.01,
+      totalOutstanding: 9990,
+    });
+  });
+});

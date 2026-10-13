@@ -79,6 +79,14 @@ test.describe('Vendor Management', () => {
   ) {
     await mockTokenValidationApi(page, true);
 
+    // Added (SOUPFIN-172): the vendor detail page loads the vendor's bill
+    // history from both bill lists. Unmocked, they 401 and bounce to /login.
+    for (const list of ['index', 'archived']) {
+      await page.route(`**/rest/bill/${list}.json*`, (route) =>
+        route.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
+      );
+    }
+
     // Mock vendor list endpoint
     await page.route('**/vendor/index.json*', (route) => {
       const url = new URL(route.request().url());

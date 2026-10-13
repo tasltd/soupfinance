@@ -90,6 +90,14 @@ export async function deleteVendor(id: string): Promise<void> {
 /**
  * Get vendor payment summary
  * GET /rest/trading/vendor/paymentSummary/:id.json
+ *
+ * NOT SERVED YET (SOUPFIN-172): VendorController has no `paymentSummary`
+ * action, and both /rest/trading/vendor/paymentSummary/:id.json and
+ * /rest/vendor/paymentSummary/:id.json return 404 on the LXC backend
+ * (checked 2026-10-13). VendorDetailPage computes the summary from
+ * `listVendorBills()` instead. The backend request is in
+ * plans/soupfin-172-vendor-payment-summary-backend.md; switch the page over
+ * once the action ships with these fields.
  */
 export async function getVendorPaymentSummary(vendorId: string): Promise<{
   vendor: Vendor;

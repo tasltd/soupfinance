@@ -245,6 +245,102 @@ export async function listBills(params?: ListParams): Promise<Bill[]> {
   return (response.data || []).map(transformBill);
 }
 
+// =============================================================================
+// Vendor bill history (SOUPFIN-172)
+// =============================================================================
+
+/** BillController.index and .archived both cap `max` at 1000. */
+export const VENDOR_BILLS_PAGE_SIZE = 1000;
+
+/** One vendor's bills, plus whether the fetch could have missed any. */
+export interface VendorBills {
+  /** Newest bill date first. */
+  bills: Bill[];
+  /**
+   * False when either list held more rows than one page returned. The vendor
+   * filter runs in the browser, so a truncated page may drop this vendor's bills
+   * and the totals then understate what the vendor is owed.
+   */
+  complete: boolean;
+}
+
+/** Totals for the vendor detail page, matching PRD VND-2. */
+export interface VendorBillSummary {
+  billCount: number;
+  totalBilled: number;
+  totalPaid: number;
+  totalOutstanding: number;
+}
+
+/**
+ * Whether a page returned every row the backend matched. Each row carries the
+ * query's `totalCount` (SoupResultTransformer); without it, a short page is the
+ * only evidence that nothing was cut off.
+ */
+function isCompletePage(rows: Bill[]): boolean {
+  if (rows.length === 0) return true;
+  const totalCount = firstNumber((rows[0] as Bill & { totalCount?: unknown }).totalCount);
+  if (totalCount !== undefined) return totalCount <= rows.length;
+  return rows.length < VENDOR_BILLS_PAGE_SIZE;
+}
+
+/**
+ * Every live bill for one vendor.
+ * GET /rest/bill/index.json + GET /rest/bill/archived.json
+ *
+ * Added (SOUPFIN-172): two backend gaps shape this, both verified on the LXC
+ * backend on 2026-10-13:
+ *   - `Bill.searchList` has no vendor filter. Its javadoc lists one, but
+ *     `?vendor.id=` and `?vendor=` both return every bill in the tenant, so the
+ *     vendor filter runs here.
+ *   - `index.json` leaves out PAID bills, which only `archived.json` returns
+ *     (archived=true OR status=PAID). Without both lists, Total Paid would miss
+ *     every bill the vendor has been paid in full.
+ * Soft-deleted bills (archived=true) are dropped. See
+ * plans/soupfin-172-vendor-payment-summary-backend.md for the backend fix.
+ */
+export async function listVendorBills(vendorId: string): Promise<VendorBills> {
+  const query = `?${toQueryString({ max: VENDOR_BILLS_PAGE_SIZE, sort: 'billDate', order: 'desc' })}`;
+  const [open, closed] = await Promise.all([
+    apiClient.get<Bill[]>(`${BASE_URL}/index.json${query}`),
+    apiClient.get<Bill[]>(`${BASE_URL}/archived.json${query}`),
+  ]);
+  const openRows = open.data || [];
+  const closedRows = closed.data || [];
+
+  const byId = new Map<string, Bill>();
+  for (const raw of [...openRows, ...closedRows]) {
+    if (raw?.vendor?.id !== vendorId || raw.archived === true) continue;
+    byId.set(raw.id, transformBill(raw));
+  }
+
+  const bills = [...byId.values()].sort((a, b) =>
+    (b.billDate || '').localeCompare(a.billDate || '')
+  );
+  return { bills, complete: isCompletePage(openRows) && isCompletePage(closedRows) };
+}
+
+/**
+ * Sum a vendor's bills into Total Billed, Total Paid and Outstanding.
+ * Reads the normalised amounts `transformBill` produces.
+ */
+export function summariseVendorBills(bills: Bill[]): VendorBillSummary {
+  let totalBilled = 0;
+  let totalPaid = 0;
+  let totalOutstanding = 0;
+  for (const bill of bills) {
+    totalBilled += firstNumber(bill.totalAmount) ?? 0;
+    totalPaid += firstNumber(bill.amountPaid) ?? 0;
+    totalOutstanding += firstNumber(bill.amountDue) ?? 0;
+  }
+  return {
+    billCount: bills.length,
+    totalBilled: round2(totalBilled),
+    totalPaid: round2(totalPaid),
+    totalOutstanding: round2(totalOutstanding),
+  };
+}
+
 /**
  * Get single bill by ID
  * GET /rest/bill/show/:id.json

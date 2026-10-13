@@ -1330,6 +1330,12 @@ export async function mockAmbientApi(page: import('@playwright/test').Page) {
     })
   );
   await page.route('**/rest/corporate/index.json*', (route) => route.fulfill(json([])));
+
+  // Added (SOUPFIN-172): the vendor detail page reads the bill history from
+  // both bill lists. Default to "no bills"; mockDashboardApi, mockBillsApi and
+  // per-spec routes registered later still win.
+  await page.route('**/rest/bill/index.json*', (route) => route.fulfill(json([])));
+  await page.route('**/rest/bill/archived.json*', (route) => route.fulfill(json([])));
 }
 
 // ===========================================================================

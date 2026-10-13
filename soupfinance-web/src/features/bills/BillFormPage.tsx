@@ -11,10 +11,10 @@
  * Changed (2026-02-01): Added service description autocomplete for line items
  */
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getBill, createBill, updateBill, resolveBillItemTaxEntryId } from '../../api/endpoints/bills';
-import { listVendors } from '../../api/endpoints/vendors';
+import { listVendors, getVendor } from '../../api/endpoints/vendors';
 import { listTaxRates, listBillServices, DEFAULT_CURRENCIES } from '../../api/endpoints/domainData';
 import { useFormatCurrency } from '../../stores';
 import { getTodayIsoDate, sanitizeDateInputValue } from '../../utils/date';
@@ -48,10 +48,14 @@ export function BillFormPage() {
   const queryClient = useQueryClient();
   const formatCurrency = useFormatCurrency();
   const isEdit = !!id;
+  // Added (SOUPFIN-172): "Create bill" on a vendor's page opens /bills/new?vendorId=…
+  // with that vendor already chosen. Ignored when editing: the bill's own vendor wins.
+  const [searchParams] = useSearchParams();
+  const preselectedVendorId = isEdit ? '' : searchParams.get('vendorId') || '';
 
   // Added: Form state
   // Changed: Use backend field names — billDate (not issueDate), paymentDate (not dueDate)
-  const [vendorId, setVendorId] = useState('');
+  const [vendorId, setVendorId] = useState(preselectedVendorId);
   // Fix (SOUPFIN-64): local calendar day, not UTC today — `new Date().toISOString()`
   // defaults the field to yesterday for part of every day east of UTC.
   const [billDate, setBillDate] = useState(getTodayIsoDate());
@@ -73,6 +77,25 @@ export function BillFormPage() {
     queryKey: ['vendors'],
     queryFn: () => listVendors({ max: 100 }),
   });
+
+  // Added (SOUPFIN-172): the dropdown lists only the first 100 vendors. A
+  // preselected vendor outside that page would leave the select blank while the
+  // form still held its id, so fetch that one vendor and add it as an option.
+  const preselectedMissing =
+    !!preselectedVendorId && !!vendors && !vendors.some((v) => v.id === preselectedVendorId);
+  const { data: preselectedVendor, isError: preselectedVendorFailed } = useQuery({
+    queryKey: ['vendor', preselectedVendorId],
+    queryFn: () => getVendor(preselectedVendorId),
+    enabled: preselectedMissing,
+  });
+  const vendorOptions =
+    preselectedMissing && preselectedVendor ? [preselectedVendor, ...(vendors ?? [])] : vendors;
+
+  // A vendorId that names no vendor must not survive to the save: the select
+  // would look empty while the form still posted that id as the bill's vendor.
+  // Derived rather than reset in an effect; picking another vendor clears it.
+  const preselectedVendorUnknown = preselectedVendorFailed && vendorId === preselectedVendorId;
+  const selectedVendorId = preselectedVendorUnknown ? '' : vendorId;
 
   // Added (2026-02-01): Fetch tax rates for dropdown
   const { data: taxRates } = useQuery({
@@ -224,7 +247,7 @@ export function BillFormPage() {
     setFormError(null);
 
     // Validate
-    if (!vendorId) {
+    if (!selectedVendorId) {
       setFormError('Please select a vendor');
       return;
     }
@@ -243,7 +266,7 @@ export function BillFormPage() {
 
     // Fix: Use nested object FK (dot-notation doesn't bind in JSON body)
     const formData: Record<string, unknown> = {
-      vendor: { id: vendorId },
+      vendor: { id: selectedVendorId },
       billDate, // Changed: Backend uses billDate (not issueDate)
       paymentDate, // Changed: Backend uses paymentDate (not dueDate)
       notes,
@@ -375,7 +398,7 @@ export function BillFormPage() {
                   id="bill-vendor"
                   name="vendorId"
                   aria-label="Vendor"
-                  value={vendorId}
+                  value={selectedVendorId}
                   onChange={(e) => setVendorId(e.target.value)}
                   className="w-full h-12 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-3 text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/50"
                   data-testid="bill-vendor-select"
@@ -384,7 +407,7 @@ export function BillFormPage() {
                   {vendorsLoading ? (
                     <option disabled>Loading vendors...</option>
                   ) : (
-                    vendors?.map((vendor) => (
+                    vendorOptions?.map((vendor) => (
                       <option key={vendor.id} value={vendor.id}>
                         {vendor.name}
                       </option>
@@ -398,6 +421,11 @@ export function BillFormPage() {
                   testId="bill-vendor-add-button"
                 />
               </div>
+              {preselectedVendorUnknown && (
+                <p className="mt-1 text-sm text-danger" data-testid="bill-vendor-not-found">
+                  The vendor from the link could not be found. Choose a vendor from the list.
+                </p>
+              )}
             </div>
 
             {/* Changed: Bill Date (backend: billDate, previously misnamed as issueDate) */}

@@ -28,6 +28,8 @@ vi.mock('../../../api/endpoints/bills', async () => {
 // Mock the vendors API
 vi.mock('../../../api/endpoints/vendors', () => ({
   listVendors: vi.fn(),
+  // Added (SOUPFIN-172): fetches a preselected vendor missing from the first page
+  getVendor: vi.fn(),
 }));
 
 // Fix: Added domainData mock — component imports listTaxRates, listBillServices, DEFAULT_CURRENCIES
@@ -51,7 +53,7 @@ vi.mock('react-router-dom', async () => {
 });
 
 import { getBill, createBill, updateBill } from '../../../api/endpoints/bills';
-import { listVendors } from '../../../api/endpoints/vendors';
+import { listVendors, getVendor } from '../../../api/endpoints/vendors';
 // Fix: Import domainData mocks — component needs tax rates for dropdown options
 import { listTaxRates, listBillServices } from '../../../api/endpoints/domainData';
 
@@ -1112,6 +1114,140 @@ describe('BillFormPage', () => {
       renderBillFormPage();
 
       expect(await screen.findByTestId('bill-vendor-add-button')).toBeInTheDocument();
+    });
+  });
+
+  // ==========================================================================
+  // Added (SOUPFIN-172): "Create bill" from a vendor page opens
+  // /bills/new?vendorId=… with that vendor already chosen.
+  // ==========================================================================
+  describe('vendor preselected from ?vendorId= (SOUPFIN-172)', () => {
+    function renderAt(url: string, path = '/bills/new') {
+      return render(
+        <QueryClientProvider client={createQueryClient()}>
+          <MemoryRouter initialEntries={[url]}>
+            <Routes>
+              <Route path={path} element={<BillFormPage />} />
+            </Routes>
+          </MemoryRouter>
+        </QueryClientProvider>
+      );
+    }
+
+    async function fillLineAndSave(user: ReturnType<typeof userEvent.setup>) {
+      await user.type(screen.getByTestId('bill-due-date-input'), '2026-11-30');
+      await user.type(screen.getByTestId('bill-item-description-0'), 'Paper');
+      const price = screen.getByTestId('bill-item-unitPrice-0');
+      await user.clear(price);
+      await user.type(price, '250');
+      await user.click(screen.getByTestId('bill-form-save-button'));
+    }
+
+    it('selects the vendor named in the query string and sends it on save', async () => {
+      const user = userEvent.setup();
+      vi.mocked(listVendors).mockResolvedValue([
+        createMockVendor({ id: 'vendor-1', name: 'Acme' }),
+        createMockVendor({ id: 'vendor-2', name: 'Globex' }),
+      ]);
+      vi.mocked(createBill).mockResolvedValue(createMockBill({ id: 'new-bill' }));
+
+      renderAt('/bills/new?vendorId=vendor-2');
+
+      const select = await screen.findByTestId('bill-vendor-select');
+      await waitFor(() => expect(select).toHaveValue('vendor-2'));
+      expect(within(select).getByRole('option', { name: 'Globex' })).toHaveProperty('selected', true);
+      // Already on the first page, so no extra lookup.
+      expect(getVendor).not.toHaveBeenCalled();
+
+      await fillLineAndSave(user);
+
+      await waitFor(() =>
+        expect(createBill).toHaveBeenCalledWith(
+          expect.objectContaining({ vendor: { id: 'vendor-2' } })
+        )
+      );
+    });
+
+    it('fetches and lists a preselected vendor that is not in the first 100', async () => {
+      // 100 vendors, none of them the one asked for: the overflow end of the
+      // dropdown's own page size.
+      const firstPage = Array.from({ length: 100 }, (_, i) =>
+        createMockVendor({ id: `vendor-${i}`, name: `Vendor ${i}` })
+      );
+      vi.mocked(listVendors).mockResolvedValue(firstPage);
+      vi.mocked(getVendor).mockResolvedValue(
+        createMockVendor({ id: 'vendor-far', name: 'Far Down The List Ltd' })
+      );
+
+      renderAt('/bills/new?vendorId=vendor-far');
+
+      const select = await screen.findByTestId('bill-vendor-select');
+      expect(
+        await within(select).findByRole('option', { name: 'Far Down The List Ltd' })
+      ).toBeInTheDocument();
+      expect(select).toHaveValue('vendor-far');
+      expect(getVendor).toHaveBeenCalledWith('vendor-far');
+      // 100 vendors + the fetched one + the "Select a vendor" placeholder.
+      expect(within(select).getAllByRole('option')).toHaveLength(102);
+    });
+
+    it('starts with no vendor chosen when there is no vendorId', async () => {
+      vi.mocked(listVendors).mockResolvedValue([createMockVendor({ id: 'vendor-1', name: 'Acme' })]);
+
+      renderAt('/bills/new');
+
+      const select = await screen.findByTestId('bill-vendor-select');
+      await waitFor(() => expect(select).toHaveTextContent('Acme'));
+      expect(select).toHaveValue('');
+      expect(getVendor).not.toHaveBeenCalled();
+    });
+
+    it("ignores vendorId when editing: the bill's own vendor wins", async () => {
+      vi.mocked(listVendors).mockResolvedValue([
+        createMockVendor({ id: 'vendor-1', name: 'Acme' }),
+        createMockVendor({ id: 'vendor-2', name: 'Globex' }),
+      ]);
+      vi.mocked(getBill).mockResolvedValue(
+        createMockBill({ vendor: { id: 'vendor-1', name: 'Acme' } })
+      );
+
+      renderAt('/bills/bill-123/edit?vendorId=vendor-2', '/bills/:id/edit');
+
+      const select = await screen.findByTestId('bill-vendor-select');
+      await waitFor(() => expect(select).toHaveValue('vendor-1'));
+      expect(getVendor).not.toHaveBeenCalled();
+    });
+
+    it('does not submit an unknown vendorId that resolves to nothing', async () => {
+      const user = userEvent.setup();
+      vi.mocked(listVendors).mockResolvedValue([createMockVendor({ id: 'vendor-1', name: 'Acme' })]);
+      vi.mocked(getVendor).mockRejectedValue(new Error('Not found'));
+
+      renderAt('/bills/new?vendorId=ghost');
+
+      const select = await screen.findByTestId('bill-vendor-select');
+      await waitFor(() => expect(getVendor).toHaveBeenCalledWith('ghost'));
+      expect(await screen.findByTestId('bill-vendor-not-found')).toHaveTextContent(
+        /vendor from the link could not be found/i
+      );
+      expect(select).toHaveValue('');
+
+      await fillLineAndSave(user);
+
+      // The id was cleared, so the required-vendor check fires instead of
+      // posting a bill against a vendor that does not exist.
+      expect(await screen.findByText('Please select a vendor')).toBeInTheDocument();
+      expect(createBill).not.toHaveBeenCalled();
+
+      // Choosing a real vendor clears the note and saves against that vendor.
+      await user.selectOptions(select, 'vendor-1');
+      expect(screen.queryByTestId('bill-vendor-not-found')).not.toBeInTheDocument();
+      await user.click(screen.getByTestId('bill-form-save-button'));
+      await waitFor(() =>
+        expect(createBill).toHaveBeenCalledWith(
+          expect.objectContaining({ vendor: { id: 'vendor-1' } })
+        )
+      );
     });
   });
 });
