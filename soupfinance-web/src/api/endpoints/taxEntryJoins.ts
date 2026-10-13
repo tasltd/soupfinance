@@ -96,6 +96,88 @@ export function resolveTaxEntryIdFromRows(
 }
 
 /**
+ * Added (SOUPFIN-168): resolve EVERY TaxEntry a line item carries.
+ *
+ * `resolveTaxEntryIdFromRows` stops at the first row, which is right for a
+ * single-select form but drops the rest of a stacked line (Ghana's
+ * NHIL + GETFund + VAT). An edit form that only knows one of three taxes
+ * re-saves the line with one.
+ *
+ * Each row resolves on its own, by the same order as the singular helper:
+ * the nested `taxEntry.id` when the row is expanded, otherwise the serialised
+ * label matched against the catalogue. A row that resolves neither way is
+ * counted in `unresolved` rather than dropped silently, so the caller can
+ * avoid rewriting a line it does not fully understand.
+ *
+ * @returns the distinct ids in row order, and how many rows could not be read.
+ */
+export function resolveTaxEntryIdsFromRows(
+  rows?: TaxEntryJoinRow[] | null,
+  catalogue?: Array<{ id: string; serialised?: string }>
+): { ids: string[]; unresolved: number } {
+  const ids: string[] = [];
+  let unresolved = 0;
+
+  for (const row of rows || []) {
+    let id = row?.taxEntry?.id || '';
+    if (!id) {
+      const label = row?.serialised?.match(TRAILING_LABEL)?.[1]?.trim();
+      // Skip the NO_TAX_OPTION sentinel, whose id is '' and has no label.
+      id = (label && catalogue?.find((entry) => entry.id && entry.serialised?.trim() === label)?.id) || '';
+    }
+    if (!id) {
+      unresolved += 1;
+    } else if (!ids.includes(id)) {
+      ids.push(id);
+    }
+  }
+
+  return { ids, unresolved };
+}
+
+/** The parts of a TaxEntry that decide how much tax it charges. */
+export interface LineTaxEntry {
+  rate: number;
+  isCompoundTax?: boolean | null;
+  isTaxable?: boolean | null;
+}
+
+/**
+ * Added (SOUPFIN-168): the tax on one line, computed the way the backend does.
+ *
+ * Mirrors `LineItemTaxBinder.applyTaxAmounts` in soupmarkets-web, minus the
+ * withholding pass (`listTaxRates` never offers withholding entries):
+ *   1. simple taxable entries are charged on the line amount and added to the
+ *      base that compound entries are charged on;
+ *   2. simple non-taxable entries are charged on the line amount only;
+ *   3. compound entries are charged on that base.
+ *
+ * So 6,000 with NHIL 2.5% + GETFund 2.5% (both taxable) + VAT 15% (compound)
+ * is 150 + 150 + 15% of 6,300 = 1,245, not the 1,200 a flat rate sum gives.
+ * Measured against the LXC backend on 13 Oct 2026.
+ *
+ * @returns the line's tax, rounded to two decimals.
+ */
+export function computeLineTax(lineAmount: number, entries: LineTaxEntry[]): number {
+  const amount = Number.isFinite(lineAmount) ? lineAmount : 0;
+  let compoundBase = amount;
+  let tax = 0;
+
+  for (const entry of entries) {
+    if (entry.isCompoundTax) continue;
+    const charged = (amount * (Number(entry.rate) || 0)) / 100;
+    tax += charged;
+    if (entry.isTaxable) compoundBase += charged;
+  }
+  for (const entry of entries) {
+    if (!entry.isCompoundTax) continue;
+    tax += (compoundBase * (Number(entry.rate) || 0)) / 100;
+  }
+
+  return Math.round((tax + Number.EPSILON) * 100) / 100;
+}
+
+/**
  * Resolve the tax RATE a line item carries, for read-only display.
  *
  * Fix (SOUPFIN-44). `resolveTaxEntryIdFromRows` collapses two very different

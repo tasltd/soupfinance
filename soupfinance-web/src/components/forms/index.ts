@@ -14,3 +14,5 @@ export { DateFilterField, type DateFilterFieldProps } from './DateFilterField';
 export { MoneyInput, type MoneyInputProps } from './MoneyInput';
 // Added (SOUPFIN-30 #15): "+" affordance beside entity dropdowns
 export { AddEntityButton, type AddEntityButtonProps } from './AddEntityButton';
+// Added (SOUPFIN-168): pick several tax entries for one line item
+export { TaxMultiSelect, type TaxMultiSelectProps, type TaxMultiSelectOption } from './TaxMultiSelect';

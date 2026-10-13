@@ -31,7 +31,7 @@
  *         invoice-date-input, invoice-due-date-input, invoice-po-number-input,
  *         invoice-notes-textarea, invoice-add-item-button, invoice-items-table,
  *         invoice-item-description-{n}, invoice-item-quantity-{n},
- *         invoice-item-unitPrice-{n}, invoice-item-taxRate-{n},
+ *         invoice-item-unitPrice-{n}, invoice-item-tax-{n} (multi-select, SOUPFIN-168),
  *         invoice-item-remove-{n},
  *         invoice-subtotal, invoice-tax, invoice-total,
  *         invoice-form-save-draft-button, invoice-form-save-send-button,
@@ -943,19 +943,25 @@ test.describe('Invoice Integration Tests', () => {
     await page.getByTestId('invoice-item-unitPrice-0').fill('100');
 
     // Tax options are real TaxEntry records; pick one with a non-zero rate.
-    const taxSelect = page.getByTestId('invoice-item-taxRate-0');
+    // Changed (SOUPFIN-168): the tax control is a multi-select; its options are menu checkboxes.
+    await page.getByTestId('invoice-item-tax-0-toggle').click();
+    const taxMenu = page.getByTestId('invoice-item-tax-0-menu');
     await expect
-      .poll(async () => await taxSelect.locator('option').count(), { timeout: 30000 })
-      .toBeGreaterThan(1);
+      .poll(async () => await taxMenu.locator('input[type="checkbox"]').count(), { timeout: 30000 })
+      .toBeGreaterThan(0);
 
-    const options = await taxSelect.locator('option').evaluateAll((opts) =>
-      opts.map((o) => ({ value: (o as HTMLOptionElement).value, label: o.textContent || '' }))
+    const options = await taxMenu.locator('label').evaluateAll((labels) =>
+      labels.map((label) => ({
+        value: (label.querySelector('input')?.getAttribute('data-testid') || '').replace('invoice-item-tax-0-option-', ''),
+        label: label.textContent || '',
+      }))
     );
     const taxable = options.find((o) => o.value && /\(([\d.]+)%\)/.test(o.label));
     expect(taxable, 'expected a real TaxEntry option').toBeTruthy();
     const rate = parseFloat(taxable!.label.match(/\(([\d.]+)%\)/)![1]);
 
-    await taxSelect.selectOption(taxable!.value);
+    await page.getByTestId(`invoice-item-tax-0-option-${taxable!.value}`).check();
+    await page.getByTestId('invoice-item-tax-0-done').click();
     await page.waitForTimeout(300);
 
     const subtotalText = await page.getByTestId('invoice-subtotal').textContent();

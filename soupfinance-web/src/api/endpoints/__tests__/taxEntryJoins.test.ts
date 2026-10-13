@@ -15,7 +15,9 @@ import {
   parseTaxAmountFromSerialised,
   parseJoinRowTaxAmount,
   resolveTaxEntryIdFromRows,
+  resolveTaxEntryIdsFromRows,
   resolveTaxRateFromRows,
+  computeLineTax,
 } from '../taxEntryJoins';
 import { NO_TAX_OPTION } from '../domainData';
 
@@ -264,5 +266,108 @@ describe('resolveTaxRateFromRows', () => {
         resolveTaxRateFromRows([{ serialised: 'TaxEntryBillItem(X(a), TAX-150-15%, 1.0)' }], big)
       ).toBe(15);
     });
+  });
+});
+
+// =============================================================================
+// Added (SOUPFIN-168): every tax on a line, and the stacked-tax computation.
+// =============================================================================
+
+/** A bare join row as LXC renders it, for a tax labelled `label`. */
+function bareRow(label: string, amount: number) {
+  return {
+    serialised: `TaxEntryInvoiceItem(InvoiceItem(quantity:2.0, unitPrice:3000.00, invoice:Invoice(number:1, total:0.00)), ${label}, ${amount}, ${6000 + amount})`,
+  };
+}
+
+const CATALOGUE = [
+  NO_TAX_OPTION,
+  { id: 'nhil', serialised: 'NHIL-2.5%' },
+  { id: 'getfl', serialised: 'GETFL-2.5%' },
+  { id: 'vat', serialised: 'VAT-S-15.0%' },
+];
+
+describe('resolveTaxEntryIdsFromRows (SOUPFIN-168)', () => {
+  it('returns every tax on a stacked line, in row order', () => {
+    const rows = [bareRow('NHIL-2.5%', 150), bareRow('GETFL-2.5%', 150), bareRow('VAT-S-15.0%', 945)];
+    expect(resolveTaxEntryIdsFromRows(rows, CATALOGUE)).toEqual({ ids: ['nhil', 'getfl', 'vat'], unresolved: 0 });
+  });
+
+  it('prefers the nested id on expanded rows, and mixes with label matches', () => {
+    const rows = [{ taxEntry: { id: 'expanded-id' }, serialised: 'whatever' }, bareRow('VAT-S-15.0%', 945)];
+    expect(resolveTaxEntryIdsFromRows(rows, CATALOGUE)).toEqual({ ids: ['expanded-id', 'vat'], unresolved: 0 });
+  });
+
+  it('counts a row it cannot identify instead of dropping it silently', () => {
+    const rows = [bareRow('NHIL-2.5%', 150), bareRow('WHT-3.0%', 180)];
+    expect(resolveTaxEntryIdsFromRows(rows, CATALOGUE)).toEqual({ ids: ['nhil'], unresolved: 1 });
+  });
+
+  it('never resolves to the empty-id "No Tax" sentinel', () => {
+    // An unparseable row has no label; matching it against NO_TAX_OPTION would return ''.
+    const rows = [{ serialised: 'garbage' }];
+    expect(resolveTaxEntryIdsFromRows(rows, CATALOGUE)).toEqual({ ids: [], unresolved: 1 });
+  });
+
+  it('with the catalogue still loading, every bare row is unresolved', () => {
+    const rows = [bareRow('NHIL-2.5%', 150), bareRow('VAT-S-15.0%', 945)];
+    expect(resolveTaxEntryIdsFromRows(rows, undefined)).toEqual({ ids: [], unresolved: 2 });
+  });
+
+  it('de-duplicates a tax that appears on two rows', () => {
+    const rows = [bareRow('NHIL-2.5%', 150), bareRow('NHIL-2.5%', 150)];
+    expect(resolveTaxEntryIdsFromRows(rows, CATALOGUE).ids).toEqual(['nhil']);
+  });
+
+  it('zero rows: nothing to resolve', () => {
+    expect(resolveTaxEntryIdsFromRows([], CATALOGUE)).toEqual({ ids: [], unresolved: 0 });
+    expect(resolveTaxEntryIdsFromRows(null, CATALOGUE)).toEqual({ ids: [], unresolved: 0 });
+  });
+
+  it('overflow: 200 rows across 200 catalogue entries all resolve', () => {
+    const big = Array.from({ length: 200 }, (_, i) => ({ id: `t${i}`, serialised: `T${i}-1.0%` }));
+    const rows = big.map((t) => bareRow(t.serialised, 60));
+    const result = resolveTaxEntryIdsFromRows(rows, big);
+    expect(result.unresolved).toBe(0);
+    expect(result.ids).toHaveLength(200);
+    expect(result.ids[199]).toBe('t199');
+  });
+});
+
+describe('computeLineTax (SOUPFIN-168)', () => {
+  const NHIL = { rate: 2.5, isTaxable: true };
+  const GETFL = { rate: 2.5, isTaxable: true };
+  const VAT = { rate: 15, isCompoundTax: true };
+
+  it('charges compound VAT on the line plus the taxable levies, as LXC stored it', () => {
+    // Measured 13 Oct 2026: NHIL 150 + GETFL 150 + VAT-S 945 on a 6,000 line.
+    expect(computeLineTax(6000, [NHIL, GETFL, VAT])).toBe(1245);
+  });
+
+  it('does not depend on the order the taxes were picked', () => {
+    expect(computeLineTax(6000, [VAT, GETFL, NHIL])).toBe(1245);
+  });
+
+  it('a non-taxable simple tax is charged but does not feed the compound base', () => {
+    expect(computeLineTax(1000, [{ rate: 10, isTaxable: false }, VAT])).toBe(250);
+  });
+
+  it('a single simple tax is a plain percentage', () => {
+    expect(computeLineTax(3000, [{ rate: 5, isTaxable: true }])).toBe(150);
+  });
+
+  it('zero: no taxes, or a zero amount, is no tax', () => {
+    expect(computeLineTax(6000, [])).toBe(0);
+    expect(computeLineTax(0, [NHIL, GETFL, VAT])).toBe(0);
+  });
+
+  it('rounds to cents', () => {
+    expect(computeLineTax(33.33, [{ rate: 2.5, isTaxable: true }])).toBe(0.83);
+  });
+
+  it('overflow: a seven-figure line under a ten-tax stack stays exact to the cent', () => {
+    const levies = Array.from({ length: 9 }, () => ({ rate: 1, isTaxable: true }));
+    // 9,999,999.99 × 9% = 899,999.9991; VAT 15% of 10,899,999.9891 = 1,634,999.998365
+    expect(computeLineTax(9999999.99, [...levies, VAT])).toBe(2535000);
   });
 });

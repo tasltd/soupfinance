@@ -30,8 +30,12 @@ import {
   updateInvoice,
   sendInvoice,
   createInvoiceItem,
-  resolveItemTaxEntryId,
+  resolveItemTaxEntryIds,
+  sumItemStoredTax,
 } from '../../api/endpoints/invoices';
+// Added (SOUPFIN-168): stacked taxes preview the way the backend computes them
+import { computeLineTax } from '../../api/endpoints/taxEntryJoins';
+import { TaxMultiSelect } from '../../components/forms/TaxMultiSelect';
 import type { InvoiceItemInput } from '../../api/endpoints/invoices';
 import { listClients, createClient, getClientPortfolio, getClientDisplayName } from '../../api/endpoints/clients';
 import { listTaxRates, listInvoiceServices } from '../../api/endpoints/domainData';
@@ -48,8 +52,9 @@ import { HelpLink } from '../../components/help';
  * Line item form state (no id for new items).
  *
  * Changed (SOUPFIN-37):
- *  - `taxEntryId` holds the real backend TaxEntry UUID and is what gets saved.
- *    `taxRate` is kept alongside it purely to drive the live preview maths.
+ *  - tax is held as real backend TaxEntry UUIDs, which is what gets saved.
+ *    (SOUPFIN-168 widened this from one id to a list; the preview is derived
+ *    from the ids rather than stored beside them.)
  *  - `discountPercent` was REMOVED. The backend finance domain has no discount
  *    field anywhere (not on Invoice, not on InvoiceItem), so a discount could
  *    never be persisted — the form was showing a discounted total that the
@@ -60,19 +65,55 @@ interface LineItem {
   description: string;
   quantity: number;
   unitPrice: number;
-  /** Real TaxEntry UUID; '' means no tax. */
-  taxEntryId: string;
-  /** Percentage mirrored from the selected TaxEntry, for preview only. */
-  taxRate: number;
+  /**
+   * Real TaxEntry UUIDs; empty means no tax.
+   * Changed (SOUPFIN-168): was a single `taxEntryId`. The backend stores one
+   * join row per TaxEntry, and Ghana lines routinely carry three.
+   */
+  taxEntryIds: string[];
+  /**
+   * Added (SOUPFIN-168): what a SAVED line held when the form loaded. Used to
+   * send tax only for lines the user actually changed — the backend reads an
+   * absent tax key as "leave this line's tax alone".
+   */
+  saved?: {
+    taxEntryIds: string[];
+    quantity: number;
+    unitPrice: number;
+    /** Tax the backend stored, summed across the line's join rows. */
+    tax: number;
+    /** Join rows that matched no selectable TaxEntry (e.g. withholding). */
+    unresolved: number;
+  };
 }
 
 const EMPTY_LINE_ITEM: LineItem = {
   description: '',
   quantity: 1,
   unitPrice: 0,
-  taxEntryId: '',
-  taxRate: 0,
+  taxEntryIds: [],
 };
+
+/** Same members, any order. */
+function sameIds(a: string[], b: string[]): boolean {
+  return a.length === b.length && a.every((id) => b.includes(id));
+}
+
+/**
+ * Added (SOUPFIN-168): whether the save must send this saved line's tax.
+ *
+ * Sent when the user changed the taxes, or when the amount changed on a line
+ * whose taxes are all known (the backend recomputes each tax only when it is
+ * told the line's taxes). Never sent for an untouched line, so a tax the form
+ * could not identify is not wiped by a save that did not mean to touch it.
+ */
+function mustSendSavedLineTax(item: LineItem): boolean {
+  if (!item.saved) return false;
+  if (!sameIds(item.taxEntryIds, item.saved.taxEntryIds)) return true;
+  const amountChanged =
+    item.quantity !== item.saved.quantity || item.unitPrice !== item.saved.unitPrice;
+  return amountChanged && item.saved.unresolved === 0 && item.taxEntryIds.length > 0;
+}
 
 export function InvoiceFormPage() {
   const { id } = useParams<{ id: string }>();
@@ -191,20 +232,30 @@ export function InvoiceFormPage() {
             description: item.description,
             quantity: item.quantity,
             unitPrice: item.unitPrice,
-            // Changed (SOUPFIN-37): tax is carried by the TaxEntry FK, so
-            // resolve the first linked entry rather than a non-existent
+            // Changed (SOUPFIN-37): tax is carried by the TaxEntry FK, not a
             // `taxRate` column on the item.
-            // Fix (SOUPFIN-42): read it through resolveItemTaxEntryId, which also
-            // handles the join row arriving as a bare FK reference. Reading
-            // `?.[0]?.taxEntry?.id` directly returned '' for that shape, so the
-            // dropdown reset to "No Tax" and re-saving dropped the tax.
-            taxEntryId: resolveItemTaxEntryId(item, taxRates),
-            taxRate: item.taxRate || 0,
+            // Fix (SOUPFIN-42): resolution also handles join rows that arrive as
+            // bare FK references, matching their label against the catalogue.
+            // Changed (SOUPFIN-168): keep EVERY join row. Reading only the first
+            // turned an NHIL + GETFund + VAT line into an NHIL-only line.
+            ...(() => {
+              const { ids, unresolved } = resolveItemTaxEntryIds(item, taxRates);
+              return {
+                taxEntryIds: ids,
+                saved: {
+                  taxEntryIds: ids,
+                  quantity: item.quantity,
+                  unitPrice: item.unitPrice,
+                  tax: sumItemStoredTax(item),
+                  unresolved,
+                },
+              };
+            })(),
           }))
         );
       }
     }
-    // `taxRates` is a dependency because resolveItemTaxEntryId needs the catalogue
+    // `taxRates` is a dependency because resolveItemTaxEntryIds needs the catalogue
     // to match a bare FK reference. The two queries race on mount; without this the
     // effect could run while the catalogue is still undefined and leave every line
     // showing "No Tax". TanStack Query keeps the reference stable, so this re-runs
@@ -395,10 +446,21 @@ export function InvoiceFormPage() {
     return sum + item.quantity * item.unitPrice;
   }, 0);
 
-  const taxAmount = lineItems.reduce((sum, item) => {
-    const lineTotal = item.quantity * item.unitPrice;
-    return sum + (lineTotal * item.taxRate) / 100;
-  }, 0);
+  // Changed (SOUPFIN-168): a line's tax is the sum across all its entries,
+  // compound ones charged on top of the simple taxable ones, as the backend does.
+  const getLineTax = (item: LineItem): number => {
+    // A saved line the form cannot fully read, and that this save will not
+    // rewrite, keeps exactly the tax the backend already stored.
+    if (item.saved && item.saved.unresolved > 0 && !mustSendSavedLineTax(item)) {
+      return item.saved.tax;
+    }
+    const entries = item.taxEntryIds
+      .map((taxId) => taxRates?.find((t) => t.id === taxId))
+      .filter((t): t is NonNullable<typeof t> => !!t);
+    return computeLineTax(item.quantity * item.unitPrice, entries);
+  };
+
+  const taxAmount = lineItems.reduce((sum, item) => sum + getLineTax(item), 0);
 
   const totalAmount = subtotal + taxAmount;
 
@@ -412,17 +474,13 @@ export function InvoiceFormPage() {
   };
 
   /**
-   * Select a tax entry for a line. Stores BOTH the id (what gets saved) and the
-   * rate (what drives the preview), so the two can never drift apart.
+   * Set the tax entries for a line.
+   * Changed (SOUPFIN-168): takes the full selection. The preview rate is no
+   * longer stored beside it — it is derived from these ids, so the two cannot drift.
    */
-  const selectLineItemTax = (index: number, taxEntryId: string) => {
-    const selected = taxRates?.find((t) => t.id === taxEntryId);
+  const selectLineItemTaxes = (index: number, taxEntryIds: string[]) => {
     setLineItems((prev) =>
-      prev.map((item, i) =>
-        i === index
-          ? { ...item, taxEntryId, taxRate: selected?.rate ?? 0 }
-          : item
-      )
+      prev.map((item, i) => (i === index ? { ...item, taxEntryIds } : item))
     );
   };
 
@@ -437,15 +495,17 @@ export function InvoiceFormPage() {
                 ...item,
                 description: service.name,
                 // Auto-fill tax from the service default by matching a real
-                // TaxEntry on rate, so the saved id and previewed rate agree.
-                ...(service.defaultTaxRate != null
-                  ? (() => {
-                      const match = taxRates?.find((t) => t.rate === service.defaultTaxRate);
-                      return match
-                        ? { taxEntryId: match.id, taxRate: match.rate }
-                        : { taxRate: service.defaultTaxRate };
-                    })()
-                  : {}),
+                // TaxEntry on rate.
+                // Changed (SOUPFIN-168): with no matching entry nothing is
+                // selected. Previewing the bare rate showed tax the save could
+                // never persist, since there is no TaxEntry id to send.
+                ...(() => {
+                  const match =
+                    service.defaultTaxRate != null
+                      ? taxRates?.find((t) => t.id && t.rate === service.defaultTaxRate)
+                      : undefined;
+                  return match ? { taxEntryIds: [match.id] } : {};
+                })(),
               }
             : item
         )
@@ -524,6 +584,16 @@ export function InvoiceFormPage() {
         formData[`invoiceItemList[${index}].description`] = item.description;
         formData[`invoiceItemList[${index}].quantity`] = item.quantity;
         formData[`invoiceItemList[${index}].unitPrice`] = item.unitPrice;
+        // Added (SOUPFIN-168): tax on a SAVED line travels with the invoice
+        // update. InvoiceService.applyItemTaxes reads `taxEntries` off the
+        // indexed params, adds and removes join rows to match, and recomputes
+        // every amount; an empty string clears the line's tax. This avoids
+        // PUT /invoiceItem/update, which cannot bind taxEntries (SOUPFIN-40).
+        // Omitted when unchanged, because the backend reads an absent key as
+        // "leave this line's tax alone".
+        if (mustSendSavedLineTax(item)) {
+          formData[`invoiceItemList[${index}].taxEntries`] = item.taxEntryIds.join(',');
+        }
       });
 
     return formData;
@@ -537,7 +607,7 @@ export function InvoiceFormPage() {
         description: item.description,
         quantity: item.quantity,
         unitPrice: item.unitPrice,
-        taxEntryIds: item.taxEntryId ? [item.taxEntryId] : [],
+        taxEntryIds: item.taxEntryIds,
       }));
 
   /**
@@ -1001,7 +1071,9 @@ export function InvoiceFormPage() {
             </button>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm" data-testid="invoice-items-table">
+            {/* Changed (SOUPFIN-168): a minimum width, so the tax chips scroll the
+                table sideways instead of squeezing Qty and Unit Price to nothing. */}
+            <table className="w-full min-w-[960px] text-sm" data-testid="invoice-items-table">
               <thead className="text-xs text-subtle-text uppercase bg-background-light dark:bg-background-dark">
                 <tr>
                   {/* Added: Service/Product reference dropdown column before Description */}
@@ -1012,7 +1084,8 @@ export function InvoiceFormPage() {
                   {/* Removed (SOUPFIN-37): "Disc %" — no discount field exists
                       on the backend, so the column promised a reduction the
                       saved invoice never had. */}
-                  <th className="px-4 py-3 text-right w-32">Tax</th>
+                  {/* Changed (SOUPFIN-168): wider, to hold one chip per tax */}
+                  <th className="px-4 py-3 text-left w-56">Tax</th>
                   <th className="px-4 py-3 text-right w-28">Amount</th>
                   <th className="px-4 py-3 w-14"></th>
                 </tr>
@@ -1020,7 +1093,7 @@ export function InvoiceFormPage() {
               <tbody>
                 {lineItems.map((item, index) => {
                   const lineTotal = item.quantity * item.unitPrice;
-                  const lineAmount = lineTotal + (lineTotal * item.taxRate) / 100;
+                  const lineAmount = lineTotal + getLineTax(item);
                   return (
                     <tr key={index} className="border-b border-border-light dark:border-border-dark">
                       {/* Added: Service/Product dropdown - auto-fills description when selected */}
@@ -1072,26 +1145,32 @@ export function InvoiceFormPage() {
                         />
                       </td>
                       <td className="px-4 py-3">
-                        {/* Changed (SOUPFIN-37): the option value is now the
-                            real TaxEntry UUID, which is what gets saved. It
-                            used to be the bare rate, which the backend has no
-                            way to resolve to a tax record. */}
-                        <select
-                          value={item.taxEntryId}
-                          onChange={(e) => selectLineItemTax(index, e.target.value)}
-                          className="w-full h-10 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-2 text-right text-text-light dark:text-text-dark focus:border-primary focus:ring-1 focus:ring-primary/50"
-                          data-testid={`invoice-item-taxRate-${index}`}
-                        >
-                          {taxRates?.length ? (
-                            taxRates.map((tax) => (
-                              <option key={tax.id || 'none'} value={tax.id}>
-                                {tax.rate ? `${tax.name} (${tax.rate}%)` : tax.name}
-                              </option>
-                            ))
-                          ) : (
-                            <option value="">No Tax</option>
-                          )}
-                        </select>
+                        {/* Changed (SOUPFIN-37): options carry the real
+                            TaxEntry UUID, which is what gets saved.
+                            Changed (SOUPFIN-168): a multi-select, so a line can
+                            carry NHIL + GETFund + VAT the way the backend stores it. */}
+                        <TaxMultiSelect
+                          options={(taxRates ?? []).map((t) => ({
+                            id: t.id,
+                            name: t.name,
+                            rate: t.rate,
+                            shortName: t.abbreviation,
+                          }))}
+                          value={item.taxEntryIds}
+                          onChange={(ids) => selectLineItemTaxes(index, ids)}
+                          ariaLabel={`Taxes for line ${index + 1}`}
+                          testId={`invoice-item-tax-${index}`}
+                        />
+                        {item.saved && item.saved.unresolved > 0 && (
+                          <p
+                            className="mt-1 text-xs text-warning"
+                            data-testid={`invoice-item-tax-unresolved-${index}`}
+                          >
+                            {item.saved.unresolved === 1
+                              ? 'This line has 1 more tax that cannot be shown here. Changing the taxes removes it.'
+                              : `This line has ${item.saved.unresolved} more taxes that cannot be shown here. Changing the taxes removes them.`}
+                          </p>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-right font-medium text-text-light dark:text-text-dark">
                         {formatCurrency(lineAmount)}

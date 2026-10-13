@@ -224,25 +224,42 @@ async function fillReportedInvoice(page: Page) {
   await page.getByTestId('invoice-item-unitPrice-0').fill('1500');
 }
 
+/**
+ * Changed (SOUPFIN-168): the per-line tax control is a multi-select. Open its menu
+ * and return the TaxEntry ids it offers, read off the checkbox test ids.
+ */
+async function offeredTaxIds(page: Page, index = 0): Promise<string[]> {
+  await page.getByTestId(`invoice-item-tax-${index}-toggle`).click();
+  const menu = page.getByTestId(`invoice-item-tax-${index}-menu`);
+  await expect(menu).toBeVisible();
+  return menu.locator('input[type="checkbox"]').evaluateAll((boxes, prefix) =>
+    boxes.map((b) => (b.getAttribute('data-testid') || '').replace(prefix as string, '')),
+    `invoice-item-tax-${index}-option-`
+  );
+}
+
+/** Tick one tax on a line and close the menu. */
+async function pickTax(page: Page, taxId: string, index = 0) {
+  await page.getByTestId(`invoice-item-tax-${index}-toggle`).click();
+  await page.getByTestId(`invoice-item-tax-${index}-option-${taxId}`).check();
+  await page.getByTestId(`invoice-item-tax-${index}-done`).click();
+}
+
 test.describe('SOUPFIN-37 — invoice line-item tax', () => {
   test('#1 tax dropdown is populated from the real TaxEntry catalogue', async ({ page }) => {
     await signInAndLand(page);
     await openNewInvoiceForm(page);
     await shot(page, 'new-invoice-form-loaded');
 
-    const taxSelect = page.getByTestId('invoice-item-taxRate-0');
-    await expect(taxSelect).toBeVisible();
-
-    const optionValues = await taxSelect.locator('option').evaluateAll((opts) =>
-      opts.map((o) => (o as HTMLOptionElement).value)
-    );
+    // Changed (SOUPFIN-168): "No Tax" is now the empty state of the multi-select
+    // rather than an option, and the options are checkboxes.
+    await expect(page.getByTestId('invoice-item-tax-0-empty')).toHaveText('No Tax');
+    const optionValues = await offeredTaxIds(page);
 
     // Real backend UUIDs, never the old synthetic ids.
     expect(optionValues).toContain(VAT_ID);
     expect(optionValues.some((v) => v.startsWith('tax-'))).toBe(false);
-
-    // "No Tax" is the empty sentinel.
-    expect(optionValues).toContain('');
+    expect(optionValues).not.toContain('');
 
     // Updated (SOUPFIN-42): compound taxes are KEPT. `LineItemTaxBinder.applyTaxAmounts`
     // sums every non-withholding row into `chargeable` — compound differs only in
@@ -278,7 +295,7 @@ test.describe('SOUPFIN-37 — invoice line-item tax', () => {
     await expect(page.getByTestId('invoice-tax')).toContainText('0.00');
     await shot(page, 'preview-before-tax');
 
-    await page.getByTestId('invoice-item-taxRate-0').selectOption(VAT_ID);
+    await pickTax(page, VAT_ID);
 
     // After: 15% of 3,000 = 450 → total 3,450.
     await expect(page.getByTestId('invoice-tax')).toContainText('450.00');
@@ -290,7 +307,7 @@ test.describe('SOUPFIN-37 — invoice line-item tax', () => {
     const captured = await signInAndLand(page);
     await openNewInvoiceForm(page);
     await fillReportedInvoice(page);
-    await page.getByTestId('invoice-item-taxRate-0').selectOption(VAT_ID);
+    await pickTax(page, VAT_ID);
     await shot(page, 'form-filled-with-tax');
 
     await page.getByTestId('invoice-form-save-draft-button').click();
@@ -331,11 +348,9 @@ test.describe('SOUPFIN-37 — invoice line-item tax', () => {
     // catalogue entirely, so the option no longer exists and `selectOption(WHT_ID)`
     // could only ever time out. The guarantee is now stronger and asserted directly:
     // the row is unofferable, and the total stays at the untaxed subtotal.
-    const taxSelect = page.getByTestId('invoice-item-taxRate-0');
-    const optionValues = await taxSelect.locator('option').evaluateAll((opts) =>
-      opts.map((o) => (o as HTMLOptionElement).value)
-    );
+    const optionValues = await offeredTaxIds(page);
     expect(optionValues).not.toContain(WHT_ID);
+    await page.getByTestId('invoice-item-tax-0-done').click();
 
     await expect(page.getByTestId('invoice-tax')).toContainText('0.00');
     await expect(page.getByTestId('invoice-total')).toContainText('3,000.00');

@@ -30,6 +30,61 @@ const API_BASE = 'http://10.115.213.183:9090';
 
 const SHOT = 'invoice-tax';
 
+/**
+ * Changed (SOUPFIN-168): the line tax control is a multi-select. Open its menu and
+ * read each offered TaxEntry as { value: id, label: "<name> (<rate>%)" }.
+ */
+async function readTaxOptions(page: Page, index = 0): Promise<Array<{ value: string; label: string }>> {
+  await page.getByTestId(`invoice-item-tax-${index}-toggle`).click();
+  const menu = page.getByTestId(`invoice-item-tax-${index}-menu`);
+  await expect(menu).toBeVisible({ timeout: 20000 });
+  // The catalogue loads after the form; wait inside the open menu rather than reopening it.
+  await expect
+    .poll(async () => menu.locator('input[type="checkbox"]').count(), { timeout: 30000 })
+    .toBeGreaterThan(0);
+  const options = await menu.locator('label').evaluateAll((labels, prefix) =>
+    labels.map((label) => ({
+      value: (label.querySelector('input')?.getAttribute('data-testid') || '').replace(prefix as string, ''),
+      label: label.textContent || '',
+    })),
+    `invoice-item-tax-${index}-option-`
+  );
+  await page.getByTestId(`invoice-item-tax-${index}-done`).click();
+  return options;
+}
+
+/** Tick each of `ids` on a line's tax menu, then close it. */
+async function tickTaxes(page: Page, ids: string[], index = 0) {
+  await page.getByTestId(`invoice-item-tax-${index}-toggle`).click();
+  for (const id of ids) {
+    await page.getByTestId(`invoice-item-tax-${index}-option-${id}`).check();
+  }
+  await page.getByTestId(`invoice-item-tax-${index}-done`).click();
+}
+
+/** Join rows of the invoice's first line, as { label, amount } read off `serialised`. */
+async function readJoinRows(
+  page: Page,
+  token: string,
+  invoiceId: string
+): Promise<{ itemId: string; rows: Array<{ label: string; amount: number }> }> {
+  const resp = await page.request.get(
+    `${API_BASE}/rest/invoiceItem/index.json?invoice.id=${invoiceId}&max=10`,
+    { headers: { 'X-Auth-Token': token }, maxRedirects: 0, timeout: 45000 }
+  );
+  expect(resp.ok()).toBeTruthy();
+  const body = await resp.json();
+  const items = Array.isArray(body) ? body : body.instanceList || [];
+  expect(items.length, 'the invoice must have persisted its line item').toBe(1);
+  // TaxEntryInvoiceItem(InvoiceItem(...), NHIL-2.5%, 150.0, 6150.0)
+  const rows = (items[0].taxEntryInvoiceItemList || []).map((row: { serialised?: string }) => {
+    const m = (row.serialised || '').match(/,\s*([^,()]+?),\s*(-?[\d.]+),\s*-?[\d.]+\)\s*$/);
+    expect(m, `could not parse a join row: ${row.serialised}`).toBeTruthy();
+    return { label: m![1].trim(), amount: parseFloat(m![2]) };
+  });
+  return { itemId: items[0].id, rows };
+}
+
 async function getAuthToken(page: Page): Promise<string> {
   // Dual-storage: remember-me writes to localStorage, otherwise sessionStorage.
   return await page.evaluate(
@@ -138,19 +193,12 @@ test.describe('Invoice line-item tax persistence (SOUPFIN-37)', () => {
     await expect(page.getByTestId('invoice-form-page')).toBeVisible({ timeout: 20000 });
     await takeScreenshot(page, `${SHOT}-03-new-invoice-form`);
 
-    // ---- 3. The tax dropdown must offer real TaxEntry ids ----------------
+    // ---- 3. The tax control must offer real TaxEntry ids ----------------
     // Synthetic ids (the old `tax-vat-15` style) are exactly what made the
     // tax unsaveable, so assert they are gone.
-    const taxSelect = page.getByTestId('invoice-item-taxRate-0');
-    await expect(taxSelect).toBeVisible({ timeout: 20000 });
-
-    await expect
-      .poll(async () => (await taxSelect.locator('option').count()), { timeout: 30000 })
-      .toBeGreaterThan(1);
-
-    const taxOptions = await taxSelect.locator('option').evaluateAll((opts) =>
-      opts.map((o) => ({ value: (o as HTMLOptionElement).value, label: o.textContent || '' }))
-    );
+    // Changed (SOUPFIN-168): a multi-select, so the options are menu checkboxes.
+    await expect(page.getByTestId('invoice-item-tax-0')).toBeVisible({ timeout: 20000 });
+    const taxOptions = await readTaxOptions(page);
     console.log('Tax options:', JSON.stringify(taxOptions));
 
     expect(
@@ -191,7 +239,7 @@ test.describe('Invoice line-item tax persistence (SOUPFIN-37)', () => {
     await page.getByTestId('invoice-item-description-0').fill('Advisory (SOUPFIN-37)');
     await page.getByTestId('invoice-item-quantity-0').fill(String(QUANTITY));
     await page.getByTestId('invoice-item-unitPrice-0').fill(String(UNIT_PRICE));
-    await taxSelect.selectOption(taxable!.value);
+    await tickTaxes(page, [taxable!.value]);
 
     await takeScreenshot(page, `${SHOT}-04-form-filled-with-tax`);
 
@@ -293,7 +341,8 @@ test.describe('Invoice line-item tax persistence (SOUPFIN-37)', () => {
     await page.getByTestId('invoice-item-description-0').fill('Untaxed line (SOUPFIN-37)');
     await page.getByTestId('invoice-item-quantity-0').fill('1');
     await page.getByTestId('invoice-item-unitPrice-0').fill('250');
-    // Leave the tax select on its default "No Tax" (empty id).
+    // Leave the tax multi-select empty: "No Tax".
+    await expect(page.getByTestId('invoice-item-tax-0-empty')).toHaveText('No Tax');
 
     await takeScreenshot(page, `${SHOT}-07-untaxed-form`);
 
@@ -322,5 +371,102 @@ test.describe('Invoice line-item tax persistence (SOUPFIN-37)', () => {
     expect(joinRows.length, 'an untaxed line must have no tax join rows').toBe(0);
 
     await takeScreenshot(page, `${SHOT}-08-untaxed-verified`);
+  });
+  // ===========================================================================
+  // Added (SOUPFIN-168): two taxes on one line persist as two join rows, and an
+  // edit through the form swaps them on the SAME saved line.
+  //
+  // UUIDs are the seeded TaxEntry rows on the LXC dev database (13 Oct 2026):
+  // NHIL 2.5% and GETFund 2.5% are simple taxable levies; VAT-S 15% is compound,
+  // charged on the line plus the levies.
+  // ===========================================================================
+  test('SOUPFIN-168: two taxes on one line persist, and editing swaps them in place', async ({ page }) => {
+    test.setTimeout(300000);
+    const NHIL = 'ff80818173ca7d260173ca8249e70001';
+    const GETFL = 'ff80818173ca7d260173ca82dcc00002';
+    const VAT = 'ff80818186941f2701869cb315b11dda';
+    const SHOT168 = 'invoice-multi-tax';
+
+    await loginAsAdmin(page);
+    const token = await getAuthToken(page);
+
+    // ---- Create: menu → Invoices → New Invoice ---------------------------
+    await page.locator('aside a[href="/invoices"]').first().click();
+    await waitForAuthSettled(page);
+    await page.getByTestId('invoice-new-button').click();
+    await waitForAuthSettled(page);
+    await expect(page.getByTestId('invoice-form-page')).toBeVisible({ timeout: 20000 });
+
+    const offered = (await readTaxOptions(page)).map((o) => o.value);
+    expect(offered, 'the seeded NHIL, GETFund and VAT-S entries must be offered').toEqual(
+      expect.arrayContaining([NHIL, GETFL, VAT])
+    );
+
+    const clientSelect = page.getByTestId('invoice-client-select');
+    await selectInvoiceableClient(page, clientSelect, API_BASE, token, 'Soupfin168');
+    await page.getByTestId('invoice-due-date-input').fill(dueDateIso());
+    const description = `Two taxes (SOUPFIN-168) ${Date.now()}`;
+    await page.getByTestId('invoice-item-description-0').fill(description);
+    await page.getByTestId('invoice-item-quantity-0').fill('2');
+    await page.getByTestId('invoice-item-unitPrice-0').fill('3000');
+    await tickTaxes(page, [NHIL, GETFL]);
+
+    // 6,000 × (2.5% + 2.5%) = 300
+    await expect(page.getByTestId(`invoice-item-tax-0-chip-${NHIL}`)).toBeVisible();
+    await expect(page.getByTestId(`invoice-item-tax-0-chip-${GETFL}`)).toBeVisible();
+    await expect(page.getByTestId('invoice-tax')).toContainText('300.00');
+    await takeScreenshot(page, `${SHOT168}-01-two-taxes-picked`);
+
+    await saveDraftWithRetry(page);
+    await waitForAuthSettled(page);
+
+    const listResp = await page.request.get(
+      `${API_BASE}/rest/invoice/index.json?max=5&sort=dateCreated&order=desc`,
+      { headers: { 'X-Auth-Token': token }, maxRedirects: 0, timeout: 45000 }
+    );
+    expect(listResp.ok()).toBeTruthy();
+    const listBody = await listResp.json();
+    const created = (Array.isArray(listBody) ? listBody : listBody.instanceList || [])[0];
+
+    // ---- Both taxes persisted as join rows, with the right amounts -------
+    const afterCreate = await readJoinRows(page, token, created.id);
+    console.log('After create:', JSON.stringify(afterCreate));
+    expect(afterCreate.rows.map((r) => r.label).sort()).toEqual(['GETFL-2.5%', 'NHIL-2.5%']);
+    for (const row of afterCreate.rows) expect(row.amount).toBeCloseTo(150, 2);
+    await takeScreenshot(page, `${SHOT168}-02-saved-list`);
+
+    // ---- Edit through the UI: the list's Edit link, never a direct goto ---
+    await page.getByTestId(`invoice-edit-${created.id}`).click({ timeout: 30000 });
+    await waitForAuthSettled(page);
+    await expect(page.getByTestId('invoice-item-description-0')).toHaveValue(description, { timeout: 60000 });
+
+    // Hydration keeps BOTH taxes — before SOUPFIN-168 only the first came back.
+    await expect(page.getByTestId(`invoice-item-tax-0-chip-${NHIL}`)).toBeVisible({ timeout: 30000 });
+    await expect(page.getByTestId(`invoice-item-tax-0-chip-${GETFL}`)).toBeVisible();
+    await takeScreenshot(page, `${SHOT168}-03-edit-hydrated`);
+
+    await page.getByTestId(`invoice-item-tax-0-remove-${GETFL}`).click();
+    await tickTaxes(page, [VAT]);
+    // NHIL 150 + VAT 15% of 6,150 = 922.50 → 1,072.50
+    await expect(page.getByTestId('invoice-tax')).toContainText('1,072.50');
+    await takeScreenshot(page, `${SHOT168}-04-edit-swapped`);
+
+    await page.getByTestId('invoice-form-save-draft-button').click();
+    await page.waitForURL(new RegExp(`/invoices/${created.id}$`), { timeout: 120000 });
+    await waitForAuthSettled(page);
+    // The detail page first paints the invoice cached from before the edit, then
+    // refetches; on this backend the refetch takes seconds. Wait for the new figure.
+    await expect(page.getByTestId('invoice-tax')).toContainText('1,072.50', { timeout: 90000 });
+    await expect(page.getByTestId('invoice-total')).toContainText('7,072.50');
+    await takeScreenshot(page, `${SHOT168}-05-after-edit-detail`);
+
+    // ---- The SAME line now carries NHIL + VAT, recomputed by the backend --
+    const afterEdit = await readJoinRows(page, token, created.id);
+    console.log('After edit:', JSON.stringify(afterEdit));
+    expect(afterEdit.itemId, 'the line is updated in place, never re-created').toBe(afterCreate.itemId);
+    const byLabel = Object.fromEntries(afterEdit.rows.map((r) => [r.label, r.amount]));
+    expect(Object.keys(byLabel).sort()).toEqual(['NHIL-2.5%', 'VAT-S-15.0%']);
+    expect(byLabel['NHIL-2.5%']).toBeCloseTo(150, 2);
+    expect(byLabel['VAT-S-15.0%']).toBeCloseTo(922.5, 2);
   });
 });

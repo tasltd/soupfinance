@@ -22,6 +22,7 @@ import type { Invoice, InvoiceStatus, InvoiceItem, InvoicePayment, ListParams } 
 import {
   parseJoinRowTaxAmount,
   resolveTaxEntryIdFromRows,
+  resolveTaxEntryIdsFromRows,
   type TaxEntryJoinRow,
 } from './taxEntryJoins';
 
@@ -63,6 +64,39 @@ export function resolveItemTaxEntryId(
   catalogue?: Array<{ id: string; serialised?: string }>
 ): string {
   return resolveTaxEntryIdFromRows(item?.taxEntryInvoiceItemList, catalogue);
+}
+
+/**
+ * Added (SOUPFIN-168): every TaxEntry a saved invoice line carries, so the edit
+ * form re-selects all of a stacked line's taxes instead of only the first.
+ * `unresolved` counts join rows that matched nothing in the catalogue.
+ */
+export function resolveItemTaxEntryIds(
+  item: {
+    taxEntryInvoiceItemList?: TaxEntryJoinRow[] | null;
+  },
+  catalogue?: Array<{ id: string; serialised?: string }>
+): { ids: string[]; unresolved: number } {
+  return resolveTaxEntryIdsFromRows(item?.taxEntryInvoiceItemList, catalogue);
+}
+
+/**
+ * Added (SOUPFIN-168): the tax the backend stored on a saved line — the sum of
+ * its join rows, withholding excluded, as `computeInvoiceTotals` sums it.
+ */
+export function sumItemStoredTax(item: {
+  taxEntryInvoiceItemList?: Array<{
+    taxAmount?: number;
+    serialised?: string;
+    taxEntry?: { id?: string; isWithholdingTax?: boolean | null } | null;
+  }> | null;
+}): number {
+  let tax = 0;
+  for (const row of item?.taxEntryInvoiceItemList || []) {
+    if (row?.taxEntry?.isWithholdingTax) continue;
+    tax += parseJoinRowTaxAmount(row);
+  }
+  return Math.round((tax + Number.EPSILON) * 100) / 100;
 }
 
 /**
@@ -309,7 +343,11 @@ export interface InvoiceItemInput {
   description: string;
   quantity: number;
   unitPrice: number;
-  /** Real TaxEntry UUIDs. Empty/omitted means an untaxed line. */
+  /**
+   * Real TaxEntry UUIDs. Empty/omitted means an untaxed line.
+   * Changed (SOUPFIN-168): a line may carry several (NHIL + GETFund + VAT);
+   * all of them go out in the one `taxEntries` value.
+   */
   taxEntryIds?: string[];
 }
 

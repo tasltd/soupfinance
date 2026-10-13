@@ -105,6 +105,22 @@ describe('listTaxRates (SOUPFIN-37)', () => {
     });
   });
 
+  // Added (SOUPFIN-168): the form previews a stacked line with these flags.
+  it('carries the compound and taxable flags, defaulting missing ones to false', async () => {
+    const listTaxRates = await load();
+    mockGet.mockResolvedValue({ data: REAL_TAX_ENTRIES });
+
+    const rates = await listTaxRates();
+    expect(rates.find((r) => r.serialised === 'VAT-S-15.0%')).toMatchObject({
+      isCompoundTax: true,
+      isTaxable: false,
+    });
+    expect(rates.find((r) => r.serialised === 'CST-5.0%')).toMatchObject({
+      isCompoundTax: false,
+      isTaxable: true,
+    });
+  });
+
   /**
    * Verified against `LineItemTaxBinder.applyTaxAmounts` (SOUP-2639), which is
    * the backend's single source of truth for line-item tax:

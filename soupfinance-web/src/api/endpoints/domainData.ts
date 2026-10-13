@@ -55,6 +55,16 @@ export interface TaxRate {
    * a bare FK reference — see `resolveItemTaxEntryId` in `endpoints/invoices`.
    */
   serialised?: string;
+  /**
+   * Added (SOUPFIN-168): charged on the line PLUS the simple taxable taxes
+   * (Ghana VAT on top of NHIL and GETFund). Drives the preview in
+   * `computeLineTax`, so a stacked line previews what the backend stores.
+   */
+  isCompoundTax?: boolean;
+  /** Added (SOUPFIN-168): a simple tax that feeds the compound base. */
+  isTaxable?: boolean;
+  /** Added (SOUPFIN-168): short label (`NHIL`), so several taxes fit on one line as chips. */
+  abbreviation?: string;
 }
 
 /**
@@ -306,6 +316,10 @@ export async function listTaxRates(): Promise<TaxRate[]> {
       rate: Number(entry.taxRate) || 0,
       description: entry.description,
       serialised: entry.serialised,
+      // Added (SOUPFIN-168): needed to preview a stacked line the way the backend computes it
+      isCompoundTax: !!entry.isCompoundTax,
+      isTaxable: !!entry.isTaxable,
+      abbreviation: entry.abbreviation,
     }));
 
   return [NO_TAX_OPTION, ...rates];

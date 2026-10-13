@@ -35,6 +35,10 @@ vi.mock('../../../api/endpoints/invoices', async () => {
     // edit-mode hydration exercises the actual FK-reference resolution rather
     // than a stub that would return undefined for every line.
     resolveItemTaxEntryId: actual.resolveItemTaxEntryId,
+    // Added (SOUPFIN-168): edit hydration keeps every join row, and the preview of
+    // an untouched line reads its stored tax. Both are pure helpers.
+    resolveItemTaxEntryIds: actual.resolveItemTaxEntryIds,
+    sumItemStoredTax: actual.sumItemStoredTax,
   };
 });
 
@@ -171,6 +175,8 @@ function createMockClient(overrides: Partial<Client> = {}): Client {
  */
 const VAT_TAX_ENTRY_ID = 'ff80818186941f2701869cb315b11dda';
 const NHIL_TAX_ENTRY_ID = 'ff80818173ca7d260173ca8249e70001';
+// Added (SOUPFIN-168): the third tax of Ghana's usual stack
+const GETFUND_TAX_ENTRY_ID = 'ff80818173ca7d260173ca82dcc00002';
 
 function setupDefaultMocks(clientsForDropdown = [createMockClient()]) {
   vi.mocked(listClients).mockResolvedValue(clientsForDropdown);
@@ -187,13 +193,39 @@ function setupDefaultMocks(clientsForDropdown = [createMockClient()]) {
   });
   vi.mocked(listTaxRates).mockResolvedValue([
     { id: '', name: 'No Tax', rate: 0 },
-    { id: VAT_TAX_ENTRY_ID, name: 'VAT- STANDARD', rate: 15 },
-    { id: NHIL_TAX_ENTRY_ID, name: 'National Health Insurance Levy', rate: 2.5 },
+    // Changed (SOUPFIN-168): flags as /rest/taxEntry/index.json reports them on LXC.
+    // VAT is compound (charged on the line plus NHIL and GETFund); the levies are taxable.
+    { id: VAT_TAX_ENTRY_ID, name: 'VAT- STANDARD', rate: 15, isCompoundTax: true, isTaxable: false, serialised: 'VAT-S-15.0%' },
+    { id: NHIL_TAX_ENTRY_ID, name: 'National Health Insurance Levy', rate: 2.5, isCompoundTax: false, isTaxable: true, serialised: 'NHIL-2.5%' },
+    { id: GETFUND_TAX_ENTRY_ID, name: 'GETFund Levy', rate: 2.5, isCompoundTax: false, isTaxable: true, serialised: 'GETFL-2.5%' },
   ]);
   vi.mocked(listInvoiceServices).mockResolvedValue([]);
   vi.mocked(createInvoiceItem).mockResolvedValue({
     id: 'new-item-1',
   } as unknown as Awaited<ReturnType<typeof createInvoiceItem>>);
+}
+
+/**
+ * Added (SOUPFIN-168): tick exactly `ids` in a line's tax multi-select, then close it.
+ * Unticks anything else that was selected, so the result is the given set.
+ */
+async function pickTaxes(
+  user: ReturnType<typeof userEvent.setup>,
+  index: number,
+  ids: string[]
+) {
+  await user.click(screen.getByTestId(`invoice-item-tax-${index}-toggle`));
+  const menu = await screen.findByTestId(`invoice-item-tax-${index}-menu`);
+  // Untick the unwanted ones first, then tick in the order given: the form keeps pick order.
+  for (const box of within(menu).getAllByRole('checkbox') as HTMLInputElement[]) {
+    const id = box.dataset.testid!.replace(`invoice-item-tax-${index}-option-`, '');
+    if (box.checked && !ids.includes(id)) await user.click(box);
+  }
+  for (const id of ids) {
+    const box = within(menu).getByTestId(`invoice-item-tax-${index}-option-${id}`) as HTMLInputElement;
+    if (!box.checked) await user.click(box);
+  }
+  await user.click(screen.getByTestId(`invoice-item-tax-${index}-done`));
 }
 
 function createQueryClient() {
@@ -861,8 +893,9 @@ describe('InvoiceFormPage', () => {
         await user.clear(priceInput);
         await user.type(priceInput, unitPrice);
 
-        if (taxEntryId !== undefined) {
-          await user.selectOptions(screen.getByTestId('invoice-item-taxRate-0'), taxEntryId);
+        if (taxEntryId) {
+          // Changed (SOUPFIN-168): tax is a multi-select; '' means leave it on "No Tax".
+          await pickTaxes(user, 0, [taxEntryId]);
         }
 
         await user.click(screen.getByTestId('invoice-form-save-draft-button'));
@@ -961,7 +994,7 @@ describe('InvoiceFormPage', () => {
         const priceInput = screen.getByTestId('invoice-item-unitPrice-0');
         await user.clear(priceInput);
         await user.type(priceInput, '1500');
-        await user.selectOptions(screen.getByTestId('invoice-item-taxRate-0'), VAT_TAX_ENTRY_ID);
+        await pickTaxes(user, 0, [VAT_TAX_ENTRY_ID]);
 
         // 2 x 1500 = 3000 subtotal, +15% = 450 tax, 3450 total.
         await waitFor(() => {
@@ -1308,5 +1341,330 @@ describe('InvoiceFormPage locked period (SOUPFIN-158)', () => {
     expect(await screen.findByTestId('invoice-date-error')).toHaveTextContent('The books are closed up to 31 Dec 2025.');
     expect(screen.getByTestId('invoice-date-input')).toHaveAttribute('aria-invalid', 'true');
     expect(mockNavigate).not.toHaveBeenCalled();
+  });
+});
+
+// =============================================================================
+// Added (SOUPFIN-168): several taxes on one line.
+//
+// The backend stores one TaxEntryInvoiceItem row per tax, and Ghana invoices
+// stack NHIL 2.5% + GETFund 2.5% + VAT 15%. The form held one tax per line, so
+// a line saved with three came back with one.
+// =============================================================================
+describe('InvoiceFormPage multiple taxes per line (SOUPFIN-168)', () => {
+  /**
+   * A join row as /rest/invoiceItem/index.json renders it on LXC: a bare FK
+   * reference. The tax's label and stored amount live only in `serialised`.
+   */
+  function bareJoinRow(label: string, taxAmount: number, base = 6000) {
+    return {
+      id: `row-${label}`,
+      serialised: `TaxEntryInvoiceItem(InvoiceItem(quantity:2.0, unitPrice:3000.00, invoice:Invoice(number:1, total:0.00)), ${label}, ${taxAmount}, ${base + taxAmount})`,
+    };
+  }
+
+  /** A saved invoice with one line of 2 × 3,000 carrying the given join rows. */
+  function savedInvoice(rows: ReturnType<typeof bareJoinRow>[]) {
+    return createMockInvoice({
+      invoiceItemList: [
+        {
+          id: 'item-1',
+          invoice: { id: 'inv-123' },
+          description: 'Advisory',
+          quantity: 2,
+          unitPrice: 3000,
+          taxEntryInvoiceItemList: rows,
+          dateCreated: '2024-01-15T10:00:00Z',
+          lastUpdated: '2024-01-15T10:00:00Z',
+        },
+      ],
+    });
+  }
+
+  /** The three rows the LXC backend stored for 6,000 with NHIL + GETFund + VAT. */
+  const STACKED_ROWS = [
+    bareJoinRow('NHIL-2.5%', 150),
+    bareJoinRow('GETFL-2.5%', 150),
+    bareJoinRow('VAT-S-15.0%', 945),
+  ];
+
+  async function renderEdit(invoice: Invoice) {
+    setupDefaultMocks();
+    vi.mocked(getInvoice).mockResolvedValue(invoice);
+    vi.mocked(updateInvoice).mockResolvedValue(invoice);
+    renderInvoiceFormPage({ route: '/invoices/inv-123/edit', path: '/invoices/:id/edit' });
+    await waitFor(() =>
+      expect(screen.getByTestId('invoice-item-description-0')).toHaveValue('Advisory')
+    );
+  }
+
+  async function saveAndGetUpdatePayload(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(screen.getByTestId('invoice-form-save-draft-button'));
+    await waitFor(() => expect(updateInvoice).toHaveBeenCalled());
+    return vi.mocked(updateInvoice).mock.calls[0][1] as Record<string, unknown>;
+  }
+
+  async function fillNewLine(user: ReturnType<typeof userEvent.setup>, quantity: string, unitPrice: string) {
+    await screen.findByText('Test Corp');
+    await user.selectOptions(screen.getByTestId('invoice-client-select'), 'c-1');
+    const dueDate = screen.getByTestId('invoice-due-date-input');
+    await user.clear(dueDate);
+    await user.type(dueDate, '2026-12-31');
+    await user.type(screen.getByTestId('invoice-item-description-0'), 'Advisory');
+    await user.clear(screen.getByTestId('invoice-item-quantity-0'));
+    await user.type(screen.getByTestId('invoice-item-quantity-0'), quantity);
+    await user.clear(screen.getByTestId('invoice-item-unitPrice-0'));
+    await user.type(screen.getByTestId('invoice-item-unitPrice-0'), unitPrice);
+  }
+
+  beforeEach(() => {
+    vi.mocked(updateInvoice).mockReset();
+    vi.mocked(createInvoice).mockReset();
+    vi.mocked(createInvoiceItem).mockReset();
+  });
+
+  describe('create', () => {
+    beforeEach(() => {
+      setupDefaultMocks([
+        createMockClient({ id: 'c-1', name: 'Test Corp', accountServices: { id: 'as-1', serialised: 'Test Corp' } }),
+      ]);
+      vi.mocked(createInvoice).mockResolvedValue(createMockInvoice({ id: 'inv-new' }));
+      vi.mocked(createInvoiceItem).mockResolvedValue({ id: 'i' } as unknown as Awaited<ReturnType<typeof createInvoiceItem>>);
+    });
+
+    it('sends every selected tax with the new line, in the order picked', async () => {
+      const user = userEvent.setup();
+      renderInvoiceFormPage();
+      await fillNewLine(user, '2', '3000');
+      await pickTaxes(user, 0, [NHIL_TAX_ENTRY_ID, GETFUND_TAX_ENTRY_ID, VAT_TAX_ENTRY_ID]);
+
+      await user.click(screen.getByTestId('invoice-form-save-draft-button'));
+
+      await waitFor(() =>
+        expect(createInvoiceItem).toHaveBeenCalledWith('inv-new', {
+          description: 'Advisory',
+          quantity: 2,
+          unitPrice: 3000,
+          taxEntryIds: [NHIL_TAX_ENTRY_ID, GETFUND_TAX_ENTRY_ID, VAT_TAX_ENTRY_ID],
+        })
+      );
+    });
+
+    it('previews the stacked tax the way the backend stores it: VAT on top of the levies', async () => {
+      const user = userEvent.setup();
+      renderInvoiceFormPage();
+      await fillNewLine(user, '2', '3000');
+      await pickTaxes(user, 0, [NHIL_TAX_ENTRY_ID, GETFUND_TAX_ENTRY_ID, VAT_TAX_ENTRY_ID]);
+
+      // 6,000 → NHIL 150 + GETFund 150 + VAT 15% of 6,300 = 945. LXC stored the same three amounts.
+      expect(screen.getByTestId('invoice-subtotal')).toHaveTextContent('$6,000.00');
+      expect(screen.getByTestId('invoice-tax')).toHaveTextContent('$1,245.00');
+      expect(screen.getByTestId('invoice-total')).toHaveTextContent('$7,245.00');
+      // One chip per tax
+      expect(screen.getByTestId(`invoice-item-tax-0-chip-${NHIL_TAX_ENTRY_ID}`)).toBeInTheDocument();
+      expect(screen.getByTestId(`invoice-item-tax-0-chip-${GETFUND_TAX_ENTRY_ID}`)).toBeInTheDocument();
+      expect(screen.getByTestId(`invoice-item-tax-0-chip-${VAT_TAX_ENTRY_ID}`)).toBeInTheDocument();
+    });
+
+    it('removing a chip drops that tax from the preview and from the save', async () => {
+      const user = userEvent.setup();
+      renderInvoiceFormPage();
+      await fillNewLine(user, '2', '3000');
+      await pickTaxes(user, 0, [NHIL_TAX_ENTRY_ID, GETFUND_TAX_ENTRY_ID]);
+      expect(screen.getByTestId('invoice-tax')).toHaveTextContent('$300.00');
+
+      await user.click(screen.getByTestId(`invoice-item-tax-0-remove-${GETFUND_TAX_ENTRY_ID}`));
+
+      expect(screen.getByTestId('invoice-tax')).toHaveTextContent('$150.00');
+      // Removing a chip must not open the menu as a side effect.
+      expect(screen.queryByTestId('invoice-item-tax-0-menu')).not.toBeInTheDocument();
+      await user.click(screen.getByTestId('invoice-form-save-draft-button'));
+      await waitFor(() => expect(createInvoiceItem).toHaveBeenCalled());
+      expect(vi.mocked(createInvoiceItem).mock.calls[0][1].taxEntryIds).toEqual([NHIL_TAX_ENTRY_ID]);
+    });
+
+    it('"No tax" in the menu clears every selection', async () => {
+      const user = userEvent.setup();
+      renderInvoiceFormPage();
+      await fillNewLine(user, '1', '100');
+      await pickTaxes(user, 0, [NHIL_TAX_ENTRY_ID, VAT_TAX_ENTRY_ID]);
+
+      await user.click(screen.getByTestId('invoice-item-tax-0-toggle'));
+      await user.click(screen.getByTestId('invoice-item-tax-0-clear'));
+
+      expect(screen.getByTestId('invoice-item-tax-0-empty')).toHaveTextContent('No Tax');
+      expect(screen.getByTestId('invoice-tax')).toHaveTextContent('$0.00');
+    });
+
+    // Zero end: a tenant with no tax entries configured.
+    it('with no tax entries set up, the line stays untaxed and says so', async () => {
+      const user = userEvent.setup();
+      vi.mocked(listTaxRates).mockResolvedValue([{ id: '', name: 'No Tax', rate: 0 }]);
+      renderInvoiceFormPage();
+      await fillNewLine(user, '1', '100');
+
+      await user.click(screen.getByTestId('invoice-item-tax-0-toggle'));
+      expect(screen.getByTestId('invoice-item-tax-0-menu')).toHaveTextContent('No tax entries are set up.');
+      expect(within(screen.getByTestId('invoice-item-tax-0-menu')).queryAllByRole('checkbox')).toHaveLength(0);
+      await user.click(screen.getByTestId('invoice-item-tax-0-done'));
+
+      await user.click(screen.getByTestId('invoice-form-save-draft-button'));
+      await waitFor(() => expect(createInvoiceItem).toHaveBeenCalled());
+      expect(vi.mocked(createInvoiceItem).mock.calls[0][1].taxEntryIds).toEqual([]);
+    });
+
+    // Overflow end: a long catalogue, every entry ticked, a seven-figure line.
+    it('sends all 40 of 40 ticked taxes and sums them on a 7-figure line', async () => {
+      const user = userEvent.setup();
+      const many = Array.from({ length: 40 }, (_, i) => ({
+        id: `tax-entry-${String(i).padStart(2, '0')}`,
+        name: `Levy ${i}`,
+        rate: 1,
+        isCompoundTax: false,
+        isTaxable: true,
+      }));
+      vi.mocked(listTaxRates).mockResolvedValue([{ id: '', name: 'No Tax', rate: 0 }, ...many]);
+      renderInvoiceFormPage();
+      await fillNewLine(user, '3', '1250000');
+      await pickTaxes(user, 0, many.map((t) => t.id));
+
+      // 3,750,000 × 40 × 1% = 1,500,000
+      expect(screen.getByTestId('invoice-tax')).toHaveTextContent('$1,500,000.00');
+      expect(screen.getByTestId('invoice-total')).toHaveTextContent('$5,250,000.00');
+
+      await user.click(screen.getByTestId('invoice-form-save-draft-button'));
+      await waitFor(() => expect(createInvoiceItem).toHaveBeenCalled());
+      expect(vi.mocked(createInvoiceItem).mock.calls[0][1].taxEntryIds).toEqual(many.map((t) => t.id));
+    });
+  });
+
+  describe('edit', () => {
+    it('re-selects every tax a saved line carries, not just the first', async () => {
+      await renderEdit(savedInvoice(STACKED_ROWS));
+
+      await waitFor(() =>
+        expect(screen.getByTestId(`invoice-item-tax-0-chip-${VAT_TAX_ENTRY_ID}`)).toBeInTheDocument()
+      );
+      expect(screen.getByTestId(`invoice-item-tax-0-chip-${NHIL_TAX_ENTRY_ID}`)).toBeInTheDocument();
+      expect(screen.getByTestId(`invoice-item-tax-0-chip-${GETFUND_TAX_ENTRY_ID}`)).toBeInTheDocument();
+      // Preview equals what the backend stored: 150 + 150 + 945
+      expect(screen.getByTestId('invoice-tax')).toHaveTextContent('$1,245.00');
+    });
+
+    it('an untouched saved line sends no tax key, so the backend leaves its taxes alone', async () => {
+      const user = userEvent.setup();
+      await renderEdit(savedInvoice(STACKED_ROWS));
+      await screen.findByTestId(`invoice-item-tax-0-chip-${VAT_TAX_ENTRY_ID}`);
+
+      const payload = await saveAndGetUpdatePayload(user);
+
+      expect(payload['invoiceItemList[0].id']).toBe('item-1');
+      expect(payload).not.toHaveProperty('invoiceItemList[0].taxEntries');
+      expect(createInvoiceItem).not.toHaveBeenCalled();
+    });
+
+    it('removing one tax from a saved line sends the remaining ones with the invoice update', async () => {
+      const user = userEvent.setup();
+      await renderEdit(savedInvoice(STACKED_ROWS));
+      await user.click(await screen.findByTestId(`invoice-item-tax-0-remove-${GETFUND_TAX_ENTRY_ID}`));
+
+      // 6,000 → NHIL 150 + VAT 15% of 6,150 = 922.50
+      expect(screen.getByTestId('invoice-tax')).toHaveTextContent('$1,072.50');
+      const payload = await saveAndGetUpdatePayload(user);
+
+      expect(payload['invoiceItemList[0].taxEntries']).toBe(`${NHIL_TAX_ENTRY_ID},${VAT_TAX_ENTRY_ID}`);
+      // The saved line is updated in place, never re-created.
+      expect(createInvoiceItem).not.toHaveBeenCalled();
+    });
+
+    it('adding a tax to a saved untaxed line sends it', async () => {
+      const user = userEvent.setup();
+      await renderEdit(savedInvoice([]));
+      await pickTaxes(user, 0, [NHIL_TAX_ENTRY_ID, GETFUND_TAX_ENTRY_ID]);
+
+      const payload = await saveAndGetUpdatePayload(user);
+      expect(payload['invoiceItemList[0].taxEntries']).toBe(`${NHIL_TAX_ENTRY_ID},${GETFUND_TAX_ENTRY_ID}`);
+    });
+
+    it('clearing every tax on a saved line sends an empty value, which the backend reads as "remove"', async () => {
+      const user = userEvent.setup();
+      await renderEdit(savedInvoice(STACKED_ROWS));
+      await screen.findByTestId(`invoice-item-tax-0-chip-${VAT_TAX_ENTRY_ID}`);
+      await user.click(screen.getByTestId('invoice-item-tax-0-toggle'));
+      await user.click(screen.getByTestId('invoice-item-tax-0-clear'));
+
+      const payload = await saveAndGetUpdatePayload(user);
+      expect(payload['invoiceItemList[0].taxEntries']).toBe('');
+    });
+
+    it('a new quantity on a taxed saved line re-sends its taxes so the backend recomputes them', async () => {
+      const user = userEvent.setup();
+      await renderEdit(savedInvoice(STACKED_ROWS));
+      await screen.findByTestId(`invoice-item-tax-0-chip-${VAT_TAX_ENTRY_ID}`);
+      await user.clear(screen.getByTestId('invoice-item-quantity-0'));
+      await user.type(screen.getByTestId('invoice-item-quantity-0'), '4');
+
+      // 12,000 → 300 + 300 + 15% of 12,600 = 2,490
+      expect(screen.getByTestId('invoice-tax')).toHaveTextContent('$2,490.00');
+      const payload = await saveAndGetUpdatePayload(user);
+      expect(payload['invoiceItemList[0].quantity']).toBe(4);
+      expect(payload['invoiceItemList[0].taxEntries']).toBe(
+        `${NHIL_TAX_ENTRY_ID},${GETFUND_TAX_ENTRY_ID},${VAT_TAX_ENTRY_ID}`
+      );
+    });
+
+    describe('a saved tax the form cannot identify (e.g. withholding)', () => {
+      const WITH_UNKNOWN = [bareJoinRow('NHIL-2.5%', 150), bareJoinRow('WHT-3.0%', 180)];
+
+      it('warns, keeps the stored tax in the preview, and leaves the line alone on an untouched save', async () => {
+        const user = userEvent.setup();
+        await renderEdit(savedInvoice(WITH_UNKNOWN));
+
+        expect(await screen.findByTestId('invoice-item-tax-unresolved-0')).toHaveTextContent(
+          'This line has 1 more tax that cannot be shown here. Changing the taxes removes it.'
+        );
+        expect(screen.getByTestId(`invoice-item-tax-0-chip-${NHIL_TAX_ENTRY_ID}`)).toBeInTheDocument();
+        // The stored rows sum to 330; the form does not pretend it is 150.
+        expect(screen.getByTestId('invoice-tax')).toHaveTextContent('$330.00');
+
+        const payload = await saveAndGetUpdatePayload(user);
+        expect(payload).not.toHaveProperty('invoiceItemList[0].taxEntries');
+      });
+
+      it('a quantity change alone still sends no tax key, so the unknown tax is not wiped', async () => {
+        const user = userEvent.setup();
+        await renderEdit(savedInvoice(WITH_UNKNOWN));
+        await screen.findByTestId('invoice-item-tax-unresolved-0');
+        await user.clear(screen.getByTestId('invoice-item-quantity-0'));
+        await user.type(screen.getByTestId('invoice-item-quantity-0'), '3');
+
+        const payload = await saveAndGetUpdatePayload(user);
+        expect(payload['invoiceItemList[0].quantity']).toBe(3);
+        expect(payload).not.toHaveProperty('invoiceItemList[0].taxEntries');
+      });
+    });
+
+    it('hydrates every tax on each of 50 saved lines', async () => {
+      const lines = Array.from({ length: 50 }, (_, i) => ({
+        id: `item-${i}`,
+        invoice: { id: 'inv-123' },
+        description: i === 0 ? 'Advisory' : `Line ${i}`,
+        quantity: 2,
+        unitPrice: 3000,
+        taxEntryInvoiceItemList: STACKED_ROWS,
+        dateCreated: '2024-01-15T10:00:00Z',
+        lastUpdated: '2024-01-15T10:00:00Z',
+      }));
+      await renderEdit(createMockInvoice({ invoiceItemList: lines }));
+
+      await waitFor(() =>
+        expect(screen.getByTestId(`invoice-item-tax-49-chip-${VAT_TAX_ENTRY_ID}`)).toBeInTheDocument()
+      );
+      for (const i of [0, 24, 49]) {
+        expect(within(screen.getByTestId(`invoice-item-tax-${i}`)).getAllByRole('button', { name: /^Remove / })).toHaveLength(3);
+      }
+      // 50 × 1,245
+      expect(screen.getByTestId('invoice-tax')).toHaveTextContent('$62,250.00');
+    });
   });
 });
