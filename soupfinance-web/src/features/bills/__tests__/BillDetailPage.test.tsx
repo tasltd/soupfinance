@@ -8,6 +8,8 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BillDetailPage } from '../BillDetailPage';
+// Added (SOUPFIN-183): the page reads its strings from the i18n namespaces
+import '../../../i18n';
 import type { Bill, BillStatus, BillItem, BillPayment } from '../../../types';
 
 // Mock the bills API - must match the import path in BillDetailPage
@@ -228,7 +230,7 @@ describe('BillDetailPage', () => {
       renderBillDetailPage();
 
       const statusBadge = await screen.findByTestId('bill-detail-status');
-      expect(statusBadge).toHaveTextContent('PAID');
+      expect(statusBadge).toHaveTextContent('Paid');
     });
 
     it('renders the bill info card with vendor details', async () => {
@@ -456,13 +458,14 @@ describe('BillDetailPage', () => {
 
   describe('status badges', () => {
     it.each([
-      ['PAID', 'bg-success'],
-      ['PARTIAL', 'bg-info'],
-      ['PENDING', 'bg-warning'],
-      ['OVERDUE', 'bg-danger'],
-      ['DRAFT', 'bg-subtle-text'],
-      ['CANCELLED', 'bg-subtle-text'],
-    ] as const)('renders %s status with correct styling', async (status, expectedClass) => {
+      // Changed (SOUPFIN-183): the badge shows the translated label, not the enum
+      ['PAID', 'Paid', 'bg-success'],
+      ['PARTIAL', 'Partially Paid', 'bg-info'],
+      ['PENDING', 'Pending', 'bg-warning'],
+      ['OVERDUE', 'Overdue', 'bg-danger'],
+      ['DRAFT', 'Draft', 'bg-subtle-text'],
+      ['CANCELLED', 'Cancelled', 'bg-subtle-text'],
+    ] as const)('renders %s status with correct styling', async (status, label, expectedClass) => {
       const mockBill = createMockBill({ status: status as BillStatus });
       vi.mocked(getBill).mockResolvedValue(mockBill);
       vi.mocked(listBillPayments).mockResolvedValue([]);
@@ -470,7 +473,7 @@ describe('BillDetailPage', () => {
       renderBillDetailPage();
 
       const statusBadge = await screen.findByTestId('bill-detail-status');
-      expect(statusBadge).toHaveTextContent(status);
+      expect(statusBadge).toHaveTextContent(label);
       expect(statusBadge.className).toContain(expectedClass);
     });
   });

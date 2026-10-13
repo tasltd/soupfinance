@@ -9,13 +9,15 @@
  * Added: data-testid attributes for E2E testing
  * Changed (2026-02-01): Added tax rate dropdown from domain data API
  * Changed (2026-02-01): Added service description autocomplete for line items
+ * Changed (SOUPFIN-183): every string goes through the `bills` namespace
  */
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getBill, createBill, updateBill, resolveBillItemTaxEntryId } from '../../api/endpoints/bills';
 import { listVendors } from '../../api/endpoints/vendors';
-import { listTaxRates, listBillServices, DEFAULT_CURRENCIES } from '../../api/endpoints/domainData';
+import { listTaxRates, listBillServices, DEFAULT_CURRENCIES, NO_TAX_OPTION } from '../../api/endpoints/domainData';
 import { useFormatCurrency } from '../../stores';
 import { getTodayIsoDate, sanitizeDateInputValue } from '../../utils/date';
 // Added (SOUPFIN-158): recognise a save rejected for a closed period
@@ -47,6 +49,7 @@ interface LineItem {
 }
 
 export function BillFormPage() {
+  const { t } = useTranslation('bills');
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -162,7 +165,7 @@ export function BillFormPage() {
         return;
       }
       // Changed (SOUPFIN-160): never show "Request failed with status code 403"
-      setFormError(getApiErrorMessage(error) || 'Failed to create bill');
+      setFormError(getApiErrorMessage(error) || t('form.errors.createFailed'));
     },
   });
 
@@ -182,7 +185,7 @@ export function BillFormPage() {
         return;
       }
       // Changed (SOUPFIN-160): never show "Request failed with status code 403"
-      setFormError(getApiErrorMessage(error) || 'Failed to update bill');
+      setFormError(getApiErrorMessage(error) || t('form.errors.updateFailed'));
     },
   });
 
@@ -257,19 +260,19 @@ export function BillFormPage() {
 
     // Validate
     if (!vendorId) {
-      setFormError('Please select a vendor');
+      setFormError(t('form.errors.vendorRequired'));
       return;
     }
     if (!billDate) {
-      setFormError('Please enter a bill date');
+      setFormError(t('form.errors.billDateRequired'));
       return;
     }
     if (!paymentDate) {
-      setFormError('Please enter a due date');
+      setFormError(t('form.errors.dueDateRequired'));
       return;
     }
     if (lineItems.length === 0 || lineItems.every((item) => !item.description)) {
-      setFormError('Please add at least one line item');
+      setFormError(t('form.errors.lineItemRequired'));
       return;
     }
 
@@ -323,7 +326,7 @@ export function BillFormPage() {
     return (
       <div className="flex flex-col gap-6" data-testid="bill-form-page">
         <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-8 text-center text-subtle-text" data-testid="bill-form-loading">
-          Loading bill...
+          {t('form.loading')}
         </div>
       </div>
     );
@@ -340,7 +343,7 @@ export function BillFormPage() {
           className="self-center inline-flex items-center gap-2 h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm"
           data-testid="bill-form-back-button"
         >
-          Back to Bills
+          {t('form.backToBills')}
         </button>
       </div>
     );
@@ -352,10 +355,10 @@ export function BillFormPage() {
       <div className="flex flex-wrap justify-between items-center gap-4">
         <div>
           <h1 className="text-3xl font-black tracking-tight text-text-light dark:text-text-dark" data-testid="bill-form-heading">
-            {isEdit ? 'Edit Bill' : 'New Bill'}
+            {isEdit ? t('editBill') : t('newBill')}
           </h1>
           <p className="text-subtle-text">
-            {isEdit ? 'Update bill details' : 'Record an expense from a vendor'}
+            {isEdit ? t('form.subtitleEdit') : t('form.subtitleNew')}
           </p>
           <HelpLink section="record-bill" className="mt-1 self-start" />
         </div>
@@ -365,7 +368,7 @@ export function BillFormPage() {
             className="h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm hover:bg-primary/5"
             data-testid="bill-form-cancel-button"
           >
-            Cancel
+            {t('form.cancel')}
           </button>
           <button
             onClick={handleSubmit}
@@ -373,7 +376,7 @@ export function BillFormPage() {
             className="h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
             data-testid="bill-form-save-button"
           >
-            {isPending ? 'Saving...' : isEdit ? 'Update Bill' : 'Save Bill'}
+            {isPending ? t('form.saving') : isEdit ? t('form.update') : t('form.save')}
           </button>
         </div>
       </div>
@@ -382,7 +385,7 @@ export function BillFormPage() {
       {isModuleBlocked && (
         <ModuleDisabledBanner
           error={moduleDisabledError}
-          context="Bills cannot be saved until the module is enabled."
+          context={t('form.moduleDisabledContext')}
           testId="bill-form-module-disabled"
         />
       )}
@@ -399,13 +402,13 @@ export function BillFormPage() {
         {/* Bill Details Card */}
         <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark" data-testid="bill-details-card">
           <div className="px-6 py-4 border-b border-border-light dark:border-border-dark">
-            <h2 className="text-lg font-bold text-text-light dark:text-text-dark">Bill Details</h2>
+            <h2 className="text-lg font-bold text-text-light dark:text-text-dark">{t('form.detailsTitle')}</h2>
           </div>
           <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Vendor */}
             <div>
               <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                Vendor <span className="text-danger">*</span>
+                {t('form.vendor')} <span className="text-danger">*</span>
               </label>
               {/* Fix (SOUPFIN-30 #15): "+" opens the vendor create page in a new
                   tab so an in-progress bill isn't lost, then refreshes this list. */}
@@ -413,15 +416,15 @@ export function BillFormPage() {
                 <select
                   id="bill-vendor"
                   name="vendorId"
-                  aria-label="Vendor"
+                  aria-label={t('form.vendor')}
                   value={vendorId}
                   onChange={(e) => setVendorId(e.target.value)}
                   className="w-full h-12 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-3 text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/50"
                   data-testid="bill-vendor-select"
                 >
-                  <option value="">Select a vendor</option>
+                  <option value="">{t('form.selectVendor')}</option>
                   {vendorsLoading ? (
-                    <option disabled>Loading vendors...</option>
+                    <option disabled>{t('form.loadingVendors')}</option>
                   ) : (
                     vendors?.map((vendor) => (
                       <option key={vendor.id} value={vendor.id}>
@@ -432,7 +435,7 @@ export function BillFormPage() {
                 </select>
                 <AddEntityButton
                   to="/vendors/new"
-                  label="Add new vendor"
+                  label={t('form.addVendor')}
                   queryKey={['vendors']}
                   testId="bill-vendor-add-button"
                 />
@@ -449,7 +452,7 @@ export function BillFormPage() {
             {/* Changed: Bill Date (backend: billDate, previously misnamed as issueDate) */}
             <div>
               <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                Bill Date <span className="text-danger">*</span>
+                {t('form.billDate')} <span className="text-danger">*</span>
               </label>
               <input
                 type="date"
@@ -470,7 +473,7 @@ export function BillFormPage() {
             {/* Changed: Payment Date (backend: paymentDate, previously misnamed as dueDate) */}
             <div>
               <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                Due Date <span className="text-danger">*</span>
+                {t('form.dueDate')} <span className="text-danger">*</span>
               </label>
               <input
                 type="date"
@@ -484,14 +487,14 @@ export function BillFormPage() {
             {/* Notes */}
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                Notes
+                {t('form.notes')}
               </label>
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={3}
                 className="w-full rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark p-3 text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/50"
-                placeholder="Add notes about this bill..."
+                placeholder={t('form.notesPlaceholder')}
                 data-testid="bill-notes-textarea"
               />
             </div>
@@ -507,42 +510,42 @@ export function BillFormPage() {
                 <span className="material-symbols-outlined text-base transition-transform" style={{ transform: showAdvanced ? 'rotate(90deg)' : 'rotate(0)' }}>
                   chevron_right
                 </span>
-                Advanced Options
+                {t('form.advancedOptions')}
               </button>
               {showAdvanced && (
                 <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded-lg border border-border-light dark:border-border-dark bg-background-light/50 dark:bg-background-dark/50" data-testid="bill-advanced-section">
                   {/* PO Number */}
                   <div>
                     <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                      PO Number
+                      {t('form.poNumber')}
                     </label>
                     <input
                       type="text"
                       value={purchaseOrderNumber}
                       onChange={(e) => setPurchaseOrderNumber(e.target.value)}
                       className="w-full h-12 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-3 text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/50"
-                      placeholder="Purchase order number"
+                      placeholder={t('form.poNumberPlaceholder')}
                       data-testid="bill-po-number-input"
                     />
                   </div>
                   {/* SO Number */}
                   <div>
                     <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                      SO Number
+                      {t('form.soNumber')}
                     </label>
                     <input
                       type="text"
                       value={salesOrderNumber}
                       onChange={(e) => setSalesOrderNumber(e.target.value)}
                       className="w-full h-12 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-3 text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/50"
-                      placeholder="Sales order number"
+                      placeholder={t('form.soNumberPlaceholder')}
                       data-testid="bill-so-number-input"
                     />
                   </div>
                   {/* Currency */}
                   <div>
                     <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                      Currency
+                      {t('form.currency')}
                     </label>
                     <select
                       value={currency}
@@ -550,7 +553,7 @@ export function BillFormPage() {
                       className="w-full h-12 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-3 text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/50"
                       data-testid="bill-currency-select"
                     >
-                      <option value="">Account default</option>
+                      <option value="">{t('form.accountDefault')}</option>
                       {DEFAULT_CURRENCIES.map((c) => (
                         <option key={c.code} value={c.code}>{c.code} - {c.label}</option>
                       ))}
@@ -560,7 +563,7 @@ export function BillFormPage() {
                   {currency && (
                     <div>
                       <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                        Exchange Rate
+                        {t('form.exchangeRate')}
                       </label>
                       <input
                         type="number"
@@ -583,7 +586,7 @@ export function BillFormPage() {
         {/* Line Items Card */}
         <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden" data-testid="bill-items-card">
           <div className="px-6 py-4 border-b border-border-light dark:border-border-dark flex justify-between items-center">
-            <h2 className="text-lg font-bold text-text-light dark:text-text-dark">Line Items</h2>
+            <h2 className="text-lg font-bold text-text-light dark:text-text-dark">{t('form.lineItemsTitle')}</h2>
             <button
               type="button"
               onClick={addLineItem}
@@ -591,7 +594,7 @@ export function BillFormPage() {
               data-testid="bill-add-item-button"
             >
               <span className="material-symbols-outlined text-base mr-1">add</span>
-              Add Item
+              {t('form.addItem')}
             </button>
           </div>
           <div className="overflow-x-auto">
@@ -599,12 +602,12 @@ export function BillFormPage() {
               <thead className="text-xs text-subtle-text uppercase bg-background-light dark:bg-background-dark">
                 <tr>
                   {/* Added: Service/Product reference dropdown column before Description */}
-                  <th className="px-4 py-3 text-left w-44">Service/Product</th>
-                  <th className="px-4 py-3 text-left">Description</th>
-                  <th className="px-4 py-3 text-right w-24">Qty</th>
-                  <th className="px-4 py-3 text-right w-32">Unit Price</th>
-                  <th className="px-4 py-3 text-right w-24">Tax %</th>
-                  <th className="px-4 py-3 text-right w-32">Amount</th>
+                  <th className="px-4 py-3 text-left w-44">{t('form.lineColumns.service')}</th>
+                  <th className="px-4 py-3 text-left">{t('form.lineColumns.description')}</th>
+                  <th className="px-4 py-3 text-right w-24">{t('form.lineColumns.quantity')}</th>
+                  <th className="px-4 py-3 text-right w-32">{t('form.lineColumns.unitPrice')}</th>
+                  <th className="px-4 py-3 text-right w-24">{t('form.lineColumns.taxRate')}</th>
+                  <th className="px-4 py-3 text-right w-32">{t('form.lineColumns.amount')}</th>
                   <th className="px-4 py-3 w-16"></th>
                 </tr>
               </thead>
@@ -621,7 +624,7 @@ export function BillFormPage() {
                           data-testid={`bill-item-service-${index}`}
                           defaultValue=""
                         >
-                          <option value="">Select...</option>
+                          <option value="">{t('form.selectService')}</option>
                           {serviceDescriptions?.map((service) => (
                             <option key={service.id} value={service.id}>
                               {service.name}
@@ -635,7 +638,7 @@ export function BillFormPage() {
                           value={item.description}
                           onChange={(e) => updateLineItem(index, 'description', e.target.value)}
                           className="w-full h-10 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-3 text-text-light dark:text-text-dark focus:border-primary focus:ring-1 focus:ring-primary/50"
-                          placeholder="Item description"
+                          placeholder={t('form.itemDescriptionPlaceholder')}
                           data-testid={`bill-item-description-${index}`}
                         />
                       </td>
@@ -680,9 +683,11 @@ export function BillFormPage() {
                         >
                           {taxRates?.map((tax) => (
                             <option key={tax.id} value={tax.id}>
-                              {tax.name}
+                              {/* Changed (SOUPFIN-183): the built-in no-tax entry is named
+                                  in domainData; tenant tax names come from the backend as-is */}
+                              {tax.id === NO_TAX_OPTION.id ? t('form.noTax') : tax.name}
                             </option>
-                          )) || <option value="0">No Tax</option>}
+                          )) || <option value="0">{t('form.noTax')}</option>}
                         </select>
                       </td>
                       <td className="px-4 py-3 text-right font-medium text-text-light dark:text-text-dark">
@@ -693,6 +698,7 @@ export function BillFormPage() {
                           type="button"
                           onClick={() => removeLineItem(index)}
                           disabled={lineItems.length === 1}
+                          aria-label={t('form.removeItem')}
                           className="text-danger hover:text-danger/70 disabled:opacity-30 disabled:cursor-not-allowed"
                           data-testid={`bill-item-remove-${index}`}
                         >
@@ -711,15 +717,15 @@ export function BillFormPage() {
             <div className="flex justify-end">
               <div className="w-64 space-y-2">
                 <div className="flex justify-between text-text-light dark:text-text-dark">
-                  <span className="text-subtle-text">Subtotal</span>
+                  <span className="text-subtle-text">{t('form.subtotal')}</span>
                   <span data-testid="bill-subtotal">{formatCurrency(subtotal)}</span>
                 </div>
                 <div className="flex justify-between text-text-light dark:text-text-dark">
-                  <span className="text-subtle-text">Tax</span>
+                  <span className="text-subtle-text">{t('form.tax')}</span>
                   <span data-testid="bill-tax">{formatCurrency(taxAmount)}</span>
                 </div>
                 <div className="flex justify-between text-lg font-bold text-text-light dark:text-text-dark border-t border-border-light dark:border-border-dark pt-2">
-                  <span>Total</span>
+                  <span>{t('form.total')}</span>
                   <span data-testid="bill-total">{formatCurrency(totalAmount)}</span>
                 </div>
               </div>

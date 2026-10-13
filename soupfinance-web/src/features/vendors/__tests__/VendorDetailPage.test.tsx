@@ -8,6 +8,8 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { VendorDetailPage } from '../VendorDetailPage';
+// Added (SOUPFIN-183): the page reads its strings from the i18n namespaces
+import '../../../i18n';
 import type { Vendor } from '../../../types';
 
 // Mock the vendors API

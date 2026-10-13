@@ -6,7 +6,10 @@
  * Added: Loading, empty, and error states
  * Added: data-testid attributes for E2E testing
  * Changed: Uses dynamic currency formatting from account settings
+ * Changed (SOUPFIN-183): every string goes through the `bills` namespace and the
+ *   status badge is translated through billStatusLabel instead of the raw enum
  */
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { listBills } from '../../api/endpoints/bills';
@@ -15,8 +18,10 @@ import { useFormatCurrency } from '../../stores';
 import { HelpLink } from '../../components/help';
 // Added (SOUPFIN-160): module-aware error card instead of a generic message
 import { ApiErrorState } from '../../components/feedback';
+import { billStatusLabel, billStatusStyle } from './billStatus';
 
 export function BillListPage() {
+  const { t } = useTranslation('bills');
   // Added: Fetch bills from API
   const { data: bills, isLoading, error, refetch } = useQuery({
     queryKey: ['bills'],
@@ -32,9 +37,9 @@ export function BillListPage() {
       <div className="flex flex-wrap justify-between items-center gap-4">
         <div>
           <h1 className="text-3xl font-black tracking-tight text-text-light dark:text-text-dark" data-testid="bill-list-heading">
-            Bills
+            {t('title')}
           </h1>
-          <p className="text-subtle-text">Manage your expenses and bills</p>
+          <p className="text-subtle-text">{t('subtitle')}</p>
           <HelpLink section="bills" className="mt-1 self-start" />
         </div>
         <Link
@@ -43,14 +48,14 @@ export function BillListPage() {
           data-testid="bill-new-button"
         >
           <span className="material-symbols-outlined text-lg">add</span>
-          New Bill
+          {t('newBill')}
         </Link>
       </div>
 
       {/* Bill Table */}
       <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden" data-testid="bill-table-container">
         {isLoading ? (
-          <div className="p-8 text-center text-subtle-text" data-testid="bill-list-loading">Loading bills...</div>
+          <div className="p-8 text-center text-subtle-text" data-testid="bill-list-loading">{t('list.loading')}</div>
         ) : error ? (
           // Changed (SOUPFIN-160): ApiErrorState tells a disabled Finance module
           // apart from a missing role or a server fault, and never shows raw HTTP text.
@@ -61,14 +66,14 @@ export function BillListPage() {
             <table className="w-full min-w-[800px] text-sm" data-testid="bill-list-table">
               <thead className="text-xs text-subtle-text uppercase bg-background-light dark:bg-background-dark">
                 <tr>
-                  <th className="px-4 sm:px-6 py-3 text-left">Bill #</th>
-                  <th className="px-4 sm:px-6 py-3 text-left">Vendor</th>
-                  <th className="px-4 sm:px-6 py-3 text-left">Issue Date</th>
-                  <th className="px-4 sm:px-6 py-3 text-left">Due Date</th>
-                  <th className="px-4 sm:px-6 py-3 text-right">Amount</th>
-                  <th className="px-4 sm:px-6 py-3 text-right">Balance Due</th>
-                  <th className="px-4 sm:px-6 py-3 text-center">Status</th>
-                  <th className="px-4 sm:px-6 py-3 text-center">Actions</th>
+                  <th className="px-4 sm:px-6 py-3 text-left">{t('list.columns.billNumber')}</th>
+                  <th className="px-4 sm:px-6 py-3 text-left">{t('list.columns.vendor')}</th>
+                  <th className="px-4 sm:px-6 py-3 text-left">{t('list.columns.issueDate')}</th>
+                  <th className="px-4 sm:px-6 py-3 text-left">{t('list.columns.dueDate')}</th>
+                  <th className="px-4 sm:px-6 py-3 text-right">{t('list.columns.amount')}</th>
+                  <th className="px-4 sm:px-6 py-3 text-right">{t('list.columns.balanceDue')}</th>
+                  <th className="px-4 sm:px-6 py-3 text-center">{t('list.columns.status')}</th>
+                  <th className="px-4 sm:px-6 py-3 text-center">{t('list.columns.actions')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -79,7 +84,7 @@ export function BillListPage() {
                         {bill.billNumber}
                       </Link>
                     </td>
-                    <td className="px-4 sm:px-6 py-4 text-text-light dark:text-text-dark">{bill.vendor?.name || 'N/A'}</td>
+                    <td className="px-4 sm:px-6 py-4 text-text-light dark:text-text-dark">{bill.vendor?.name || t('notAvailable')}</td>
                     <td className="px-4 sm:px-6 py-4 text-subtle-text">{bill.billDate}</td>
                     <td className="px-4 sm:px-6 py-4 text-subtle-text">{bill.paymentDate}</td>
                     <td className="px-4 sm:px-6 py-4 text-right font-medium text-text-light dark:text-text-dark">
@@ -89,13 +94,13 @@ export function BillListPage() {
                       {formatCurrency(bill.amountDue)}
                     </td>
                     <td className="px-4 sm:px-6 py-4 text-center">
-                      <span className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${getStatusStyle(bill.status)}`} data-testid={`bill-status-${bill.id}`}>
-                        {bill.status}
+                      <span className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${billStatusStyle(bill.status)}`} data-testid={`bill-status-${bill.id}`}>
+                        {billStatusLabel(t, bill.status)}
                       </span>
                     </td>
                     <td className="px-4 sm:px-6 py-4 text-center">
                       <Link to={`/bills/${bill.id}/edit`} className="text-primary hover:underline text-sm" data-testid={`bill-edit-${bill.id}`}>
-                        Edit
+                        {t('list.edit')}
                       </Link>
                     </td>
                   </tr>
@@ -107,11 +112,11 @@ export function BillListPage() {
           // Added: Empty state when no bills exist
           <div className="p-12 text-center" data-testid="bill-list-empty">
             <span className="material-symbols-outlined text-6xl text-subtle-text/50 mb-4">receipt</span>
-            <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">No bills yet</h3>
-            <p className="text-subtle-text mb-4">Track your expenses by adding bills from vendors.</p>
+            <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">{t('list.emptyTitle')}</h3>
+            <p className="text-subtle-text mb-4">{t('list.emptyBody')}</p>
             <Link to="/bills/new" className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm" data-testid="bill-create-first-button">
               <span className="material-symbols-outlined text-lg">add</span>
-              Create Bill
+              {t('list.createFirst')}
             </Link>
           </div>
         )}
@@ -120,15 +125,3 @@ export function BillListPage() {
   );
 }
 
-// Added: Status badge styling helper
-function getStatusStyle(status: string): string {
-  const styles: Record<string, string> = {
-    PAID: 'bg-success/10 text-success',
-    PARTIAL: 'bg-info/10 text-info',
-    PENDING: 'bg-warning/10 text-warning',
-    OVERDUE: 'bg-danger/10 text-danger',
-    DRAFT: 'bg-subtle-text/10 text-subtle-text',
-    CANCELLED: 'bg-subtle-text/10 text-subtle-text',
-  };
-  return styles[status] || styles.DRAFT;
-}

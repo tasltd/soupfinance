@@ -7,6 +7,9 @@
 import type { Invoice, Bill } from '../../types';
 import type { TrialBalance, ProfitLoss, BalanceSheet, AgingReport } from '../../types';
 import type { CompanyInfo } from './index';
+// Added (SOUPFIN-183): the bill template reads its labels from the bills namespace
+import i18n from '../../i18n';
+import { billStatusLabel } from '../../features/bills/billStatus';
 
 // =============================================================================
 // Shared Styles
@@ -414,6 +417,8 @@ export function generateBillHtml(
   company: CompanyInfo,
   formatCurrency: (amount: number | null | undefined) => string
 ): string {
+  // Added (SOUPFIN-183): labels follow the app language through the bills namespace
+  const t = i18n.getFixedT(null, 'bills');
   const statusClass = getStatusClass(bill.status);
 
   return `
@@ -430,27 +435,27 @@ export function generateBillHtml(
             <div class="company-name">${escapeHtml(company.name)}</div>
             <div class="company-details">
               ${company.address ? `${escapeHtml(company.address)}<br>` : ''}
-              ${company.phone ? `Tel: ${escapeHtml(company.phone)}<br>` : ''}
-              ${company.email ? `Email: ${escapeHtml(company.email)}` : ''}
+              ${company.phone ? `${escapeHtml(t('pdf.phone', { value: company.phone }))}<br>` : ''}
+              ${company.email ? escapeHtml(t('pdf.email', { value: company.email })) : ''}
             </div>
           </div>
           <div class="document-info">
-            <div class="document-title">BILL</div>
+            <div class="document-title">${escapeHtml(t('pdf.documentTitle'))}</div>
             <div class="document-number">${escapeHtml(bill.billNumber)}</div>
-            <div class="document-date">Date: ${escapeHtml(bill.billDate)}</div>
-            <div class="status-badge ${statusClass}">${escapeHtml(bill.status)}</div>
+            <div class="document-date">${escapeHtml(t('pdf.date', { date: bill.billDate }))}</div>
+            <div class="status-badge ${statusClass}">${escapeHtml(billStatusLabel(t, bill.status))}</div>
           </div>
         </div>
 
         <div class="parties">
           <div class="party">
-            <div class="party-label">From Vendor</div>
-            <div class="party-name">${escapeHtml(bill.vendor?.name || 'N/A')}</div>
+            <div class="party-label">${escapeHtml(t('pdf.fromVendor'))}</div>
+            <div class="party-name">${escapeHtml(bill.vendor?.name || t('notAvailable'))}</div>
           </div>
           <div class="party">
-            <div class="party-label">Payment Due</div>
+            <div class="party-label">${escapeHtml(t('pdf.paymentDue'))}</div>
             <div class="party-details">
-              <strong>Due Date:</strong> ${escapeHtml(bill.paymentDate)}
+              <strong>${escapeHtml(t('pdf.dueDate'))}</strong> ${escapeHtml(bill.paymentDate)}
             </div>
           </div>
         </div>
@@ -458,11 +463,11 @@ export function generateBillHtml(
         <table>
           <thead>
             <tr>
-              <th>Description</th>
-              <th class="text-right">Qty</th>
-              <th class="text-right">Unit Price</th>
-              <th class="text-right">Tax</th>
-              <th class="text-right">Amount</th>
+              <th>${escapeHtml(t('pdf.columns.description'))}</th>
+              <th class="text-right">${escapeHtml(t('pdf.columns.quantity'))}</th>
+              <th class="text-right">${escapeHtml(t('pdf.columns.unitPrice'))}</th>
+              <th class="text-right">${escapeHtml(t('pdf.columns.tax'))}</th>
+              <th class="text-right">${escapeHtml(t('pdf.columns.amount'))}</th>
             </tr>
           </thead>
           <tbody>
@@ -480,38 +485,38 @@ export function generateBillHtml(
 
         <div class="totals">
           <div class="total-row">
-            <span class="total-label">Subtotal</span>
+            <span class="total-label">${escapeHtml(t('pdf.subtotal'))}</span>
             <span class="total-value">${formatCurrency(bill.subtotal)}</span>
           </div>
           <div class="total-row">
-            <span class="total-label">Tax</span>
+            <span class="total-label">${escapeHtml(t('pdf.tax'))}</span>
             <span class="total-value">${formatCurrency(bill.taxAmount)}</span>
           </div>
           <div class="total-row border-top">
-            <span class="total-label">Total</span>
+            <span class="total-label">${escapeHtml(t('pdf.total'))}</span>
             <span class="total-value">${formatCurrency(bill.totalAmount)}</span>
           </div>
           ${(bill.amountPaid || 0) > 0 ? `
             <div class="total-row">
-              <span class="total-label">Amount Paid</span>
+              <span class="total-label">${escapeHtml(t('pdf.amountPaid'))}</span>
               <span class="total-value" style="color: #16a34a;">${formatCurrency(bill.amountPaid)}</span>
             </div>
           ` : ''}
           <div class="total-row grand-total">
-            <span class="total-label">Balance Due</span>
+            <span class="total-label">${escapeHtml(t('pdf.balanceDue'))}</span>
             <span class="total-value">${formatCurrency(bill.amountDue)}</span>
           </div>
         </div>
 
         ${bill.notes ? `
           <div class="notes">
-            <div class="notes-title">Notes</div>
+            <div class="notes-title">${escapeHtml(t('pdf.notes'))}</div>
             <div class="notes-content">${escapeHtml(bill.notes)}</div>
           </div>
         ` : ''}
 
         <div class="footer">
-          Generated by SoupFinance
+          ${escapeHtml(t('pdf.footer'))}
         </div>
       </div>
     </body>

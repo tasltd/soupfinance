@@ -627,11 +627,12 @@ test.describe('Bill Management', () => {
       await expect(page.getByTestId('bill-list-loading')).not.toBeVisible({ timeout: 5000 });
 
       // Check status badges for different statuses
-      await expect(page.getByTestId('bill-status-bill-001')).toHaveText('PENDING');
-      await expect(page.getByTestId('bill-status-bill-002')).toHaveText('PAID');
-      await expect(page.getByTestId('bill-status-bill-003')).toHaveText('OVERDUE');
-      await expect(page.getByTestId('bill-status-bill-004')).toHaveText('DRAFT');
-      await expect(page.getByTestId('bill-status-bill-005')).toHaveText('PARTIAL');
+      // Changed (SOUPFIN-183): badges show the translated label, not the raw enum
+      await expect(page.getByTestId('bill-status-bill-001')).toHaveText('Pending');
+      await expect(page.getByTestId('bill-status-bill-002')).toHaveText('Paid');
+      await expect(page.getByTestId('bill-status-bill-003')).toHaveText('Overdue');
+      await expect(page.getByTestId('bill-status-bill-004')).toHaveText('Draft');
+      await expect(page.getByTestId('bill-status-bill-005')).toHaveText('Partially Paid');
 
       await takeScreenshot(page, 'bills-status-badges');
     });
@@ -1053,7 +1054,8 @@ test.describe('Bill Management', () => {
       await expect(page.getByTestId('bill-info-card')).toContainText('Acme Corp');
       await expect(page.getByTestId('bill-info-card')).toContainText('2026-01-15');
       await expect(page.getByTestId('bill-info-card')).toContainText('2026-02-14');
-      await expect(page.getByTestId('bill-detail-status')).toHaveText('PENDING');
+      // Changed (SOUPFIN-183): translated label, not the raw enum
+      await expect(page.getByTestId('bill-detail-status')).toHaveText('Pending');
 
       await takeScreenshot(page, 'bills-detail-header');
     });

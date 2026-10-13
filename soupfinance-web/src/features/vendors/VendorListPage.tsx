@@ -2,8 +2,11 @@
  * Vendor List Page
  * PURPOSE: Display and manage vendors with CRUD operations
  * Reference: soupfinance-designs/vendor-client-management/
+ * Changed (SOUPFIN-183): every string goes through the `vendors` namespace
  */
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { ELEMENT_SLOT, withElement } from '../../i18n/withElement';
 import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { listVendors, deleteVendor } from '../../api';
@@ -39,6 +42,7 @@ interface DeleteState {
 }
 
 export function VendorListPage() {
+  const { t } = useTranslation('vendors');
   const queryClient = useQueryClient();
 
   // Added: Search state for filtering vendors
@@ -122,9 +126,9 @@ export function VendorListPage() {
             className="text-3xl font-black tracking-tight text-text-light dark:text-text-dark"
             data-testid="vendor-list-heading"
           >
-            Vendors
+            {t('title')}
           </h1>
-          <p className="text-subtle-text">Manage your suppliers and vendors</p>
+          <p className="text-subtle-text">{t('subtitle')}</p>
           <HelpLink section="vendors" className="mt-1 self-start" />
         </div>
         <Link
@@ -133,14 +137,14 @@ export function VendorListPage() {
           data-testid="vendor-new-button"
         >
           <span className="material-symbols-outlined text-lg">add</span>
-          New Vendor
+          {t('newVendor')}
         </Link>
       </div>
 
       {/* Added (SOUPFIN-182): active / archived filter */}
       <div
         role="tablist"
-        aria-label="Vendor status"
+        aria-label={t('list.statusTabsLabel')}
         className="flex gap-1 border-b border-border-light dark:border-border-dark"
         data-testid="vendor-status-tabs"
       >
@@ -158,7 +162,7 @@ export function VendorListPage() {
             }`}
             data-testid={`vendor-tab-${tab}`}
           >
-            {tab === 'active' ? 'Active' : 'Archived'}
+            {t(`list.tabs.${tab}`)}
           </button>
         ))}
       </div>
@@ -173,8 +177,8 @@ export function VendorListPage() {
           type="search"
           id="vendor-search"
           name="vendor-search"
-          aria-label="Search vendors"
-          placeholder="Search vendors..."
+          aria-label={t('list.searchLabel')}
+          placeholder={t('list.searchPlaceholder')}
           value={searchTerm}
           onChange={(e) => {
             setSearchTerm(e.target.value);
@@ -192,7 +196,7 @@ export function VendorListPage() {
       >
         {isLoading ? (
           <div className="p-8 text-center text-subtle-text" data-testid="vendor-list-loading">
-            Loading vendors...
+            {t('list.loading')}
           </div>
         ) : error ? (
           // Changed (SOUPFIN-160): ApiErrorState tells a disabled Trading module
@@ -204,11 +208,11 @@ export function VendorListPage() {
             <table className="w-full min-w-[600px] text-sm" data-testid="vendor-list-table">
               <thead className="text-xs text-subtle-text uppercase bg-background-light dark:bg-background-dark">
                 <tr>
-                  <th className="px-4 sm:px-6 py-3 text-left">Name</th>
-                  <th className="px-4 sm:px-6 py-3 text-left">Email</th>
-                  <th className="px-4 sm:px-6 py-3 text-left">Phone</th>
-                  <th className="px-4 sm:px-6 py-3 text-center">Payment Terms</th>
-                  <th className="px-4 sm:px-6 py-3 text-center">Actions</th>
+                  <th className="px-4 sm:px-6 py-3 text-left">{t('list.columns.name')}</th>
+                  <th className="px-4 sm:px-6 py-3 text-left">{t('list.columns.email')}</th>
+                  <th className="px-4 sm:px-6 py-3 text-left">{t('list.columns.phone')}</th>
+                  <th className="px-4 sm:px-6 py-3 text-center">{t('list.columns.paymentTerms')}</th>
+                  <th className="px-4 sm:px-6 py-3 text-center">{t('list.columns.actions')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -234,14 +238,14 @@ export function VendorListPage() {
                       {vendor.phoneNumber || '-'}
                     </td>
                     <td className="px-4 sm:px-6 py-4 text-center text-text-light dark:text-text-dark">
-                      {vendor.paymentTerms ? `${vendor.paymentTerms} days` : '-'}
+                      {vendor.paymentTerms ? t('paymentTermsDays', { count: vendor.paymentTerms }) : '-'}
                     </td>
                     <td className="px-4 sm:px-6 py-4 text-center">
                       <div className="flex items-center justify-center gap-2">
                         <Link
                           to={`/vendors/${vendor.id}`}
                           className="p-1.5 rounded hover:bg-primary/10 text-subtle-text hover:text-primary transition-colors"
-                          title="View"
+                          title={t('list.view')}
                           data-testid={`vendor-view-${vendor.id}`}
                         >
                           <span className="material-symbols-outlined text-lg">visibility</span>
@@ -249,7 +253,7 @@ export function VendorListPage() {
                         <Link
                           to={`/vendors/${vendor.id}/edit`}
                           className="p-1.5 rounded hover:bg-primary/10 text-subtle-text hover:text-primary transition-colors"
-                          title="Edit"
+                          title={t('list.edit')}
                           data-testid={`vendor-edit-${vendor.id}`}
                         >
                           <span className="material-symbols-outlined text-lg">edit</span>
@@ -259,7 +263,7 @@ export function VendorListPage() {
                           <button
                             onClick={() => handleDeleteClick(vendor.id, vendor.name)}
                             className="p-1.5 rounded hover:bg-danger/10 text-subtle-text hover:text-danger transition-colors"
-                            title="Delete"
+                            title={t('list.delete')}
                             data-testid={`vendor-delete-${vendor.id}`}
                           >
                             <span className="material-symbols-outlined text-lg">delete</span>
@@ -275,23 +279,23 @@ export function VendorListPage() {
         ) : page > 1 ? (
           // Added (SOUPFIN-182): rows were removed elsewhere and this page no longer exists
           <div className="p-12 text-center" data-testid="vendor-list-page-empty">
-            <p className="text-subtle-text mb-4">Page {page} has no vendors.</p>
+            <p className="text-subtle-text mb-4">{t('list.pageEmpty', { page })}</p>
             <button
               type="button"
               onClick={() => setPage(1)}
               className="inline-flex items-center gap-2 h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm hover:bg-primary/5"
               data-testid="vendor-list-first-page"
             >
-              Go to the first page
+              {t('list.firstPage')}
             </button>
           </div>
         ) : status === 'archived' ? (
           // Added (SOUPFIN-182)
           <div className="p-12 text-center" data-testid="vendor-list-archived-empty">
             <span className="material-symbols-outlined text-6xl text-subtle-text/50 mb-4 block">inventory_2</span>
-            <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">No archived vendors</h3>
+            <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">{t('list.archivedEmptyTitle')}</h3>
             <p className="text-subtle-text">
-              {searchTerm ? 'No archived vendor matches your search.' : 'Vendors you archive appear here.'}
+              {searchTerm ? t('list.archivedNoMatch') : t('list.archivedEmptyBody')}
             </p>
           </div>
         ) : (
@@ -299,15 +303,15 @@ export function VendorListPage() {
             <span className="material-symbols-outlined text-6xl text-subtle-text/50 mb-4 block">
               storefront
             </span>
-            <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">No vendors yet</h3>
-            <p className="text-subtle-text mb-4">Add your first vendor to start managing expenses.</p>
+            <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">{t('list.emptyTitle')}</h3>
+            <p className="text-subtle-text mb-4">{t('list.emptyBody')}</p>
             <Link
               to="/vendors/new"
               className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm"
               data-testid="vendor-create-first-button"
             >
               <span className="material-symbols-outlined text-lg">add</span>
-              Add Vendor
+              {t('list.addVendor')}
             </Link>
           </div>
         )}
@@ -317,17 +321,18 @@ export function VendorListPage() {
       {rowCount > 0 && (
         <div className="flex flex-wrap justify-between items-center gap-4 text-sm text-subtle-text" data-testid="vendor-pagination-summary">
           <span data-testid="vendor-pagination-range">
-            Showing {rangeStart} to {rangeEnd} of {total} {status === 'archived' ? 'archived ' : ''}
-            {total === 1 ? 'vendor' : 'vendors'}
+            {status === 'archived'
+              ? t('list.rangeArchived', { start: rangeStart, end: rangeEnd, count: total })
+              : t('list.range', { start: rangeStart, end: rangeEnd, count: total })}
           </span>
           {totalPages > 1 && (
-            <nav className="flex items-center" aria-label="Vendor pages" data-testid="vendor-pagination">
+            <nav className="flex items-center" aria-label={t('list.paginationLabel')} data-testid="vendor-pagination">
               <button
                 type="button"
                 onClick={() => goToPage(page - 1)}
                 disabled={page <= 1}
                 className="flex size-9 items-center justify-center rounded-lg text-subtle-text hover:bg-primary/10 disabled:opacity-40 disabled:cursor-not-allowed"
-                aria-label="Previous page"
+                aria-label={t('list.previousPage')}
                 data-testid="vendor-pagination-prev"
               >
                 <span className="material-symbols-outlined">chevron_left</span>
@@ -357,7 +362,7 @@ export function VendorListPage() {
                 onClick={() => goToPage(page + 1)}
                 disabled={page >= totalPages}
                 className="flex size-9 items-center justify-center rounded-lg text-subtle-text hover:bg-primary/10 disabled:opacity-40 disabled:cursor-not-allowed"
-                aria-label="Next page"
+                aria-label={t('list.nextPage')}
                 data-testid="vendor-pagination-next"
               >
                 <span className="material-symbols-outlined">chevron_right</span>
@@ -376,9 +381,10 @@ export function VendorListPage() {
           <div className="relative w-full max-w-md rounded-xl bg-surface-light dark:bg-surface-dark shadow-2xl overflow-hidden">
             {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-border-light dark:border-border-dark p-6">
-              <p className="text-xl font-bold text-text-light dark:text-text-dark">Delete Vendor</p>
+              <p className="text-xl font-bold text-text-light dark:text-text-dark">{t('deleteDialog.title')}</p>
               <button
                 onClick={handleCancelDelete}
+                aria-label={t('deleteDialog.close')}
                 className="flex size-8 items-center justify-center rounded-full hover:bg-black/10 dark:hover:bg-white/10"
                 data-testid="vendor-delete-modal-close"
               >
@@ -394,12 +400,13 @@ export function VendorListPage() {
                 </div>
                 <div>
                   <p className="text-text-light dark:text-text-dark">
-                    Are you sure you want to delete{' '}
-                    <span className="font-semibold">{deleteState.vendorName}</span>?
+                    {withElement(
+                      t('deleteDialog.confirm', { name: ELEMENT_SLOT }),
+                      <span className="font-semibold">{deleteState.vendorName}</span>
+                    )}
                   </p>
                   <p className="text-subtle-text mt-2 text-sm">
-                    This action cannot be undone. All bills associated with this vendor will remain but
-                    the vendor reference will be removed.
+                    {t('deleteDialog.warning')}
                   </p>
                 </div>
               </div>
@@ -412,7 +419,7 @@ export function VendorListPage() {
                 className="h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm hover:bg-primary/5"
                 data-testid="delete-cancel-button"
               >
-                Cancel
+                {t('deleteDialog.cancel')}
               </button>
               <button
                 onClick={handleConfirmDelete}
@@ -420,7 +427,7 @@ export function VendorListPage() {
                 className="h-10 px-4 rounded-lg bg-danger text-white font-bold text-sm hover:bg-danger/90 disabled:opacity-50"
                 data-testid="delete-confirm-button"
               >
-                {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
+                {deleteMutation.isPending ? t('deleteDialog.deleting') : t('deleteDialog.delete')}
               </button>
             </div>
           </div>

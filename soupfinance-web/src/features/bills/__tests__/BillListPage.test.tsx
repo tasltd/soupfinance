@@ -7,6 +7,8 @@ import { render, screen, within, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BillListPage } from '../BillListPage';
+// Added (SOUPFIN-183): the page reads its strings from the i18n namespaces
+import '../../../i18n';
 import type { Bill, BillStatus } from '../../../types';
 
 // Mock the bills API - must match the import path in BillListPage
@@ -278,13 +280,14 @@ describe('BillListPage', () => {
 
   describe('status badges', () => {
     it.each([
-      ['PAID', 'bg-success'],
-      ['PARTIAL', 'bg-info'],
-      ['PENDING', 'bg-warning'],
-      ['OVERDUE', 'bg-danger'],
-      ['DRAFT', 'bg-subtle-text'],
-      ['CANCELLED', 'bg-subtle-text'],
-    ] as const)('renders %s status with correct styling', async (status, expectedClass) => {
+      // Changed (SOUPFIN-183): the badge shows the translated label, not the enum
+      ['PAID', 'Paid', 'bg-success'],
+      ['PARTIAL', 'Partially Paid', 'bg-info'],
+      ['PENDING', 'Pending', 'bg-warning'],
+      ['OVERDUE', 'Overdue', 'bg-danger'],
+      ['DRAFT', 'Draft', 'bg-subtle-text'],
+      ['CANCELLED', 'Cancelled', 'bg-subtle-text'],
+    ] as const)('renders %s status with correct styling', async (status, label, expectedClass) => {
       const mockBill = createMockBill({
         id: `bill-${status.toLowerCase()}`,
         status: status as BillStatus,
@@ -294,7 +297,7 @@ describe('BillListPage', () => {
       renderBillListPage();
 
       const statusBadge = await screen.findByTestId(`bill-status-bill-${status.toLowerCase()}`);
-      expect(statusBadge).toHaveTextContent(status);
+      expect(statusBadge).toHaveTextContent(label);
       expect(statusBadge.className).toContain(expectedClass);
     });
 
@@ -305,7 +308,8 @@ describe('BillListPage', () => {
       renderBillListPage();
 
       const statusBadge = await screen.findByTestId('bill-status-bill-test');
-      expect(statusBadge).toHaveTextContent('PAID');
+      expect(statusBadge).toHaveTextContent('Paid');
+      expect(statusBadge).not.toHaveTextContent('PAID');
     });
   });
 

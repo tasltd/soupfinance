@@ -2,8 +2,11 @@
  * Vendor Form Page (Create/Edit)
  * PURPOSE: Create new vendor or edit existing vendor details
  * Reference: soupfinance-designs/new-invoice-form/ (form patterns)
+ * Changed (SOUPFIN-183): every string goes through the `vendors` namespace;
+ *   Zod messages are keys under form.validation, translated when rendered
  */
 import { useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -19,28 +22,31 @@ import { HelpLink } from '../../components/help';
 // Added (SOUPFIN-160): module-aware lookup and save errors
 import { getApiErrorMessage, parseApiError } from '../../api/errors';
 import { ApiErrorState, ModuleDisabledBanner } from '../../components/feedback';
+import type enVendors from '../../i18n/locales/en/vendors.json';
 
 // Added: Zod validation schema for vendor form
 // Constraints: name required, email format validation, payment terms must be positive
 // Changed: paymentTerms uses union with nan transform to handle empty input (valueAsNumber returns NaN for empty)
+// Changed (SOUPFIN-183): each message is a key under vendors:form.validation, so the
+// schema can stay at module level and still render in the user's language
 const vendorSchema = z.object({
-  name: z.string().min(1, 'Vendor name is required').max(255, 'Name is too long'),
-  email: z.string().email('Invalid email address').optional().or(z.literal('')),
-  phoneNumber: z.string().max(50, 'Phone number is too long').optional().or(z.literal('')),
-  address: z.string().max(500, 'Address is too long').optional().or(z.literal('')),
-  taxIdentificationNumber: z.string().max(50, 'TIN is too long').optional().or(z.literal('')),
+  name: z.string().min(1, 'nameRequired').max(255, 'nameTooLong'),
+  email: z.string().email('invalidEmail').optional().or(z.literal('')),
+  phoneNumber: z.string().max(50, 'phoneTooLong').optional().or(z.literal('')),
+  address: z.string().max(500, 'addressTooLong').optional().or(z.literal('')),
+  taxIdentificationNumber: z.string().max(50, 'tinTooLong').optional().or(z.literal('')),
   paymentTerms: z
     .number()
-    .int('Payment terms must be a whole number')
-    .min(0, 'Payment terms cannot be negative')
-    .max(365, 'Payment terms cannot exceed 365 days')
+    .int('paymentTermsWhole')
+    .min(0, 'paymentTermsNegative')
+    .max(365, 'paymentTermsMax')
     .optional()
     .or(z.nan().transform(() => undefined)),
-  notes: z.string().max(2000, 'Notes are too long').optional().or(z.literal('')),
+  notes: z.string().max(2000, 'notesTooLong').optional().or(z.literal('')),
   // Added (SOUPFIN-182): soupbroker.trading.Vendor fields the form did not render
-  symbol: z.string().trim().max(255, 'Symbol is too long').optional().or(z.literal('')),
+  symbol: z.string().trim().max(255, 'symbolTooLong').optional().or(z.literal('')),
   vendorType: z.enum(VENDOR_TYPES).optional().or(z.literal('')),
-  postalAddress: z.string().max(500, 'Postal address is too long').optional().or(z.literal('')),
+  postalAddress: z.string().max(500, 'postalAddressTooLong').optional().or(z.literal('')),
   ledgerAccountId: z.string().optional().or(z.literal('')),
   archived: z.boolean().optional(),
 });
@@ -48,22 +54,17 @@ const vendorSchema = z.object({
 // Added: Type inference from schema for form values
 type VendorFormData = z.infer<typeof vendorSchema>;
 
+// Added (SOUPFIN-183): the message keys the schema above may produce
+type VendorValidationKey = keyof (typeof enVendors)['form']['validation'];
+
 // Added (SOUPFIN-182): general-purpose types first — SoupFinance tenants are
 // SERVICES businesses, so the brokerage-specific types are the rarer choice.
 const GENERAL_VENDOR_TYPES: VendorType[] = ['SUPPLIER', 'SERVICE_PROVIDER', 'CONTRACTOR', 'CONSULTANT', 'OTHER'];
 
-function vendorTypeLabel(type: string): string {
-  const words = type.toLowerCase().split('_').join(' ');
-  return words.charAt(0).toUpperCase() + words.slice(1);
-}
-
-const VENDOR_TYPE_OPTIONS = [
-  { value: '', label: 'Not classified' },
-  ...GENERAL_VENDOR_TYPES.map((type) => ({ value: type, label: vendorTypeLabel(type) })),
-  ...VENDOR_TYPES.filter((type) => !GENERAL_VENDOR_TYPES.includes(type)).map((type) => ({
-    value: type,
-    label: vendorTypeLabel(type),
-  })),
+// Changed (SOUPFIN-183): labels come from vendors:types.<TYPE>, built per render
+const VENDOR_TYPE_ORDER: VendorType[] = [
+  ...GENERAL_VENDOR_TYPES,
+  ...VENDOR_TYPES.filter((type) => !GENERAL_VENDOR_TYPES.includes(type)),
 ];
 
 // Added (SOUPFIN-182): the generic GSON template flattens enums to their name,
@@ -122,10 +123,24 @@ function toVendorPayload(data: VendorFormData, isEdit: boolean): Partial<Vendor>
 }
 
 export function VendorFormPage() {
+  const { t } = useTranslation('vendors');
   const { id } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const isEdit = !!id;
+
+  // Added (SOUPFIN-183): a schema message is a key; anything else (a Zod default)
+  // is shown as sent rather than as a missing-key path
+  const fieldError = (message?: string) =>
+    message ? t(`form.validation.${message as VendorValidationKey}`, { defaultValue: message }) : undefined;
+
+  const vendorTypeOptions = useMemo(
+    () => [
+      { value: '', label: t('types.notClassified') },
+      ...VENDOR_TYPE_ORDER.map((type) => ({ value: type, label: t(`types.${type}`) })),
+    ],
+    [t],
+  );
 
   // Added: React Hook Form setup with Zod resolver
   const {
@@ -183,27 +198,27 @@ export function VendorFormPage() {
   // an option, or the select would show "none" and an update would unlink it.
   const ledgerAccountOptions = useMemo(() => {
     const options = [
-      { value: '', label: isEdit ? 'No ledger account' : 'Create one automatically' },
+      { value: '', label: isEdit ? t('form.ledgerNone') : t('form.ledgerAuto') },
       ...(liabilityAccounts ?? []).map((account) => ({ value: account.id, label: ledgerAccountLabel(account) })),
     ];
     const linked = vendor?.ledgerAccount;
     if (linked?.id && !options.some((option) => option.value === linked.id)) {
       // serialised is "<name>[ <category path> ] - <currency>"; the name is enough here
       const name = linked.name || linked.serialised?.split('[')[0].trim() || linked.id;
-      options.push({ value: linked.id, label: `${name} (currently linked)` });
+      options.push({ value: linked.id, label: t('form.ledgerCurrentlyLinked', { name }) });
     }
     return options;
-  }, [liabilityAccounts, vendor, isEdit]);
+  }, [liabilityAccounts, vendor, isEdit, t]);
 
   const ledgerAccountHelper = accountsError
-    ? `Ledger accounts could not be loaded: ${getApiErrorMessage(accountsError)}`
+    ? t('form.ledgerLoadFailed', { reason: getApiErrorMessage(accountsError) })
     : isLoadingAccounts
-      ? 'Loading ledger accounts...'
+      ? t('form.ledgerLoading')
       : liabilityAccounts && liabilityAccounts.length === 0
-        ? 'No liability accounts in the chart of accounts yet.'
+        ? t('form.ledgerEmpty')
         : isEdit
-          ? 'Liability account that bills from this vendor post to'
-          : 'Liability account that bills from this vendor post to. Leave empty to create one.';
+          ? t('form.ledgerHelpEdit')
+          : t('form.ledgerHelpNew');
 
   // Added: Populate form when vendor data is loaded
   useEffect(() => {
@@ -263,7 +278,7 @@ export function VendorFormPage() {
     return (
       <div className="flex flex-col gap-6" data-testid="vendor-form-page">
         <div className="flex items-center justify-center p-12 text-subtle-text">
-          Loading vendor...
+          {t('loading')}
         </div>
       </div>
     );
@@ -280,7 +295,7 @@ export function VendorFormPage() {
           className="self-center inline-flex items-center gap-2 h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm"
           data-testid="vendor-form-back-button"
         >
-          Back to Vendors
+          {t('backToVendors')}
         </button>
       </div>
     );
@@ -299,10 +314,10 @@ export function VendorFormPage() {
             className="text-3xl font-black tracking-tight text-text-light dark:text-text-dark"
             data-testid="vendor-form-heading"
           >
-            {isEdit ? 'Edit Vendor' : 'New Vendor'}
+            {isEdit ? t('editVendor') : t('newVendor')}
           </h1>
           <p className="text-subtle-text">
-            {isEdit ? 'Update vendor information' : 'Add a new vendor to your system'}
+            {isEdit ? t('form.subtitleEdit') : t('form.subtitleNew')}
           </p>
           <HelpLink section="vendors" className="mt-1 self-start" />
         </div>
@@ -312,7 +327,7 @@ export function VendorFormPage() {
             className="h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm hover:bg-primary/5"
             data-testid="vendor-form-cancel"
           >
-            Cancel
+            {t('form.cancel')}
           </button>
           <button
             onClick={handleSubmit(onSubmit)}
@@ -320,7 +335,7 @@ export function VendorFormPage() {
             className="h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
             data-testid="vendor-form-save"
           >
-            {isSaving ? 'Saving...' : isEdit ? 'Update Vendor' : 'Create Vendor'}
+            {isSaving ? t('form.saving') : isEdit ? t('form.update') : t('form.create')}
           </button>
         </div>
       </div>
@@ -329,7 +344,7 @@ export function VendorFormPage() {
       {isModuleBlocked && (
         <ModuleDisabledBanner
           error={vendorError}
-          context="Vendors cannot be saved until the module is enabled."
+          context={t('form.moduleDisabledContext')}
           testId="vendor-form-module-disabled"
         />
       )}
@@ -342,7 +357,7 @@ export function VendorFormPage() {
         >
           <span className="material-symbols-outlined text-xl">error</span>
           <div>
-            <p className="font-medium">Failed to save vendor</p>
+            <p className="font-medium">{t('form.saveFailed')}</p>
             <p className="text-sm opacity-80">
               {/* Changed (SOUPFIN-160): never "Request failed with status code 403" */}
               {getApiErrorMessage(mutationError)}
@@ -360,54 +375,54 @@ export function VendorFormPage() {
         {/* Basic Information Section */}
         <div className="p-6 border-b border-border-light dark:border-border-dark">
           <h2 className="text-lg font-bold text-text-light dark:text-text-dark mb-6">
-            Basic Information
+            {t('form.basicInfo')}
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Input
-              label="Vendor Name"
-              placeholder="Enter vendor name"
+              label={t('form.name')}
+              placeholder={t('form.namePlaceholder')}
               required
-              error={errors.name?.message}
+              error={fieldError(errors.name?.message)}
               {...register('name')}
               data-testid="vendor-form-name"
             />
             <Input
-              label="Email"
+              label={t('form.email')}
               type="email"
-              placeholder="vendor@example.com"
-              error={errors.email?.message}
+              placeholder={t('form.emailPlaceholder')}
+              error={fieldError(errors.email?.message)}
               {...register('email')}
               data-testid="vendor-form-email"
             />
             <Input
-              label="Phone Number"
+              label={t('form.phone')}
               type="tel"
-              placeholder="+1 (555) 123-4567"
-              error={errors.phoneNumber?.message}
+              placeholder={t('form.phonePlaceholder')}
+              error={fieldError(errors.phoneNumber?.message)}
               {...register('phoneNumber')}
               data-testid="vendor-form-phone"
             />
             <Input
-              label="Tax Identification Number"
-              placeholder="Enter TIN"
-              helperText="Tax ID for reporting purposes"
-              error={errors.taxIdentificationNumber?.message}
+              label={t('form.tin')}
+              placeholder={t('form.tinPlaceholder')}
+              helperText={t('form.tinHelp')}
+              error={fieldError(errors.taxIdentificationNumber?.message)}
               {...register('taxIdentificationNumber')}
               data-testid="vendor-form-tin"
             />
             {/* Added (SOUPFIN-182) */}
             <Input
-              label="Symbol"
-              placeholder="e.g. ACME"
-              helperText="Short code used in lookups. Must be unique."
-              error={errors.symbol?.message}
+              label={t('form.symbol')}
+              placeholder={t('form.symbolPlaceholder')}
+              helperText={t('form.symbolHelp')}
+              error={fieldError(errors.symbol?.message)}
               {...register('symbol')}
               data-testid="vendor-form-symbol"
             />
             <Select
-              label="Vendor Type"
-              options={VENDOR_TYPE_OPTIONS}
-              error={errors.vendorType?.message}
+              label={t('form.vendorType')}
+              options={vendorTypeOptions}
+              error={fieldError(errors.vendorType?.message)}
               {...register('vendorType')}
               data-testid="vendor-form-vendor-type"
             />
@@ -416,22 +431,22 @@ export function VendorFormPage() {
 
         {/* Payment Terms Section */}
         <div className="p-6 border-b border-border-light dark:border-border-dark">
-          <h2 className="text-lg font-bold text-text-light dark:text-text-dark mb-6">Payment Terms</h2>
+          <h2 className="text-lg font-bold text-text-light dark:text-text-dark mb-6">{t('form.paymentTermsTitle')}</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Input
-              label="Payment Terms (Days)"
+              label={t('form.paymentTerms')}
               type="number"
               placeholder="30"
               min={0}
               max={365}
-              helperText="Number of days until payment is due (e.g., Net 30)"
-              error={errors.paymentTerms?.message}
+              helperText={t('form.paymentTermsHelp')}
+              error={fieldError(errors.paymentTerms?.message)}
               {...register('paymentTerms', { valueAsNumber: true })}
               data-testid="vendor-form-payment-terms"
             />
             {/* Added (SOUPFIN-182): payables ledger account FK */}
             <Select
-              label="Ledger Account"
+              label={t('form.ledgerAccount')}
               options={ledgerAccountOptions}
               helperText={ledgerAccountHelper}
               disabled={isLoadingAccounts}
@@ -443,22 +458,22 @@ export function VendorFormPage() {
 
         {/* Address Section */}
         <div className="p-6 border-b border-border-light dark:border-border-dark">
-          <h2 className="text-lg font-bold text-text-light dark:text-text-dark mb-6">Address</h2>
+          <h2 className="text-lg font-bold text-text-light dark:text-text-dark mb-6">{t('form.addressTitle')}</h2>
           <Textarea
-            label="Address"
-            placeholder="Enter vendor's full address"
+            label={t('form.address')}
+            placeholder={t('form.addressPlaceholder')}
             rows={3}
-            error={errors.address?.message}
+            error={fieldError(errors.address?.message)}
             {...register('address')}
             data-testid="vendor-form-address"
           />
           {/* Added (SOUPFIN-182): Vendor.postalAddress is a separate column */}
           <Textarea
-            label="Postal Address"
-            placeholder="P.O. Box or mailing address, if different"
+            label={t('form.postalAddress')}
+            placeholder={t('form.postalAddressPlaceholder')}
             rows={2}
             containerClassName="mt-6"
-            error={errors.postalAddress?.message}
+            error={fieldError(errors.postalAddress?.message)}
             {...register('postalAddress')}
             data-testid="vendor-form-postal-address"
           />
@@ -467,13 +482,13 @@ export function VendorFormPage() {
         {/* Notes Section */}
         <div className="p-6">
           <h2 className="text-lg font-bold text-text-light dark:text-text-dark mb-6">
-            Additional Notes
+            {t('form.notesTitle')}
           </h2>
           <Textarea
-            label="Notes"
-            placeholder="Add any additional notes about this vendor..."
+            label={t('form.notes')}
+            placeholder={t('form.notesPlaceholder')}
             rows={4}
-            error={errors.notes?.message}
+            error={fieldError(errors.notes?.message)}
             {...register('notes')}
             data-testid="vendor-form-notes"
           />
@@ -482,14 +497,14 @@ export function VendorFormPage() {
         {/* Added (SOUPFIN-182): soft-delete toggle; a new vendor is always active */}
         {isEdit && (
           <div className="p-6 border-t border-border-light dark:border-border-dark" data-testid="vendor-form-status-section">
-            <h2 className="text-lg font-bold text-text-light dark:text-text-dark mb-4">Status</h2>
+            <h2 className="text-lg font-bold text-text-light dark:text-text-dark mb-4">{t('form.statusTitle')}</h2>
             <Checkbox
-              label="Archive this vendor"
+              label={t('form.archive')}
               {...register('archived')}
               data-testid="vendor-form-archived"
             />
             <p className="text-sm text-subtle-text mt-2">
-              Archived vendors move to the Archived tab of the vendor list. Their bills are kept.
+              {t('form.archiveHelp')}
             </p>
           </div>
         )}
@@ -502,7 +517,7 @@ export function VendorFormPage() {
           className="flex-1 h-12 px-4 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm hover:bg-primary/5"
           data-testid="vendor-form-cancel-mobile"
         >
-          Cancel
+          {t('form.cancel')}
         </button>
         <button
           onClick={handleSubmit(onSubmit)}
@@ -510,7 +525,7 @@ export function VendorFormPage() {
           className="flex-1 h-12 px-4 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
           data-testid="vendor-form-save-mobile"
         >
-          {isSaving ? 'Saving...' : isEdit ? 'Update' : 'Create'}
+          {isSaving ? t('form.saving') : isEdit ? t('form.updateShort') : t('form.createShort')}
         </button>
       </div>
     </div>

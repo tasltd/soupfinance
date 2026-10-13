@@ -6,8 +6,12 @@
  * Added: Loading, error, and content states
  * Added: data-testid attributes for E2E testing
  * Updated: Frontend PDF generation and email sending
+ * Changed (SOUPFIN-183): every string goes through the `bills` namespace and the
+ *   status badge is translated through billStatusLabel instead of the raw enum
  */
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { ELEMENT_SLOT, withElement } from '../../i18n/withElement';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 // Added (SOUPFIN-160): module-aware error card for a failed bill load
@@ -18,8 +22,10 @@ import { useFormatCurrency } from '../../stores';
 import { usePdf, useEmailSend } from '../../hooks';
 // Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
 import { HelpLink } from '../../components/help';
+import { billStatusLabel, billStatusStyle } from './billStatus';
 
 export function BillDetailPage() {
+  const { t } = useTranslation('bills');
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -65,7 +71,7 @@ export function BillDetailPage() {
 
   // Added: Handle delete with confirmation
   const handleDelete = () => {
-    if (window.confirm('Are you sure you want to delete this bill? This action cannot be undone.')) {
+    if (window.confirm(t('detail.confirmDelete'))) {
       deleteMutation.mutate();
     }
   };
@@ -92,7 +98,7 @@ export function BillDetailPage() {
     return (
       <div className="flex flex-col gap-6" data-testid="bill-detail-page">
         <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-8 text-center text-subtle-text" data-testid="bill-detail-loading">
-          Loading bill details...
+          {t('detail.loading')}
         </div>
       </div>
     );
@@ -102,9 +108,9 @@ export function BillDetailPage() {
     return (
       <div className="flex flex-col gap-6" data-testid="bill-detail-page">
         <div className="flex flex-wrap justify-between items-center gap-4">
-          <h1 className="text-3xl font-black tracking-tight text-text-light dark:text-text-dark">Bill Details</h1>
+          <h1 className="text-3xl font-black tracking-tight text-text-light dark:text-text-dark">{t('billDetails')}</h1>
           <Link to="/bills" className="h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm flex items-center">
-            Back to Bills
+            {t('detail.backToBills')}
           </Link>
         </div>
         {/* Changed (SOUPFIN-160): a failed load says why (module disabled, no
@@ -114,10 +120,10 @@ export function BillDetailPage() {
         ) : (
           <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-12 text-center" data-testid="bill-detail-error">
             <span className="material-symbols-outlined text-6xl text-danger/50 mb-4">error</span>
-            <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">Bill not found</h3>
-            <p className="text-subtle-text mb-4">The bill could not be found. It may have been deleted.</p>
+            <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">{t('detail.notFoundTitle')}</h3>
+            <p className="text-subtle-text mb-4">{t('detail.notFoundBody')}</p>
             <Link to="/bills" className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm">
-              Back to Bills
+              {t('detail.backToBills')}
             </Link>
           </div>
         )}
@@ -131,18 +137,18 @@ export function BillDetailPage() {
       <div className="flex flex-wrap justify-between items-center gap-4">
         <div>
           <h1 className="text-3xl font-black tracking-tight text-text-light dark:text-text-dark" data-testid="bill-detail-heading">
-            Bill {bill.billNumber}
+            {t('detail.heading', { number: bill.billNumber })}
           </h1>
           <p className="text-subtle-text">
-            <span className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${getStatusStyle(bill.status)}`} data-testid="bill-detail-status">
-              {bill.status}
+            <span className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${billStatusStyle(bill.status)}`} data-testid="bill-detail-status">
+              {billStatusLabel(t, bill.status)}
             </span>
           </p>
           <HelpLink section="bills" className="mt-1 self-start" />
         </div>
         <div className="flex gap-3">
           <Link to="/bills" className="h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm flex items-center hover:bg-primary/5">
-            Back
+            {t('detail.back')}
           </Link>
           <button
             onClick={() => generateBill(bill)}
@@ -151,7 +157,7 @@ export function BillDetailPage() {
             data-testid="bill-download-pdf-button"
           >
             <span className="material-symbols-outlined text-lg mr-2">download</span>
-            {isPdfGenerating ? 'Generating...' : 'Download PDF'}
+            {isPdfGenerating ? t('detail.generatingPdf') : t('detail.downloadPdf')}
           </button>
           <button
             onClick={handleOpenSendDialog}
@@ -159,7 +165,7 @@ export function BillDetailPage() {
             data-testid="bill-send-button"
           >
             <span className="material-symbols-outlined text-lg mr-2">send</span>
-            Send
+            {t('detail.send')}
           </button>
           <Link
             to={`/bills/${id}/edit`}
@@ -167,7 +173,7 @@ export function BillDetailPage() {
             data-testid="bill-edit-button"
           >
             <span className="material-symbols-outlined text-lg mr-2">edit</span>
-            Edit
+            {t('detail.edit')}
           </Link>
           <button
             onClick={handleDelete}
@@ -176,7 +182,7 @@ export function BillDetailPage() {
             data-testid="bill-delete-button"
           >
             <span className="material-symbols-outlined text-lg mr-2">delete</span>
-            {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
+            {deleteMutation.isPending ? t('detail.deleting') : t('detail.delete')}
           </button>
         </div>
       </div>
@@ -186,28 +192,28 @@ export function BillDetailPage() {
         {/* Bill Info */}
         <div className="lg:col-span-2 bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark" data-testid="bill-info-card">
           <div className="px-6 py-4 border-b border-border-light dark:border-border-dark">
-            <h2 className="text-lg font-bold text-text-light dark:text-text-dark">Bill Information</h2>
+            <h2 className="text-lg font-bold text-text-light dark:text-text-dark">{t('detail.infoTitle')}</h2>
           </div>
           <div className="p-6 grid grid-cols-2 gap-4">
             <div>
-              <p className="text-sm text-subtle-text">Bill Number</p>
+              <p className="text-sm text-subtle-text">{t('detail.billNumber')}</p>
               <p className="font-medium text-text-light dark:text-text-dark">{bill.billNumber}</p>
             </div>
             <div>
-              <p className="text-sm text-subtle-text">Vendor</p>
-              <p className="font-medium text-text-light dark:text-text-dark">{bill.vendor?.name || 'N/A'}</p>
+              <p className="text-sm text-subtle-text">{t('detail.vendor')}</p>
+              <p className="font-medium text-text-light dark:text-text-dark">{bill.vendor?.name || t('notAvailable')}</p>
             </div>
             <div>
-              <p className="text-sm text-subtle-text">Bill Date</p>
+              <p className="text-sm text-subtle-text">{t('detail.billDate')}</p>
               <p className="font-medium text-text-light dark:text-text-dark">{bill.billDate}</p>
             </div>
             <div>
-              <p className="text-sm text-subtle-text">Due Date</p>
+              <p className="text-sm text-subtle-text">{t('detail.dueDate')}</p>
               <p className="font-medium text-text-light dark:text-text-dark">{bill.paymentDate}</p>
             </div>
             {bill.notes && (
               <div className="col-span-2">
-                <p className="text-sm text-subtle-text">Notes</p>
+                <p className="text-sm text-subtle-text">{t('detail.notes')}</p>
                 <p className="font-medium text-text-light dark:text-text-dark">{bill.notes}</p>
               </div>
             )}
@@ -217,7 +223,7 @@ export function BillDetailPage() {
         {/* Amount Summary */}
         <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark" data-testid="bill-amount-card">
           <div className="px-6 py-4 border-b border-border-light dark:border-border-dark">
-            <h2 className="text-lg font-bold text-text-light dark:text-text-dark">Amount Summary</h2>
+            <h2 className="text-lg font-bold text-text-light dark:text-text-dark">{t('detail.amountTitle')}</h2>
           </div>
           {/*
             Fix (SOUPFIN-43): these read the NORMALISED header amounts. The backend
@@ -228,23 +234,23 @@ export function BillDetailPage() {
           */}
           <div className="p-6 space-y-3">
             <div className="flex justify-between">
-              <p className="text-subtle-text">Subtotal</p>
+              <p className="text-subtle-text">{t('detail.subtotal')}</p>
               <p className="font-medium text-text-light dark:text-text-dark" data-testid="bill-detail-subtotal">{formatCurrency(bill.subtotal)}</p>
             </div>
             <div className="flex justify-between">
-              <p className="text-subtle-text">Tax</p>
+              <p className="text-subtle-text">{t('detail.tax')}</p>
               <p className="font-medium text-text-light dark:text-text-dark" data-testid="bill-detail-tax">{formatCurrency(bill.taxAmount)}</p>
             </div>
             <div className="flex justify-between border-t border-border-light dark:border-border-dark pt-3">
-              <p className="font-bold text-text-light dark:text-text-dark">Total</p>
+              <p className="font-bold text-text-light dark:text-text-dark">{t('detail.total')}</p>
               <p className="font-bold text-text-light dark:text-text-dark" data-testid="bill-detail-total">{formatCurrency(bill.totalAmount)}</p>
             </div>
             <div className="flex justify-between">
-              <p className="text-subtle-text">Amount Paid</p>
+              <p className="text-subtle-text">{t('detail.amountPaid')}</p>
               <p className="font-medium text-success" data-testid="bill-detail-amount-paid">{formatCurrency(bill.amountPaid)}</p>
             </div>
             <div className="flex justify-between bg-primary/10 -mx-6 px-6 py-3 mt-3">
-              <p className="font-bold text-primary">Balance Due</p>
+              <p className="font-bold text-primary">{t('detail.balanceDue')}</p>
               <p className="font-bold text-primary" data-testid="bill-detail-balance-due">{formatCurrency(bill.amountDue)}</p>
             </div>
           </div>
@@ -254,18 +260,18 @@ export function BillDetailPage() {
       {/* Line Items */}
       <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden" data-testid="bill-items-card">
         <div className="px-6 py-4 border-b border-border-light dark:border-border-dark">
-          <h2 className="text-lg font-bold text-text-light dark:text-text-dark">Line Items</h2>
+          <h2 className="text-lg font-bold text-text-light dark:text-text-dark">{t('detail.lineItemsTitle')}</h2>
         </div>
         {bill.billItemList && bill.billItemList.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full text-sm" data-testid="bill-items-table">
               <thead className="text-xs text-subtle-text uppercase bg-background-light dark:bg-background-dark">
                 <tr>
-                  <th className="px-6 py-3 text-left">Description</th>
-                  <th className="px-6 py-3 text-right">Qty</th>
-                  <th className="px-6 py-3 text-right">Unit Price</th>
-                  <th className="px-6 py-3 text-right">Tax Rate</th>
-                  <th className="px-6 py-3 text-right">Amount</th>
+                  <th className="px-6 py-3 text-left">{t('detail.lineColumns.description')}</th>
+                  <th className="px-6 py-3 text-right">{t('detail.lineColumns.quantity')}</th>
+                  <th className="px-6 py-3 text-right">{t('detail.lineColumns.unitPrice')}</th>
+                  <th className="px-6 py-3 text-right">{t('detail.lineColumns.taxRate')}</th>
+                  <th className="px-6 py-3 text-right">{t('detail.lineColumns.amount')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -297,7 +303,7 @@ export function BillDetailPage() {
           </div>
         ) : (
           <div className="p-8 text-center text-subtle-text" data-testid="bill-items-empty">
-            No line items
+            {t('detail.noLineItems')}
           </div>
         )}
       </div>
@@ -305,7 +311,7 @@ export function BillDetailPage() {
       {/* Payment History */}
       <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark overflow-hidden" data-testid="bill-payments-card">
         <div className="px-6 py-4 border-b border-border-light dark:border-border-dark flex justify-between items-center gap-4">
-          <h2 className="text-lg font-bold text-text-light dark:text-text-dark">Payment History</h2>
+          <h2 className="text-lg font-bold text-text-light dark:text-text-dark">{t('detail.paymentsTitle')}</h2>
           {/* Added (SOUPFIN-81): how recording a payment works */}
           <HelpLink section="record-payment" className="ml-auto" />
           {bill.amountDue > 0 && (
@@ -315,7 +321,7 @@ export function BillDetailPage() {
               data-testid="record-payment-button"
             >
               <span className="material-symbols-outlined text-base mr-1">add</span>
-              Record Payment
+              {t('detail.recordPayment')}
             </Link>
           )}
         </div>
@@ -324,10 +330,10 @@ export function BillDetailPage() {
             <table className="w-full text-sm" data-testid="bill-payments-table">
               <thead className="text-xs text-subtle-text uppercase bg-background-light dark:bg-background-dark">
                 <tr>
-                  <th className="px-6 py-3 text-left">Date</th>
-                  <th className="px-6 py-3 text-left">Method</th>
-                  <th className="px-6 py-3 text-left">Reference</th>
-                  <th className="px-6 py-3 text-right">Amount</th>
+                  <th className="px-6 py-3 text-left">{t('detail.paymentColumns.date')}</th>
+                  <th className="px-6 py-3 text-left">{t('detail.paymentColumns.method')}</th>
+                  <th className="px-6 py-3 text-left">{t('detail.paymentColumns.reference')}</th>
+                  <th className="px-6 py-3 text-right">{t('detail.paymentColumns.amount')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -344,7 +350,7 @@ export function BillDetailPage() {
           </div>
         ) : (
           <div className="p-8 text-center text-subtle-text" data-testid="bill-payments-empty">
-            No payments recorded yet
+            {t('detail.noPayments')}
           </div>
         )}
       </div>
@@ -354,9 +360,10 @@ export function BillDetailPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" data-testid="send-bill-dialog">
           <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark w-full max-w-md mx-4 shadow-xl">
             <div className="px-6 py-4 border-b border-border-light dark:border-border-dark flex justify-between items-center">
-              <h3 className="text-lg font-bold text-text-light dark:text-text-dark">Send Bill</h3>
+              <h3 className="text-lg font-bold text-text-light dark:text-text-dark">{t('detail.sendDialog.title')}</h3>
               <button
                 onClick={() => setShowSendDialog(false)}
+                aria-label={t('detail.sendDialog.close')}
                 className="text-subtle-text hover:text-text-light dark:hover:text-text-dark"
               >
                 <span className="material-symbols-outlined">close</span>
@@ -364,18 +371,21 @@ export function BillDetailPage() {
             </div>
             <div className="p-6 space-y-4">
               <p className="text-sm text-subtle-text">
-                Send bill <strong>{bill?.billNumber}</strong> with a frontend-generated PDF attachment.
+                {withElement(
+                  t('detail.sendDialog.intro', { number: ELEMENT_SLOT }),
+                  <strong>{bill?.billNumber}</strong>
+                )}
               </p>
 
               <div>
                 <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                  Recipient Name
+                  {t('detail.sendDialog.recipientName')}
                 </label>
                 <input
                   type="text"
                   value={recipientName}
                   onChange={(e) => setRecipientName(e.target.value)}
-                  placeholder="Vendor Name"
+                  placeholder={t('detail.sendDialog.recipientNamePlaceholder')}
                   className="w-full h-10 px-3 rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark"
                   data-testid="send-recipient-name"
                 />
@@ -383,13 +393,13 @@ export function BillDetailPage() {
 
               <div>
                 <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                  Recipient Email <span className="text-danger">*</span>
+                  {t('detail.sendDialog.recipientEmail')} <span className="text-danger">*</span>
                 </label>
                 <input
                   type="email"
                   value={recipientEmail}
                   onChange={(e) => setRecipientEmail(e.target.value)}
-                  placeholder="recipient@example.com"
+                  placeholder={t('detail.sendDialog.recipientEmailPlaceholder')}
                   required
                   className="w-full h-10 px-3 rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark"
                   data-testid="send-recipient-email"
@@ -404,7 +414,7 @@ export function BillDetailPage() {
 
               {emailSuccess && (
                 <div className="p-3 rounded-lg bg-success/10 text-success text-sm" data-testid="send-success">
-                  Bill sent successfully!
+                  {t('detail.sendDialog.success')}
                 </div>
               )}
             </div>
@@ -413,7 +423,7 @@ export function BillDetailPage() {
                 onClick={() => setShowSendDialog(false)}
                 className="h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm"
               >
-                Cancel
+                {t('detail.sendDialog.cancel')}
               </button>
               <button
                 onClick={handleSendBill}
@@ -424,12 +434,12 @@ export function BillDetailPage() {
                 {isEmailSending ? (
                   <>
                     <span className="material-symbols-outlined text-lg mr-2 animate-spin">progress_activity</span>
-                    Sending...
+                    {t('detail.sendDialog.sending')}
                   </>
                 ) : (
                   <>
                     <span className="material-symbols-outlined text-lg mr-2">send</span>
-                    Send Bill
+                    {t('detail.sendDialog.submit')}
                   </>
                 )}
               </button>
@@ -441,15 +451,3 @@ export function BillDetailPage() {
   );
 }
 
-// Added: Status badge styling helper
-function getStatusStyle(status: string): string {
-  const styles: Record<string, string> = {
-    PAID: 'bg-success/10 text-success',
-    PARTIAL: 'bg-info/10 text-info',
-    PENDING: 'bg-warning/10 text-warning',
-    OVERDUE: 'bg-danger/10 text-danger',
-    DRAFT: 'bg-subtle-text/10 text-subtle-text',
-    CANCELLED: 'bg-subtle-text/10 text-subtle-text',
-  };
-  return styles[status] || styles.DRAFT;
-}
