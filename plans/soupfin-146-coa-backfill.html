@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SOUPFIN-146 — Backfill a chart of accounts for tenants with an empty one (backend plan)</title>
+<script type="application/json" id="plan-index">
+{
+  "title": "SOUPFIN-146 — Backfill a chart of accounts for tenants with an empty one",
+  "revision": "1",
+  "goal": "After one reviewed run, no non-archived SERVICES, TRADING or unclassified tenant has an empty chart of accounts, each of them has the FINANCE module, and every tenant that already had accounts is byte-for-byte unchanged.",
+  "stories": [
+    {"id": "P1", "title": "Backfill rules and report shape fixed in a runnable reference (plans/coa-templates/backfill.mjs)", "status": "done"},
+    {"id": "P2", "title": "Acceptance checks: zero empty after, untouched tenants identical, idempotent, dry run predicts real run, listener ordering, per-tenant rollback, race, zero and overflow (backfill.test.mjs, 21 checks)", "status": "done"},
+    {"id": "P3", "title": "Read-only before/after SQL (backfill-verify.sql), run against the LXC database for the baseline", "status": "done"},
+    {"id": "P4", "title": "Backend: CoaBackfillService.run(dryRun, accountIds) on top of SOUPFIN-145 CoaTemplateService.apply", "status": "todo"},
+    {"id": "P5", "title": "Backend: rewire AccountController.seedChartOfAccounts and seedAllChartOfAccounts to it; POST only, dryRun defaults to true", "status": "todo"},
+    {"id": "P6", "title": "Backend: CoaBackfillServiceSpec (ports backfill.test.mjs) and a functional spec over HTTP", "status": "todo"},
+    {"id": "P7", "title": "Run on LXC: dry run, real run, verify SQL, second run creates nothing", "status": "todo"},
+    {"id": "P8", "title": "Run on TAS through the soupmarkets-web deploy workflow, with the dry-run report reviewed by a person first", "status": "todo"}
+  ],
+  "screens": [],
+  "dependsOn": ["SOUPFIN-143 P3 and P4 (LedgerAccountType, CoaTemplateService.compose)", "SOUPFIN-145 P3 (CoaTemplateService.apply)"],
+  "followUps": ["SOUPFIN-235"]
+}
+</script>
+<style>
+  :root { --primary:#f24a0d; --text:#181311; --sub:#8a6b60; --border:#e6dedb; --bg:#f8f6f5; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:15px/1.55 Manrope, "Noto Sans", system-ui, sans-serif; color:var(--text); background:var(--bg); }
+  main { max-width: 980px; margin: 0 auto; padding: 32px 24px 64px; }
+  h1 { font-size: 30px; font-weight: 800; letter-spacing:-0.02em; margin: 0 0 6px; }
+  h2 { font-size: 21px; margin: 36px 0 10px; padding-top: 8px; border-top: 1px solid var(--border); }
+  h3 { font-size: 16px; margin: 22px 0 6px; }
+  p.lead { color: var(--sub); margin: 0 0 18px; }
+  .card { background:#fff; border:1px solid var(--border); border-radius:12px; padding:16px 20px; margin: 14px 0; }
+  .goal { border-left: 4px solid var(--primary); }
+  .warn { border-left: 4px solid #d97706; }
+  table { width:100%; border-collapse: collapse; background:#fff; border:1px solid var(--border); border-radius:12px; overflow:hidden; margin: 10px 0; font-size: 14px; }
+  th { text-align:left; background:#f5f1f0; color:var(--sub); font-size:12px; text-transform:uppercase; letter-spacing:.04em; padding:8px 12px; }
+  td { padding:8px 12px; border-top:1px solid var(--border); vertical-align: top; overflow-wrap: anywhere; }
+  td.n { text-align: right; font-variant-numeric: tabular-nums; }
+  code { font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; background:#f5f1f0; padding:1px 5px; border-radius:4px; }
+  pre { background:#1f1715; color:#f3ebe8; padding:14px 16px; border-radius:10px; overflow:auto; font: 12.5px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; }
+  pre code { background:none; padding:0; color:inherit; }
+  .pill { display:inline-block; padding:1px 9px; border-radius:999px; font-size:12px; font-weight:700; }
+  .done { background:#dcfce7; color:#166534; } .todo { background:#fef3c7; color:#92400e; }
+  ol li, ul li { margin: 4px 0; }
+</style>
+</head>
+<body>
+<main>
+<h1>SOUPFIN-146 — Backfill a chart of accounts for tenants with an empty one</h1>
+<p class="lead">Backend plan for soupmarkets-web, branch <code>authentication-base-on-multi-tenancy-descriminator</code>. Written 2026-10-12 from the SoupFinance repository, which may not change backend code (<code>.claude/rules/backend-changes-workflow.md</code>, SOUPFIN-13 directive). Builds on SOUPFIN-143 and SOUPFIN-145.</p>
+
+<div class="card goal"><b>Goal.</b> After one reviewed run, no non-archived SERVICES, TRADING or unclassified tenant has an empty chart of accounts. Each of them has the FINANCE module, which is what gates the Ledger and Accounting pages. Every tenant that already had accounts is byte-for-byte unchanged.</div>
+
+<h2>1. Parts</h2>
+<table>
+<tr><th>Part</th><th>What</th><th>Status</th></tr>
+<tr><td>P1</td><td>Backfill rules and report shape, as runnable code: <code>plans/coa-templates/backfill.mjs</code></td><td><span class="pill done">done</span></td></tr>
+<tr><td>P2</td><td>Acceptance checks in <code>plans/coa-templates/backfill.test.mjs</code> (21 checks). With SOUPFIN-143 and 145, <code>node --test plans/coa-templates/*.test.mjs</code> runs 95, all passing. Seven deliberate bugs were planted one at a time; each turned at least one check red.</td><td><span class="pill done">done</span></td></tr>
+<tr><td>P3</td><td>Read-only before and after SQL, <code>plans/coa-templates/backfill-verify.sql</code>, run against the LXC database for the baseline in section 3</td><td><span class="pill done">done</span></td></tr>
+<tr><td>P4</td><td><code>CoaBackfillService.run</code></td><td><span class="pill todo">todo</span></td></tr>
+<tr><td>P5</td><td>Rewire the two existing <code>AccountController</code> actions</td><td><span class="pill todo">todo</span></td></tr>
+<tr><td>P6</td><td>Spock unit and functional specs</td><td><span class="pill todo">todo</span></td></tr>
+<tr><td>P7</td><td>Run on LXC</td><td><span class="pill todo">todo</span></td></tr>
+<tr><td>P8</td><td>Run on TAS</td><td><span class="pill todo">todo</span></td></tr>
+</table>
+<p><b>Order.</b> SOUPFIN-143 P3 and P4, then SOUPFIN-145 P3, land first. The backfill calls <code>CoaTemplateService.apply</code>, so registration, the template picker and the backfill share one idempotent write path. None of those parts exist in soupmarkets-web yet, which is why P4 to P8 cannot start today.</p>
+
+<h2>2. What the backend has today (checked 2026-10-12, commit e0b818d716)</h2>
+<table>
+<tr><th>#</th><th>Finding</th><th>Where</th><th>Consequence for this plan</th></tr>
+<tr><td>1</td><td>A backfill already exists: <code>seedChartOfAccountsForAllTenants</code>. It skips a tenant with any <b>category</b>, does nothing when <code>businessLicenceCategory</code> is null, and seeds the old hard-coded 32-account chart.</td><td><code>AccountRegistrationService.groovy:689-745</code></td><td>Its body is replaced. Every one of the 207 empty LXC tenants has a null licence, so today's code would leave all of them empty.</td></tr>
+<tr><td>2</td><td>Two actions call it, both <code>@WithoutTenant</code> and ROLE_ADMIN_ROOT only: <code>/account/seedChartOfAccounts.json?id=</code> and <code>/account/seedAllChartOfAccounts.json</code>. Neither is in <code>allowedMethods</code>, so a GET runs them.</td><td><code>AccountController.groovy:541-576</code></td><td>The backfill reuses these two URLs. They become POST only, and default to a dry run.</td></tr>
+<tr><td>3</td><td>Inserting a FINANCE <code>AccountModule</code> fires an afterCommit listener. It seeds the Ghana <b>brokerage</b> chart (TRADING PORTFOLIO, SHARES QUOTED ON THE GHANA STOCK EXCHANGE and so on) unless the tenant already has a category whose <code>account</code> is the tenant, or one named <code>SHORT -TERM LIABILITIES</code>.</td><td><code>AccountModuleListenerService.groovy:66-110</code>, <code>AccountModuleUtilityService.groovy:55-77</code></td><td>The chart and the module go in <b>one</b> transaction. If the module commits first, a SERVICES tenant gets a brokerage chart. A check plants exactly that and fails.</td></tr>
+<tr><td>4</td><td>Both templates already contain <code>SHORT -TERM LIABILITIES</code>, so the listener's name guard holds once the chart is in.</td><td><code>plans/coa-templates/base/*.json</code></td><td>A check now fails if a template ever drops that category. <code>writePlan</code> also stamps <code>account</code> on every category, so the second guard holds too.</td></tr>
+<tr><td>5</td><td>BootStrap calls <code>seedAccountModulesForAllTenants</code> on every start. A null licence maps to no modules.</td><td><code>BootstrapListenerService.groovy:384-401</code>, <code>AccountRegistrationService.groovy:868-882</code></td><td>The backfill must create the FINANCE row itself for unclassified tenants. Leaving the licence null does not undo it: nothing removes modules.</td></tr>
+<tr><td>6</td><td><code>FinanceModuleInterceptor</code> allows a finance controller when <code>account.accountModuleList</code> has a FINANCE row. That one row covers the ledger, voucher, invoice and bill controllers.</td><td><code>FinanceModuleInterceptor.groovy:25-44</code></td><td>"Enable Ledger and Accounting" in the ticket is one FINANCE row per tenant.</td></tr>
+<tr><td>7</td><td><code>LedgerAccount</code> name and number are unique per <code>tenantId</code>, archived rows included.</td><td><code>LedgerAccount.groovy:135-138</code></td><td>"Empty" is counted over all rows, archived included. A tenant whose only account is archived is not empty, and is left alone.</td></tr>
+</table>
+
+<h2>3. LXC baseline (measured 2026-10-12)</h2>
+<p>From <code>backfill-verify.sql</code> against <code>soupbroker_seed_source</code> on 10.115.213.114.</p>
+<table>
+<tr><th>Measure</th><th>Value</th></tr>
+<tr><td>Accounts (tenants)</td><td class="n">214</td></tr>
+<tr><td>With an empty chart (query 1)</td><td class="n">207</td></tr>
+<tr><td>Of those: licence null / archived / brokerage</td><td class="n">207 / 0 / 0</td></tr>
+<tr><td>Of those: already have a FINANCE module / have categories / have an agent or user</td><td class="n">207 / 0 / 0</td></tr>
+<tr><td>Created between</td><td>2025-11-24 and 2025-12-01 (functional-test leftovers named "Test Account" or nothing)</td></tr>
+<tr><td>Tenants with accounts (query 3)</td><td>7: Dev Securities (BROKER, 3,167 accounts) and six SERVICES E2E firms (32 each)</td></tr>
+<tr><td>Empty tenants skipped by design (query 2)</td><td class="n">0</td></tr>
+<tr><td>Brokerage categories on SERVICES or TRADING tenants (query 5)</td><td class="n">0</td></tr>
+</table>
+<p>So on LXC the run seeds 207 SERVICES charts (69 accounts each, 14,283 accounts in all) and creates no modules. Query 3 also shows 2,451 <code>ledger_account</code> rows with a null <code>tenant_id</code> and two tenant ids with charts but no <code>account</code> row. The backfill scans <code>account</code> rows, so it never sees them; they are seed-data debris, not part of this ticket.</p>
+<p>The TAS count is not measured from here: this repository does not touch Soupmarkets production. The dry run in P8 produces it.</p>
+
+<h2>4. Rules the backfill enforces</h2>
+<ol>
+<li><b>Empty means 0 <code>LedgerAccount</code> rows</b>, archived included. Categories alone do not count: a tenant with the old categories and no accounts is seeded, and its categories are reused (matched case-insensitively), not duplicated.</li>
+<li><b>Which template.</b> SERVICES gets <code>services</code>, TRADING gets <code>trading</code>, a null licence gets <code>services</code>. The licence is reported as <code>licenceDefaulted</code>, never written back. BROKER, ASSET_MANAGER, CUSTODIAN, TRUSTEE, PRIMARY_DEALER and FUND_MANAGER are skipped as <code>no-template</code>: they have their own brokerage chart.</li>
+<li><b>Country overlay</b> when <code>countryOfOrigin</code> names one. The field is free text, so <code>GH</code>, <code>gh</code>, <code>GHA</code>, <code>gha</code> and <code>Ghana</code> all mean the Ghana overlay; anything else gets none. No industry overlay: there is no first-class industry field yet (parent plan, task 9).</li>
+<li><b>Archived tenants are skipped</b> and do not count as still empty.</li>
+<li><b>One transaction per tenant</b>, under <code>Account.lock(id)</code>. The chart is written first, then the FINANCE module if no active one exists. A failure rolls that tenant back completely and the run carries on.</li>
+<li><b>Re-check under the lock.</b> If the tenant gained an account between the scan and its transaction, it is skipped as <code>gained-accounts</code> and nothing is written.</li>
+<li><b>Tenants with accounts are not listed</b> in the report, only counted (<code>untouched</code>). On TAS that is every brokerage tenant.</li>
+<li><b>A dry run is the default.</b> A POST without <code>dryRun=false</code> writes nothing and returns what a real run would do, tenant by tenant. A check asserts the real run then does exactly that.</li>
+</ol>
+
+<h2>5. Report shape</h2>
+<p>Produced by running <code>backfill.mjs</code> on four tenants: an unclassified test tenant, a Ghana trading company, a broker with accounts and a broker without. The Groovy port returns the same keys.</p>
+<pre><code>{
+  "dryRun": true,
+  "summary": { "scanned": 4, "untouched": 1, "empty": 3, "seeded": 2, "skipped": 1, "failed": 0,
+               "accountsCreated": 151, "modulesEnabled": 1, "stillEmpty": null },
+  "stillEmpty": null,
+  "tenants": [
+    { "accountId": "ff8081819ac7c15b019ac83c11c60240", "name": "Test Account 1764295910941",
+      "businessLicenceCategory": null, "outcome": "would-seed", "reason": null,
+      "template": "services", "overlays": [], "licenceDefaulted": true,
+      "accountsCreated": 69, "categoriesCreated": 21, "moduleEnabled": false, "problems": [], "error": null },
+    { "accountId": "b1c2-ghana-trading", "name": "Kumasi Hardware Ltd",
+      "businessLicenceCategory": "TRADING", "outcome": "would-seed", "reason": null,
+      "template": "trading", "overlays": ["GH"], "licenceDefaulted": false,
+      "accountsCreated": 82, "categoriesCreated": 23, "moduleEnabled": true, "problems": [], "error": null },
+    { "accountId": "c9d0-broker-empty", "name": "New Broker Ltd",
+      "businessLicenceCategory": "BROKER", "outcome": "skipped", "reason": "no-template",
+      "template": null, "overlays": [], "licenceDefaulted": false,
+      "accountsCreated": 0, "categoriesCreated": 0, "moduleEnabled": false, "problems": [], "error": null }
+  ]
+}</code></pre>
+<table>
+<tr><th>Field</th><th>Meaning</th></tr>
+<tr><td><code>outcome</code></td><td><code>seeded</code>, <code>would-seed</code> (dry run), <code>skipped</code> or <code>failed</code></td></tr>
+<tr><td><code>reason</code></td><td>For a skip: <code>archived</code>, <code>no-template</code> or <code>gained-accounts</code></td></tr>
+<tr><td><code>summary.seeded</code></td><td>Tenants seeded; in a dry run, the tenants a real run would seed</td></tr>
+<tr><td><code>stillEmpty</code></td><td>After a real run, the ids of every non-archived tenant (of those scanned) still at 0 accounts. Null in a dry run. The acceptance criterion holds when it lists only <code>no-template</code> and <code>failed</code> tenants, and on LXC it must be empty.</td></tr>
+<tr><td><code>problems</code></td><td>Non-fatal notes from <code>planApply</code>, such as a singleton role another account already holds. Always empty on an empty tenant.</td></tr>
+</table>
+
+<h2>6. Files to change in soupmarkets-web</h2>
+<table>
+<tr><th>File</th><th>Change</th></tr>
+<tr><td><code>grails-app/services/soupbroker/finance/CoaBackfillService.groovy</code></td><td>New. Ports <code>backfill()</code> and <code>selectionFor()</code> from <code>backfill.mjs</code>. The country aliases live in one static map, and SOUPFIN-145's <code>listTemplates</code> should use it for <code>recommended</code> too, so the picker and the backfill agree on "gha".</td></tr>
+<tr><td><code>grails-app/services/soupbroker/finance/CoaTemplateService.groovy</code></td><td>(SOUPFIN-145 P3.) Its write loop must set <code>account</code> on every <code>LedgerAccountCategory</code> it creates; that is the listener guard in finding 3. <code>apply</code> must join the caller's transaction (default <code>REQUIRED</code> propagation) so the backfill can add the module inside it.</td></tr>
+<tr><td><code>grails-app/services/soupbroker/AccountRegistrationService.groovy</code></td><td><code>seedChartOfAccountsForTenant</code> and <code>seedChartOfAccountsForAllTenants</code> become one-line calls to <code>coaBackfillService.run</code>, or are deleted with their callers moved over.</td></tr>
+<tr><td><code>grails-app/controllers/soupbroker/AccountController.groovy</code></td><td>Both actions take <code>dryRun</code> (default true; anything but <code>true</code>/<code>false</code> is a 422) and <code>accountIds</code>. Add <code>seedChartOfAccounts: "POST", seedAllChartOfAccounts: "POST"</code> to <code>allowedMethods</code>.</td></tr>
+</table>
+<pre><code>// CoaBackfillService
+@WithoutTenant
+Map run(boolean dryRun = true, List&lt;String&gt; accountIds = null) {
+    // One query for the tenants that already have accounts, archived rows included.
+    Set&lt;String&gt; nonEmpty = Tenants.withoutId {
+        LedgerAccount.executeQuery('select distinct l.tenantId from LedgerAccount l') as Set
+    }
+    List&lt;Account&gt; tenants = Account.withCriteria {
+        if (accountIds != null) {
+            if (accountIds) inList('id', accountIds) else isNull('id')   // an empty list scans nothing
+        }
+        order('dateCreated', 'asc')
+    }
+    List&lt;Map&gt; rows = []
+    int untouched = 0
+    tenants.each { Account account -&gt;
+        if (account.id in nonEmpty) { untouched++; return }
+        Map row = newRow(account)
+        rows &lt;&lt; row
+        Map sel = selectionFor(account)                          // archived / no-template / template + overlays
+        if (!sel.seed) { row.reason = sel.reason; return }
+        try {
+            Tenants.withId(account.id) {
+                if (dryRun) { fillPreview(row, account, sel); return }
+                LedgerAccount.withNewTransaction {
+                    Account locked = Account.lock(account.id)
+                    if (LedgerAccount.count() &gt; 0) { row.outcome = 'skipped'; row.reason = 'gained-accounts'; return }
+                    CoaApplyResult r = coaTemplateService.apply(locked,
+                            new CoaApplyCommand(template: sel.template, overlays: sel.overlays, dryRun: false))
+                    // Module last, in the same transaction: see finding 3.
+                    if (!hasActiveFinanceModule(locked)) {
+                        new AccountModule(account: locked, moduleGroup: ModuleGroup.FINANCE,
+                                controller: ModuleGroup.FINANCE.controllerList, startDate: new Date()).save(failOnError: true)
+                        row.moduleEnabled = true
+                    }
+                    fillResult(row, r)
+                    row.outcome = 'seeded'
+                }
+            }
+        } catch (Exception e) {
+            log.error("COA backfill failed for ${account.id} (${account.name}): ${e.message}", e)
+            io.sentry.Sentry.captureException(e)
+            resetToFailed(row, e)
+        }
+        log.info("COA backfill ${dryRun ? 'dry run' : 'run'}: ${account.id} ${row.outcome} ${row.reason ?: ''} ${row.accountsCreated}")
+    }
+    return report(dryRun, tenants, untouched, rows)               // same keys as backfill.mjs
+}</code></pre>
+<pre><code>// AccountController
+@WithoutTenant
+def seedAllChartOfAccounts() {
+    if (!SpringSecurityUtils.ifAllGranted("ROLE_ADMIN_ROOT")) {
+        render status: 403, text: 'Admin root access required'
+        return
+    }
+    Boolean dryRun = params.dryRun == null ? true : params.boolean('dryRun')
+    if (dryRun == null) {
+        render status: 422, contentType: 'application/json',
+               text: ([status: 422, code: 'invalid-dry-run', message: 'dryRun must be true or false'] as JSON).toString()
+        return
+    }
+    List&lt;String&gt; ids = params.containsKey('accountIds') ? params.list('accountIds') : null
+    render(coaBackfillService.run(dryRun, ids) as JSON)
+}
+// seedChartOfAccounts(id) is the same call with [params.id ?: Account.current().id].</code></pre>
+<p><b>Why not BootStrap.</b> The existing module backfill runs on every boot (finding 5), and it would be the obvious home. But BootStrap runs on every server this WAR reaches, including brokerage production, on every deploy. Writing charts into production tenants should happen once, by a person who has read the dry-run report. The two admin actions give that; a boot hook does not.</p>
+<p><b>Why one transaction per tenant, not one for the run.</b> A single bad tenant would otherwise undo the other 206, and a run over hundreds of tenants would hold locks for minutes.</p>
+
+<h2>7. Runbook</h2>
+<h3>LXC first (P7)</h3>
+<ol>
+<li>Deploy the branch to the SoupFinance LXC only: <code>cd soupmarkets-web &amp;&amp; source env-variables.sh &amp;&amp; ./gradlew assembleDeployToSoupfinanceBackend</code>. Not <code>assembleDeployToDemo</code>: it cascades to Demo and Edge production. Check no other Gradle task runs first (<code>.claude/rules/gradle-concurrent-tasks.md</code>).</li>
+<li>Save the before state: <code>mysql -h 10.115.213.114 -u soupbroker -p soupbroker_seed_source &lt; plans/coa-templates/backfill-verify.sql &gt; before.txt</code>. Expect 207 in query 1.</li>
+<li>Log in as a ROLE_ADMIN_ROOT user (<code>soup.support</code>) with <code>POST /rest/api/login</code>, then dry run, straight at Tomcat so no proxy timeout applies:
+<pre><code>curl -s -X POST -H "X-Auth-Token: $TOKEN" -H 'Accept: application/json' \
+  'http://10.115.213.183:9090/account/seedAllChartOfAccounts.json'</code></pre>
+Expect <code>summary.seeded</code> 207, <code>skipped</code> 0, <code>accountsCreated</code> 14,283, <code>modulesEnabled</code> 0.</li>
+<li>Real run: the same call with <code>?dryRun=false</code> and <code>--max-time 1800</code>. Expect <code>stillEmpty</code> [].</li>
+<li>Save the after state and compare: query 1 is 0, query 3 is identical to <code>before.txt</code>, queries 4 and 5 return no rows.</li>
+<li>Run the real call again. Expect <code>empty</code> 0 and <code>seeded</code> 0.</li>
+</ol>
+<h3>Then TAS (P8)</h3>
+<div class="card warn">This writes to production tenants. It goes through the soupmarkets-web deploy workflow, from a soupmarkets-web session, on an explicit instruction. Never from this repository (<code>.claude/rules/deployment-restrictions.md</code>).</div>
+<ol>
+<li>Deploy the release that carries P4 to P6 to TAS through the soupmarkets-web workflow.</li>
+<li>Run <code>backfill-verify.sql</code> read-only and keep the output.</li>
+<li>Dry run as a ROLE_ADMIN_ROOT user from the server itself, against Tomcat on localhost. Send the report to a person. Look in particular at <code>licenceDefaulted</code> tenants (they get a SERVICES chart) and at <code>no-template</code> brokers with empty charts (the backfill leaves those to an operator).</li>
+<li>If the report is approved, real run. If any tenant should be left out, pass the approved ids as <code>accountIds</code> instead of running for all.</li>
+<li>Verify as on LXC: query 1 at 0, query 3 unchanged, queries 4 and 5 empty, and a second run seeds nothing. Then log in as one seeded SoupFinance user and open Ledger, then Chart of Accounts.</li>
+</ol>
+
+<h2>8. Tests to write in soupmarkets-web (P6)</h2>
+<table>
+<tr><th>Spec</th><th>Kind</th><th>Ports / covers</th></tr>
+<tr><td><code>CoaBackfillServiceSpec</code></td><td>Integration (Spock, real DB, several tenants)</td><td>Every check in <code>backfill.test.mjs</code>: zero empty after; untouched tenants identical (accounts, categories, modules); second run writes nothing; the dry run is the default and predicts the real run; null licence gets SERVICES and keeps a null licence; country spellings; brokerage and archived skipped; module created only when missing; no brokerage categories after commit, plus the control where the module commits first and the brokerage chart appears; per-tenant rollback; <code>gained-accounts</code>; categories without accounts reused; <code>accountIds</code>; zero tenants; 1,000 empty tenants beside 200 full ones.</td></tr>
+<tr><td><code>CoaBackfillFunctionalSpec</code></td><td>Functional (HTTP, <code>BaseDomainFunctionalSpec</code>)</td><td>A ROLE_ADMIN user gets 403 on both actions. A GET gets 405. Root: POST with no params writes nothing; <code>dryRun=false</code> seeds a fresh tenant, after which <code>/rest/ledgerAccount/index.json?max=1000</code> as that tenant returns 200 with the template's accounts (not 403); <code>dryRun=maybe</code> gets 422.</td></tr>
+</table>
+<p>Count accounts through <code>index.json</code> with <code>?max=1000</code>: without it the index returns 10 rows.</p>
+
+<h2>9. Decisions taken without asking</h2>
+<table>
+<tr><th>Decision</th><th>Why</th><th>Easy to reverse?</th></tr>
+<tr><td>Reuse the two ROLE_ADMIN_ROOT actions, not a boot hook or a Flyway migration</td><td>A boot hook writes to every production tenant on every deploy, unreviewed. Flyway SQL cannot run <code>compose()</code>, and Flyway is off on LXC.</td><td>Yes</td></tr>
+<tr><td><code>dryRun</code> defaults to true</td><td>An admin probing the URL must not seed production by accident.</td><td>Yes</td></tr>
+<tr><td>Null licence: seed SERVICES but leave the field null</td><td>The ticket asks for the SERVICES template, not a licence change. Writing the licence would also change what BootStrap's module backfill does for that tenant.</td><td>Yes</td></tr>
+<tr><td>Brokerage licences skipped</td><td>No SoupFinance template fits a broker, and they have their own chart. The report lists them, so the criterion "0 tenants with an empty COA" holds for every tenant the backfill can seed.</td><td>Yes: call <code>createBrokerChartOfAccounts</code> for them</td></tr>
+<tr><td>Archived tenants skipped</td><td>Nobody can use them; seeding is writes for nothing.</td><td>Yes</td></tr>
+<tr><td>Apply the country overlay; no industry overlay</td><td>Gives the same chart the template picker recommends. Industry has no field to read yet.</td><td>Yes: tenants can apply an overlay later through SOUPFIN-145</td></tr>
+<tr><td>Only the FINANCE module, also for TRADING tenants</td><td>The ticket asks for Ledger and Accounting. BootStrap already adds TRADING for TRADING tenants.</td><td>Yes</td></tr>
+</table>
+
+<h2>10. Follow-ups</h2>
+<ul>
+<li><b>SOUPFIN-235</b>: Backend: <code>AccountModuleListenerService</code> seeds the Ghana brokerage chart on any tenant that gets a FINANCE module while its chart is empty, whatever its licence. A SERVICES tenant whose module is enabled from the admin screen before it has a chart gets TRADING PORTFOLIO and GSE share accounts. The backfill avoids it by ordering; the listener should check the licence.</li>
+</ul>
+
+<h2>11. Sources</h2>
+<ul>
+<li>soupmarkets-web e0b818d716 (2026-10-09): <code>AccountRegistrationService</code>, <code>AccountController</code>, <code>AccountModuleListenerService</code>, <code>AccountModuleUtilityService</code>, <code>BootstrapListenerService</code>, <code>FinanceModuleInterceptor</code>, <code>AccountModule</code>, <code>BusinessLicenceCategory</code>, <code>LedgerAccountCategory</code>.</li>
+<li>LXC database <code>soupbroker_seed_source</code>, queried 2026-10-12 with <code>backfill-verify.sql</code>.</li>
+<li><code>plans/coa-template-seeding.md</code> (parent plan, task 4), <code>plans/soupfin-143-coa-template-seed-data.html</code>, <code>plans/soupfin-145-apply-template-endpoints.html</code>.</li>
+<li>Reference and checks: <code>plans/coa-templates/backfill.mjs</code>, <code>plans/coa-templates/backfill.test.mjs</code>. Run <code>node --test plans/coa-templates/*.test.mjs</code>.</li>
+</ul>
+</main>
+</body>
+</html>

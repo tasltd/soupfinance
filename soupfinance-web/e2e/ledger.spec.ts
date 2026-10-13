@@ -362,7 +362,9 @@ test.describe('Ledger Management', () => {
 
       // Should show empty state
       await expect(page.getByTestId('coa-empty')).toBeVisible();
-      await expect(page.locator('text=No accounts found')).toBeVisible();
+      // Changed (SOUPFIN-147): the empty state is a set-up call to action
+      await expect(page.getByTestId('coa-empty')).toContainText('Set up your chart of accounts');
+      await expect(page.getByTestId('coa-setup-cta')).toBeVisible();
 
       await takeScreenshot(page, 'chart-of-accounts-empty');
     });

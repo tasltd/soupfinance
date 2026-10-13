@@ -2,7 +2,7 @@
  * Accounting E2E Tests
  * Tests for journal entries, vouchers, and transaction register
  */
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import {
   mockTokenValidationApi,
   takeScreenshot,
@@ -831,7 +831,8 @@ test.describe('Accounting Module', () => {
       await takeScreenshot(page, 'voucher-form-journal-preview');
     });
 
-    // Changed: VoucherFormPage cancel navigates to /accounting/vouchers
+    // Changed (SOUPFIN-154): Cancel returns to the Transaction Register.
+    // It used to go to /accounting/vouchers, which rendered a blank form.
     test('cancel button returns to transaction register', async ({ page }) => {
       await mockAccountingApi(page);
 
@@ -840,8 +841,8 @@ test.describe('Accounting Module', () => {
       // Click cancel
       await page.getByTestId('voucher-form-cancel-button').click();
 
-      // Should navigate to vouchers list (actual cancel behavior)
-      await expect(page).toHaveURL(/\/accounting\/vouchers/);
+      await expect(page).toHaveURL(/\/accounting\/transactions$/);
+      await expect(page.getByTestId('transaction-register-page')).toBeVisible();
     });
 
     test('form has action buttons', async ({ page }) => {
@@ -904,9 +905,125 @@ test.describe('Accounting Module', () => {
       await page.getByTestId('new-payment-button').click();
       await expect(page.getByTestId('voucher-form-page')).toBeVisible();
 
-      // Cancel goes to /accounting/vouchers (not back to register)
+      // Changed (SOUPFIN-154): Cancel goes back to the register
       await page.getByTestId('voucher-form-cancel-button').click();
-      await expect(page).toHaveURL(/\/accounting\/vouchers/);
+      await expect(page).toHaveURL(/\/accounting\/transactions$/);
+      await expect(page.getByTestId('transaction-register-page')).toBeVisible();
+    });
+  });
+
+  // ===========================================================================
+  // Added (SOUPFIN-154): Register row actions open the right record
+  // ===========================================================================
+
+  // View and Edit used to point at /accounting/voucher/:id and
+  // /accounting/journal-entry/:id/edit, which were not routed, so the catch-all
+  // sent the user to /dashboard. /accounting/vouchers/:id rendered a blank
+  // create form. Every row action now opens the record it was clicked on.
+  test.describe('Transaction Register row actions (SOUPFIN-154)', () => {
+    const SHOT_DIR = 'e2e/playwright/screenshots/soupfin-154';
+    // Screenshots go to a tracked directory; test-results/ is ignored and wiped.
+    async function shot(page: Page, name: string) {
+      await page.screenshot({ path: `${SHOT_DIR}/${name}.png`, fullPage: true });
+    }
+
+    async function openRowAction(page: Page, rowId: string, action: 'View' | 'Edit') {
+      await page.getByTestId(`transaction-actions-${rowId}`).click();
+      await page.getByTestId(`transaction-dropdown-${rowId}`).getByRole('button', { name: action }).click();
+    }
+
+    test.beforeEach(async ({ page }) => {
+      await mockAccountingApi(page);
+      await page.goto('/accounting/transactions');
+      await expect(page.getByTestId('transaction-table')).toBeVisible();
+    });
+
+    test('View on a posted journal entry opens it read-only', async ({ page }) => {
+      await shot(page, '01-register');
+      await openRowAction(page, 'group-001-0', 'View');
+
+      await expect(page).toHaveURL(/\/accounting\/journal-entry\/group-001$/);
+      await expect(page.getByTestId('journal-entry-heading')).toHaveText('Journal Entry');
+      await expect(page.getByTestId('journal-entry-reference-input')).toHaveValue('JE-2024-001');
+      await expect(page.getByTestId('journal-entry-readonly-banner')).toBeVisible();
+      await shot(page, '02-journal-entry-view');
+    });
+
+    test('Edit on a draft journal entry opens its edit form', async ({ page }) => {
+      await openRowAction(page, 'group-002-0', 'Edit');
+
+      await expect(page).toHaveURL(/\/accounting\/journal-entry\/group-002\/edit$/);
+      await expect(page.getByTestId('journal-entry-heading')).toHaveText('Edit Journal Entry');
+      await expect(page.getByTestId('journal-entry-reference-input')).toHaveValue('JE-2024-002');
+      await expect(page.getByTestId('journal-entry-save-draft-button')).toBeEnabled();
+      await shot(page, '03-journal-entry-edit');
+    });
+
+    test('View on a voucher opens it read-only with its values', async ({ page }) => {
+      await openRowAction(page, 'voucher-002-cash', 'View');
+
+      await expect(page).toHaveURL(/\/accounting\/vouchers\/voucher-002$/);
+      await expect(page.getByTestId('voucher-form-heading')).toHaveText('Receipt Voucher');
+      await expect(page.getByTestId('voucher-notes-input')).toHaveValue('Client payment received');
+      await expect(page.getByTestId('voucher-cash-account-select')).toHaveValue('acc-cash');
+      await expect(page.getByTestId('voucher-income-account-select')).toHaveValue('acc-revenue');
+      // The fieldset disables every control inside it.
+      await expect(page.getByTestId('voucher-notes-input')).toBeDisabled();
+      await expect(page.getByTestId('voucher-cash-account-select')).toBeDisabled();
+      await expect(page.getByTestId('voucher-type-receipt')).toBeDisabled();
+      await expect(page.getByTestId('voucher-form-save-draft-button')).toHaveCount(0);
+      await shot(page, '04-voucher-view');
+
+      // Back returns to the register, not a blank form.
+      await page.getByTestId('voucher-form-cancel-button').click();
+      await expect(page).toHaveURL(/\/accounting\/transactions$/);
+      await expect(page.getByTestId('transaction-register-page')).toBeVisible();
+    });
+
+    test('Edit on a voucher opens it filled in and saving updates it', async ({ page }) => {
+      let updateUrl = '';
+      let updateBody: Record<string, unknown> | null = null;
+      await page.route('**/rest/voucher/update/*', (route) => {
+        updateUrl = route.request().url();
+        updateBody = route.request().postDataJSON();
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ ...mockVouchers[0], description: 'Office supplies, corrected' }),
+        });
+      });
+
+      await openRowAction(page, 'voucher-001-cash', 'Edit');
+
+      await expect(page).toHaveURL(/\/accounting\/vouchers\/voucher-001\/edit$/);
+      await expect(page.getByTestId('voucher-form-heading')).toHaveText('Edit Payment Voucher');
+      const notes = page.getByTestId('voucher-notes-input');
+      await expect(notes).toHaveValue('Office supplies payment');
+      await expect(page.getByTestId('voucher-expense-account-select')).toHaveValue('acc-expense');
+      await shot(page, '05-voucher-edit');
+
+      await notes.fill('Office supplies, corrected');
+      await page.getByTestId('voucher-form-save-draft-button').click();
+
+      await expect(page).toHaveURL(/\/accounting\/transactions$/);
+      await expect(page.getByTestId('transaction-register-page')).toBeVisible();
+      expect(updateUrl).toContain('/rest/voucher/update/voucher-001.json');
+      expect(updateBody).toMatchObject({
+        id: 'voucher-001',
+        voucherType: 'PAYMENT',
+        notes: 'Office supplies, corrected',
+        amount: 450,
+        cashAccount: { id: 'acc-cash' },
+        expenseAccount: { id: 'acc-expense' },
+      });
+      await shot(page, '06-voucher-saved-back-in-register');
+    });
+
+    test('/accounting/vouchers lands on the register, not a blank form', async ({ page }) => {
+      await page.goto('/accounting/vouchers');
+      await expect(page).toHaveURL(/\/accounting\/transactions$/);
+      await expect(page.getByTestId('transaction-register-page')).toBeVisible();
+      await expect(page.getByTestId('voucher-form-page')).toHaveCount(0);
     });
   });
 

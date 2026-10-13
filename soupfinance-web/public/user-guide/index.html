@@ -77,6 +77,8 @@
         <li><a href="#users">Users</a></li>
         <li><a href="#bank-accounts">Bank accounts</a></li>
         <li><a href="#account-settings">Company settings</a></li>
+        <li><a href="#financial-years">Financial years and closing</a></li>
+        <li><a href="#opening-balances">Opening balances</a></li>
       </ol>
     </li>
     <li><a href="#support">Support</a></li>
@@ -1050,6 +1052,78 @@
     Reports use this date to work out which year a figure belongs to. Change it later and earlier
     reports will not match the new ones.
   </div>
+
+  <h3 id="financial-years">Financial years and closing</h3>
+
+  <p>A financial year is the twelve months your accounts cover. At the end of each year you close
+  it. Closing moves the year's profit or loss into Retained Earnings. Income and expense accounts
+  then start the next year at zero.</p>
+
+  <p>Open <span class="ui">Settings</span>, then <span class="ui">Financial Years</span>. The list
+  shows each year, its dates and whether it is open or closed.</p>
+
+  <figure>
+    <img src="images/financial-years.jpg" alt="The Financial Years page, listing FY 2025 as open and FY 2024 as closed, with the lock date card below." width="1440" height="900">
+    <figcaption>Your financial years and the lock date.</figcaption>
+  </figure>
+
+  <h4>Add a year</h4>
+  <p>Select <span class="ui">New financial year</span>. SoupFinance suggests the twelve months after
+  your latest year. Change the name or dates if you need to, then select
+  <span class="ui">Save financial year</span>. Two years cannot share a day.</p>
+
+  <h4>Close a year</h4>
+  <p>Select <span class="ui">Close year</span> on the year's row. A checklist appears first. You can
+  close the year only when all three checks pass:</p>
+  <ul>
+    <li><strong>No pending entries.</strong> Post or delete any draft invoices, bills, vouchers and
+    journal entries dated in the year.</li>
+    <li><strong>The trial balance balances.</strong> Total debits must equal total credits.</li>
+    <li><strong>A Retained Earnings account exists.</strong> The year's profit or loss goes there.</li>
+  </ul>
+
+  <figure>
+    <img src="images/financial-years-close.jpg" alt="The Close FY 2025 dialog with three passed checks: no pending entries, the trial balance balances, and a profit goes to Retained Earnings." width="1440" height="900">
+    <figcaption>The checklist shown before a year closes.</figcaption>
+  </figure>
+
+  <h4>The lock date</h4>
+  <p>Nobody can post a journal entry, voucher, invoice or bill dated on or before the lock date.
+  Closing a year moves the lock date to the year's last day. An administrator can also set the lock
+  date by hand, for example to lock a finished quarter.</p>
+
+  <p>If you save an entry dated inside a locked period, SoupFinance keeps your entry on screen and
+  shows the reason under the date. Choose a later date, or ask your administrator to move the lock
+  date.</p>
+
+  <figure>
+    <img src="images/journal-entry-locked-date.jpg" alt="A journal entry dated 30 November 2025, with the message that the books are closed up to December 31, 2025 shown under the date." width="1440" height="1019">
+    <figcaption>A journal entry dated in a closed year.</figcaption>
+  </figure>
+
+  <h4>Reopen a year</h4>
+  <p>Only an administrator can reopen a closed year. Select <span class="ui">Reopen</span> on its row.
+  Reopening reverses the closing entry and moves the lock date back. Close the year again when you
+  finish your changes.</p>
+
+  <h3 id="opening-balances">Opening balances</h3>
+
+  <p>Moving from another accounting system? Enter each account's balance from your old books, as of
+  one date. That date is usually the day before your first financial year in SoupFinance.</p>
+
+  <p>On the <span class="ui">Financial Years</span> page, select
+  <span class="ui">Enter opening balances</span>. Type each balance as a debit or a credit, never
+  both on one row. The totals under the grid must match before you can post.</p>
+
+  <figure>
+    <img src="images/opening-balances.jpg" alt="The opening balances grid with balances typed for cash, equipment, payables and share capital, and a message that the grid is out of balance by 27,500.00." width="1440" height="1498">
+    <figcaption>Opening balances that do not balance yet.</figcaption>
+  </figure>
+
+  <p>If your old books do not explain the whole difference, select
+  <span class="ui">Put the difference in Opening Balance Equity</span>. Then select
+  <span class="ui">Post opening balances</span>. The balances then appear on the
+  <a href="#trial-balance">Trial Balance</a> as of that date.</p>
 </section>
 
 <!-- ============================================================== support -->

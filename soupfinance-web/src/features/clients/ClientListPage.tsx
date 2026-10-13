@@ -67,9 +67,12 @@ export function ClientListPage() {
   // Fix (SOUP-1929): the soft-delete (archive) always proceeds via a direct
   // DELETE /rest/client/delete/{id}.json — the backend (SOUP-1928,
   // ClientService.doDelete) flips archived+deleted and excludes the client from
-  // searchList even when invoices/account-services reference it, so there is NO
-  // relatedList pre-check to gate on. On failure we keep the modal open and
-  // surface the error instead of silently stalling ("Deleting…" → nothing).
+  // searchList even when invoices/account-services reference it. On failure we
+  // keep the modal open and surface the error instead of silently stalling
+  // ("Deleting…" → nothing).
+  // Fix (SOUPFIN-169): there IS a relatedList gate. The backend DeleteInterceptor
+  // answers 200 + relatedList and deletes nothing when the client has linked
+  // records; deleteClient now rejects with ClientDeleteBlockedError in that case.
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteClient(id),
     onSuccess: () => {
@@ -408,7 +411,10 @@ export function ClientListPage() {
                       role="alert"
                       data-testid="client-delete-error"
                     >
-                      Could not delete this client. Please try again.
+                      {/* Fix (SOUPFIN-169): a blocked delete is not a retryable failure. */}
+                      {deleteMutation.error?.name === 'ClientDeleteBlockedError'
+                        ? 'This client was not deleted. It still has linked contacts or accounts, so the server kept it.'
+                        : 'Could not delete this client. Please try again.'}
                     </p>
                   )}
                 </div>

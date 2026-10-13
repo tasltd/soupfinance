@@ -245,7 +245,9 @@ test.describe('Vendor Management', () => {
 
       // Should show error state
       await expect(page.getByTestId('vendor-list-error')).toBeVisible();
-      await expect(page.locator('text=Failed to load vendors')).toBeVisible();
+      // Changed (SOUPFIN-160): ApiErrorState names a server fault
+      await expect(page.getByTestId('vendor-list-error')).toHaveAttribute('data-error-kind', 'server_error');
+      await expect(page.getByTestId('vendor-list-error-title')).toHaveText('Server error');
 
       await takeScreenshot(page, 'vendor-list-error');
     });

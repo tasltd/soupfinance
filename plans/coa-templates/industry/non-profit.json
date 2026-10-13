@@ -1,0 +1,17 @@
+{
+  "key": "non-profit",
+  "name": "Non-profit",
+  "appliesTo": ["SERVICES"],
+  "description": "NGOs, churches, associations and foundations that report restricted and unrestricted funds.",
+  "remove": [],
+  "add": [
+    { "number": "3000", "name": "Accumulated Fund (Net Assets)", "ledgerAccountCategory": "OWNERS EQUITY", "replace": true },
+    { "number": "3050", "name": "Restricted Funds", "ledgerAccountCategory": "OWNERS EQUITY" },
+    { "number": "4050", "name": "Grants and Donations - Unrestricted", "ledgerAccountCategory": "INCOME" },
+    { "number": "4060", "name": "Grants and Donations - Restricted", "ledgerAccountCategory": "INCOME" },
+    { "number": "4070", "name": "Membership Dues", "ledgerAccountCategory": "INCOME" },
+    { "number": "2150", "name": "Deferred Grant Income", "ledgerAccountCategory": "SHORT -TERM LIABILITIES" },
+    { "number": "5090", "name": "Programme Expenses", "ledgerAccountCategory": "DIRECT EXPENSES" },
+    { "number": "6350", "name": "Fundraising Expenses", "ledgerAccountCategory": "SELLING & PROMOTIONAL" }
+  ]
+}

@@ -13,6 +13,9 @@ import { getVendor, createVendor, updateVendor } from '../../api';
 import { Input, Textarea } from '../../components/forms';
 // Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
 import { HelpLink } from '../../components/help';
+// Added (SOUPFIN-160): module-aware lookup and save errors
+import { getApiErrorMessage, parseApiError } from '../../api/errors';
+import { ApiErrorState, ModuleDisabledBanner } from '../../components/feedback';
 
 // Added: Zod validation schema for vendor form
 // Constraints: name required, email format validation, payment terms must be positive
@@ -62,11 +65,15 @@ export function VendorFormPage() {
   });
 
   // Added: Query to fetch vendor data for edit mode
-  const { data: vendor, isLoading: isLoadingVendor } = useQuery({
+  const { data: vendor, isLoading: isLoadingVendor, error: vendorError, refetch: refetchVendor } = useQuery({
     queryKey: ['vendor', id],
     queryFn: () => getVendor(id!),
     enabled: isEdit, // Only fetch when editing
   });
+
+  // Added (SOUPFIN-160): the vendor lookup came back "module not enabled". The
+  // form stays visible under a banner, but saving is blocked: it would 403 too.
+  const isModuleBlocked = !!vendorError && parseApiError(vendorError).kind === 'module_disabled';
 
   // Added: Populate form when vendor data is loaded
   useEffect(() => {
@@ -128,6 +135,8 @@ export function VendorFormPage() {
 
   // Added: Form submission handler
   const onSubmit = (data: VendorFormData) => {
+    // Added (SOUPFIN-160): Enter in a field must not bypass the disabled button
+    if (isModuleBlocked) return;
     if (isEdit) {
       updateMutation.mutate(data);
     } else {
@@ -142,6 +151,23 @@ export function VendorFormPage() {
         <div className="flex items-center justify-center p-12 text-subtle-text">
           Loading vendor...
         </div>
+      </div>
+    );
+  }
+
+  // Added (SOUPFIN-160): any other failed edit-mode load (no permission,
+  // server fault, missing vendor) replaces the form, as on BillFormPage.
+  if (isEdit && vendorError && !isModuleBlocked) {
+    return (
+      <div className="flex flex-col gap-6" data-testid="vendor-form-page">
+        <ApiErrorState error={vendorError} onRetry={() => refetchVendor()} testId="vendor-form-load-error" />
+        <button
+          onClick={() => navigate('/vendors')}
+          className="self-center inline-flex items-center gap-2 h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm"
+          data-testid="vendor-form-back-button"
+        >
+          Back to Vendors
+        </button>
       </div>
     );
   }
@@ -176,14 +202,23 @@ export function VendorFormPage() {
           </button>
           <button
             onClick={handleSubmit(onSubmit)}
-            disabled={isSaving || isSubmitting}
-            className="h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90 disabled:opacity-50"
+            disabled={isSaving || isSubmitting || isModuleBlocked}
+            className="h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
             data-testid="vendor-form-save"
           >
             {isSaving ? 'Saving...' : isEdit ? 'Update Vendor' : 'Create Vendor'}
           </button>
         </div>
       </div>
+
+      {/* Added (SOUPFIN-160): explain why the vendor could not be loaded */}
+      {isModuleBlocked && (
+        <ModuleDisabledBanner
+          error={vendorError}
+          context="Vendors cannot be saved until the module is enabled."
+          testId="vendor-form-module-disabled"
+        />
+      )}
 
       {/* Error Banner */}
       {mutationError && (
@@ -195,7 +230,8 @@ export function VendorFormPage() {
           <div>
             <p className="font-medium">Failed to save vendor</p>
             <p className="text-sm opacity-80">
-              {mutationError instanceof Error ? mutationError.message : 'An unexpected error occurred'}
+              {/* Changed (SOUPFIN-160): never "Request failed with status code 403" */}
+              {getApiErrorMessage(mutationError)}
             </p>
           </div>
         </div>
@@ -306,8 +342,8 @@ export function VendorFormPage() {
         </button>
         <button
           onClick={handleSubmit(onSubmit)}
-          disabled={isSaving || isSubmitting}
-          className="flex-1 h-12 px-4 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90 disabled:opacity-50"
+          disabled={isSaving || isSubmitting || isModuleBlocked}
+          className="flex-1 h-12 px-4 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
           data-testid="vendor-form-save-mobile"
         >
           {isSaving ? 'Saving...' : isEdit ? 'Update' : 'Create'}

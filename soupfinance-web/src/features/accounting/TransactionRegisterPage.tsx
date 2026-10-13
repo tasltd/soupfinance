@@ -250,7 +250,8 @@ export function TransactionRegisterPage() {
     if (tx.type === 'JOURNAL_ENTRY') {
       navigate(`/accounting/journal-entry/${tx.sourceId}`);
     } else {
-      navigate(`/accounting/voucher/${tx.sourceId}`);
+      // Fix (SOUPFIN-154): /accounting/voucher/:id was never routed
+      navigate(`/accounting/vouchers/${tx.sourceId}`);
     }
     setOpenActionDropdown(null);
   }, [navigate]);
@@ -259,7 +260,7 @@ export function TransactionRegisterPage() {
     if (tx.type === 'JOURNAL_ENTRY') {
       navigate(`/accounting/journal-entry/${tx.sourceId}/edit`);
     } else {
-      navigate(`/accounting/voucher/${tx.sourceId}/edit`);
+      navigate(`/accounting/vouchers/${tx.sourceId}/edit`);
     }
     setOpenActionDropdown(null);
   }, [navigate]);

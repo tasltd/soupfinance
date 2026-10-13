@@ -24,6 +24,7 @@
  */
 import { test, expect, type Page } from '@playwright/test';
 import { backendTestUsers, takeScreenshot } from '../fixtures';
+import { selectInvoiceableClient } from './invoice-client-helper';
 
 const API_BASE = 'http://10.115.213.183:9090';
 
@@ -168,52 +169,10 @@ test.describe('Invoice line-item tax persistence (SOUPFIN-37)', () => {
     await expect(page.getByTestId('invoice-item-discountPercent-0')).toHaveCount(0);
 
     // ---- 5. Fill the form ------------------------------------------------
+    // Fix (3 Oct 2026, moved to a shared helper for SOUPFIN-170): the first client listed on
+    // the dev data has no account services, so choose one the form can invoice.
     const clientSelect = page.getByTestId('invoice-client-select');
-    await expect
-      .poll(async () => (await clientSelect.locator('option').count()), { timeout: 30000 })
-      .toBeGreaterThan(1);
-
-    // Fix (3 Oct 2026): the first client listed on the dev data has no account services, so
-    // the save was refused ("Selected client has no account services") and the test failed on
-    // data, not on tax. Choose, through the API, the first offered client the form can invoice:
-    // one whose first portfolio carries account services, as resolveAccountServicesId reads it.
-    const offered = await clientSelect.locator('option').evaluateAll((opts) =>
-      opts.map((o) => (o as HTMLOptionElement).value).filter((v) => !!v)
-    );
-    let clientValue = '';
-    for (const id of offered) {
-      const res = await page.request.get(`${API_BASE}/rest/client/show/${id}.json`, {
-        headers: { 'X-Auth-Token': token }, maxRedirects: 0,
-      });
-      if (!res.ok()) continue;
-      const portfolioId = (await res.json())?.portfolioList?.[0]?.id;
-      if (!portfolioId) continue;
-      const pf = await page.request.get(`${API_BASE}/rest/clientPortfolio/show/${portfolioId}.json`, {
-        headers: { 'X-Auth-Token': token }, maxRedirects: 0,
-      });
-      if (pf.ok() && (await pf.json())?.accountServices?.id) {
-        clientValue = id;
-        break;
-      }
-    }
-    if (clientValue) {
-      await clientSelect.selectOption(clientValue);
-    } else {
-      // None can be invoiced (the dev data's clients have no portfolio), so do what a dealer
-      // does: create one in the form. "Create & Select" adds the client, its account services
-      // and the portfolio link, then selects it.
-      await page.getByTestId('invoice-new-client-button').click();
-      await page.getByTestId('new-client-type-individual').click();
-      const stamp = Date.now();
-      await page.getByTestId('new-client-first-name').fill('Tax');
-      await page.getByTestId('new-client-last-name').fill(`Soupfin37 ${stamp}`);
-      await page.getByTestId('new-client-email').fill(`soupfin37+${stamp}@example.com`);
-      await page.getByTestId('new-client-create-button').click();
-      await expect
-        .poll(async () => clientSelect.inputValue(), { timeout: 60000 })
-        .not.toBe('');
-      clientValue = await clientSelect.inputValue();
-    }
+    await selectInvoiceableClient(page, clientSelect, API_BASE, token, 'Soupfin37');
 
     const dueDate = page.getByTestId('invoice-due-date-input');
     await dueDate.fill(dueDateIso());
@@ -325,15 +284,10 @@ test.describe('Invoice line-item tax persistence (SOUPFIN-37)', () => {
     await waitForAuthSettled(page);
     await expect(page.getByTestId('invoice-form-page')).toBeVisible({ timeout: 20000 });
 
+    // Fix (SOUPFIN-170): option nth(1) is a client with no account services on the dev data,
+    // so the save was refused before any tax logic ran. Use the same choice as the test above.
     const clientSelect = page.getByTestId('invoice-client-select');
-    await expect
-      .poll(async () => (await clientSelect.locator('option').count()), { timeout: 30000 })
-      .toBeGreaterThan(1);
-    const clientValue = await clientSelect
-      .locator('option')
-      .nth(1)
-      .evaluate((o) => (o as HTMLOptionElement).value);
-    await clientSelect.selectOption(clientValue);
+    await selectInvoiceableClient(page, clientSelect, API_BASE, token, 'Soupfin37');
 
     await page.getByTestId('invoice-due-date-input').fill(dueDateIso());
     await page.getByTestId('invoice-item-description-0').fill('Untaxed line (SOUPFIN-37)');

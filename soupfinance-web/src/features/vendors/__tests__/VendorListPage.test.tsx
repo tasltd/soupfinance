@@ -17,6 +17,8 @@ vi.mock('../../../api', () => ({
 }));
 
 import { listVendors, deleteVendor } from '../../../api';
+// Added (SOUPFIN-160): Axios-shaped 403/500 errors
+import { moduleDisabled403, roleDenied403, serverError500 } from '../../../test/apiErrorFixtures';
 
 // ============================================================================
 // Test Helpers
@@ -139,8 +141,9 @@ describe('VendorListPage', () => {
 
       renderVendorListPage();
 
+      // Changed (SOUPFIN-160): ApiErrorState shows the error's own message
       expect(await screen.findByTestId('vendor-list-error')).toBeInTheDocument();
-      expect(screen.getByText('Failed to load vendors')).toBeInTheDocument();
+      expect(screen.getByText('Something went wrong')).toBeInTheDocument();
     });
 
     it('displays retry button in error state', async () => {
@@ -158,7 +161,7 @@ describe('VendorListPage', () => {
 
       renderVendorListPage();
 
-      expect(await screen.findByText(/There was an error loading your vendors/i)).toBeInTheDocument();
+      expect(await screen.findByTestId('vendor-list-error-message')).toHaveTextContent('Network error');
     });
   });
 
@@ -589,6 +592,47 @@ describe('VendorListPage', () => {
       const container = await screen.findByTestId('vendor-table-container');
       expect(container.className).toContain('rounded-xl');
       expect(container.className).toContain('border');
+    });
+  });
+
+  // Added (SOUPFIN-160): the error card names the cause and never shows HTTP text
+  describe('module-aware errors (SOUPFIN-160)', () => {
+    it.each([
+      ['a disabled Trading module', () => moduleDisabled403('Trading', '/vendor/index.json'), 'module_disabled', 'Trading module is not available'],
+      ['a missing role', () => roleDenied403('/vendor/index.json'), 'forbidden', 'You do not have permission'],
+      ['a server fault', () => serverError500('/vendor/index.json'), 'server_error', 'Server error'],
+    ])('explains %s', async (_cause, makeError, kind, title) => {
+      vi.mocked(listVendors).mockRejectedValue(makeError());
+
+      renderVendorListPage();
+
+      const card = await screen.findByTestId('vendor-list-error');
+      expect(card).toHaveAttribute('data-error-kind', kind);
+      expect(within(card).getByText(title)).toBeInTheDocument();
+      expect(document.body.textContent).not.toMatch(/status code/i);
+    });
+
+    it('offers no Retry when the module is disabled', async () => {
+      vi.mocked(listVendors).mockRejectedValue(moduleDisabled403('Trading', '/vendor/index.json'));
+
+      renderVendorListPage();
+
+      const card = await screen.findByTestId('vendor-list-error');
+      expect(within(card).queryByRole('button', { name: /retry/i })).not.toBeInTheDocument();
+      expect(within(card).getByText(/contact your administrator to enable this module/i)).toBeInTheDocument();
+    });
+
+    it('Retry after a server fault refetches and shows the data', async () => {
+      vi.mocked(listVendors).mockRejectedValueOnce(serverError500('/vendor/index.json'));
+
+      renderVendorListPage();
+
+      const card = await screen.findByTestId('vendor-list-error');
+      vi.mocked(listVendors).mockResolvedValue([]);
+      within(card).getByRole('button', { name: /retry/i }).click();
+
+      await waitFor(() => expect(screen.queryByTestId('vendor-list-error')).not.toBeInTheDocument());
+      expect(vi.mocked(listVendors)).toHaveBeenCalledTimes(2);
     });
   });
 });
