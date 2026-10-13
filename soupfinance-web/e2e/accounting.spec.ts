@@ -87,6 +87,10 @@ const mockVouchers = [
     voucherNumber: 'PMT-2024-001',
     voucherDate: '2024-10-21',
     voucherType: 'PAYMENT',
+    // Added (SOUPFIN-162): a payment voucher always has a party; the backend
+    // refuses a VENDOR voucher without one (noVendorSelected), and so does the form.
+    voucherTo: 'VENDOR',
+    vendor: { id: 'vendor-001' },
     description: 'Office supplies payment',
     amount: 450,
     status: 'DRAFT',
@@ -193,6 +197,18 @@ test.describe('Accounting Module', () => {
         ]),
       });
     });
+
+    // Added (SOUPFIN-162): the voucher form's vendor, client and staff fields
+    // are selects over these lists. Unmocked, they 401 and bounce to /login.
+    await page.route('**/rest/trading/vendor/index.json*', (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ id: 'vendor-001', name: 'Office Depot' }]) })
+    );
+    await page.route('**/rest/client/index.json*', (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) })
+    );
+    await page.route('**/rest/agent/index.json*', (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) })
+    );
 
     // Changed: Mock transaction groups endpoint (for journal entries)
     // useTransactions hook calls listTransactionGroups which hits this endpoint
@@ -784,7 +800,7 @@ test.describe('Accounting Module', () => {
       await page.getByLabel('Client').check();
 
       // Now client input should be visible
-      await expect(page.getByTestId('voucher-client-input')).toBeVisible();
+      await expect(page.getByTestId('voucher-client-select')).toBeVisible();
 
       await takeScreenshot(page, 'voucher-form-receipt');
     });
@@ -866,7 +882,7 @@ test.describe('Accounting Module', () => {
       // Payment type should show vendor selection
       await page.getByTestId('voucher-type-payment').click();
       await expect(page.getByTestId('voucher-beneficiary-section')).toBeVisible();
-      await expect(page.getByTestId('voucher-vendor-input')).toBeVisible();
+      await expect(page.getByTestId('voucher-vendor-select')).toBeVisible();
 
       await takeScreenshot(page, 'voucher-form-beneficiary');
     });
@@ -1015,6 +1031,7 @@ test.describe('Accounting Module', () => {
         amount: 450,
         cashAccount: { id: 'acc-cash' },
         expenseAccount: { id: 'acc-expense' },
+        vendor: { id: 'vendor-001' },
       });
       await shot(page, '06-voucher-saved-back-in-register');
     });

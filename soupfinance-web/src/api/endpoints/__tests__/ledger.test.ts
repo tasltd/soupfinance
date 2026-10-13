@@ -302,3 +302,49 @@ describe('updateVoucher FK binding (SOUPFIN-154)', () => {
     expect(mockPut.mock.calls[0][1]).toEqual({ id: 'v2', notes: 'Only the description changed' });
   });
 });
+
+// Added (SOUPFIN-162): Voucher has no `client` property. A CLIENT voucher binds
+// its party as accountServices, so both create and update must send that key.
+describe('voucher client party binding (SOUPFIN-162)', () => {
+  let mockPost: ReturnType<typeof vi.fn>;
+  let mockPut: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockPost = vi.fn().mockResolvedValue({ data: { id: 'v1' } });
+    mockPut = vi.fn().mockResolvedValue({ data: { id: 'v1' } });
+    (axios.create as ReturnType<typeof vi.fn>).mockReturnValue({
+      interceptors: { request: { use: vi.fn() }, response: { use: vi.fn() } },
+      get: vi.fn().mockResolvedValue({ data: { voucher: { SYNCHRONIZER_TOKEN: 't', SYNCHRONIZER_URI: '/voucher/create' } } }),
+      post: mockPost,
+      put: mockPut,
+      delete: vi.fn(),
+    });
+  });
+
+  it('createVoucher sends the client account as accountServices', async () => {
+    vi.resetModules();
+    const { createVoucher } = await import('../ledger');
+    await createVoucher({
+      voucherType: 'RECEIPT',
+      voucherTo: 'CLIENT',
+      transactionDate: '2026-10-13',
+      amount: 50,
+      notes: 'Fee',
+      accountServicesId: 'as-1',
+      cashAccountId: 'acc-cash',
+      incomeAccountId: 'acc-income',
+    });
+    const body = mockPost.mock.calls[0][1];
+    expect(body.accountServices).toEqual({ id: 'as-1' });
+    expect(body).not.toHaveProperty('client');
+    expect(body).not.toHaveProperty('accountServicesId');
+  });
+
+  it('updateVoucher sends the client account as accountServices', async () => {
+    vi.resetModules();
+    const { updateVoucher } = await import('../ledger');
+    await updateVoucher('v1', { voucherTo: 'CLIENT', accountServicesId: 'as-2' });
+    expect(mockPut.mock.calls[0][1]).toEqual({ id: 'v1', voucherTo: 'CLIENT', accountServices: { id: 'as-2' } });
+  });
+});

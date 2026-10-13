@@ -32,6 +32,11 @@ import { voucherToFormValues } from './voucherFormValues';
 import { useLedgerAccounts } from '../../hooks/useLedgerAccounts';
 import { usePaymentMethods } from '../../hooks/usePaymentMethods';
 import { DEFAULT_CURRENCIES } from '../../api/endpoints/domainData';
+// Added (SOUPFIN-162): real party lists behind the vendor, client and staff fields
+import { listVendors } from '../../api/endpoints/vendors';
+import { listClients, resolveAccountServicesId, getClientDisplayName } from '../../api/endpoints/clients';
+import { agentApi } from '../../api/endpoints/settings';
+import { AddEntityButton } from '../../components/forms/AddEntityButton';
 // Added (SOUPFIN-9): module-disabled banner + user-friendly submit errors
 import { ModuleDisabledBanner } from '../../components/feedback';
 import { getApiErrorMessage, getPeriodLockError } from '../../api/errors';
@@ -64,6 +69,17 @@ const voucherFormSchema = z.object({
   incomeAccountId: z.string().optional(),
   amount: z.number().min(0.01, 'Amount must be greater than 0'),
 }).refine(
+  // Added (SOUPFIN-162): the backend rejects a VENDOR voucher with no vendor
+  // and a CLIENT voucher with no client account, so say so before saving.
+  (data) => data.voucherTo !== 'VENDOR' || !!data.vendorId,
+  { message: 'Select a vendor', path: ['vendorId'] }
+).refine(
+  (data) => data.voucherTo !== 'CLIENT' || !!data.clientId,
+  { message: 'Select a client', path: ['clientId'] }
+).refine(
+  (data) => data.voucherTo !== 'STAFF' || !!data.staffId,
+  { message: 'Select a staff member', path: ['staffId'] }
+).refine(
   // Added: Validate expense account required for payment vouchers
   (data) => {
     if (data.voucherType === 'PAYMENT') {
@@ -148,6 +164,23 @@ export function VoucherFormPage() {
 
   // Added: Fetch payment methods from backend (domain class, not enum)
   const { data: paymentMethods } = usePaymentMethods();
+
+  // Added (SOUPFIN-162): the vendor, client and staff fields used to be free
+  // text that was posted as the FK id, so a typed name reached the backend as
+  // vendor.id. They now choose from these lists. The query keys match the ones
+  // the "+" buttons refresh when the user returns from the create page.
+  const { data: vendors, isLoading: vendorsLoading } = useQuery({
+    queryKey: ['vendors'],
+    queryFn: () => listVendors({ max: 100 }),
+  });
+  const { data: clients, isLoading: clientsLoading } = useQuery({
+    queryKey: ['clients-for-voucher'],
+    queryFn: () => listClients({ max: 100 }),
+  });
+  const { data: staff, isLoading: staffLoading } = useQuery({
+    queryKey: ['agents-for-voucher'],
+    queryFn: () => agentApi.list({ max: 100 }),
+  });
 
   // Changed: Get initial voucher type from URL path or query param
   // Supports both /accounting/voucher/payment and /accounting/voucher?type=payment
@@ -304,6 +337,47 @@ export function VoucherFormPage() {
     [paymentMethods]
   );
 
+  // Added (SOUPFIN-162): party dropdown options
+  const vendorOptions: SelectOption[] = useMemo(() =>
+    (vendors || []).map((v) => ({ value: v.id, label: v.name || v.id })),
+    [vendors]
+  );
+
+  const staffOptions: SelectOption[] = useMemo(() =>
+    (staff || []).map((a) => ({
+      value: a.id,
+      label: `${a.firstName ?? ''} ${a.lastName ?? ''}`.trim() || a.id,
+    })),
+    [staff]
+  );
+
+  // A saved CLIENT voucher stores the client's AccountServices id, not the
+  // Client id. Find the client that owns it so the dropdown shows that client.
+  // When the list does not carry the nested accountServices, keep the stored
+  // account as its own option so editing does not silently drop the party.
+  const watchedClientId = watch('clientId');
+  const clientIds = useMemo(() => new Set((clients || []).map((c) => c.id)), [clients]);
+  useEffect(() => {
+    if (!clients || !watchedClientId || clientIds.has(watchedClientId)) return;
+    const owner = clients.find((c) =>
+      c.portfolioList?.some((p) => p.accountServices?.id === watchedClientId)
+    );
+    if (owner) setValue('clientId', owner.id);
+  }, [clients, clientIds, watchedClientId, setValue]);
+
+  const existingAccountServices = (existingVoucher as { accountServices?: { id?: string; serialised?: string } } | undefined)
+    ?.accountServices;
+  const clientOptions: SelectOption[] = useMemo(() => {
+    const options = (clients || []).map((c) => ({ value: c.id, label: getClientDisplayName(c) }));
+    if (watchedClientId && !clientIds.has(watchedClientId) && existingAccountServices?.id === watchedClientId) {
+      options.unshift({
+        value: watchedClientId,
+        label: existingAccountServices.serialised || 'Current client account',
+      });
+    }
+    return options;
+  }, [clients, clientIds, watchedClientId, existingAccountServices]);
+
   // Added: Clear conditional fields when voucher type changes
   // Changed (SOUPFIN-154): run from the user's click rather than an effect, so
   // filling the form from a loaded voucher does not wipe its accounts.
@@ -332,6 +406,22 @@ export function VoucherFormPage() {
     setSubmitError(null);
 
     try {
+      // Added (SOUPFIN-162): Voucher.accountServices is the client FK on the
+      // backend. Resolve it from the chosen client; a stored account (edit of an
+      // existing voucher) is used as is.
+      let accountServicesId: string | undefined;
+      if (data.voucherTo === 'CLIENT' && data.clientId) {
+        const client = (clients || []).find((c) => c.id === data.clientId);
+        accountServicesId = client ? await resolveAccountServicesId(client) : data.clientId;
+        if (!accountServicesId) {
+          setError('clientId', {
+            type: 'manual',
+            message: 'This client has no account to pay into or receive from. Open the client and add one.',
+          }, { shouldFocus: true });
+          return;
+        }
+      }
+
       // Changed: Transform form data to API request format with correct backend field names
       const request: CreateVoucherRequest = {
         voucherType: data.voucherType as VoucherType,
@@ -341,9 +431,10 @@ export function VoucherFormPage() {
         notes: data.notes,
         reference: data.reference,
         beneficiaryName: data.beneficiaryName,
-        clientId: data.clientId || undefined,
-        vendorId: data.vendorId || undefined,
-        staffId: data.staffId || undefined,
+        // Changed (SOUPFIN-162): only the party the voucher is to/from is sent
+        accountServicesId,
+        vendorId: data.voucherTo === 'VENDOR' ? data.vendorId || undefined : undefined,
+        staffId: data.voucherTo === 'STAFF' ? data.staffId || undefined : undefined,
         cashAccountId: data.cashAccountId,
         expenseAccountId: data.expenseAccountId || undefined,
         incomeAccountId: data.incomeAccountId || undefined,
@@ -376,7 +467,7 @@ export function VoucherFormPage() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [navigate, isExisting, voucherId, setError]);
+  }, [navigate, isExisting, voucherId, setError, clients]);
 
   // Added: Wrapper for save draft action - explicitly typed for TypeScript
   const handleSaveDraft = handleSubmit(onSubmit);
@@ -656,35 +747,81 @@ export function VoucherFormPage() {
 
           {/* Added: Conditional fields based on beneficiary/payer type */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Changed (SOUPFIN-162): selects backed by the client, vendor and
+                staff lists, each with a "+" that opens the create page in a new
+                tab and refreshes the list on return. They were free-text
+                inputs whose text was posted as the FK id. */}
             {watchedVoucherTo === 'CLIENT' && (
-              <Input
-                label={isPaymentType ? 'Client (Beneficiary)' : 'Client (Payer)'}
-                placeholder="Search or enter client name..."
-                {...register('clientId')}
-                error={errors.clientId?.message}
-                helperText="Start typing to search existing clients"
-                data-testid="voucher-client-input"
-              />
+              <div className="flex items-start gap-2">
+                <Select
+                  label={isPaymentType ? 'Client (Beneficiary)' : 'Client (Payer)'}
+                  required
+                  options={clientOptions}
+                  placeholder={clientsLoading ? 'Loading clients' : 'Select client...'}
+                  {...register('clientId')}
+                  error={errors.clientId?.message}
+                  helperText={!clientsLoading && clientOptions.length === 0 ? 'No clients yet. Use + to add one.' : undefined}
+                  containerClassName="flex-1 min-w-0"
+                  data-testid="voucher-client-select"
+                />
+                <div className="pt-7">
+                  <AddEntityButton
+                    to="/clients/new"
+                    label="Add new client"
+                    queryKey={['clients-for-voucher']}
+                    testId="voucher-add-client-button"
+                    disabled={isReadOnly}
+                  />
+                </div>
+              </div>
             )}
             {watchedVoucherTo === 'VENDOR' && (
-              <Input
-                label={isPaymentType ? 'Vendor (Beneficiary)' : 'Vendor (Payer)'}
-                placeholder="Search or enter vendor name..."
-                {...register('vendorId')}
-                error={errors.vendorId?.message}
-                helperText="Start typing to search existing vendors"
-                data-testid="voucher-vendor-input"
-              />
+              <div className="flex items-start gap-2">
+                <Select
+                  label={isPaymentType ? 'Vendor (Beneficiary)' : 'Vendor (Payer)'}
+                  required
+                  options={vendorOptions}
+                  placeholder={vendorsLoading ? 'Loading vendors' : 'Select vendor...'}
+                  {...register('vendorId')}
+                  error={errors.vendorId?.message}
+                  helperText={!vendorsLoading && vendorOptions.length === 0 ? 'No vendors yet. Use + to add one.' : undefined}
+                  containerClassName="flex-1 min-w-0"
+                  data-testid="voucher-vendor-select"
+                />
+                <div className="pt-7">
+                  <AddEntityButton
+                    to="/vendors/new"
+                    label="Add new vendor"
+                    queryKey={['vendors']}
+                    testId="voucher-add-vendor-button"
+                    disabled={isReadOnly}
+                  />
+                </div>
+              </div>
             )}
             {watchedVoucherTo === 'STAFF' && (
-              <Input
-                label={isPaymentType ? 'Staff Member (Beneficiary)' : 'Staff Member (Payer)'}
-                placeholder="Search or enter staff name..."
-                {...register('staffId')}
-                error={errors.staffId?.message}
-                helperText="Start typing to search staff members"
-                data-testid="voucher-staff-input"
-              />
+              <div className="flex items-start gap-2">
+                <Select
+                  label={isPaymentType ? 'Staff Member (Beneficiary)' : 'Staff Member (Payer)'}
+                  required
+                  options={staffOptions}
+                  placeholder={staffLoading ? 'Loading staff' : 'Select staff member...'}
+                  {...register('staffId')}
+                  error={errors.staffId?.message}
+                  helperText={!staffLoading && staffOptions.length === 0 ? 'No staff members yet. Use + to add one.' : undefined}
+                  containerClassName="flex-1 min-w-0"
+                  data-testid="voucher-staff-select"
+                />
+                <div className="pt-7">
+                  <AddEntityButton
+                    to="/settings/users/new"
+                    label="Add new staff member"
+                    queryKey={['agents-for-voucher']}
+                    testId="voucher-add-staff-button"
+                    disabled={isReadOnly}
+                  />
+                </div>
+              </div>
             )}
             {watchedVoucherTo === 'OTHER' && (
               <Input

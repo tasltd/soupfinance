@@ -369,7 +369,9 @@ export async function createVoucher(data: CreateVoucherRequest): Promise<Voucher
   };
 
   // FK references as nested objects for JSON binding
-  if (data.clientId) body.client = { id: data.clientId };
+  // Fix (SOUPFIN-162): the backend binds the client party as accountServices;
+  // a `client` key was ignored, so every CLIENT voucher failed noClientSelected.
+  if (data.accountServicesId) body.accountServices = { id: data.accountServicesId };
   if (data.vendorId) body.vendor = { id: data.vendorId };
   if (data.staffId) body.staff = { id: data.staffId };
   if (data.cashAccountId) body.cashAccount = { id: data.cashAccountId };
@@ -398,7 +400,7 @@ export async function updateVoucher(id: string, data: Partial<CreateVoucherReque
   // every FK the create path maps. staffId, incomeAccountId and
   // paymentMethodId used to be sent as flat strings, which Grails ignores.
   const {
-    clientId, vendorId, staffId, cashAccountId, expenseAccountId, incomeAccountId, paymentMethodId,
+    accountServicesId, vendorId, staffId, cashAccountId, expenseAccountId, incomeAccountId, paymentMethodId,
     ...rest
   } = data;
   const body: Record<string, unknown> = {
@@ -407,7 +409,7 @@ export async function updateVoucher(id: string, data: Partial<CreateVoucherReque
   };
 
   // FK references as nested objects for JSON binding
-  if (clientId) body.client = { id: clientId };
+  if (accountServicesId) body.accountServices = { id: accountServicesId };
   if (vendorId) body.vendor = { id: vendorId };
   if (staffId) body.staff = { id: staffId };
   if (cashAccountId) body.cashAccount = { id: cashAccountId };

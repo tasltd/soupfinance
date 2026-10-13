@@ -1316,6 +1316,8 @@ export async function mockAmbientApi(page: import('@playwright/test').Page) {
   );
   await page.route('**/rest/client/index.json*', (route) => route.fulfill(json([])));
   await page.route('**/rest/ledgerAccount/index.json*', (route) => route.fulfill(json([])));
+  // Added (SOUPFIN-162): the voucher form's staff select reads the agent list.
+  await page.route('**/rest/agent/index.json*', (route) => route.fulfill(json([])));
 
   // Added (SOUPFIN-55): the dashboard now resolves whether the tenant has an
   // unfinished corporate KYC application, to decide whether to offer the

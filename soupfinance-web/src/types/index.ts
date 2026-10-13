@@ -504,7 +504,9 @@ export interface CreateVoucherRequest {
   notes: string; // Changed: Backend uses notes (not description)
   reference?: string;
   beneficiaryName?: string;
-  clientId?: string;
+  // Changed (SOUPFIN-162): Voucher has no `client` field. A CLIENT voucher
+  // points at the client's AccountServices (Voucher.accountServices).
+  accountServicesId?: string;
   vendorId?: string;
   staffId?: string;
   cashAccountId: string; // Bank or cash account

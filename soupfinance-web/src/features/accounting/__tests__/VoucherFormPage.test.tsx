@@ -50,7 +50,21 @@ const PAYMENT_METHODS = [
 
 const CSRF = { SYNCHRONIZER_TOKEN: 'vtok-9', SYNCHRONIZER_URI: '/voucher/create' };
 
+// Added (SOUPFIN-162): the party lists behind the vendor, client and staff selects.
+const VENDORS = [
+  { id: 'vendor-7', name: 'Acme Landlords' },
+  { id: 'vendor-8', name: 'Office Depot' },
+];
+// The list response carries bare portfolio refs; the AccountServices id is only
+// on /clientPortfolio/show (SOUPFIN-27).
+const CLIENTS = [
+  { id: 'client-3', name: 'Ada Ventures', portfolioList: [{ id: 'cp-3' }] },
+  { id: 'client-4', firstName: 'Kofi', lastName: 'Mensah', portfolioList: [] },
+];
+const AGENTS = [{ id: 'agent-1', firstName: 'Ama', lastName: 'Owusu' }];
+
 let accountsResponse: () => Promise<unknown>;
+let vendorsResponse: () => Promise<unknown>;
 
 function LocationProbe() {
   return <div data-testid="location">{useLocation().pathname}</div>;
@@ -86,8 +100,15 @@ async function waitForAccounts() {
 beforeEach(() => {
   vi.clearAllMocks();
   accountsResponse = () => Promise.resolve({ data: RAW_ACCOUNTS });
+  vendorsResponse = () => Promise.resolve({ data: VENDORS });
   http.get.mockImplementation((url: string) => {
     if (url.startsWith('/ledgerAccount/index.json')) return accountsResponse();
+    if (url.startsWith('/trading/vendor/index.json')) return vendorsResponse();
+    if (url.startsWith('/client/index.json')) return Promise.resolve({ data: CLIENTS });
+    if (url.startsWith('/agent/index.json')) return Promise.resolve({ data: AGENTS });
+    if (url === '/clientPortfolio/show/cp-3.json') {
+      return Promise.resolve({ data: { id: 'cp-3', accountServices: { id: 'as-3' } } });
+    }
     if (url.startsWith('/paymentMethod/index.json')) return Promise.resolve({ data: PAYMENT_METHODS });
     if (url === '/voucher/create.json') return Promise.resolve({ data: { voucher: CSRF } });
     return Promise.reject(new Error(`unexpected GET ${url}`));
@@ -105,7 +126,7 @@ describe('VoucherFormPage type switching', () => {
     expect(screen.queryByTestId('voucher-income-account-select')).not.toBeInTheDocument();
     expect(screen.getByTestId('voucher-amount-preview')).toHaveTextContent('Money Out');
     // Payment defaults to paying a vendor.
-    expect(screen.getByTestId('voucher-vendor-input')).toBeInTheDocument();
+    expect(screen.getByTestId('voucher-vendor-select')).toBeInTheDocument();
     const rows = within(screen.getByTestId('voucher-journal-preview')).getAllByRole('row');
     expect(rows[1]).toHaveTextContent('Expense Account');
     expect(rows[2]).toHaveTextContent('Bank/Cash Account');
@@ -148,7 +169,7 @@ describe('VoucherFormPage type switching', () => {
     const { unmount } = renderAt('/accounting/voucher/receipt');
     expect(await screen.findByTestId('voucher-form-heading')).toHaveTextContent('New Receipt Voucher');
     // Receipts default to a client payer.
-    expect(screen.getByTestId('voucher-client-input')).toBeInTheDocument();
+    expect(screen.getByTestId('voucher-client-select')).toBeInTheDocument();
     unmount();
 
     renderAt('/accounting/vouchers/new?type=deposit');
@@ -160,13 +181,14 @@ describe('VoucherFormPage type switching', () => {
     renderAt('/accounting/vouchers/new');
     await waitForAccounts();
 
-    await user.type(screen.getByTestId('voucher-vendor-input'), 'vendor-42');
+    await waitFor(() => expect(optionValues('voucher-vendor-select')).toEqual(['vendor-7', 'vendor-8']));
+    await user.selectOptions(screen.getByTestId('voucher-vendor-select'), 'vendor-8');
     await user.click(screen.getByLabelText('Staff'));
-    expect(screen.queryByTestId('voucher-vendor-input')).not.toBeInTheDocument();
-    expect(screen.getByTestId('voucher-staff-input')).toHaveValue('');
+    expect(screen.queryByTestId('voucher-vendor-select')).not.toBeInTheDocument();
+    expect(screen.getByTestId('voucher-staff-select')).toHaveValue('');
 
     await user.click(screen.getByLabelText('Vendor'));
-    expect(screen.getByTestId('voucher-vendor-input')).toHaveValue('');
+    expect(screen.getByTestId('voucher-vendor-select')).toHaveValue('');
 
     await user.click(screen.getByLabelText('Other'));
     expect(screen.getByTestId('voucher-beneficiary-name-input')).toBeInTheDocument();
@@ -235,7 +257,8 @@ describe('VoucherFormPage payload', () => {
     await user.type(screen.getByTestId('voucher-reference-input'), 'PV-2026-014');
     await user.selectOptions(screen.getByTestId('voucher-payment-method-select'), 'pm-bank');
     await user.type(screen.getByTestId('voucher-notes-input'), 'April rent');
-    await user.type(screen.getByTestId('voucher-vendor-input'), 'vendor-7');
+    await waitFor(() => expect(optionValues('voucher-vendor-select')).toContain('vendor-7'));
+    await user.selectOptions(screen.getByTestId('voucher-vendor-select'), 'vendor-7');
     await user.selectOptions(screen.getByTestId('voucher-cash-account-select'), 'acc-bank');
     await user.selectOptions(screen.getByTestId('voucher-expense-account-select'), 'acc-rent');
     await user.clear(screen.getByTestId('voucher-amount-input'));
@@ -276,7 +299,8 @@ describe('VoucherFormPage payload', () => {
     await waitForAccounts();
 
     await user.type(screen.getByTestId('voucher-notes-input'), 'Consulting fee');
-    await user.type(screen.getByTestId('voucher-client-input'), 'client-3');
+    await waitFor(() => expect(optionValues('voucher-client-select')).toEqual(['client-3', 'client-4']));
+    await user.selectOptions(screen.getByTestId('voucher-client-select'), 'client-3');
     await user.selectOptions(screen.getByTestId('voucher-cash-account-select'), 'acc-cash');
     await user.selectOptions(screen.getByTestId('voucher-income-account-select'), 'acc-sales');
     await user.clear(screen.getByTestId('voucher-amount-input'));
@@ -290,12 +314,15 @@ describe('VoucherFormPage payload', () => {
       voucherTo: 'CLIENT',
       notes: 'Consulting fee',
       amount: 800,
-      client: { id: 'client-3' },
+      // Fix (SOUPFIN-162): the client's AccountServices, resolved through its
+      // portfolio, not the Client id under a `client` key the backend ignores.
+      accountServices: { id: 'as-3' },
       cashAccount: { id: 'acc-cash' },
       incomeAccount: { id: 'acc-sales' },
     });
     expect(body).not.toHaveProperty('expenseAccount');
     expect(body).not.toHaveProperty('paymentMethod');
+    expect(body).not.toHaveProperty('client');
   });
 
   it('blocks an empty payment with the required-field messages and sends nothing', async () => {
@@ -309,6 +336,7 @@ describe('VoucherFormPage payload', () => {
     expect(screen.getByText('Bank/Cash account is required')).toBeInTheDocument();
     expect(screen.getByText('Expense account is required for payment vouchers')).toBeInTheDocument();
     expect(screen.getByText('Amount must be greater than 0')).toBeInTheDocument();
+    expect(screen.getByText('Select a vendor')).toBeInTheDocument();
     expect(http.post).not.toHaveBeenCalled();
   });
 
@@ -348,6 +376,8 @@ describe('VoucherFormPage module gating', () => {
     await waitForAccounts();
 
     await user.type(screen.getByTestId('voucher-notes-input'), 'Rent');
+    await waitFor(() => expect(optionValues('voucher-vendor-select')).toContain('vendor-7'));
+    await user.selectOptions(screen.getByTestId('voucher-vendor-select'), 'vendor-7');
     await user.selectOptions(screen.getByTestId('voucher-cash-account-select'), 'acc-cash');
     await user.selectOptions(screen.getByTestId('voucher-expense-account-select'), 'acc-rent');
     await user.type(screen.getByTestId('voucher-amount-input'), '10');
@@ -358,5 +388,108 @@ describe('VoucherFormPage module gating', () => {
     expect(error).toHaveTextContent('Accounting module');
     expect(error).not.toHaveTextContent('Request failed with status code');
     expect(screen.getByTestId('location')).toHaveTextContent('/accounting/vouchers/new');
+  });
+});
+
+// Added (SOUPFIN-162): the party fields were free-text inputs whose text was
+// posted as the FK id. They are now selects over the real records.
+describe('VoucherFormPage party selects (SOUPFIN-162)', () => {
+  async function fillPaymentBasics(user: ReturnType<typeof userEvent.setup>) {
+    await user.type(screen.getByTestId('voucher-notes-input'), 'Rent');
+    await user.selectOptions(screen.getByTestId('voucher-cash-account-select'), 'acc-bank');
+    await user.selectOptions(screen.getByTestId('voucher-expense-account-select'), 'acc-rent');
+    await user.type(screen.getByTestId('voucher-amount-input'), '100');
+  }
+
+  it('the vendor field is a select listing only the vendors the backend returned', async () => {
+    renderAt('/accounting/vouchers/new');
+    await waitForAccounts();
+
+    const vendor = screen.getByTestId('voucher-vendor-select');
+    expect(vendor.tagName).toBe('SELECT');
+    await waitFor(() => expect(optionValues('voucher-vendor-select')).toEqual(['vendor-7', 'vendor-8']));
+    expect(within(vendor).getByRole('option', { name: 'Acme Landlords' })).toBeInTheDocument();
+    expect(http.get).toHaveBeenCalledWith(expect.stringMatching(/^\/trading\/vendor\/index\.json\?.*max=100/));
+  });
+
+  it('a payment to a vendor sends that vendor id and no other party', async () => {
+    const user = userEvent.setup();
+    renderAt('/accounting/vouchers/new');
+    await waitForAccounts();
+    await fillPaymentBasics(user);
+    await waitFor(() => expect(optionValues('voucher-vendor-select')).toContain('vendor-8'));
+    await user.selectOptions(screen.getByTestId('voucher-vendor-select'), 'vendor-8');
+    await user.click(screen.getByTestId('voucher-form-save-draft-button'));
+
+    await waitFor(() => expect(http.post).toHaveBeenCalledTimes(1));
+    const body = http.post.mock.calls[0][1];
+    expect(body.vendor).toEqual({ id: 'vendor-8' });
+    for (const key of ['staff', 'accountServices', 'client']) expect(body).not.toHaveProperty(key);
+  });
+
+  it('a payment to staff sends the agent as staff', async () => {
+    const user = userEvent.setup();
+    renderAt('/accounting/vouchers/new');
+    await waitForAccounts();
+    await fillPaymentBasics(user);
+    await user.click(screen.getByLabelText('Staff'));
+    await waitFor(() => expect(optionValues('voucher-staff-select')).toEqual(['agent-1']));
+    expect(within(screen.getByTestId('voucher-staff-select')).getByRole('option', { name: 'Ama Owusu' })).toBeInTheDocument();
+    await user.selectOptions(screen.getByTestId('voucher-staff-select'), 'agent-1');
+    await user.click(screen.getByTestId('voucher-form-save-draft-button'));
+
+    await waitFor(() => expect(http.post).toHaveBeenCalledTimes(1));
+    const body = http.post.mock.calls[0][1];
+    expect(body).toMatchObject({ voucherTo: 'STAFF', staff: { id: 'agent-1' } });
+    expect(body).not.toHaveProperty('vendor');
+  });
+
+  it('refuses a client with no account and sends nothing', async () => {
+    const user = userEvent.setup();
+    renderAt('/accounting/voucher/receipt');
+    await waitForAccounts();
+    await user.type(screen.getByTestId('voucher-notes-input'), 'Fee');
+    await user.selectOptions(screen.getByTestId('voucher-cash-account-select'), 'acc-cash');
+    await user.selectOptions(screen.getByTestId('voucher-income-account-select'), 'acc-sales');
+    await user.type(screen.getByTestId('voucher-amount-input'), '10');
+    await waitFor(() => expect(optionValues('voucher-client-select')).toContain('client-4'));
+    await user.selectOptions(screen.getByTestId('voucher-client-select'), 'client-4');
+    await user.click(screen.getByTestId('voucher-form-save-draft-button'));
+
+    expect(await screen.findByText(/This client has no account/)).toBeInTheDocument();
+    expect(http.post).not.toHaveBeenCalled();
+  });
+
+  it('a tenant with no vendors (zero) sees an empty list, a hint and the + button', async () => {
+    vendorsResponse = () => Promise.resolve({ data: [] });
+    const user = userEvent.setup();
+    const open = vi.spyOn(window, 'open').mockReturnValue(null);
+    renderAt('/accounting/vouchers/new');
+    await waitForAccounts();
+
+    expect(await screen.findByText('No vendors yet. Use + to add one.')).toBeInTheDocument();
+    expect(optionValues('voucher-vendor-select')).toEqual([]);
+    await user.click(screen.getByTestId('voucher-add-vendor-button'));
+    expect(open).toHaveBeenCalledWith('/vendors/new', '_blank', 'noopener,noreferrer');
+
+    await fillPaymentBasics(user);
+    await user.click(screen.getByTestId('voucher-form-save-draft-button'));
+    expect(await screen.findByText('Select a vendor')).toBeInTheDocument();
+    expect(http.post).not.toHaveBeenCalled();
+  });
+
+  it('lists every vendor of a full page (100, overflow) and keeps them selectable', async () => {
+    vendorsResponse = () =>
+      Promise.resolve({ data: Array.from({ length: 100 }, (_, i) => ({ id: `v-${i}`, name: `Vendor ${i}` })) });
+    const user = userEvent.setup();
+    renderAt('/accounting/vouchers/new');
+    await waitForAccounts();
+
+    await waitFor(() => expect(optionValues('voucher-vendor-select')).toHaveLength(100));
+    await fillPaymentBasics(user);
+    await user.selectOptions(screen.getByTestId('voucher-vendor-select'), 'v-99');
+    await user.click(screen.getByTestId('voucher-form-save-draft-button'));
+    await waitFor(() => expect(http.post).toHaveBeenCalledTimes(1));
+    expect(http.post.mock.calls[0][1].vendor).toEqual({ id: 'v-99' });
   });
 });

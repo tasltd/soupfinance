@@ -39,6 +39,23 @@ vi.mock('../../../hooks/useLedgerAccounts', () => ({
   }),
 }));
 
+// Added (SOUPFIN-162): the party fields are selects over these lists.
+vi.mock('../../../api/endpoints/vendors', () => ({
+  listVendors: vi.fn().mockResolvedValue([{ id: 'vendor-001', name: 'Office Depot' }]),
+}));
+vi.mock('../../../api/endpoints/clients', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../api/endpoints/clients')>();
+  return {
+    ...actual,
+    listClients: vi.fn().mockResolvedValue([
+      { id: 'client-9', name: 'Ada Ventures', portfolioList: [{ id: 'cp-9', accountServices: { id: 'as-9' } }] },
+    ]),
+  };
+});
+vi.mock('../../../api/endpoints/settings', () => ({
+  agentApi: { list: vi.fn().mockResolvedValue([]) },
+}));
+
 vi.mock('../../../hooks/usePaymentMethods', () => ({
   usePaymentMethods: () => ({ data: [{ id: 'pm-bank', name: 'Bank Transfer' }] }),
 }));
@@ -114,7 +131,7 @@ describe('VoucherFormPage — existing voucher (SOUPFIN-154)', () => {
     expect(screen.getByTestId('voucher-form-fields')).toBeDisabled();
     expect(screen.getByTestId('voucher-cash-account-select')).toHaveValue('acc-cash');
     expect(screen.getByTestId('voucher-expense-account-select')).toHaveValue('acc-expense');
-    expect(screen.getByTestId('voucher-vendor-input')).toHaveValue('vendor-001');
+    await waitFor(() => expect(screen.getByTestId('voucher-vendor-select')).toHaveValue('vendor-001'));
 
     // No save buttons in view mode; an editable voucher offers Edit instead.
     expect(screen.queryByTestId('voucher-form-save-draft-button')).not.toBeInTheDocument();
@@ -156,6 +173,26 @@ describe('VoucherFormPage — existing voucher (SOUPFIN-154)', () => {
     });
     expect(mockedCreateVoucher).not.toHaveBeenCalled();
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/accounting/transactions'));
+  });
+
+  it('Edit of a client voucher shows the owning client and saves its AccountServices (SOUPFIN-162)', async () => {
+    mockedGetVoucher.mockResolvedValue({
+      ...PENDING_PAYMENT,
+      voucherTo: 'CLIENT',
+      vendor: undefined,
+      accountServices: { id: 'as-9', serialised: 'Direct Account : Corporate(Ada Ventures)' },
+    } as unknown as Voucher);
+    mockedUpdateVoucher.mockResolvedValue(PENDING_PAYMENT);
+    const user = userEvent.setup();
+    renderAt('/accounting/vouchers/voucher-001/edit');
+
+    await waitFor(() => expect(screen.getByTestId('voucher-client-select')).toHaveValue('client-9'));
+    await user.click(screen.getByTestId('voucher-form-save-draft-button'));
+
+    await waitFor(() => expect(mockedUpdateVoucher).toHaveBeenCalledTimes(1));
+    const request = mockedUpdateVoucher.mock.calls[0][1];
+    expect(request).toMatchObject({ voucherTo: 'CLIENT', accountServicesId: 'as-9' });
+    expect(request.vendorId).toBeUndefined();
   });
 
   it('a posted voucher stays read-only on the /edit URL and explains why', async () => {

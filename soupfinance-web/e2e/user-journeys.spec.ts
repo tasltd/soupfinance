@@ -916,14 +916,14 @@ test.describe('User Journey: Accounting Workflow', () => {
     await expect(page.getByTestId('voucher-form-page')).toBeVisible();
     // Changed: Use correct testids - check that payment tab is active
     await expect(page.getByTestId('voucher-type-payment')).toBeVisible();
-    await expect(page.getByTestId('voucher-vendor-input')).toBeVisible();
+    await expect(page.getByTestId('voucher-vendor-select')).toBeVisible();
 
     // Receipt voucher shows client field
     await page.goto('/accounting/voucher/receipt');
     await expect(page.getByTestId('voucher-form-page')).toBeVisible();
     // Changed: Check that receipt tab is active and client input is shown
     await expect(page.getByTestId('voucher-type-receipt')).toBeVisible();
-    await expect(page.getByTestId('voucher-client-input')).toBeVisible();
+    await expect(page.getByTestId('voucher-client-select')).toBeVisible();
 
     await takeScreenshot(page, 'journey-accounting-voucher-types');
   });
