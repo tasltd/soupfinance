@@ -280,6 +280,13 @@ describe('VendorDetailPage', () => {
       expect(editButton).toHaveAttribute('href', '/vendors/vendor-456/edit');
     });
 
+    // Added (SOUPFIN-178): pay several of this vendor's bills in one payment
+    it('links to Pay Bills with this vendor preselected', async () => {
+      vi.mocked(getVendor).mockResolvedValue(createMockVendor({ id: 'vendor-456' }));
+      renderVendorDetailPage('vendor-456');
+      expect(await screen.findByTestId('vendor-pay-bills')).toHaveAttribute('href', '/payments/make?vendorId=vendor-456');
+    });
+
     it('renders delete button', async () => {
       const mockVendor = createMockVendor();
       vi.mocked(getVendor).mockResolvedValue(mockVendor);

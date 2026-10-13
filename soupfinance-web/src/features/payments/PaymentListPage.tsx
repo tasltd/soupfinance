@@ -204,6 +204,38 @@ export function PaymentListPage() {
           <p className="text-subtle-text">Track all incoming and outgoing payments</p>
           <HelpLink section="payments" className="mt-1 self-start" />
         </div>
+        <div className="flex flex-wrap gap-2">
+        {/* Added (SOUPFIN-178): one payment applied across many invoices or bills */}
+        <Link
+          to="/payments/receive"
+          aria-disabled={isModuleDisabled}
+          tabIndex={isModuleDisabled ? -1 : undefined}
+          onClick={(e) => {
+            if (isModuleDisabled) e.preventDefault();
+          }}
+          className={`flex items-center gap-2 h-10 px-4 rounded-lg bg-primary/10 text-primary font-bold text-sm hover:bg-primary/20 ${
+            isModuleDisabled ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''
+          }`}
+          data-testid="receive-payment-button"
+        >
+          <span className="material-symbols-outlined text-lg">call_received</span>
+          Receive payment
+        </Link>
+        <Link
+          to="/payments/make"
+          aria-disabled={isModuleDisabled}
+          tabIndex={isModuleDisabled ? -1 : undefined}
+          onClick={(e) => {
+            if (isModuleDisabled) e.preventDefault();
+          }}
+          className={`flex items-center gap-2 h-10 px-4 rounded-lg bg-primary/10 text-primary font-bold text-sm hover:bg-primary/20 ${
+            isModuleDisabled ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''
+          }`}
+          data-testid="pay-bills-button"
+        >
+          <span className="material-symbols-outlined text-lg">call_made</span>
+          Pay bills
+        </Link>
         <Link
           to="/payments/new"
           aria-disabled={isModuleDisabled}
@@ -219,6 +251,7 @@ export function PaymentListPage() {
           <span className="material-symbols-outlined text-lg">add</span>
           Record Payment
         </Link>
+        </div>
       </div>
 
       {/* Added: Finance module disabled — render dedicated state instead of broken table + tabs */}

@@ -245,6 +245,15 @@ export function ClientDetailPage() {
             <span className="material-symbols-outlined text-lg">receipt_long</span>
             Create Invoice
           </Link>
+          {/* Added (SOUPFIN-178): apply one payment across this client's open invoices */}
+          <Link
+            to={`/payments/receive?clientId=${client.id}`}
+            className="inline-flex items-center gap-2 h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm hover:bg-primary/5"
+            data-testid="client-receive-payment"
+          >
+            <span className="material-symbols-outlined text-lg">call_received</span>
+            Receive Payment
+          </Link>
         </div>
       </div>
 

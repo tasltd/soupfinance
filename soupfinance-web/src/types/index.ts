@@ -345,6 +345,67 @@ export interface BillPayment extends BaseEntity {
 }
 
 // =============================================================================
+// Finance Types - Payment Allocation (one payment across many invoices/bills)
+// Mirrors: soupbroker.finance.PaymentAllocationGroup, PaymentAllocation,
+//          AllocationDirection, AllocationStrategy, AllocationGroupStatus
+// Added (SOUPFIN-178)
+// =============================================================================
+
+/** RECEIPT = money in from a client; PAYMENT = money out to a vendor. */
+export type AllocationDirection = 'RECEIPT' | 'PAYMENT';
+export type AllocationStrategy = 'FIFO' | 'PRO_RATA' | 'MANUAL';
+export type AllocationGroupStatus = 'DRAFT' | 'POSTED' | 'REVERSED';
+
+type GrailsRef = { id: string; serialised?: string; class?: string };
+
+export interface PaymentAllocation extends BaseEntity {
+  allocationGroup?: GrailsRef;
+  invoice?: GrailsRef | null;
+  bill?: GrailsRef | null;
+  amount: number;
+  allocatedDate?: string;
+  notes?: string;
+  invoicePayment?: GrailsRef | null;
+  billPayment?: GrailsRef | null;
+}
+
+export interface PaymentAllocationGroup extends BaseEntity {
+  voucher?: GrailsRef | null;
+  direction: AllocationDirection;
+  strategy: AllocationStrategy;
+  totalAmount: number;
+  allocatedAmount?: number;
+  paymentDate: string;
+  paymentMethod?: GrailsRef | null;
+  reference?: string;
+  notes?: string;
+  accountServices?: GrailsRef | null;
+  vendor?: GrailsRef | null;
+  cashAccount?: GrailsRef;
+  status?: AllocationGroupStatus;
+  paymentAllocationList?: PaymentAllocation[];
+}
+
+/**
+ * Request body for POST /rest/paymentAllocationGroup/save.json.
+ * Mirrors soupbroker.finance.CreateAllocationCommand / AllocationLineCommand
+ * (the command object PaymentAllocationService.createAllocation takes).
+ */
+export interface CreatePaymentAllocationRequest {
+  direction: AllocationDirection;
+  strategy: AllocationStrategy;
+  totalAmount: number;
+  paymentDate: string;
+  paymentMethod?: { id: string };
+  reference?: string;
+  notes?: string;
+  accountServicesId?: string;
+  vendorId?: string;
+  cashAccountId: string;
+  allocations: Array<{ invoiceId?: string; billId?: string; amount: number; notes?: string }>;
+}
+
+// =============================================================================
 // Finance Types - Payment Method (domain class, not enum)
 // Mirrors: soupbroker.finance.PaymentMethod
 // =============================================================================
