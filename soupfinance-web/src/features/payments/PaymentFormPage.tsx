@@ -10,8 +10,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { listInvoices, recordInvoicePayment } from '../../api/endpoints/invoices';
-import { listBills, recordBillPayment } from '../../api/endpoints/bills';
+import { listInvoices, getInvoice, recordInvoicePayment } from '../../api/endpoints/invoices';
+import { listBills, getBill, recordBillPayment } from '../../api/endpoints/bills';
 import { useFormatCurrency, useCurrencySymbol } from '../../stores';
 import { useLedgerAccounts } from '../../hooks/useLedgerAccounts';
 import { usePaymentMethods } from '../../hooks/usePaymentMethods';
@@ -23,6 +23,22 @@ import { HelpLink } from '../../components/help';
 
 // Added: Payment type for form toggle
 type PaymentType = 'invoice' | 'bill';
+
+// Added: A document can take a payment while it is unpaid and has a balance.
+function hasBalanceDue(doc: { status?: string; amountDue?: number }): boolean {
+  return doc.status !== 'PAID' && (doc.amountDue || 0) > 0;
+}
+
+// Added (SOUPFIN-176): put a separately loaded preselected document at the top of
+// the options when the list did not already offer it.
+function withPreselected<T extends { id: string; status?: string; amountDue?: number }>(
+  listed: T[] | undefined,
+  preselected: T | undefined
+): T[] | undefined {
+  if (!listed || !preselected || !hasBalanceDue(preselected)) return listed;
+  if (listed.some((doc) => doc.id === preselected.id)) return listed;
+  return [preselected, ...listed];
+}
 
 export function PaymentFormPage() {
   const navigate = useNavigate();
@@ -66,9 +82,23 @@ export function PaymentFormPage() {
   });
 
   // Added: Filter to invoices with balance due
-  const unpaidInvoices = invoices?.filter(
-    (inv) => inv.status !== 'PAID' && (inv.amountDue || 0) > 0
-  );
+  const listedUnpaidInvoices = invoices?.filter(hasBalanceDue);
+
+  // Fix (SOUPFIN-176): "Record Payment" on a detail page preselects a document that
+  // the list above may not offer — it holds only the newest 100, and bill/index.json
+  // reports amountDue 0 for bills that do have a balance. The <select> is required,
+  // so the browser refused to submit. Load the preselected document by id instead.
+  const { data: preselectedInvoice } = useQuery({
+    queryKey: ['invoice', preselectedInvoiceId],
+    queryFn: () => getInvoice(preselectedInvoiceId as string),
+    enabled:
+      paymentType === 'invoice' &&
+      !!preselectedInvoiceId &&
+      !!invoices &&
+      !listedUnpaidInvoices?.some((inv) => inv.id === preselectedInvoiceId),
+    retry: false,
+  });
+  const unpaidInvoices = withPreselected(listedUnpaidInvoices, preselectedInvoice);
 
   // Added: Fetch bills for dropdown (only unpaid/partial)
   const {
@@ -83,9 +113,20 @@ export function PaymentFormPage() {
   });
 
   // Added: Filter to bills with balance due
-  const unpaidBills = bills?.filter(
-    (bill) => bill.status !== 'PAID' && (bill.amountDue || 0) > 0
-  );
+  const listedUnpaidBills = bills?.filter(hasBalanceDue);
+
+  // Fix (SOUPFIN-176): same as the invoice case above.
+  const { data: preselectedBill } = useQuery({
+    queryKey: ['bill', preselectedBillId],
+    queryFn: () => getBill(preselectedBillId as string),
+    enabled:
+      paymentType === 'bill' &&
+      !!preselectedBillId &&
+      !!bills &&
+      !listedUnpaidBills?.some((bill) => bill.id === preselectedBillId),
+    retry: false,
+  });
+  const unpaidBills = withPreselected(listedUnpaidBills, preselectedBill);
 
   // Added: Fetch bank/cash accounts for payInAccount/payOutAccount selection
   const { data: ledgerAccounts } = useLedgerAccounts();
@@ -169,27 +210,29 @@ export function PaymentFormPage() {
     }
 
     // Submit based on payment type
-    // Changed: Send paymentMethod.id as FK reference (domain class, not string)
+    // Fix (SOUPFIN-176): send every FK as a nested object. Grails JSON binding ignores
+    // dotted keys like 'invoice.id' — the backend answered 422 "invoice cannot be null"
+    // and the payment method and bank account were never bound.
     if (paymentType === 'invoice') {
       invoicePaymentMutation.mutate({
-        'invoice.id': selectedId,
+        invoice: { id: selectedId },
         amount: paymentAmount,
         paymentDate,
-        ...(paymentMethodId && { 'paymentMethod.id': paymentMethodId }),
+        ...(paymentMethodId && { paymentMethod: { id: paymentMethodId } }),
         reference: reference || undefined,
         notes: notes || undefined,
-        ...(bankAccountId && { 'payInAccount.id': bankAccountId }),
-      } as unknown as Partial<InvoicePayment>);
+        ...(bankAccountId && { payInAccount: { id: bankAccountId } }),
+      });
     } else {
       billPaymentMutation.mutate({
-        'bill.id': selectedId,
+        bill: { id: selectedId },
         amount: paymentAmount,
         paymentDate,
-        ...(paymentMethodId && { 'paymentMethod.id': paymentMethodId }),
+        ...(paymentMethodId && { paymentMethod: { id: paymentMethodId } }),
         reference: reference || undefined,
         notes: notes || undefined,
-        ...(bankAccountId && { 'payOutAccount.id': bankAccountId }),
-      } as unknown as Partial<BillPayment>);
+        ...(bankAccountId && { payOutAccount: { id: bankAccountId } }),
+      });
     }
   };
 

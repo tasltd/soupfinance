@@ -8,7 +8,7 @@
  * - Mock data ONLY when VITE_USE_MOCK_DATA=true explicitly
  */
 import { useQuery } from '@tanstack/react-query';
-import { listLedgerAccounts } from '../api/endpoints/ledger';
+import { listAllLedgerAccounts } from '../api/endpoints/ledger';
 import type { LedgerAccount } from '../types';
 
 // Mock accounts for explicit testing mode only (VITE_USE_MOCK_DATA=true)
@@ -60,7 +60,11 @@ export function useLedgerAccounts() {
       }
 
       // Changed: Always use real API, let errors propagate, return empty if no data
-      const accounts = await listLedgerAccounts();
+      // Fix (SOUPFIN-176): fetch every page. A bare index.json returns the backend
+      // default of 10 rows, newest first — on a tenant with vendor-generated expense
+      // accounts that held no ASSET account, so the payment form's bank/cash dropdown
+      // was empty and every payment failed "payInAccount cannot be null".
+      const accounts = await listAllLedgerAccounts();
       return accounts; // Return empty array if API returns empty - no fallback to mock
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
