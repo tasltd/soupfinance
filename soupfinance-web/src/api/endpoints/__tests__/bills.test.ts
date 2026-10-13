@@ -511,3 +511,47 @@ describe('resolveBillItemTaxRate (SOUPFIN-44)', () => {
     ).toBe(0);
   });
 });
+
+describe('payment receipt (SOUPFIN-179)', () => {
+  let mockGet: ReturnType<typeof vi.fn>;
+  let mockPost: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+    mockGet = vi.fn();
+    mockPost = vi.fn();
+    (axios.create as ReturnType<typeof vi.fn>).mockReturnValue({
+      interceptors: { request: { use: vi.fn() }, response: { use: vi.fn() } },
+      get: mockGet,
+      post: mockPost,
+      put: vi.fn(),
+      delete: vi.fn(),
+    });
+  });
+
+  it('downloadPaymentReceipt fetches the SoupBrokerFile link as a blob', async () => {
+    const blob = new Blob(['%PDF']);
+    mockGet.mockResolvedValue({ data: blob });
+    const { downloadPaymentReceipt } = await import('../bills');
+
+    await expect(downloadPaymentReceipt('file-77')).resolves.toBe(blob);
+    expect(mockGet).toHaveBeenCalledWith('/soupBrokerFile/link/file-77', {
+      responseType: 'blob',
+      headers: { Accept: '*/*' },
+    });
+  });
+
+  it('recordBillPayment posts the data URI receipt unchanged in the JSON body', async () => {
+    mockGet.mockResolvedValue({ data: { SYNCHRONIZER_TOKEN: 't', SYNCHRONIZER_URI: '/u' } });
+    mockPost.mockResolvedValue({ data: { id: 'bp-1' } });
+    const { recordBillPayment } = await import('../bills');
+    const receipt = 'data:application/pdf;base64,JVBERi0xLjQ=';
+
+    await recordBillPayment({ amount: 5, paymentReceipt: receipt } as never);
+
+    const [url, body] = mockPost.mock.calls[0];
+    expect(url).toMatch(/^\/billPayment\/save\.json\?/);
+    expect(body).toEqual({ amount: 5, paymentReceipt: receipt });
+  });
+});

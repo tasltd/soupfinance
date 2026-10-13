@@ -20,6 +20,9 @@ import type { Invoice, Bill, InvoicePayment, BillPayment } from '../../types';
 import { getTodayIsoDate } from '../../utils/date';
 // Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
 import { HelpLink } from '../../components/help';
+// Added (SOUPFIN-179): receipt upload for outgoing (bill) payments
+import { ReceiptDropzone } from './ReceiptDropzone';
+import { readReceiptAsDataUrl } from './receipt';
 
 // Added: Payment type for form toggle
 type PaymentType = 'invoice' | 'bill';
@@ -51,6 +54,11 @@ export function PaymentFormPage() {
   // Added: Bank/cash account for deposit (invoice) or payment source (bill)
   const [bankAccountId, setBankAccountId] = useState('');
   const [formError, setFormError] = useState('');
+  // Added (SOUPFIN-179): BillPayment.paymentReceipt. InvoicePayment has no
+  // receipt field in the Grails domain, so this is only offered for bills.
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [receiptError, setReceiptError] = useState('');
+  const [isReadingReceipt, setIsReadingReceipt] = useState(false);
 
   // Added: Fetch invoices for dropdown (only unpaid/partial)
   // NOTE: retry=false so 403 (module disabled) surfaces immediately
@@ -113,6 +121,15 @@ export function PaymentFormPage() {
     }
   }, [paymentType, preselectedInvoiceId, preselectedBillId]);
 
+  // Added (SOUPFIN-179): an invoice payment cannot carry a receipt, so drop
+  // one picked on the Outgoing tab rather than leave it hidden in state.
+  useEffect(() => {
+    if (paymentType === 'invoice') {
+      setReceiptFile(null);
+      setReceiptError('');
+    }
+  }, [paymentType]);
+
   // Added: Invoice payment mutation
   const invoicePaymentMutation = useMutation({
     mutationFn: (data: Partial<InvoicePayment>) => recordInvoicePayment(data),
@@ -142,7 +159,7 @@ export function PaymentFormPage() {
   });
 
   // Added: Handle form submission
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError('');
 
@@ -181,6 +198,19 @@ export function PaymentFormPage() {
         ...(bankAccountId && { 'payInAccount.id': bankAccountId }),
       } as unknown as Partial<InvoicePayment>);
     } else {
+      // Added (SOUPFIN-179): receipt travels as a base64 data URI in the JSON body
+      let paymentReceipt: string | undefined;
+      if (receiptFile) {
+        setIsReadingReceipt(true);
+        try {
+          paymentReceipt = await readReceiptAsDataUrl(receiptFile);
+        } catch (error) {
+          setReceiptError(error instanceof Error ? error.message : 'Could not read the receipt file.');
+          return;
+        } finally {
+          setIsReadingReceipt(false);
+        }
+      }
       billPaymentMutation.mutate({
         'bill.id': selectedId,
         amount: paymentAmount,
@@ -189,11 +219,12 @@ export function PaymentFormPage() {
         reference: reference || undefined,
         notes: notes || undefined,
         ...(bankAccountId && { 'payOutAccount.id': bankAccountId }),
+        ...(paymentReceipt && { paymentReceipt }),
       } as unknown as Partial<BillPayment>);
     }
   };
 
-  const isPending = invoicePaymentMutation.isPending || billPaymentMutation.isPending;
+  const isPending = invoicePaymentMutation.isPending || billPaymentMutation.isPending || isReadingReceipt;
   const isLoadingData = paymentType === 'invoice' ? isLoadingInvoices : isLoadingBills;
 
   // Added: Detect Finance module disabled (403 on the source list endpoint)
@@ -461,6 +492,27 @@ export function PaymentFormPage() {
                 data-testid="reference-input"
               />
             </div>
+
+            {/* Added (SOUPFIN-179): receipt / proof of payment, outgoing only */}
+            {paymentType === 'bill' && (
+              <ReceiptDropzone
+                file={receiptFile}
+                error={receiptError}
+                disabled={isPending}
+                onSelect={(file) => {
+                  setReceiptFile(file);
+                  setReceiptError('');
+                }}
+                onReject={(message) => {
+                  setReceiptFile(null);
+                  setReceiptError(message);
+                }}
+                onRemove={() => {
+                  setReceiptFile(null);
+                  setReceiptError('');
+                }}
+              />
+            )}
 
             {/* Notes */}
             <div className="flex flex-col gap-2">

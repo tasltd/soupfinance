@@ -335,7 +335,9 @@ export interface BillPayment extends BaseEntity {
   // The REST index/show only send { id, class, serialised } — no `name`.
   paymentMethod?: { id: string; name?: string; serialised?: string; class?: string };
   payOutAccount?: { id: string; name?: string; code?: string; serialised?: string; class?: string }; // Added: Bank/cash account for payment
-  paymentReceipt?: string; // Added: File upload reference for payment receipt
+  // Changed (SOUPFIN-179): SoupBrokerFile FK as the REST payload returns it.
+  // On save the form sends a base64 data: URI string instead (see recordBillPayment).
+  paymentReceipt?: { id: string; serialised?: string; class?: string } | null;
   currency?: string; // Added: Payment currency
   exchangeRate?: number; // Added (SOUPFIN-177): backend field
   quickReference?: string; // Added (SOUPFIN-177): SbDomain short id, e.g. "08FF1C9C7D"
