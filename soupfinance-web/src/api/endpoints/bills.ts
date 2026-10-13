@@ -314,6 +314,111 @@ export async function updateBill(id: string, data: Partial<Bill>): Promise<Bill>
   return response.data;
 }
 
+// =============================================================================
+// Bill lifecycle (SOUPFIN-184)
+// =============================================================================
+
+export type BillLifecycleAction = 'saveDraft' | 'submit' | 'cancel';
+
+/**
+ * The backend this frontend is talking to does not have the lifecycle action yet.
+ *
+ * Added (SOUPFIN-184): draft, submit and void are planned soupmarkets-web
+ * endpoints (`plans/soupfin-184-bill-lifecycle.html`). Grails answers an action
+ * a controller does not have with a Tomcat HTML error page — status 400 on the
+ * LXC backend, 404 or 405 elsewhere — never with JSON. This error turns that
+ * into a sentence the user can act on, instead of "Request failed with status
+ * code 400", and tells the caller nothing was saved.
+ */
+export class BillActionUnavailableError extends Error {
+  readonly action: BillLifecycleAction;
+
+  constructor(action: BillLifecycleAction) {
+    super(BILL_ACTION_UNAVAILABLE_MESSAGES[action]);
+    this.name = 'BillActionUnavailableError';
+    this.action = action;
+  }
+}
+
+const BILL_ACTION_UNAVAILABLE_MESSAGES: Record<BillLifecycleAction, string> = {
+  saveDraft:
+    'Draft bills are not available on this server yet, so nothing was saved. Use Submit to save and post the bill, or ask your administrator to update the server.',
+  submit:
+    'Submitting draft bills is not available on this server yet. Ask your administrator to update the server.',
+  cancel:
+    'Voiding bills is not available on this server yet, so the bill is unchanged. Ask your administrator to update the server.',
+};
+
+interface HttpErrorLike {
+  response?: { status?: number; data?: unknown; headers?: Record<string, unknown> };
+}
+
+/** True when the response is the servlet container's HTML page for an unmapped action. */
+export function isMissingActionResponse(error: unknown): boolean {
+  const response = (error as HttpErrorLike | null)?.response;
+  if (!response || ![400, 404, 405].includes(response.status ?? 0)) return false;
+  const contentType = String(response.headers?.['content-type'] ?? '');
+  if (contentType.includes('text/html')) return true;
+  const data = response.data;
+  return typeof data === 'string' && data.trimStart().startsWith('<');
+}
+
+async function runLifecycleAction<T>(action: BillLifecycleAction, request: () => Promise<T>): Promise<T> {
+  try {
+    return await request();
+  } catch (error) {
+    if (isMissingActionResponse(error)) throw new BillActionUnavailableError(action);
+    throw error;
+  }
+}
+
+/**
+ * Save a bill as a draft: stored, but not posted to the ledger.
+ * POST /rest/bill/saveDraft.json — PLANNED (SOUPFIN-184)
+ *
+ * Takes the same body as `createBill`. It is a separate action, not a flag on
+ * save.json, on purpose: today's backend ignores unknown JSON properties, so a
+ * flag would silently post the "draft". A missing action fails loudly instead.
+ *
+ * CSRF Token Required: same `withForm` token as save.json, from create.json.
+ */
+export async function saveBillDraft(data: Partial<Bill> | Record<string, unknown>): Promise<Bill> {
+  return runLifecycleAction('saveDraft', async () => {
+    const csrf = await getCsrfToken('bill');
+    const response = await apiClient.post<Bill>(
+      `${BASE_URL}/saveDraft.json?${csrfQueryString(csrf)}`,
+      data
+    );
+    return response.data;
+  });
+}
+
+/**
+ * Submit a draft: DRAFT -> posted, payment status PENDING.
+ * POST /rest/bill/submit/:id.json — PLANNED (SOUPFIN-184). No CSRF, like update.
+ */
+export async function submitBill(id: string): Promise<Bill> {
+  return runLifecycleAction('submit', async () => {
+    const response = await apiClient.post<Bill>(`${BASE_URL}/submit/${id}.json`, {});
+    return response.data;
+  });
+}
+
+/**
+ * Void a posted bill that has no payments: reverses its ledger postings and
+ * marks it CANCELLED. The bill stays on record.
+ * POST /rest/bill/cancel/:id.json — PLANNED (SOUPFIN-184). The action is not
+ * called `void` because that is a reserved word for a Groovy method name.
+ */
+export async function cancelBill(id: string, cancelReason?: string): Promise<Bill> {
+  return runLifecycleAction('cancel', async () => {
+    const response = await apiClient.post<Bill>(`${BASE_URL}/cancel/${id}.json`, {
+      ...(cancelReason ? { cancelReason } : {}),
+    });
+    return response.data;
+  });
+}
+
 /**
  * Delete bill (soft delete)
  * DELETE /rest/bill/delete/:id.json
