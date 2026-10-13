@@ -9,11 +9,10 @@
  *     and the sub-items were clipped. The fix makes the nav column scroll and
  *     pins the bottom block.
  *
- *  2. SOUPFIN-25 — category-aware navigation visibility. The Vendors nav item
- *     must be hidden for SERVICES tenants (they have no suppliers/inventory)
- *     and shown for TRADING tenants. When the tenant's business category is
- *     unknown (settings not yet loaded), items default to visible so nothing
- *     disappears during the initial load.
+ *  2. SOUPFIN-173 — Vendors is shown for every business category. SOUPFIN-25
+ *     hid it for SERVICES tenants, but a SERVICES tenant still records bills,
+ *     and a bill requires a vendor. The account store is still mocked so these
+ *     tests can prove the category no longer changes the nav.
  *
  * Only `useAccountStore` is mocked — the real `useUIStore`/`useAuthStore` are
  * kept so the layout assertions above exercise the same code path they always
@@ -122,61 +121,63 @@ describe('SideNav layout does not distort when a long section expands', () => {
   });
 });
 
-describe('SideNav — category-aware visibility (SOUPFIN-25)', () => {
+describe('SideNav — Vendors is reachable for every business category (SOUPFIN-173)', () => {
+  // Every category the type allows, plus "settings not loaded yet".
+  const CATEGORIES: (BusinessLicenceCategory | undefined)[] = [
+    'SERVICES',
+    'TRADING',
+    'BROKER',
+    'ASSET_MANAGER',
+    'CUSTODIAN',
+    'TRUSTEE',
+    'PRIMARY_DEALER',
+    undefined,
+  ];
+
   beforeEach(() => {
     useUIStore.setState({ sidebarCollapsed: false, mobileSidebarOpen: false });
     mockBusinessCategory = undefined;
   });
 
-  it('hides the Vendors item for SERVICES tenants', () => {
-    mockBusinessCategory = 'SERVICES';
+  it.each(CATEGORIES)('shows the Vendors link to /vendors for category %s', (category) => {
+    mockBusinessCategory = category;
     renderAt('/dashboard');
 
-    expect(screen.queryByText('Vendors')).not.toBeInTheDocument();
-    // Grafted from variant B: guard against over-filtering. Hiding Vendors must
-    // not take unrelated items with it — a filter bug that dropped everything
-    // would still satisfy the assertion above on its own.
-    expect(screen.getByText('Dashboard')).toBeInTheDocument();
-    expect(screen.getByText('Invoices')).toBeInTheDocument();
-    expect(screen.getByText('Clients')).toBeInTheDocument();
+    const link = screen.getByRole('link', { name: 'Vendors' });
+    expect(link).toHaveAttribute('href', '/vendors');
   });
 
-  it('shows the Vendors item for TRADING tenants', () => {
-    mockBusinessCategory = 'TRADING';
-    renderAt('/dashboard');
+  it('renders the same top-level items for SERVICES as for TRADING', () => {
+    // The regression this guards against is a category filter coming back:
+    // compare the full rendered list, not just the Vendors entry.
+    const hrefs = (category: BusinessLicenceCategory) => {
+      mockBusinessCategory = category;
+      const { container, unmount } = renderAt('/dashboard');
+      const list = [...container.querySelectorAll('nav a')].map((a) => a.getAttribute('href'));
+      unmount();
+      return list;
+    };
 
-    expect(screen.getByText('Vendors')).toBeInTheDocument();
+    const services = hrefs('SERVICES');
+    expect(services).toContain('/vendors');
+    expect(services).toContain('/bills');
+    expect(services).toEqual(hrefs('TRADING'));
   });
 
-  it('shows the Vendors item for other non-SERVICES categories (e.g. BROKER)', () => {
-    mockBusinessCategory = 'BROKER';
-    renderAt('/dashboard');
-
-    expect(screen.getByText('Vendors')).toBeInTheDocument();
-  });
-
-  it('defaults to showing Vendors when the category is unknown (settings not loaded)', () => {
-    mockBusinessCategory = undefined;
-    renderAt('/dashboard');
-
-    expect(screen.getByText('Vendors')).toBeInTheDocument();
-  });
-
-  it('keeps Vendors hidden for SERVICES even when the sidebar is collapsed', () => {
-    // Collapsed mode hides labels but still renders the item, so a label-only
-    // assertion would pass even if the filter did nothing. Assert on the route.
+  it('keeps Vendors for SERVICES when the sidebar is collapsed', () => {
+    // Collapsed mode hides labels, so assert on the route rather than the text.
     mockBusinessCategory = 'SERVICES';
     useUIStore.setState({ sidebarCollapsed: true });
     const { container } = renderAt('/dashboard');
 
-    expect(container.querySelector('a[href="/vendors"]')).toBeNull();
+    expect(container.querySelector('a[href="/vendors"]')).not.toBeNull();
   });
 
-  it('renders the Vendors link to /vendors for TRADING tenants', () => {
-    mockBusinessCategory = 'TRADING';
-    const { container } = renderAt('/dashboard');
+  it('marks Vendors active on vendor sub-routes for a SERVICES tenant', () => {
+    mockBusinessCategory = 'SERVICES';
+    renderAt('/vendors/new');
 
-    expect(container.querySelector('a[href="/vendors"]')).not.toBeNull();
+    expect(screen.getByRole('link', { name: 'Vendors' }).className).toContain('text-primary');
   });
 });
 

@@ -171,9 +171,8 @@ test.describe('SOUPFIN-63: nav links are named without the icon ligature', () =>
       }
     }
 
-    // Stated positively: the top-level names ARE the labels, in order. Vendors
-    // is hidden for SERVICES tenants (SOUPFIN-25), but these mocks leave the
-    // business category unset, so all ten render.
+    // Stated positively: the top-level names ARE the labels, in order. All ten
+    // render for every business category (SOUPFIN-173).
     expect(names.slice(0, 10)).toEqual([
       'Dashboard',
       'Invoices',
