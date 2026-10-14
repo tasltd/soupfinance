@@ -16,6 +16,8 @@
 import type { AxiosError } from 'axios';
 // Added (SOUPFIN-158): lock-date messages use the app's display date format
 import { formatDisplayDate } from '../utils/date';
+// Added (SOUPFIN-185): login copy follows the language picked on the auth pages
+import { authText } from '../i18n/authText';
 
 // Kind of error — drives icon + tone, lets pages branch on intent (retry vs contact admin)
 export type ApiErrorKind =
@@ -27,6 +29,10 @@ export type ApiErrorKind =
   | 'network'           // connection failure, timeout
   | 'period_locked'     // Added (SOUPFIN-158): the date falls on or before the books' lock date
   | 'unknown';          // fallback
+
+// Added (SOUPFIN-185): named so the auth pages can recognise and translate them
+const NETWORK_MESSAGE = 'We could not reach the server. Check your internet connection and try again.';
+const SERVER_ERROR_MESSAGE = 'Something went wrong on our side. Please try again in a moment.';
 
 export interface ParsedApiError {
   kind: ApiErrorKind;
@@ -240,7 +246,7 @@ export function parseApiError(error: unknown): ParsedApiError {
       return {
         kind: 'network',
         title: 'Connection problem',
-        message: 'We could not reach the server. Check your internet connection and try again.',
+        message: NETWORK_MESSAGE,
         actionHint: 'If the problem persists, contact your administrator.',
       };
     }
@@ -322,9 +328,7 @@ export function parseApiError(error: unknown): ParsedApiError {
       return {
         kind: 'server_error',
         title: 'Server error',
-        message:
-          serverMessage ||
-          'Something went wrong on our side. Please try again in a moment.',
+        message: serverMessage || SERVER_ERROR_MESSAGE,
         actionHint: 'If this keeps happening, contact your administrator.',
         status,
       };
@@ -377,6 +381,25 @@ const ACCOUNT_STATE_PATTERNS =
 /** Copy shown when nothing more specific — and safe — can be said about a login failure. */
 const LOGIN_GENERIC_FAILURE = 'Unable to sign in. Please try again.';
 
+/** Changed (SOUPFIN-185): read at call time so the current language applies. */
+function loginGenericFailure(): string {
+  return authText('errors.signInFailed', LOGIN_GENERIC_FAILURE);
+}
+
+/**
+ * Added (SOUPFIN-185): parseApiError's message for the public auth pages, in the
+ * user's language. Only the app's own connection and server copy is translated;
+ * a message the backend wrote is shown as it came.
+ */
+export function getAuthApiErrorMessage(error: unknown): string {
+  const parsed = parseApiError(error);
+  if (parsed.kind === 'network') return authText('errors.network', parsed.message);
+  if (parsed.kind === 'server_error' && parsed.message === SERVER_ERROR_MESSAGE) {
+    return authText('errors.serverError', parsed.message);
+  }
+  return parsed.message;
+}
+
 /**
  * Axios's own `message` strings. A caller that already wrapped an AxiosError and
  * rethrew `new Error(err.message)` would otherwise smuggle the exact text this
@@ -413,7 +436,8 @@ const RAW_AXIOS_MESSAGE =
  */
 export function getLoginErrorMessage(
   error: unknown,
-  fallback = 'Invalid username or password.',
+  // Changed (SOUPFIN-185): default is translated at call time
+  fallback = authText('errors.invalidCredentials', 'Invalid username or password.'),
 ): string {
   if (error && typeof error === 'object' && (error as Record<string, unknown>).isAxiosError === true) {
     const axErr = error as AxiosError;
@@ -438,17 +462,17 @@ export function getLoginErrorMessage(
     // No response (network/timeout) or 5xx → the general parser. Its 401 branch
     // ("Session expired") is unreachable here because 401 is handled above.
     if (!axErr.response || (status !== undefined && status >= 500)) {
-      return parseApiError(error).message;
+      return getAuthApiErrorMessage(error);
     }
 
     // Other 4xx (e.g. 400 malformed request) — prefer a useful backend message,
     // never the raw "status code" text.
-    return extractServerMessage(axErr.response.data) || LOGIN_GENERIC_FAILURE;
+    return extractServerMessage(axErr.response.data) || loginGenericFailure();
   }
 
   if (error instanceof Error && error.message && !RAW_AXIOS_MESSAGE.test(error.message)) {
     return error.message;
   }
 
-  return LOGIN_GENERIC_FAILURE;
+  return loginGenericFailure();
 }

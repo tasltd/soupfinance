@@ -10,6 +10,8 @@
  * Changed (2026-01-28): Created to verify OTP auto-request fix
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+// Added (SOUPFIN-185): the pages read their copy from i18n
+import '../../../i18n'
 import { render, screen, waitFor, act, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'

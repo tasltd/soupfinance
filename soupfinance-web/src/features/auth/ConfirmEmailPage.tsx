@@ -15,19 +15,35 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
+// Added (SOUPFIN-185): every visible string comes from the auth namespace
+import { useTranslation } from 'react-i18next';
 import { confirmEmail } from '../../api/endpoints/registration';
 import { Logo } from '../../components/Logo';
 
 // Password requirements
 const PASSWORD_MIN_LENGTH = 8;
+// Changed (SOUPFIN-185): labels are auth keys (confirmEmail.requirements.<key>)
 const PASSWORD_REQUIREMENTS = [
-  { key: 'length', label: 'At least 8 characters', test: (p: string) => p.length >= PASSWORD_MIN_LENGTH },
-  { key: 'uppercase', label: 'One uppercase letter', test: (p: string) => /[A-Z]/.test(p) },
-  { key: 'lowercase', label: 'One lowercase letter', test: (p: string) => /[a-z]/.test(p) },
-  { key: 'number', label: 'One number', test: (p: string) => /\d/.test(p) },
-];
+  { key: 'length', test: (p: string) => p.length >= PASSWORD_MIN_LENGTH },
+  { key: 'uppercase', test: (p: string) => /[A-Z]/.test(p) },
+  { key: 'lowercase', test: (p: string) => /[a-z]/.test(p) },
+  { key: 'number', test: (p: string) => /\d/.test(p) },
+] as const;
+
+/**
+ * Added (SOUPFIN-185): a client-side message is kept as its key, so switching
+ * language re-renders it; a message the backend wrote is kept as sent.
+ */
+type FormMessage =
+  | { key: `confirmEmail.errors.${'passwordRequired' | 'passwordWeak' | 'confirmRequired' | 'passwordsMismatch' | 'failed' | 'failedRetry'}` }
+  | { text: string };
+
+function backendMessages(errors: Record<string, string>): Record<string, FormMessage> {
+  return Object.fromEntries(Object.entries(errors).map(([field, text]) => [field, { text }]));
+}
 
 export function ConfirmEmailPage() {
+  const { t } = useTranslation('auth');
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token');
@@ -39,7 +55,8 @@ export function ConfirmEmailPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Validation state
-  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [validationErrors, setValidationErrors] = useState<Record<string, FormMessage>>({});
+  const message = (m: FormMessage) => ('key' in m ? t(m.key) : m.text);
   const [touched, setTouched] = useState({ password: false, confirmPassword: false });
 
   // Success state
@@ -60,19 +77,20 @@ export function ConfirmEmailPage() {
         setConfirmationSuccess(true);
       } else {
         if (response.errors) {
-          setValidationErrors(response.errors);
+          setValidationErrors(backendMessages(response.errors));
         } else {
-          setValidationErrors({ form: response.error || response.message || 'Confirmation failed' });
+          const text = response.error || response.message;
+          setValidationErrors({ form: text ? { text } : { key: 'confirmEmail.errors.failed' } });
         }
       }
     },
     onError: (error: Error & { response?: { data?: { message?: string; error?: string; errors?: Record<string, string> } } }) => {
       const backendData = error.response?.data;
       if (backendData?.errors) {
-        setValidationErrors(backendData.errors);
+        setValidationErrors(backendMessages(backendData.errors));
       } else {
-        const errorMessage = backendData?.message || backendData?.error || error.message || 'Confirmation failed. Please try again.';
-        setValidationErrors({ form: errorMessage });
+        const text = backendData?.message || backendData?.error || error.message;
+        setValidationErrors({ form: text ? { text } : { key: 'confirmEmail.errors.failedRetry' } });
       }
     },
   });
@@ -86,18 +104,18 @@ export function ConfirmEmailPage() {
 
   // Validate form
   const validateForm = (): boolean => {
-    const errors: Record<string, string> = {};
+    const errors: Record<string, FormMessage> = {};
 
     if (!password) {
-      errors.password = 'Password is required';
+      errors.password = { key: 'confirmEmail.errors.passwordRequired' };
     } else if (!allPasswordChecksPassed) {
-      errors.password = 'Password does not meet requirements';
+      errors.password = { key: 'confirmEmail.errors.passwordWeak' };
     }
 
     if (!confirmPassword) {
-      errors.confirmPassword = 'Please confirm your password';
+      errors.confirmPassword = { key: 'confirmEmail.errors.confirmRequired' };
     } else if (password !== confirmPassword) {
-      errors.confirmPassword = 'Passwords do not match';
+      errors.confirmPassword = { key: 'confirmEmail.errors.passwordsMismatch' };
     }
 
     setValidationErrors(errors);
@@ -140,13 +158,13 @@ export function ConfirmEmailPage() {
             className="text-3xl font-black tracking-tight text-text-light dark:text-text-dark"
             data-testid="confirm-email-success-heading"
           >
-            Account Activated!
+            {t('confirmEmail.successTitle')}
           </h2>
           <p className="mt-4 text-subtle-text">
-            Your email has been confirmed and your password is set.
+            {t('confirmEmail.successMessage')}
           </p>
           <p className="mt-2 text-subtle-text">
-            You can now sign in to your account.
+            {t('confirmEmail.successNext')}
           </p>
         </div>
 
@@ -156,7 +174,7 @@ export function ConfirmEmailPage() {
           className="h-14 rounded-lg bg-primary text-white font-bold text-base hover:bg-primary/90 transition-colors"
           data-testid="confirm-email-login-button"
         >
-          Sign In
+          {t('confirmEmail.successSignIn')}
         </button>
       </div>
     );
@@ -176,10 +194,10 @@ export function ConfirmEmailPage() {
           className="text-3xl font-black tracking-tight text-text-light dark:text-text-dark"
           data-testid="confirm-email-heading"
         >
-          Set Your Password
+          {t('confirmEmail.title')}
         </h2>
         <p className="mt-2 text-subtle-text">
-          Create a secure password to complete your account setup.
+          {t('confirmEmail.subtitle')}
         </p>
       </div>
 
@@ -189,7 +207,7 @@ export function ConfirmEmailPage() {
           className="p-4 rounded-lg bg-danger/10 border border-danger/30 text-danger text-sm"
           data-testid="confirm-email-form-error"
         >
-          {validationErrors.form}
+          {message(validationErrors.form)}
         </div>
       )}
 
@@ -198,7 +216,7 @@ export function ConfirmEmailPage() {
         {/* Password */}
         <div className="flex flex-col gap-2">
           <label className="text-sm font-medium text-text-light dark:text-text-dark">
-            Password <span className="text-danger">*</span>
+            {t('confirmEmail.password')} <span className="text-danger">*</span>
           </label>
           <div className="relative">
             <input
@@ -206,7 +224,7 @@ export function ConfirmEmailPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               onBlur={() => setTouched((prev) => ({ ...prev, password: true }))}
-              placeholder="Enter your password"
+              placeholder={t('confirmEmail.passwordPlaceholder')}
               data-testid="confirm-email-password-input"
               className={`h-12 w-full px-4 pr-12 rounded-lg border ${
                 validationErrors.password && touched.password
@@ -226,7 +244,7 @@ export function ConfirmEmailPage() {
             </button>
           </div>
           {validationErrors.password && touched.password && (
-            <span className="text-xs text-danger">{validationErrors.password}</span>
+            <span className="text-xs text-danger">{message(validationErrors.password)}</span>
           )}
 
           {/* Password requirements */}
@@ -241,7 +259,7 @@ export function ConfirmEmailPage() {
                 <span className="material-symbols-outlined text-sm">
                   {check.passed ? 'check_circle' : 'radio_button_unchecked'}
                 </span>
-                <span>{check.label}</span>
+                <span>{t(`confirmEmail.requirements.${check.key}`)}</span>
               </div>
             ))}
           </div>
@@ -250,7 +268,7 @@ export function ConfirmEmailPage() {
         {/* Confirm Password */}
         <div className="flex flex-col gap-2">
           <label className="text-sm font-medium text-text-light dark:text-text-dark">
-            Confirm Password <span className="text-danger">*</span>
+            {t('confirmEmail.confirmPassword')} <span className="text-danger">*</span>
           </label>
           <div className="relative">
             <input
@@ -258,7 +276,7 @@ export function ConfirmEmailPage() {
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               onBlur={() => setTouched((prev) => ({ ...prev, confirmPassword: true }))}
-              placeholder="Confirm your password"
+              placeholder={t('confirmEmail.confirmPasswordPlaceholder')}
               data-testid="confirm-email-confirm-password-input"
               className={`h-12 w-full px-4 pr-12 rounded-lg border ${
                 validationErrors.confirmPassword && touched.confirmPassword
@@ -278,19 +296,19 @@ export function ConfirmEmailPage() {
             </button>
           </div>
           {validationErrors.confirmPassword && touched.confirmPassword && (
-            <span className="text-xs text-danger">{validationErrors.confirmPassword}</span>
+            <span className="text-xs text-danger">{message(validationErrors.confirmPassword)}</span>
           )}
           {/* Real-time password match indicator - shows as soon as user types in confirm field */}
           {confirmPassword && password && (
             password === confirmPassword ? (
               <span className="text-xs text-success flex items-center gap-1">
                 <span className="material-symbols-outlined text-sm">check_circle</span>
-                Passwords match
+                {t('confirmEmail.passwordsMatch')}
               </span>
             ) : (
               <span className="text-xs text-danger flex items-center gap-1">
                 <span className="material-symbols-outlined text-sm">cancel</span>
-                Passwords do not match
+                {t('confirmEmail.passwordsMismatch')}
               </span>
             )
           )}
@@ -306,19 +324,19 @@ export function ConfirmEmailPage() {
           {confirmMutation.isPending ? (
             <>
               <span className="material-symbols-outlined animate-spin">progress_activity</span>
-              Activating Account...
+              {t('confirmEmail.submitting')}
             </>
           ) : (
-            'Activate Account'
+            t('confirmEmail.submit')
           )}
         </button>
       </form>
 
       {/* Already have an account */}
       <p className="text-center text-sm text-subtle-text">
-        Already activated?{' '}
+        {t('confirmEmail.alreadyActivated')}{' '}
         <a href="/login" className="text-primary hover:underline font-medium" data-testid="confirm-email-login-link">
-          Sign in
+          {t('confirmEmail.signIn')}
         </a>
       </p>
     </div>

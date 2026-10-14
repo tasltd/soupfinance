@@ -23,9 +23,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
+// Added (SOUPFIN-185): every visible string comes from the auth namespace
+import { useTranslation, Trans } from 'react-i18next';
 import { registerTenant } from '../../api/endpoints/registration';
 // Added (SOUPFIN-29): friendly fallback message instead of raw "Request failed with status code 400"
-import { getApiErrorMessage } from '../../api/errors';
+// Changed (SOUPFIN-185): auth-page variant translates the connection and server copy
+import { getAuthApiErrorMessage } from '../../api/errors';
 import type { TenantRegistration, BusinessType } from '../../api/endpoints/registration';
 // Changed: Import shared country/currency data from domainData (single source of truth)
 import {
@@ -37,7 +40,36 @@ import {
 import type { Country } from '../../api/endpoints/domainData';
 import { Logo } from '../../components/Logo';
 
+/** Added (SOUPFIN-185): keys under register.errors used by client-side validation */
+type RegisterErrorKey =
+  | 'companyNameRequired'
+  | 'businessTypeRequired'
+  | 'countryRequired'
+  | 'firstNameRequired'
+  | 'lastNameRequired'
+  | 'emailRequired'
+  | 'emailInvalid'
+  | 'passwordRequired'
+  | 'passwordMinLength'
+  | 'passwordUppercase'
+  | 'passwordLowercase'
+  | 'passwordNumber'
+  | 'passwordsMismatch'
+  | 'failed'
+  | 'failedRetry';
+
+/**
+ * Added (SOUPFIN-185): a client-side message is kept as its key, so switching
+ * language re-renders it; a message the backend wrote is kept as sent.
+ */
+type FormMessage = { key: RegisterErrorKey } | { text: string };
+
+function backendMessages(errors: Record<string, string>): Record<string, FormMessage> {
+  return Object.fromEntries(Object.entries(errors).map(([field, text]) => [field, { text }]));
+}
+
 export function RegistrationPage() {
+  const { t } = useTranslation('auth');
   const navigate = useNavigate();
 
   // Changed: Load country list from backend utility controller (falls back to defaults)
@@ -65,7 +97,8 @@ export function RegistrationPage() {
   const [showPassword, setShowPassword] = useState(false);
 
   // Error state for validation
-  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [validationErrors, setValidationErrors] = useState<Record<string, FormMessage>>({});
+  const message = (m: FormMessage) => ('key' in m ? t(`register.errors.${m.key}`) : m.text);
 
   // Success state - shown only on legacy email-confirmation path
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
@@ -93,9 +126,10 @@ export function RegistrationPage() {
       } else {
         // Handle backend validation errors
         if (response.errors) {
-          setValidationErrors(response.errors);
+          setValidationErrors(backendMessages(response.errors));
         } else {
-          setValidationErrors({ form: response.error || response.message || 'Registration failed' });
+          const text = response.error || response.message;
+          setValidationErrors({ form: text ? { text } : { key: 'failed' } });
         }
       }
     },
@@ -103,17 +137,13 @@ export function RegistrationPage() {
       // Parse backend error message
       const backendData = error.response?.data;
       if (backendData?.errors) {
-        setValidationErrors(backendData.errors);
+        setValidationErrors(backendMessages(backendData.errors));
       } else {
         // Changed (SOUPFIN-29): prefer explicit backend message/error, then fall back to
         // getApiErrorMessage (never the raw "Request failed with status code 400"), and
         // finally to fixed copy so an empty parsed message can never render a blank banner.
-        const errorMessage =
-          backendData?.message ||
-          backendData?.error ||
-          getApiErrorMessage(error) ||
-          'Registration failed. Please try again.';
-        setValidationErrors({ form: errorMessage });
+        const text = backendData?.message || backendData?.error || getAuthApiErrorMessage(error);
+        setValidationErrors({ form: text ? { text } : { key: 'failedRetry' } });
       }
     },
   });
@@ -149,56 +179,56 @@ export function RegistrationPage() {
 
   // Form validation
   const validateForm = (): boolean => {
-    const errors: Record<string, string> = {};
+    const errors: Record<string, FormMessage> = {};
 
     // Company name - required
     if (!formData.companyName.trim()) {
-      errors.companyName = 'Company name is required';
+      errors.companyName = { key: 'companyNameRequired' };
     }
 
     // Business type - required
     if (!formData.businessType) {
-      errors.businessType = 'Please select a business type';
+      errors.businessType = { key: 'businessTypeRequired' };
     }
 
     // Changed: Country is required - determines default currency for the account
     if (!formData.country) {
-      errors.country = 'Please select your country';
+      errors.country = { key: 'countryRequired' };
     }
 
     // Admin first name - required
     if (!formData.adminFirstName?.trim()) {
-      errors.adminFirstName = 'First name is required';
+      errors.adminFirstName = { key: 'firstNameRequired' };
     }
 
     // Admin last name - required
     if (!formData.adminLastName?.trim()) {
-      errors.adminLastName = 'Last name is required';
+      errors.adminLastName = { key: 'lastNameRequired' };
     }
 
     // Email - required and must be valid
     if (!formData.email?.trim()) {
-      errors.email = 'Email is required';
+      errors.email = { key: 'emailRequired' };
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      errors.email = 'Please enter a valid email address';
+      errors.email = { key: 'emailInvalid' };
     }
 
     // Added (2026-05-22): Password required + match ConfirmEmailPage rules
     // Backend may still reject it when requireEmailConfirmation=true; that's fine.
     const pwd = formData.password ?? '';
     if (!pwd) {
-      errors.password = 'Password is required';
+      errors.password = { key: 'passwordRequired' };
     } else if (pwd.length < 8) {
-      errors.password = 'Password must be at least 8 characters';
+      errors.password = { key: 'passwordMinLength' };
     } else if (!/[A-Z]/.test(pwd)) {
-      errors.password = 'Password must include an uppercase letter';
+      errors.password = { key: 'passwordUppercase' };
     } else if (!/[a-z]/.test(pwd)) {
-      errors.password = 'Password must include a lowercase letter';
+      errors.password = { key: 'passwordLowercase' };
     } else if (!/\d/.test(pwd)) {
-      errors.password = 'Password must include a number';
+      errors.password = { key: 'passwordNumber' };
     }
     if (!errors.password && pwd !== confirmPassword) {
-      errors.confirmPassword = 'Passwords do not match';
+      errors.confirmPassword = { key: 'passwordsMismatch' };
     }
 
     setValidationErrors(errors);
@@ -235,10 +265,10 @@ export function RegistrationPage() {
             className="text-3xl font-black tracking-tight text-text-light dark:text-text-dark"
             data-testid="registration-success-heading"
           >
-            Check Your Email
+            {t('register.success.title')}
           </h2>
           <p className="mt-4 text-subtle-text">
-            We've sent a confirmation email to:
+            {t('register.success.sentTo')}
           </p>
           <p className="mt-2 font-medium text-text-light dark:text-text-dark">
             {registeredEmail}
@@ -247,40 +277,40 @@ export function RegistrationPage() {
 
         {/* Instructions */}
         <div className="bg-surface-light dark:bg-surface-dark rounded-lg p-6 border border-border-light dark:border-border-dark">
-          <h3 className="font-semibold text-text-light dark:text-text-dark mb-3">Next Steps:</h3>
+          <h3 className="font-semibold text-text-light dark:text-text-dark mb-3">{t('register.success.nextSteps')}</h3>
           <ol className="space-y-3 text-sm text-subtle-text">
             <li className="flex gap-3">
               <span className="flex-shrink-0 size-6 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center text-xs">1</span>
-              <span>Open the email from SoupFinance</span>
+              <span>{t('register.success.step1')}</span>
             </li>
             <li className="flex gap-3">
               <span className="flex-shrink-0 size-6 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center text-xs">2</span>
-              <span>Click the confirmation link</span>
+              <span>{t('register.success.step2')}</span>
             </li>
             <li className="flex gap-3">
               <span className="flex-shrink-0 size-6 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center text-xs">3</span>
-              <span>Set your password to complete setup</span>
+              <span>{t('register.success.step3')}</span>
             </li>
           </ol>
         </div>
 
         {/* Didn't receive email */}
         <p className="text-center text-sm text-subtle-text">
-          Didn't receive the email?{' '}
+          {t('register.success.noEmail')}{' '}
           <button
             type="button"
             onClick={() => navigate('/resend-confirmation', { state: { email: registeredEmail } })}
             className="text-primary hover:underline font-medium"
           >
-            Resend confirmation
+            {t('register.success.resend')}
           </button>
         </p>
 
         {/* Back to login */}
         <p className="text-center text-sm text-subtle-text">
-          Already confirmed?{' '}
+          {t('register.success.alreadyConfirmed')}{' '}
           <a href="/login" className="text-primary hover:underline font-medium">
-            Sign in
+            {t('register.success.signIn')}
           </a>
         </p>
       </div>
@@ -301,9 +331,9 @@ export function RegistrationPage() {
           className="text-3xl font-black tracking-tight text-text-light dark:text-text-dark"
           data-testid="registration-heading"
         >
-          Create Your Account
+          {t('register.title')}
         </h2>
-        <p className="mt-2 text-subtle-text">Start managing your business finances in minutes.</p>
+        <p className="mt-2 text-subtle-text">{t('register.subtitle')}</p>
       </div>
 
       {/* Form error message */}
@@ -312,7 +342,7 @@ export function RegistrationPage() {
           className="p-4 rounded-lg bg-danger/10 border border-danger/30 text-danger text-sm"
           data-testid="registration-form-error"
         >
-          {validationErrors.form}
+          {message(validationErrors.form)}
         </div>
       )}
 
@@ -321,14 +351,14 @@ export function RegistrationPage() {
         {/* Company Name */}
         <label className="flex flex-col gap-2">
           <span className="text-sm font-medium text-text-light dark:text-text-dark">
-            Company Name <span className="text-danger">*</span>
+            {t('register.companyName')} <span className="text-danger">*</span>
           </span>
           <input
             type="text"
             name="companyName"
             value={formData.companyName}
             onChange={handleChange}
-            placeholder="Enter your company name"
+            placeholder={t('register.companyNamePlaceholder')}
             data-testid="registration-company-name-input"
             className={`h-12 px-4 rounded-lg border ${
               validationErrors.companyName
@@ -338,7 +368,7 @@ export function RegistrationPage() {
           />
           {validationErrors.companyName && (
             <span className="text-xs text-danger" data-testid="registration-company-name-error">
-              {validationErrors.companyName}
+              {message(validationErrors.companyName)}
             </span>
           )}
         </label>
@@ -346,7 +376,7 @@ export function RegistrationPage() {
         {/* Business Type */}
         <label className="flex flex-col gap-2">
           <span className="text-sm font-medium text-text-light dark:text-text-dark">
-            Business Type <span className="text-danger">*</span>
+            {t('register.businessType')} <span className="text-danger">*</span>
           </span>
           <div className="grid grid-cols-2 gap-4">
             <button
@@ -368,10 +398,10 @@ export function RegistrationPage() {
                 <span className={`font-medium text-sm ${
                   formData.businessType === 'TRADING' ? 'text-primary' : 'text-text-light dark:text-text-dark'
                 }`}>
-                  Trading
+                  {t('register.trading')}
                 </span>
                 <span className="text-xs text-subtle-text text-center">
-                  Retail, wholesale, inventory
+                  {t('register.tradingHint')}
                 </span>
               </div>
             </button>
@@ -394,17 +424,17 @@ export function RegistrationPage() {
                 <span className={`font-medium text-sm ${
                   formData.businessType === 'SERVICES' ? 'text-primary' : 'text-text-light dark:text-text-dark'
                 }`}>
-                  Services
+                  {t('register.services')}
                 </span>
                 <span className="text-xs text-subtle-text text-center">
-                  Consulting, professional, labor
+                  {t('register.servicesHint')}
                 </span>
               </div>
             </button>
           </div>
           {validationErrors.businessType && (
             <span className="text-xs text-danger" data-testid="registration-business-type-error">
-              {validationErrors.businessType}
+              {message(validationErrors.businessType)}
             </span>
           )}
         </label>
@@ -412,7 +442,7 @@ export function RegistrationPage() {
         {/* Changed: Country selection - determines default currency (editable later in settings) */}
         <label className="flex flex-col gap-2">
           <span className="text-sm font-medium text-text-light dark:text-text-dark">
-            Country <span className="text-danger">*</span>
+            {t('register.country')} <span className="text-danger">*</span>
           </span>
           <select
             name="country"
@@ -425,7 +455,7 @@ export function RegistrationPage() {
                 : 'border-border-light dark:border-border-dark focus:border-primary focus:ring-primary/20'
             } bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark focus:ring-2 focus:outline-none`}
           >
-            <option value="">Select your country</option>
+            <option value="">{t('register.countryPlaceholder')}</option>
             {countryRegions.map((region) => (
               <optgroup key={region} label={region}>
                 {countries.filter(c => c.region === region).map((country) => (
@@ -438,13 +468,18 @@ export function RegistrationPage() {
           </select>
           {validationErrors.country && (
             <span className="text-xs text-danger" data-testid="registration-country-error">
-              {validationErrors.country}
+              {message(validationErrors.country)}
             </span>
           )}
           {/* Show auto-mapped currency as helpful feedback */}
           {formData.country && formData.currency && (
             <span className="text-xs text-subtle-text">
-              Default currency: <strong>{formData.currency}</strong> (can be changed later in settings)
+              <Trans
+                t={t}
+                i18nKey="register.defaultCurrency"
+                values={{ currency: formData.currency }}
+                components={{ strong: <strong /> }}
+              />
             </span>
           )}
         </label>
@@ -452,7 +487,7 @@ export function RegistrationPage() {
         {/* Admin Name - First & Last Name */}
         <div className="flex flex-col gap-2">
           <span className="text-sm font-medium text-text-light dark:text-text-dark">
-            Your Name <span className="text-danger">*</span>
+            {t('register.yourName')} <span className="text-danger">*</span>
           </span>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="flex flex-col gap-1">
@@ -461,7 +496,7 @@ export function RegistrationPage() {
                 name="adminFirstName"
                 value={formData.adminFirstName}
                 onChange={handleChange}
-                placeholder="First name"
+                placeholder={t('register.firstName')}
                 data-testid="registration-admin-first-name"
                 className={`h-12 px-4 rounded-lg border ${
                   validationErrors.adminFirstName
@@ -470,7 +505,7 @@ export function RegistrationPage() {
                 } bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark placeholder:text-subtle-text focus:ring-2 focus:outline-none`}
               />
               {validationErrors.adminFirstName && (
-                <span className="text-xs text-danger">{validationErrors.adminFirstName}</span>
+                <span className="text-xs text-danger">{message(validationErrors.adminFirstName)}</span>
               )}
             </div>
             <div className="flex flex-col gap-1">
@@ -479,7 +514,7 @@ export function RegistrationPage() {
                 name="adminLastName"
                 value={formData.adminLastName}
                 onChange={handleChange}
-                placeholder="Last name"
+                placeholder={t('register.lastName')}
                 data-testid="registration-admin-last-name"
                 className={`h-12 px-4 rounded-lg border ${
                   validationErrors.adminLastName
@@ -488,7 +523,7 @@ export function RegistrationPage() {
                 } bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark placeholder:text-subtle-text focus:ring-2 focus:outline-none`}
               />
               {validationErrors.adminLastName && (
-                <span className="text-xs text-danger">{validationErrors.adminLastName}</span>
+                <span className="text-xs text-danger">{message(validationErrors.adminLastName)}</span>
               )}
             </div>
           </div>
@@ -497,14 +532,14 @@ export function RegistrationPage() {
         {/* Email */}
         <label className="flex flex-col gap-2">
           <span className="text-sm font-medium text-text-light dark:text-text-dark">
-            Email <span className="text-danger">*</span>
+            {t('register.email')} <span className="text-danger">*</span>
           </span>
           <input
             type="email"
             name="email"
             value={formData.email}
             onChange={handleChange}
-            placeholder="Enter your email address"
+            placeholder={t('register.emailPlaceholder')}
             data-testid="registration-email-input"
             className={`h-12 px-4 rounded-lg border ${
               validationErrors.email
@@ -514,7 +549,7 @@ export function RegistrationPage() {
           />
           {validationErrors.email && (
             <span className="text-xs text-danger" data-testid="registration-email-error">
-              {validationErrors.email}
+              {message(validationErrors.email)}
             </span>
           )}
         </label>
@@ -522,7 +557,7 @@ export function RegistrationPage() {
         {/* Added (2026-05-22): Password + confirm fields for single-step registration */}
         <label className="flex flex-col gap-2">
           <span className="text-sm font-medium text-text-light dark:text-text-dark">
-            Password <span className="text-danger">*</span>
+            {t('register.password')} <span className="text-danger">*</span>
           </span>
           <div className="relative">
             <input
@@ -530,7 +565,7 @@ export function RegistrationPage() {
               name="password"
               value={formData.password ?? ''}
               onChange={handleChange}
-              placeholder="At least 8 characters"
+              placeholder={t('register.passwordPlaceholder')}
               data-testid="registration-password-input"
               autoComplete="new-password"
               className={`h-12 w-full pl-4 pr-12 rounded-lg border ${
@@ -543,7 +578,7 @@ export function RegistrationPage() {
               type="button"
               onClick={() => setShowPassword((v) => !v)}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-subtle-text hover:text-text-light dark:hover:text-text-dark"
-              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              aria-label={showPassword ? t('register.hidePassword') : t('register.showPassword')}
               data-testid="registration-password-toggle"
             >
               <span className="material-symbols-outlined text-xl">
@@ -553,24 +588,24 @@ export function RegistrationPage() {
           </div>
           {validationErrors.password && (
             <span className="text-xs text-danger" data-testid="registration-password-error">
-              {validationErrors.password}
+              {message(validationErrors.password)}
             </span>
           )}
           <span className="text-xs text-subtle-text">
-            Must include uppercase, lowercase, and a number
+            {t('register.passwordHint')}
           </span>
         </label>
 
         <label className="flex flex-col gap-2">
           <span className="text-sm font-medium text-text-light dark:text-text-dark">
-            Confirm Password <span className="text-danger">*</span>
+            {t('register.confirmPassword')} <span className="text-danger">*</span>
           </span>
           <input
             type={showPassword ? 'text' : 'password'}
             name="confirmPassword"
             value={confirmPassword}
             onChange={handleChange}
-            placeholder="Re-enter your password"
+            placeholder={t('register.confirmPasswordPlaceholder')}
             data-testid="registration-confirm-password-input"
             autoComplete="new-password"
             className={`h-12 px-4 rounded-lg border ${
@@ -581,7 +616,7 @@ export function RegistrationPage() {
           />
           {validationErrors.confirmPassword && (
             <span className="text-xs text-danger" data-testid="registration-confirm-password-error">
-              {validationErrors.confirmPassword}
+              {message(validationErrors.confirmPassword)}
             </span>
           )}
         </label>
@@ -596,24 +631,24 @@ export function RegistrationPage() {
           {registerMutation.isPending ? (
             <>
               <span className="material-symbols-outlined animate-spin">progress_activity</span>
-              Creating Account...
+              {t('register.submitting')}
             </>
           ) : (
-            'Create Account'
+            t('register.submit')
           )}
         </button>
 
         {/* Terms note */}
         <p className="text-xs text-center text-subtle-text">
-          By creating an account, you agree to our Terms of Service and Privacy Policy
+          {t('register.terms')}
         </p>
       </form>
 
       {/* Login link */}
       <p className="text-center text-sm text-subtle-text">
-        Already have an account?{' '}
+        {t('register.haveAccount')}{' '}
         <a href="/login" className="text-primary hover:underline font-medium" data-testid="registration-login-link">
-          Sign in
+          {t('register.signIn')}
         </a>
       </p>
     </div>

@@ -5,6 +5,9 @@
  * Reference: soupfinance-designs/login-authentication/
  */
 import { Outlet, useLocation } from 'react-router-dom';
+// Added (SOUPFIN-185): the sign-in, register and password pages switch language here
+import { useTranslation } from 'react-i18next';
+import { LanguageSwitcher } from './LanguageSwitcher';
 import { Logo } from '../Logo';
 // Added: GSAP login background animation (SOUP-679)
 import { useLoginBackground } from '../../hooks/useGsapAnimations';
@@ -14,6 +17,7 @@ import { HelpLink, authHelpSection } from '../help';
 export function AuthLayout() {
   // Added: GSAP login background animation ref (SOUP-679)
   const bgRef = useLoginBackground();
+  const { t } = useTranslation('auth');
   const { pathname } = useLocation();
 
   return (
@@ -50,20 +54,19 @@ export function AuthLayout() {
           <div className="space-y-8">
             <div>
               <h2 className="text-4xl font-black tracking-tight mb-4">
-                Financial clarity,
+                {t('layout.headlineLine1')}
                 <br />
-                simplified.
+                {t('layout.headlineLine2')}
               </h2>
               <p className="text-lg text-white/80 max-w-md">
-                Professional invoicing and accounting for growing businesses.
-                Manage your finances with confidence.
+                {t('layout.tagline')}
               </p>
             </div>
 
             {/* Testimonial */}
             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 max-w-md border border-white/10">
               <p className="text-base italic text-white/90 mb-4">
-                "SoupFinance transformed how we manage our receivables. What used to take days now takes minutes. The reporting features alone have saved us countless hours."
+                {t('layout.testimonial')}
               </p>
               <div className="flex items-center gap-3">
                 <img
@@ -73,7 +76,7 @@ export function AuthLayout() {
                 />
                 <div>
                   <p className="font-semibold">Michael Okonkwo</p>
-                  <p className="text-sm text-white/70">CFO, Nexus Holdings Ltd</p>
+                  <p className="text-sm text-white/70">{t('layout.testimonialRole')}</p>
                 </div>
               </div>
             </div>
@@ -84,15 +87,15 @@ export function AuthLayout() {
             <span className="flex items-center gap-2">
               {/* Fix (SOUPFIN-63): decorative icons beside their own labels. */}
               <span aria-hidden="true" className="material-symbols-outlined text-lg">verified_user</span>
-              Bank-grade Security
+              {t('layout.trustSecurity')}
             </span>
             <span className="flex items-center gap-2">
               <span aria-hidden="true" className="material-symbols-outlined text-lg">groups</span>
-              2,500+ Teams
+              {t('layout.trustTeams')}
             </span>
             <span className="flex items-center gap-2">
               <span aria-hidden="true" className="material-symbols-outlined text-lg">lock</span>
-              256-bit SSL
+              {t('layout.trustSsl')}
             </span>
           </div>
         </div>
@@ -101,6 +104,12 @@ export function AuthLayout() {
       {/* Right: Form Panel */}
       <div className="flex-1 flex items-center justify-center p-8">
         <div data-anim="login-form" className="w-full max-w-md">
+          {/* Added (SOUPFIN-185): language picker, so a visitor can read these pages before
+              signing in. In the flow above the form, not pinned to a corner: the register
+              form is taller than the viewport, and a pinned picker landed on its heading. */}
+          <div className="flex justify-end mb-6" data-testid="auth-language-switcher">
+            <LanguageSwitcher />
+          </div>
           <Outlet />
           {/* Opens the static guide in a new tab: /help needs a session, these pages do not */}
           <div className="mt-6 flex justify-center">

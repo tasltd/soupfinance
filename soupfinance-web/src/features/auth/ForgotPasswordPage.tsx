@@ -20,13 +20,16 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
+// Added (SOUPFIN-185): every visible string comes from the auth namespace
+import { useTranslation, Trans } from 'react-i18next';
 import { forgotPassword } from '../../api/endpoints/registration';
 import { Logo } from '../../components/Logo';
-import { getApiErrorMessage } from '../../api/errors';
+import { getAuthApiErrorMessage } from '../../api/errors';
 
 const RESEND_COOLDOWN_SECONDS = 60;
 
 export function ForgotPasswordPage() {
+  const { t } = useTranslation('auth');
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
   const [cooldown, setCooldown] = useState(0);
@@ -80,10 +83,10 @@ export function ForgotPasswordPage() {
           className="text-3xl font-black tracking-tight text-text-light dark:text-text-dark"
           data-testid="forgot-password-heading"
         >
-          Forgot Password?
+          {t('forgotPassword.title')}
         </h2>
         <p className="mt-2 text-subtle-text">
-          Enter your email address and we'll send you a link to reset your password.
+          {t('forgotPassword.subtitle')}
         </p>
       </div>
 
@@ -96,7 +99,7 @@ export function ForgotPasswordPage() {
         >
           <span className="material-symbols-outlined text-lg flex-shrink-0 mt-0.5">error</span>
           <div>
-            <p className="font-medium">We could not send the reset link</p>
+            <p className="font-medium">{t('forgotPassword.errorTitle')}</p>
             <p className="mt-1 text-danger/80" data-testid="forgot-password-error-message">
               {sendError}
             </p>
@@ -112,9 +115,14 @@ export function ForgotPasswordPage() {
         >
           <span className="material-symbols-outlined text-lg flex-shrink-0 mt-0.5">check_circle</span>
           <div>
-            <p className="font-medium">Reset link sent</p>
+            <p className="font-medium">{t('forgotPassword.successTitle')}</p>
             <p className="mt-1 text-success/80">
-              If an account exists for <span className="font-medium">{email}</span>, a password reset link has been sent. Please check your inbox and spam folder.
+              <Trans
+                t={t}
+                i18nKey="forgotPassword.successMessage"
+                values={{ email }}
+                components={{ bold: <span className="font-medium" /> }}
+              />
             </p>
           </div>
         </div>
@@ -124,13 +132,13 @@ export function ForgotPasswordPage() {
       <form onSubmit={handleSubmit} className="flex flex-col gap-6" data-testid="forgot-password-form">
         <label className="flex flex-col gap-2">
           <span className="text-sm font-medium text-text-light dark:text-text-dark">
-            Email Address
+            {t('forgotPassword.email')}
           </span>
           <input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="Enter your email address"
+            placeholder={t('forgotPassword.emailPlaceholder')}
             required
             data-testid="forgot-password-email-input"
             className="h-12 px-4 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark placeholder:text-subtle-text focus:border-primary focus:ring-2 focus:ring-primary/20"
@@ -146,14 +154,14 @@ export function ForgotPasswordPage() {
           {forgotMutation.isPending ? (
             <>
               <span className="material-symbols-outlined animate-spin">progress_activity</span>
-              Sending...
+              {t('forgotPassword.sending')}
             </>
           ) : cooldown > 0 ? (
-            `Resend available in ${cooldown}s`
+            t('forgotPassword.cooldown', { seconds: cooldown })
           ) : sent ? (
-            'Resend Reset Link'
+            t('forgotPassword.resend')
           ) : (
-            'Send Reset Link'
+            t('forgotPassword.send')
           )}
         </button>
       </form>
@@ -161,15 +169,15 @@ export function ForgotPasswordPage() {
       {/* Navigation links */}
       <div className="flex flex-col gap-2 text-center text-sm text-subtle-text">
         <p>
-          Remember your password?{' '}
+          {t('forgotPassword.rememberPassword')}{' '}
           <Link to="/login" className="text-primary hover:underline font-medium" data-testid="forgot-password-login-link">
-            Sign in
+            {t('forgotPassword.signIn')}
           </Link>
         </p>
         <p>
-          Don't have an account?{' '}
+          {t('forgotPassword.noAccount')}{' '}
           <Link to="/register" className="text-primary hover:underline font-medium" data-testid="forgot-password-register-link">
-            Register your company
+            {t('forgotPassword.registerCompany')}
           </Link>
         </p>
       </div>
@@ -184,5 +192,5 @@ function getForgotPasswordErrorMessage(error: unknown): string {
   if (response?.status === 400 && data && typeof data.message === 'string' && data.message) {
     return data.message;
   }
-  return getApiErrorMessage(error);
+  return getAuthApiErrorMessage(error);
 }

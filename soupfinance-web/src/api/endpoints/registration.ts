@@ -24,7 +24,9 @@
  */
 import axios from 'axios';
 // Added (SOUPFIN-186): plain-language fallback for reset failures
-import { getApiErrorMessage } from '../errors';
+// Changed (SOUPFIN-185): auth-page variant translates the connection and server copy
+import { getAuthApiErrorMessage } from '../errors';
+import { authText } from '../../i18n/authText';
 
 // Axios instance for /account/ endpoints (public, unauthenticated)
 // Uses empty baseURL so requests go through the proxy which injects Api-Authorization
@@ -312,7 +314,8 @@ function requireSuccessBody(data: unknown): ConfirmationResponse {
   if (data && typeof data === 'object' && (data as ConfirmationResponse).success === true) {
     return data as ConfirmationResponse;
   }
-  throw new Error(PASSWORD_RESET_UNAVAILABLE_MESSAGE);
+  // Changed (SOUPFIN-185): thrown in the user's language
+  throw new Error(authText('resetPassword.unavailable', PASSWORD_RESET_UNAVAILABLE_MESSAGE));
 }
 
 /**
@@ -348,8 +351,12 @@ export function getResetPasswordError(error: unknown): ResetPasswordError {
   // Same cap as extractServerMessage() in api/errors.ts: a page-sized body is not a sentence
   const serverMessage = rawMessage.length < MAX_SERVER_MESSAGE_LENGTH ? rawMessage : '';
   const code = data && typeof data === 'object' ? data.code : undefined;
-  const expiredText = 'This password reset link has expired.';
-  const invalidText = 'This password reset link is invalid or has already been used.';
+  // Changed (SOUPFIN-185): fallback copy in the user's language; a server sentence stays as sent
+  const expiredText = authText('resetPassword.linkExpiredMessage', 'This password reset link has expired.');
+  const invalidText = authText(
+    'resetPassword.linkUsedMessage',
+    'This password reset link is invalid or has already been used.',
+  );
 
   if (code === 'TOKEN_EXPIRED') {
     return { kind: 'link_expired', message: serverMessage || expiredText };
@@ -365,7 +372,7 @@ export function getResetPasswordError(error: unknown): ResetPasswordError {
   if (response?.status === 400 && serverMessage) {
     return { kind: 'form', message: serverMessage };
   }
-  return { kind: 'form', message: getApiErrorMessage(error) };
+  return { kind: 'form', message: getAuthApiErrorMessage(error) };
 }
 
 // =============================================================================

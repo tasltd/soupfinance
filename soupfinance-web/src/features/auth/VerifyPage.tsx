@@ -15,6 +15,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
+// Added (SOUPFIN-185): every visible string comes from the auth namespace
+import { useTranslation, Trans } from 'react-i18next';
 import { requestOTP, verifyOTP } from '../../api/auth';
 import { useAuthStore } from '../../stores';
 import { Logo } from '../../components/Logo';
@@ -26,7 +28,16 @@ interface VerifyLocationState {
   companyName?: string;
 }
 
+/**
+ * Added (SOUPFIN-185): a client-side message is kept as its key, so switching
+ * language re-renders it; a message from the server is kept as sent.
+ */
+type VerifyMessage =
+  | { key: `verify.errors.${'incomplete' | 'sendFailed' | 'invalidCode'}` }
+  | { text: string };
+
 export function VerifyPage() {
+  const { t } = useTranslation('auth');
   const navigate = useNavigate();
   const location = useLocation();
   const state = location.state as VerifyLocationState | null;
@@ -39,7 +50,7 @@ export function VerifyPage() {
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   // Error state
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<VerifyMessage | null>(null);
 
   // Resend cooldown
   const [resendCooldown, setResendCooldown] = useState(0);
@@ -70,7 +81,7 @@ export function VerifyPage() {
       setError(null);
     },
     onError: (error: Error) => {
-      setError(error.message || 'Failed to send verification code. Please try again.');
+      setError(error.message ? { text: error.message } : { key: 'verify.errors.sendFailed' });
     },
   });
 
@@ -95,7 +106,8 @@ export function VerifyPage() {
     },
     onError: (error: Error & { response?: { data?: { message?: string } } }) => {
       const backendMessage = error.response?.data?.message;
-      setError(backendMessage || error.message || 'Invalid verification code. Please try again.');
+      const text = backendMessage || error.message;
+      setError(text ? { text } : { key: 'verify.errors.invalidCode' });
       // Clear OTP inputs on error
       setOtp(['', '', '', '', '']);
       inputRefs.current[0]?.focus();
@@ -144,7 +156,7 @@ export function VerifyPage() {
     e.preventDefault();
     const code = otp.join('');
     if (code.length !== 5) {
-      setError('Please enter the complete 5-digit code');
+      setError({ key: 'verify.errors.incomplete' });
       return;
     }
     setError(null);
@@ -180,14 +192,24 @@ export function VerifyPage() {
           className="text-3xl font-black tracking-tight text-text-light dark:text-text-dark"
           data-testid="verify-heading"
         >
-          Verify Your Account
+          {t('verify.title')}
         </h2>
         <p className="mt-2 text-subtle-text">
-          We've sent a 5-digit code to <span className="font-medium text-text-light dark:text-text-dark">{maskedContact}</span>
+          <Trans
+            t={t}
+            i18nKey="verify.codeSent"
+            values={{ contact: maskedContact }}
+            components={{ contact: <span className="font-medium text-text-light dark:text-text-dark" /> }}
+          />
         </p>
         {state.companyName && (
           <p className="mt-1 text-sm text-subtle-text">
-            Setting up <span className="font-medium">{state.companyName}</span>
+            <Trans
+              t={t}
+              i18nKey="verify.settingUp"
+              values={{ company: state.companyName }}
+              components={{ company: <span className="font-medium" /> }}
+            />
           </p>
         )}
       </div>
@@ -198,7 +220,7 @@ export function VerifyPage() {
           className="p-4 rounded-lg bg-danger/10 border border-danger/30 text-danger text-sm"
           data-testid="verify-error"
         >
-          {error}
+          {'key' in error ? t(error.key) : error.text}
         </div>
       )}
 
@@ -207,7 +229,7 @@ export function VerifyPage() {
         {/* OTP Inputs */}
         <div className="flex flex-col gap-2">
           <label className="text-sm font-medium text-text-light dark:text-text-dark">
-            Verification Code
+            {t('verify.code')}
           </label>
           <div className="flex gap-3 justify-center" data-testid="verify-otp-inputs">
             {otp.map((digit, index) => (
@@ -238,19 +260,19 @@ export function VerifyPage() {
           {verifyMutation.isPending ? (
             <>
               <span className="material-symbols-outlined animate-spin">progress_activity</span>
-              Verifying...
+              {t('verify.verifying')}
             </>
           ) : (
-            'Verify & Continue'
+            t('verify.submit')
           )}
         </button>
 
         {/* Resend Code */}
         <div className="text-center">
           <p className="text-sm text-subtle-text">
-            Didn't receive the code?{' '}
+            {t('verify.noCode')}{' '}
             {resendCooldown > 0 ? (
-              <span className="text-subtle-text">Resend in {resendCooldown}s</span>
+              <span className="text-subtle-text">{t('verify.resendIn', { seconds: resendCooldown })}</span>
             ) : (
               <button
                 type="button"
@@ -259,7 +281,7 @@ export function VerifyPage() {
                 className="text-primary hover:underline font-medium disabled:opacity-50"
                 data-testid="verify-resend-button"
               >
-                {requestOtpMutation.isPending ? 'Sending...' : 'Resend Code'}
+                {requestOtpMutation.isPending ? t('verify.sending') : t('verify.resend')}
               </button>
             )}
           </p>
@@ -268,13 +290,13 @@ export function VerifyPage() {
 
       {/* Back to registration link */}
       <p className="text-center text-sm text-subtle-text">
-        Wrong contact info?{' '}
+        {t('verify.wrongContact')}{' '}
         <a
           href="/register"
           className="text-primary hover:underline font-medium"
           data-testid="verify-back-link"
         >
-          Go back to registration
+          {t('verify.backToRegistration')}
         </a>
       </p>
     </div>

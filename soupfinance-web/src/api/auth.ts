@@ -11,6 +11,8 @@ import apiClient, { toFormData } from './client';
 // Added (SOUPFIN-29): translate raw AxiosError ("Request failed with status code 401")
 // into a user-friendly message before it reaches the store / UI.
 import { getLoginErrorMessage } from './errors';
+// Added (SOUPFIN-185): OTP failure copy in the user's language
+import { authText } from '../i18n/authText';
 
 // User type returned from login
 export interface AuthUser {
@@ -223,7 +225,10 @@ export async function requestOTP(contact: string): Promise<{ message: string }> 
     throw new Error(
       getLoginErrorMessage(
         err,
-        "We couldn't send a verification code. Please check the email or phone number and try again.",
+        authText(
+          'errors.otpSendFailed',
+          "We couldn't send a verification code. Please check the email or phone number and try again.",
+        ),
       ),
     );
   }
@@ -250,7 +255,10 @@ export async function verifyOTP(code: string): Promise<AuthUser> {
     );
   } catch (err) {
     throw new Error(
-      getLoginErrorMessage(err, 'Invalid or expired verification code. Please try again.'),
+      getLoginErrorMessage(
+        err,
+        authText('errors.otpInvalid', 'Invalid or expired verification code. Please try again.'),
+      ),
     );
   }
 

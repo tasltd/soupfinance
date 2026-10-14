@@ -18,12 +18,15 @@
 import { useState, useEffect } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
+// Added (SOUPFIN-185): every visible string comes from the auth namespace
+import { useTranslation, Trans } from 'react-i18next';
 import { resendConfirmation } from '../../api/endpoints/registration';
 import { Logo } from '../../components/Logo';
 
 const RESEND_COOLDOWN_SECONDS = 60;
 
 export function ResendConfirmationPage() {
+  const { t } = useTranslation('auth');
   const location = useLocation();
   const emailFromState = (location.state as { email?: string } | null)?.email ?? '';
 
@@ -78,10 +81,10 @@ export function ResendConfirmationPage() {
           className="text-3xl font-black tracking-tight text-text-light dark:text-text-dark"
           data-testid="resend-confirmation-heading"
         >
-          Resend Confirmation Email
+          {t('resendConfirmation.title')}
         </h2>
         <p className="mt-2 text-subtle-text">
-          Enter the email address you registered with and we'll send a new confirmation link.
+          {t('resendConfirmation.subtitle')}
         </p>
       </div>
 
@@ -93,9 +96,14 @@ export function ResendConfirmationPage() {
         >
           <span className="material-symbols-outlined text-lg flex-shrink-0 mt-0.5">check_circle</span>
           <div>
-            <p className="font-medium">Confirmation email sent</p>
+            <p className="font-medium">{t('resendConfirmation.successTitle')}</p>
             <p className="mt-1 text-success/80">
-              If an account exists for <span className="font-medium">{email}</span>, a new confirmation link has been sent. Please check your inbox and spam folder.
+              <Trans
+                t={t}
+                i18nKey="resendConfirmation.successMessage"
+                values={{ email }}
+                components={{ bold: <span className="font-medium" /> }}
+              />
             </p>
           </div>
         </div>
@@ -105,13 +113,13 @@ export function ResendConfirmationPage() {
       <form onSubmit={handleSubmit} className="flex flex-col gap-6" data-testid="resend-confirmation-form">
         <label className="flex flex-col gap-2">
           <span className="text-sm font-medium text-text-light dark:text-text-dark">
-            Email Address
+            {t('resendConfirmation.email')}
           </span>
           <input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="Enter your email address"
+            placeholder={t('resendConfirmation.emailPlaceholder')}
             required
             data-testid="resend-confirmation-email-input"
             className="h-12 px-4 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark placeholder:text-subtle-text focus:border-primary focus:ring-2 focus:ring-primary/20"
@@ -127,14 +135,14 @@ export function ResendConfirmationPage() {
           {resendMutation.isPending ? (
             <>
               <span className="material-symbols-outlined animate-spin">progress_activity</span>
-              Sending...
+              {t('resendConfirmation.sending')}
             </>
           ) : cooldown > 0 ? (
-            `Resend available in ${cooldown}s`
+            t('resendConfirmation.cooldown', { seconds: cooldown })
           ) : sent ? (
-            'Resend Again'
+            t('resendConfirmation.resendAgain')
           ) : (
-            'Send Confirmation Email'
+            t('resendConfirmation.send')
           )}
         </button>
       </form>
@@ -142,15 +150,15 @@ export function ResendConfirmationPage() {
       {/* Navigation links */}
       <div className="flex flex-col gap-2 text-center text-sm text-subtle-text">
         <p>
-          Already confirmed?{' '}
+          {t('resendConfirmation.alreadyConfirmed')}{' '}
           <Link to="/login" className="text-primary hover:underline font-medium" data-testid="resend-confirmation-login-link">
-            Sign in
+            {t('resendConfirmation.signIn')}
           </Link>
         </p>
         <p>
-          Don't have an account?{' '}
+          {t('resendConfirmation.noAccount')}{' '}
           <Link to="/register" className="text-primary hover:underline font-medium" data-testid="resend-confirmation-register-link">
-            Register your company
+            {t('resendConfirmation.registerCompany')}
           </Link>
         </p>
       </div>

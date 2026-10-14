@@ -17,10 +17,13 @@
 import { useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
+// Added (SOUPFIN-185): every visible string comes from the auth namespace
+import { useTranslation } from 'react-i18next';
 import { resetPassword, getResetPasswordError } from '../../api/endpoints/registration';
 import { Logo } from '../../components/Logo';
 
 export function ResetPasswordPage() {
+  const { t } = useTranslation('auth');
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token') || '';
 
@@ -69,13 +72,13 @@ export function ResetPasswordPage() {
             className="text-3xl font-black tracking-tight text-text-light dark:text-text-dark"
             data-testid="reset-password-link-error-heading"
           >
-            {expired ? 'Reset Link Expired' : 'Invalid Reset Link'}
+            {expired ? t('resetPassword.linkExpiredTitle') : t('resetPassword.invalidLinkTitle')}
           </h2>
           <p className="mt-2 text-subtle-text" data-testid="reset-password-link-error-message">
-            {resetError?.message ?? 'This password reset link is invalid or has expired.'}
+            {resetError?.message ?? t('resetPassword.invalidLinkMessage')}
           </p>
           <p className="mt-2 text-subtle-text">
-            Each reset link works once and expires after a short time. Request a new one to continue.
+            {t('resetPassword.linkHelp')}
           </p>
         </div>
 
@@ -86,12 +89,12 @@ export function ResetPasswordPage() {
               className="text-primary hover:underline font-medium"
               data-testid="reset-password-request-new-link"
             >
-              Request a new reset link
+              {t('resetPassword.requestNewLink')}
             </Link>
           </p>
           <p>
             <Link to="/login" className="text-primary hover:underline font-medium">
-              Back to sign in
+              {t('resetPassword.backToSignIn')}
             </Link>
           </p>
         </div>
@@ -118,10 +121,10 @@ export function ResetPasswordPage() {
             className="text-3xl font-black tracking-tight text-text-light dark:text-text-dark"
             data-testid="reset-password-success-heading"
           >
-            Password Reset Successfully
+            {t('resetPassword.successTitle')}
           </h2>
           <p className="mt-2 text-subtle-text">
-            Your password has been updated. You can now sign in with your new password.
+            {t('resetPassword.successMessage')}
           </p>
         </div>
 
@@ -130,7 +133,7 @@ export function ResetPasswordPage() {
           data-testid="reset-password-login-link"
           className="h-14 rounded-lg bg-primary text-white font-bold text-base hover:bg-primary/90 flex items-center justify-center gap-2 transition-colors"
         >
-          Sign In
+          {t('resetPassword.signIn')}
         </Link>
       </div>
     );
@@ -156,10 +159,10 @@ export function ResetPasswordPage() {
           className="text-3xl font-black tracking-tight text-text-light dark:text-text-dark"
           data-testid="reset-password-heading"
         >
-          Reset Your Password
+          {t('resetPassword.title')}
         </h2>
         <p className="mt-2 text-subtle-text">
-          Enter your new password below.
+          {t('resetPassword.subtitle')}
         </p>
       </div>
 
@@ -171,10 +174,10 @@ export function ResetPasswordPage() {
         >
           <span className="material-symbols-outlined text-lg flex-shrink-0 mt-0.5">error</span>
           <div>
-            <p className="font-medium">Reset failed</p>
+            <p className="font-medium">{t('resetPassword.errorTitle')}</p>
             <p className="mt-1 text-danger/80" data-testid="reset-password-error-message">
               {/* Changed (SOUPFIN-186): plain-language message, never "Request failed with status code 400" */}
-              {resetError?.message ?? 'Something went wrong. Please try again.'}
+              {resetError?.message ?? t('resetPassword.errorFallback')}
             </p>
           </div>
         </div>
@@ -184,38 +187,38 @@ export function ResetPasswordPage() {
       <form onSubmit={handleSubmit} className="flex flex-col gap-6" data-testid="reset-password-form">
         <label className="flex flex-col gap-2">
           <span className="text-sm font-medium text-text-light dark:text-text-dark">
-            New Password
+            {t('resetPassword.password')}
           </span>
           <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="Enter new password"
+            placeholder={t('resetPassword.passwordPlaceholder')}
             required
             minLength={8}
             data-testid="reset-password-input"
             className="h-12 px-4 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark placeholder:text-subtle-text focus:border-primary focus:ring-2 focus:ring-primary/20"
           />
           {!passwordLongEnough && (
-            <span className="text-xs text-danger">Password must be at least 8 characters</span>
+            <span className="text-xs text-danger">{t('resetPassword.passwordMinLength')}</span>
           )}
         </label>
 
         <label className="flex flex-col gap-2">
           <span className="text-sm font-medium text-text-light dark:text-text-dark">
-            Confirm New Password
+            {t('resetPassword.confirmPassword')}
           </span>
           <input
             type="password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
-            placeholder="Confirm new password"
+            placeholder={t('resetPassword.confirmPasswordPlaceholder')}
             required
             data-testid="reset-password-confirm-input"
             className="h-12 px-4 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark placeholder:text-subtle-text focus:border-primary focus:ring-2 focus:ring-primary/20"
           />
           {!passwordsMatch && (
-            <span className="text-xs text-danger">Passwords do not match</span>
+            <span className="text-xs text-danger">{t('resetPassword.passwordsMismatch')}</span>
           )}
         </label>
 
@@ -228,10 +231,10 @@ export function ResetPasswordPage() {
           {resetMutation.isPending ? (
             <>
               <span className="material-symbols-outlined animate-spin">progress_activity</span>
-              Resetting...
+              {t('resetPassword.resetting')}
             </>
           ) : (
-            'Reset Password'
+            t('resetPassword.submit')
           )}
         </button>
       </form>
@@ -240,7 +243,7 @@ export function ResetPasswordPage() {
       <div className="text-center text-sm text-subtle-text">
         <p>
           <Link to="/login" className="text-primary hover:underline font-medium">
-            Back to sign in
+            {t('resetPassword.backToSignIn')}
           </Link>
         </p>
       </div>

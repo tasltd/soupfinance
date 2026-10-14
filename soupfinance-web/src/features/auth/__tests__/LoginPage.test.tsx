@@ -3,6 +3,8 @@
  * Tests form rendering, validation, and submission behavior
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+// Added (SOUPFIN-185): the pages read their copy from i18n
+import '../../../i18n'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { BrowserRouter } from 'react-router-dom'

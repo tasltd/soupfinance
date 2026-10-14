@@ -5,6 +5,8 @@
  */
 import { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
+// Added (SOUPFIN-185): every visible string comes from the auth namespace
+import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../stores';
 import { Logo } from '../../components/Logo';
 
@@ -27,6 +29,7 @@ const UNCONFIRMED_PATTERNS = [
 ];
 
 export function LoginPage() {
+  const { t } = useTranslation('auth');
   const navigate = useNavigate();
   const location = useLocation();
   const { login, isLoading, error, clearError } = useAuthStore();
@@ -66,10 +69,10 @@ export function LoginPage() {
       {/* Header */}
       <div>
         <h2 className="text-3xl font-black tracking-tight text-text-light dark:text-text-dark" data-testid="login-heading">
-          Welcome back
+          {t('login.title')}
         </h2>
         <p className="mt-2 text-subtle-text">
-          Sign in to access your corporate finance dashboard
+          {t('login.subtitle')}
         </p>
       </div>
 
@@ -81,15 +84,15 @@ export function LoginPage() {
         >
           <span className="material-symbols-outlined text-success">check_circle</span>
           <div className="flex-1">
-            <p className="font-medium">Your account is ready.</p>
+            <p className="font-medium">{t('login.registeredTitle')}</p>
             <p className="mt-1 text-text-light dark:text-text-dark">
-              Sign in with the password you just created to access your dashboard.
+              {t('login.registeredMessage')}
             </p>
           </div>
           <button
             type="button"
             onClick={() => setShowRegistrationBanner(false)}
-            aria-label="Dismiss"
+            aria-label={t('login.dismiss')}
             className="text-subtle-text hover:text-text-light dark:hover:text-text-dark"
           >
             <span className="material-symbols-outlined text-base">close</span>
@@ -109,7 +112,7 @@ export function LoginPage() {
                 className="text-primary hover:underline font-medium"
                 data-testid="login-resend-confirmation-link"
               >
-                Resend confirmation email
+                {t('login.resendConfirmation')}
               </Link>
             </p>
           )}
@@ -120,13 +123,13 @@ export function LoginPage() {
       <form onSubmit={handleSubmit} className="flex flex-col gap-6" data-testid="login-form">
         <label className="flex flex-col gap-2">
           <span className="text-sm font-medium text-text-light dark:text-text-dark">
-            Username
+            {t('login.username')}
           </span>
           <input
             type="text"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="Enter your username"
+            placeholder={t('login.usernamePlaceholder')}
             required
             data-testid="login-email-input"
             className="h-12 px-4 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark placeholder:text-subtle-text focus:border-primary focus:ring-2 focus:ring-primary/20"
@@ -135,13 +138,13 @@ export function LoginPage() {
 
         <label className="flex flex-col gap-2">
           <span className="text-sm font-medium text-text-light dark:text-text-dark">
-            Password
+            {t('login.password')}
           </span>
           <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="Enter your password"
+            placeholder={t('login.passwordPlaceholder')}
             required
             data-testid="login-password-input"
             className="h-12 px-4 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark placeholder:text-subtle-text focus:border-primary focus:ring-2 focus:ring-primary/20"
@@ -158,14 +161,14 @@ export function LoginPage() {
               data-testid="login-remember-checkbox"
               className="size-4 rounded border-border-light text-primary focus:ring-primary cursor-pointer"
             />
-            <span className="text-sm text-subtle-text">Remember me</span>
+            <span className="text-sm text-subtle-text">{t('login.rememberMe')}</span>
           </label>
           <Link
             to="/forgot-password"
             className="text-sm text-primary hover:underline font-medium"
             data-testid="login-forgot-password-link"
           >
-            Forgot password?
+            {t('login.forgotPassword')}
           </Link>
         </div>
 
@@ -178,19 +181,19 @@ export function LoginPage() {
           {isLoading ? (
             <>
               <span className="material-symbols-outlined animate-spin">progress_activity</span>
-              Signing in...
+              {t('login.signingIn')}
             </>
           ) : (
-            'Sign In'
+            t('login.signIn')
           )}
         </button>
       </form>
 
       {/* Register link */}
       <p className="text-center text-sm text-subtle-text">
-        Don't have an account?{' '}
+        {t('login.noAccount')}{' '}
         <a href="/register" className="text-primary hover:underline font-medium" data-testid="login-register-link">
-          Register your company
+          {t('login.registerCompany')}
         </a>
       </p>
     </div>
