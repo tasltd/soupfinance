@@ -177,6 +177,17 @@ describe('ResetPasswordPage (SOUPFIN-186)', () => {
     })
   })
 
+  // Added (SOUPFIN-189): the success screen's Sign In leads to the login page
+  it('goes to /login from the success screen', async () => {
+    mockReset.mockResolvedValue({ success: true, message: 'Your password has been reset.' })
+    renderAt('/reset-password?token=tok_abc')
+
+    await fillAndSubmit()
+    await userEvent.setup().click(await screen.findByTestId('reset-password-login-link'))
+
+    expect(await screen.findByTestId('login-page')).toBeInTheDocument()
+  })
+
   it('swaps the form for the expired-link screen on TOKEN_EXPIRED', async () => {
     mockReset.mockRejectedValue(
       axiosError(400, { success: false, code: 'TOKEN_EXPIRED', message: 'This password reset link has expired.' }),
