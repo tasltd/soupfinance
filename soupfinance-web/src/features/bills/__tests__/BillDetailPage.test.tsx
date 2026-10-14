@@ -19,6 +19,9 @@ vi.mock('../../../api/endpoints/bills', async () => {
     getBill: vi.fn(),
     deleteBill: vi.fn(),
     listBillPayments: vi.fn(),
+    // Added (SOUPFIN-184): void; the error class stays real
+    cancelBill: vi.fn(),
+    BillActionUnavailableError: actual.BillActionUnavailableError,
     // SOUPFIN-38/44: pure helpers, no network — keep the real implementations so
     // the Tax Rate column exercises real FK-reference resolution.
     resolveBillItemTaxEntryId: actual.resolveBillItemTaxEntryId,
@@ -66,7 +69,7 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
-import { getBill, deleteBill, listBillPayments } from '../../../api/endpoints/bills';
+import { getBill, deleteBill, listBillPayments, cancelBill, BillActionUnavailableError } from '../../../api/endpoints/bills';
 // SOUPFIN-44: the Tax Rate column resolves against the real catalogue, and
 // NO_TAX_OPTION is what makes an unresolved entry look like 0%.
 import { listTaxRates, NO_TAX_OPTION } from '../../../api/endpoints/domainData';
@@ -455,15 +458,18 @@ describe('BillDetailPage', () => {
   });
 
   describe('status badges', () => {
+    // Changed (SOUPFIN-184): each case is a bill the backend could actually send.
+    // `status` is a derived PaymentStatus; DRAFT and CANCELLED come from the
+    // planned `postingStatus`; OVERDUE is an unpaid balance past its due date.
     it.each([
-      ['PAID', 'bg-success'],
-      ['PARTIAL', 'bg-info'],
-      ['PENDING', 'bg-warning'],
-      ['OVERDUE', 'bg-danger'],
-      ['DRAFT', 'bg-subtle-text'],
-      ['CANCELLED', 'bg-subtle-text'],
-    ] as const)('renders %s status with correct styling', async (status, expectedClass) => {
-      const mockBill = createMockBill({ status: status as BillStatus });
+      ['PAID', { status: 'PAID', amountPaid: 1600, amountDue: 0 }, 'bg-success'],
+      ['PARTIAL', { status: 'PARTIAL', paymentDate: '2999-12-31' }, 'bg-info'],
+      ['PENDING', { status: 'PENDING', paymentDate: '2999-12-31' }, 'bg-warning'],
+      ['OVERDUE', { status: 'PENDING', paymentDate: '2024-02-15', amountDue: 1100 }, 'bg-danger'],
+      ['DRAFT', { status: null, postingStatus: 'DRAFT' }, 'bg-subtle-text'],
+      ['CANCELLED', { status: 'PENDING', postingStatus: 'CANCELLED' }, 'bg-subtle-text'],
+    ] as const)('renders %s status with correct styling', async (status, overrides, expectedClass) => {
+      const mockBill = createMockBill(overrides as Partial<Bill>);
       vi.mocked(getBill).mockResolvedValue(mockBill);
       vi.mocked(listBillPayments).mockResolvedValue([]);
 
@@ -778,5 +784,150 @@ describe('BillDetailPage', () => {
       await waitFor(() => expect(screen.queryByTestId('bill-detail-error')).not.toBeInTheDocument());
       expect(vi.mocked(getBill)).toHaveBeenCalledTimes(2);
     });
+  });
+});
+
+// ============================================================================
+// Added (SOUPFIN-184): Void action and closed bills
+// ============================================================================
+
+describe('BillDetailPage lifecycle (SOUPFIN-184)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(listTaxRates).mockResolvedValue([NO_TAX_OPTION]);
+    vi.mocked(listBillPayments).mockResolvedValue([]);
+  });
+
+  /** A posted, unpaid bill that is not yet due — the one bill that can be voided. */
+  const voidable = (overrides: Partial<Bill> = {}) =>
+    createMockBill({ status: 'PENDING', paymentDate: '2999-12-31', amountPaid: 0, amountDue: 1600, ...overrides });
+
+  it('offers Void on a posted bill with no payments, next to Edit', async () => {
+    vi.mocked(getBill).mockResolvedValue(voidable());
+    renderBillDetailPage();
+
+    expect(await screen.findByTestId('bill-void-button')).toBeEnabled();
+    expect(screen.getByTestId('bill-edit-button')).toBeInTheDocument();
+    expect(screen.queryByTestId('bill-void-dialog')).not.toBeInTheDocument();
+  });
+
+  it('asks for confirmation, focuses Keep bill, and voids with the reason', async () => {
+    const user = userEvent.setup();
+    vi.mocked(getBill).mockResolvedValueOnce(voidable()).mockResolvedValue(voidable({ postingStatus: 'CANCELLED', cancelReason: 'Entered twice' }));
+    vi.mocked(cancelBill).mockResolvedValue(voidable({ postingStatus: 'CANCELLED' }));
+    renderBillDetailPage();
+
+    await user.click(await screen.findByTestId('bill-void-button'));
+    const dialog = screen.getByTestId('bill-void-dialog');
+    expect(within(dialog).getByRole('dialog')).toHaveAccessibleName(/void bill BILL-2024-001/i);
+    expect(dialog).toHaveTextContent('$1,600.00');
+    expect(dialog).toHaveTextContent('Acme Supplies');
+    expect(screen.getByTestId('bill-void-cancel')).toHaveFocus();
+
+    await user.type(screen.getByTestId('bill-void-reason'), '  Entered twice  ');
+    await user.click(screen.getByTestId('bill-void-confirm'));
+
+    await waitFor(() => expect(cancelBill).toHaveBeenCalledWith('bill-123', 'Entered twice'));
+    await waitFor(() => expect(screen.queryByTestId('bill-void-dialog')).not.toBeInTheDocument());
+    // The bill is reloaded and now reads as voided and closed
+    expect(await screen.findByTestId('bill-voided-notice')).toHaveTextContent(/Reason: Entered twice/);
+    expect(screen.getByTestId('bill-detail-status')).toHaveTextContent('CANCELLED');
+    expect(screen.queryByTestId('bill-edit-button')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('bill-void-button')).not.toBeInTheDocument();
+  });
+
+  it('sends no reason when the box is left blank', async () => {
+    const user = userEvent.setup();
+    vi.mocked(getBill).mockResolvedValue(voidable());
+    vi.mocked(cancelBill).mockResolvedValue(voidable({ postingStatus: 'CANCELLED' }));
+    renderBillDetailPage();
+
+    await user.click(await screen.findByTestId('bill-void-button'));
+    await user.type(screen.getByTestId('bill-void-reason'), '   ');
+    await user.click(screen.getByTestId('bill-void-confirm'));
+
+    await waitFor(() => expect(cancelBill).toHaveBeenCalledWith('bill-123', undefined));
+  });
+
+  it('Keep bill and Escape close the dialog without voiding', async () => {
+    const user = userEvent.setup();
+    vi.mocked(getBill).mockResolvedValue(voidable());
+    renderBillDetailPage();
+
+    await user.click(await screen.findByTestId('bill-void-button'));
+    await user.click(screen.getByTestId('bill-void-cancel'));
+    expect(screen.queryByTestId('bill-void-dialog')).not.toBeInTheDocument();
+
+    await user.click(screen.getByTestId('bill-void-button'));
+    await user.keyboard('{Escape}');
+    expect(screen.queryByTestId('bill-void-dialog')).not.toBeInTheDocument();
+    expect(cancelBill).not.toHaveBeenCalled();
+  });
+
+  it('keeps the dialog open and says the bill is unchanged when the server cannot void yet', async () => {
+    const user = userEvent.setup();
+    vi.mocked(getBill).mockResolvedValue(voidable());
+    vi.mocked(cancelBill).mockRejectedValue(new BillActionUnavailableError('cancel'));
+    renderBillDetailPage();
+
+    await user.click(await screen.findByTestId('bill-void-button'));
+    await user.click(screen.getByTestId('bill-void-confirm'));
+
+    const error = await screen.findByTestId('bill-void-error');
+    expect(error).toHaveTextContent(/bill is unchanged/i);
+    expect(error).not.toHaveTextContent(/status code/i);
+    expect(screen.getByTestId('bill-void-dialog')).toBeInTheDocument();
+    expect(screen.getByTestId('bill-detail-status')).toHaveTextContent('PENDING');
+  });
+
+  it('disables Void on a bill with payments and says why', async () => {
+    vi.mocked(getBill).mockResolvedValue(voidable({ status: 'PARTIAL', amountPaid: 0.01, amountDue: 1599.99 }));
+    renderBillDetailPage();
+
+    expect(await screen.findByTestId('bill-void-button')).toBeDisabled();
+    expect(screen.getByTestId('bill-void-blocked')).toHaveTextContent(/void its payments first/i);
+  });
+
+  it('offers neither Edit nor Void on a paid bill', async () => {
+    vi.mocked(getBill).mockResolvedValue(createMockBill({ status: 'PAID', amountPaid: 1600, amountDue: 0 }));
+    renderBillDetailPage();
+
+    expect(await screen.findByTestId('bill-detail-status')).toHaveTextContent('PAID');
+    expect(screen.queryByTestId('bill-edit-button')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('bill-void-button')).not.toBeInTheDocument();
+  });
+
+  it('offers Edit but not Void on a draft: there is nothing posted to reverse', async () => {
+    vi.mocked(getBill).mockResolvedValue(voidable({ status: null, postingStatus: 'DRAFT' }));
+    renderBillDetailPage();
+
+    expect(await screen.findByTestId('bill-detail-status')).toHaveTextContent('DRAFT');
+    expect(screen.getByTestId('bill-edit-button')).toBeInTheDocument();
+    expect(screen.queryByTestId('bill-void-button')).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ['voided', { postingStatus: 'CANCELLED' }],
+    ['draft', { status: null, postingStatus: 'DRAFT' }],
+  ] as const)('offers no Record Payment on a %s bill, even with a balance', async (_label, overrides) => {
+    vi.mocked(getBill).mockResolvedValue(voidable(overrides as Partial<Bill>));
+    renderBillDetailPage();
+
+    await screen.findByTestId('bill-payments-card');
+    expect(screen.queryByTestId('record-payment-button')).not.toBeInTheDocument();
+  });
+
+  it('keeps Record Payment on an overdue bill', async () => {
+    vi.mocked(getBill).mockResolvedValue(voidable({ paymentDate: '2020-01-01' }));
+    renderBillDetailPage();
+
+    expect(await screen.findByTestId('record-payment-button')).toBeInTheDocument();
+  });
+
+  it('shows the void date on a voided bill', async () => {
+    vi.mocked(getBill).mockResolvedValue(voidable({ postingStatus: 'CANCELLED', cancelledDate: '2026-10-14T09:30:00Z' }));
+    renderBillDetailPage();
+
+    expect(await screen.findByTestId('bill-voided-notice')).toHaveTextContent('voided on 2026-10-14');
   });
 });

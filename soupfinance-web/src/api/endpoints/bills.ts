@@ -325,8 +325,8 @@ export type BillLifecycleAction = 'saveDraft' | 'submit' | 'cancel';
  *
  * Added (SOUPFIN-184): draft, submit and void are planned soupmarkets-web
  * endpoints (`plans/soupfin-184-bill-lifecycle.html`). Grails answers an action
- * a controller does not have with a Tomcat HTML error page — status 400 on the
- * LXC backend, 404 or 405 elsewhere — never with JSON. This error turns that
+ * a controller does not have with a Tomcat HTML error page — status 404 on the
+ * LXC backend (checked 2026-10-14), 400 or 405 on some builds — never with JSON. This error turns that
  * into a sentence the user can act on, instead of "Request failed with status
  * code 400", and tells the caller nothing was saved.
  */

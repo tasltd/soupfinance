@@ -67,7 +67,8 @@ export function billToDoc(bill: Bill): AllocatableDoc {
 }
 
 /** True when a document still has a balance and is not closed. */
-export function isOpen(doc: { amountDue?: number; status?: string }): boolean {
+// Changed (SOUPFIN-184): `status` may be null on a bill the backend has not re-saved.
+export function isOpen(doc: { amountDue?: number; status?: string | null }): boolean {
   return toCents(doc.amountDue ?? 0) > 0 && !CLOSED_STATUSES.has(String(doc.status ?? ''));
 }
 

@@ -6,13 +6,18 @@
  * Added: Loading, error, and content states
  * Added: data-testid attributes for E2E testing
  * Updated: Frontend PDF generation and email sending
+ * Changed (SOUPFIN-184): the badge shows the lifecycle status, a paid or voided
+ * bill hides Edit, and a posted bill can be voided after a confirmation.
  */
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 // Added (SOUPFIN-160): module-aware error card for a failed bill load
 import { ApiErrorState } from '../../components/feedback';
-import { getBill, deleteBill, listBillPayments, resolveBillItemTaxRate } from '../../api/endpoints/bills';
+import { getBill, deleteBill, cancelBill, listBillPayments, resolveBillItemTaxRate } from '../../api/endpoints/bills';
+import { getApiErrorMessage } from '../../api/errors';
+// Added (SOUPFIN-184): lifecycle status and the rules for editing and voiding
+import { canEditBill, getBillDisplayStatus, getBillStatusStyle, getVoidBlockReason } from './billStatus';
 import { listTaxRates } from '../../api/endpoints/domainData';
 import { useFormatCurrency } from '../../stores';
 import { usePdf, useEmailSend } from '../../hooks';
@@ -53,6 +58,37 @@ export function BillDetailPage() {
     queryFn: () => listBillPayments(id!),
     enabled: !!id,
   });
+
+  // Added (SOUPFIN-184): void (cancel) a posted bill. The bill stays on record.
+  const [showVoidDialog, setShowVoidDialog] = useState(false);
+  const [voidReason, setVoidReason] = useState('');
+  const keepBillButtonRef = useRef<HTMLButtonElement>(null);
+  const voidMutation = useMutation({
+    mutationFn: () => cancelBill(id!, voidReason.trim() || undefined),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['bills'] });
+      queryClient.invalidateQueries({ queryKey: ['bill', id] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+      setShowVoidDialog(false);
+    },
+  });
+
+  // Focus the safe choice when the dialog opens; Escape closes it.
+  useEffect(() => {
+    if (!showVoidDialog) return;
+    keepBillButtonRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !voidMutation.isPending) setShowVoidDialog(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [showVoidDialog, voidMutation.isPending]);
+
+  const openVoidDialog = () => {
+    voidMutation.reset();
+    setVoidReason('');
+    setShowVoidDialog(true);
+  };
 
   // Added: Delete mutation
   const deleteMutation = useMutation({
@@ -125,6 +161,13 @@ export function BillDetailPage() {
     );
   }
 
+  // Added (SOUPFIN-184)
+  const displayStatus = getBillDisplayStatus(bill);
+  const voidBlock = getVoidBlockReason(bill, displayStatus);
+  // A draft has nothing to reverse and a closed bill has nothing left to void,
+  // so neither offers the action. A bill with payments shows it disabled, with why.
+  const showVoid = voidBlock === null || voidBlock === 'has-payments';
+
   return (
     <div className="flex flex-col gap-6" data-testid="bill-detail-page">
       {/* Page Header */}
@@ -134,13 +177,13 @@ export function BillDetailPage() {
             Bill {bill.billNumber}
           </h1>
           <p className="text-subtle-text">
-            <span className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${getStatusStyle(bill.status)}`} data-testid="bill-detail-status">
-              {bill.status}
+            <span className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${getBillStatusStyle(displayStatus)}`} data-testid="bill-detail-status">
+              {displayStatus}
             </span>
           </p>
           <HelpLink section="bills" className="mt-1 self-start" />
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
           <Link to="/bills" className="h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm flex items-center hover:bg-primary/5">
             Back
           </Link>
@@ -161,14 +204,31 @@ export function BillDetailPage() {
             <span className="material-symbols-outlined text-lg mr-2">send</span>
             Send
           </button>
-          <Link
-            to={`/bills/${id}/edit`}
-            className="h-10 px-4 rounded-lg bg-primary/20 text-primary font-bold text-sm flex items-center hover:bg-primary/30"
-            data-testid="bill-edit-button"
-          >
-            <span className="material-symbols-outlined text-lg mr-2">edit</span>
-            Edit
-          </Link>
+          {/* Changed (SOUPFIN-184): a paid or voided bill is closed and cannot be edited */}
+          {canEditBill(displayStatus) && (
+            <Link
+              to={`/bills/${id}/edit`}
+              className="h-10 px-4 rounded-lg bg-primary/20 text-primary font-bold text-sm flex items-center hover:bg-primary/30"
+              data-testid="bill-edit-button"
+            >
+              <span className="material-symbols-outlined text-lg mr-2">edit</span>
+              Edit
+            </Link>
+          )}
+          {/* Added (SOUPFIN-184): void reverses the posting; the bill stays on record */}
+          {showVoid && (
+            <button
+              type="button"
+              onClick={openVoidDialog}
+              disabled={voidBlock === 'has-payments'}
+              title={voidBlock === 'has-payments' ? 'Void the payments on this bill first.' : undefined}
+              className="h-10 px-4 rounded-lg ring-1 ring-danger/40 text-danger font-bold text-sm flex items-center hover:bg-danger/10 disabled:opacity-50 disabled:cursor-not-allowed"
+              data-testid="bill-void-button"
+            >
+              <span className="material-symbols-outlined text-lg mr-2">block</span>
+              Void
+            </button>
+          )}
           <button
             onClick={handleDelete}
             disabled={deleteMutation.isPending}
@@ -180,6 +240,21 @@ export function BillDetailPage() {
           </button>
         </div>
       </div>
+
+      {/* Added (SOUPFIN-184): why Void is disabled, in words rather than a tooltip only */}
+      {voidBlock === 'has-payments' && (
+        <p className="text-sm text-subtle-text -mt-3" data-testid="bill-void-blocked">
+          This bill has payments, so it cannot be voided. Void its payments first.
+        </p>
+      )}
+
+      {/* Added (SOUPFIN-184): a voided bill says so, with the reason when one was given */}
+      {displayStatus === 'CANCELLED' && (
+        <div className="rounded-lg border border-border-light dark:border-border-dark bg-subtle-text/10 p-4 text-sm text-text-light dark:text-text-dark" role="status" data-testid="bill-voided-notice">
+          This bill was voided{bill.cancelledDate ? ` on ${bill.cancelledDate.slice(0, 10)}` : ''}. It no longer counts towards what you owe.
+          {bill.cancelReason && <span className="block mt-1 text-subtle-text">Reason: {bill.cancelReason}</span>}
+        </div>
+      )}
 
       {/* Bill Summary Card */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -308,7 +383,8 @@ export function BillDetailPage() {
           <h2 className="text-lg font-bold text-text-light dark:text-text-dark">Payment History</h2>
           {/* Added (SOUPFIN-81): how recording a payment works */}
           <HelpLink section="record-payment" className="ml-auto" />
-          {bill.amountDue > 0 && (
+          {/* Changed (SOUPFIN-184): a draft is not owed yet and a voided bill is closed */}
+          {bill.amountDue > 0 && displayStatus !== 'DRAFT' && displayStatus !== 'CANCELLED' && (
             <Link
               to={`/payments/new?billId=${id}`}
               className="h-9 px-3 rounded-lg bg-primary text-white font-bold text-sm flex items-center hover:bg-primary/90"
@@ -348,6 +424,84 @@ export function BillDetailPage() {
           </div>
         )}
       </div>
+
+      {/* Added (SOUPFIN-184): Void confirmation (modal-delete-confirmation design) */}
+      {showVoidDialog && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50" data-testid="bill-void-dialog">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="bill-void-title"
+            className="relative w-full max-w-lg rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark shadow-2xl overflow-hidden"
+          >
+            <div className="flex items-center justify-between border-b border-border-light dark:border-border-dark p-6">
+              <h2 id="bill-void-title" className="text-xl font-bold text-text-light dark:text-text-dark">
+                Void bill {bill.billNumber}?
+              </h2>
+              <button
+                type="button"
+                onClick={() => setShowVoidDialog(false)}
+                disabled={voidMutation.isPending}
+                className="flex size-8 items-center justify-center rounded-full text-subtle-text hover:bg-black/10 dark:hover:bg-white/10"
+                aria-label="Close"
+              >
+                <span className="material-symbols-outlined text-2xl">close</span>
+              </button>
+            </div>
+            <div className="p-6 flex flex-col gap-4 text-sm text-text-light dark:text-text-dark">
+              <div className="flex gap-4">
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-danger/10 text-danger">
+                  <span className="material-symbols-outlined">warning</span>
+                </div>
+                <p>
+                  Voiding reverses this bill's ledger entries for {formatCurrency(bill.totalAmount)} owed to{' '}
+                  {bill.vendor?.name || 'this vendor'}. The bill stays on record, marked as voided, and can no longer be edited or paid.
+                </p>
+              </div>
+              <label className="flex flex-col gap-2">
+                <span className="font-medium">Reason (optional)</span>
+                <textarea
+                  value={voidReason}
+                  onChange={(e) => setVoidReason(e.target.value)}
+                  rows={2}
+                  maxLength={255}
+                  disabled={voidMutation.isPending}
+                  className="w-full rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark p-3 text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/50"
+                  placeholder="For example: entered twice"
+                  data-testid="bill-void-reason"
+                />
+              </label>
+              {voidMutation.isError && (
+                <p className="rounded-lg bg-danger/10 text-danger p-3" role="alert" data-testid="bill-void-error">
+                  {getApiErrorMessage(voidMutation.error) || 'The bill could not be voided. It is unchanged.'}
+                </p>
+              )}
+            </div>
+            <div className="flex justify-end gap-3 border-t border-border-light dark:border-border-dark p-6">
+              <button
+                ref={keepBillButtonRef}
+                type="button"
+                onClick={() => setShowVoidDialog(false)}
+                disabled={voidMutation.isPending}
+                className="h-10 px-4 rounded-lg text-sm font-bold text-text-light dark:text-text-dark ring-1 ring-border-light dark:ring-border-dark hover:bg-black/5 dark:hover:bg-white/5"
+                data-testid="bill-void-cancel"
+              >
+                Keep bill
+              </button>
+              <button
+                type="button"
+                onClick={() => voidMutation.mutate()}
+                disabled={voidMutation.isPending}
+                className="flex items-center gap-2 h-10 px-4 rounded-lg bg-danger text-white text-sm font-bold hover:bg-danger/90 disabled:opacity-60"
+                data-testid="bill-void-confirm"
+              >
+                <span className="material-symbols-outlined text-lg">block</span>
+                {voidMutation.isPending ? 'Voiding...' : 'Void bill'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Send Bill Email Dialog */}
       {showSendDialog && (
@@ -439,17 +593,4 @@ export function BillDetailPage() {
       )}
     </div>
   );
-}
-
-// Added: Status badge styling helper
-function getStatusStyle(status: string): string {
-  const styles: Record<string, string> = {
-    PAID: 'bg-success/10 text-success',
-    PARTIAL: 'bg-info/10 text-info',
-    PENDING: 'bg-warning/10 text-warning',
-    OVERDUE: 'bg-danger/10 text-danger',
-    DRAFT: 'bg-subtle-text/10 text-subtle-text',
-    CANCELLED: 'bg-subtle-text/10 text-subtle-text',
-  };
-  return styles[status] || styles.DRAFT;
 }

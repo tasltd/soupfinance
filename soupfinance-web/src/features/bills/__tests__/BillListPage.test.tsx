@@ -37,7 +37,7 @@ function createMockBill(overrides: Partial<Bill> = {}): Bill {
     vendor: { id: 'vendor-1', name: 'Acme Supplies' },
     billDate: '2024-01-15',
     paymentDate: '2024-02-15',
-    status: 'DRAFT' as BillStatus,
+    status: 'PENDING' as BillStatus,
     subtotal: 1000,
     taxAmount: 100,
     totalAmount: 1050,
@@ -276,19 +276,48 @@ describe('BillListPage', () => {
     });
   });
 
-  describe('status badges', () => {
+  // Added (SOUPFIN-184): a closed bill's row links to the bill, not its edit form
+  describe('row action by lifecycle', () => {
     it.each([
-      ['PAID', 'bg-success'],
-      ['PARTIAL', 'bg-info'],
-      ['PENDING', 'bg-warning'],
-      ['OVERDUE', 'bg-danger'],
-      ['DRAFT', 'bg-subtle-text'],
-      ['CANCELLED', 'bg-subtle-text'],
-    ] as const)('renders %s status with correct styling', async (status, expectedClass) => {
-      const mockBill = createMockBill({
-        id: `bill-${status.toLowerCase()}`,
-        status: status as BillStatus,
-      });
+      ['PAID', { status: 'PAID', amountPaid: 1050, amountDue: 0 }],
+      ['CANCELLED', { status: 'PENDING', postingStatus: 'CANCELLED' }],
+    ] as const)('offers View instead of Edit on a %s bill', async (_label, overrides) => {
+      vi.mocked(listBills).mockResolvedValue([createMockBill({ id: 'closed-1', ...(overrides as Partial<Bill>) })]);
+
+      renderBillListPage();
+
+      const view = await screen.findByTestId('bill-view-closed-1');
+      expect(view).toHaveAttribute('href', '/bills/closed-1');
+      expect(screen.queryByTestId('bill-edit-closed-1')).not.toBeInTheDocument();
+    });
+
+    it('keeps Edit on a draft and on an overdue bill', async () => {
+      vi.mocked(listBills).mockResolvedValue([
+        createMockBill({ id: 'd-1', status: null, postingStatus: 'DRAFT' }),
+        createMockBill({ id: 'o-1', status: 'PENDING', paymentDate: '2020-01-01' }),
+      ]);
+
+      renderBillListPage();
+
+      expect(await screen.findByTestId('bill-edit-d-1')).toHaveAttribute('href', '/bills/d-1/edit');
+      expect(screen.getByTestId('bill-edit-o-1')).toBeInTheDocument();
+      expect(screen.getByTestId('bill-status-o-1')).toHaveTextContent('OVERDUE');
+    });
+  });
+
+  describe('status badges', () => {
+    // Changed (SOUPFIN-184): each case is a bill the backend could actually send.
+    // `status` is a derived PaymentStatus; DRAFT and CANCELLED come from the
+    // planned `postingStatus`; OVERDUE is an unpaid balance past its due date.
+    it.each([
+      ['PAID', { status: 'PAID', amountPaid: 1050, amountDue: 0 }, 'bg-success'],
+      ['PARTIAL', { status: 'PARTIAL', paymentDate: '2999-12-31' }, 'bg-info'],
+      ['PENDING', { status: 'PENDING', paymentDate: '2999-12-31' }, 'bg-warning'],
+      ['OVERDUE', { status: 'PENDING', paymentDate: '2024-02-15', amountDue: 1050 }, 'bg-danger'],
+      ['DRAFT', { status: null, postingStatus: 'DRAFT' }, 'bg-subtle-text'],
+      ['CANCELLED', { status: 'PENDING', postingStatus: 'CANCELLED' }, 'bg-subtle-text'],
+    ] as const)('renders %s status with correct styling', async (status, overrides, expectedClass) => {
+      const mockBill = createMockBill({ id: `bill-${status.toLowerCase()}`, ...(overrides as Partial<Bill>) });
       vi.mocked(listBills).mockResolvedValue([mockBill]);
 
       renderBillListPage();

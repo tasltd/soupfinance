@@ -142,6 +142,24 @@ describe('paymentAllocations endpoints (SOUPFIN-178)', () => {
       expect(String(http.get.mock.calls[0][0])).toMatch(/^\/bill\/index\.json\?/);
       expect(queryOf(http.get.mock.calls[0]).get('vendor.id')).toBe('v-1');
     });
+
+    // Added (SOUPFIN-184): a draft is not posted and a voided bill is closed,
+    // so neither can be paid even though both still carry a balance.
+    it('leaves out draft and voided bills, keeps an overdue one', async () => {
+      http.get.mockResolvedValue({
+        data: [
+          { ...billRow('b-draft', 'v-1', 500, 0, 4), status: null, postingStatus: 'DRAFT' },
+          { ...billRow('b-void', 'v-1', 500, 0, 4), status: 'PENDING', postingStatus: 'CANCELLED' },
+          { ...billRow('b-late', 'v-1', 500, 0, 4), status: 'PENDING', paymentDate: '2020-01-01T00:00:00Z' },
+          { ...billRow('b-open', 'v-1', 500, 100, 4), status: 'PARTIAL' },
+        ],
+      });
+      const { listOpenBillsForVendor } = await import('../paymentAllocations');
+
+      const result = await listOpenBillsForVendor('v-1');
+
+      expect(result.documents.map((b) => b.id)).toEqual(['b-late', 'b-open']);
+    });
   });
 
   describe('resolveClientAccountServicesIds', () => {

@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SOUPFIN-184 — Bill lifecycle: Save draft, Submit, Void</title>
+<script type="application/json" id="plan-index">
+{
+  "title": "SOUPFIN-184 — Bill lifecycle: Save draft, Submit, Void",
+  "revision": "1",
+  "goal": "A finance user can save a bill as a draft without posting it, submit a draft so it is posted and awaits payment, and void a posted bill with no payments so its ledger entries are reversed and it stays on record as CANCELLED. Paid and voided bills cannot be edited, and every bill page shows the same lifecycle status.",
+  "stories": [
+    { "id": "F1", "title": "Frontend: one lifecycle status (billStatus.ts) used by the list, detail page, edit form, PDF and Pay Bills", "status": "done" },
+    { "id": "F2", "title": "Frontend: Save Draft and Submit Bill buttons on the bill form; status and derived totals no longer sent", "status": "done" },
+    { "id": "F3", "title": "Frontend: Void action with a confirmation modal on the bill detail page", "status": "done" },
+    { "id": "F4", "title": "Frontend: PAID and CANCELLED bills locked (no Edit link, read-only form, no Record Payment)", "status": "done" },
+    { "id": "F5", "title": "Frontend: a missing backend action (HTML 404/400/405) becomes a sentence that says nothing changed", "status": "done" },
+    { "id": "B1", "title": "Backend: Bill.postingStatus (DRAFT | POSTED | CANCELLED), cancelledDate, cancelReason + migration", "status": "planned" },
+    { "id": "B2", "title": "Backend: POST /rest/bill/saveDraft.json — store without posting to the ledger", "status": "planned" },
+    { "id": "B3", "title": "Backend: POST /rest/bill/submit/{id}.json — post a draft's ledger entries", "status": "planned" },
+    { "id": "B4", "title": "Backend: POST /rest/bill/cancel/{id}.json — reverse postings, mark CANCELLED", "status": "planned" },
+    { "id": "B5", "title": "Backend: exclude DRAFT and CANCELLED bills from AP balances, aging and the bill payment pickers", "status": "planned" }
+  ],
+  "screens": [
+    { "id": "S1", "title": "Bills list with every lifecycle status", "image": "../soupfinance-web/e2e/playwright/screenshots/soupfin-184/01-list-lifecycle-statuses.png" },
+    { "id": "S2", "title": "New bill: Save Draft and Submit Bill", "image": "../soupfinance-web/e2e/playwright/screenshots/soupfin-184/02-new-bill-filled.png" },
+    { "id": "S3", "title": "Void confirmation", "image": "../soupfinance-web/e2e/playwright/screenshots/soupfin-184/09-void-confirmation.png" },
+    { "id": "S4", "title": "Voided bill", "image": "../soupfinance-web/e2e/playwright/screenshots/soupfin-184/10-detail-after-void.png" },
+    { "id": "S5", "title": "Paid bill: edit form locked", "image": "../soupfinance-web/e2e/playwright/screenshots/soupfin-184/14-paid-bill-edit-locked.png" }
+  ]
+}
+</script>
+<style>
+  body { font-family: Manrope, "Noto Sans", sans-serif; color: #181311; background: #f8f6f5; margin: 0; line-height: 1.55; }
+  main { max-width: 960px; margin: 0 auto; padding: 32px 24px 64px; }
+  h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.03em; margin: 0 0 4px; }
+  h2 { font-size: 21px; margin: 36px 0 8px; }
+  h3 { font-size: 16px; margin: 20px 0 6px; }
+  .sub { color: #8a6b60; margin: 0 0 24px; }
+  .card { background: #fff; border: 1px solid #e6dedb; border-radius: 12px; padding: 20px 24px; margin: 16px 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #e6dedb; vertical-align: top; }
+  th { background: #f5f1f0; color: #8a6b60; font-size: 12px; text-transform: uppercase; }
+  code, pre { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size: 13px; }
+  pre { background: #221510; color: #f8f6f5; padding: 14px 16px; border-radius: 8px; overflow-x: auto; }
+  .tag { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+  .done { background: #dcfce7; color: #166534; } .planned { background: #fef3c7; color: #92400e; }
+  figure { margin: 16px 0; } figure img { width: 100%; border: 1px solid #e6dedb; border-radius: 8px; }
+  figcaption { color: #8a6b60; font-size: 13px; margin-top: 4px; }
+  .flow { font-family: ui-monospace, monospace; background: #fff; border: 1px solid #e6dedb; border-radius: 8px; padding: 14px 16px; white-space: pre; overflow-x: auto; }
+</style>
+</head>
+<body>
+<main>
+<h1>SOUPFIN-184 — Bill lifecycle</h1>
+<p class="sub">Save draft, Submit, Void. Frontend shipped; backend actions planned for soupmarkets-web. Written 2026-10-14.</p>
+
+<div class="card">
+  <strong>In short.</strong> The bill pages now follow the PRD lifecycle. The frontend is finished and tested.
+  The backend has no draft, submit or void action yet, so on today's server those three buttons explain that
+  nothing changed. This plan lists what soupmarkets-web must add for them to work.
+</div>
+
+<h2>1. What the backend does today</h2>
+<p>Checked on the LXC backend on 2026-10-14, and in <code>soupbroker/finance/Bill.groovy</code>.</p>
+<ul>
+  <li><code>Bill.status</code> is a <code>PaymentStatus</code>. The backend derives it from payments in
+    <code>getCheckStatus()</code> and marks it <code>bindable:false</code>, so a client cannot set it.
+    The first 100 bills on LXC read: 66 <code>null</code>, 32 <code>PENDING</code>, 2 <code>PARTIAL</code>.
+    <code>index.json</code> leaves out paid bills.</li>
+  <li>There is no draft or cancelled state. Every bill posts to the ledger when it is saved, through
+    <code>BillItemLedgerTransactionListenerService</code> and <code>TaxEntryBillItemLedgerTransactionListenerService</code>.</li>
+  <li>OVERDUE is not stored anywhere. It means an unpaid balance past its due date.</li>
+  <li><code>POST /rest/bill/saveDraft.json</code>, <code>/submit/{id}.json</code> and <code>/cancel/{id}.json</code>
+    all return a Tomcat HTML 404 page.</li>
+</ul>
+
+<h2>2. The lifecycle</h2>
+<div class="flow">DRAFT ──Submit──▶ PENDING ──payment──▶ PARTIAL ──payment──▶ PAID
+                      │   (past due with a balance shows OVERDUE)
+                      └──Void (no payments)──▶ CANCELLED</div>
+<table>
+  <tr><th>Shown</th><th>Comes from</th><th>Edit</th><th>Void</th><th>Pay</th></tr>
+  <tr><td>DRAFT</td><td><code>postingStatus = DRAFT</code></td><td>Yes</td><td>No (delete it instead)</td><td>No</td></tr>
+  <tr><td>PENDING / PARTIAL</td><td><code>status</code> (null is derived the backend's way)</td><td>Yes</td><td>Only with no payments</td><td>Yes</td></tr>
+  <tr><td>OVERDUE</td><td>balance &gt; 0 and due date before today</td><td>Yes</td><td>Only with no payments</td><td>Yes</td></tr>
+  <tr><td>PAID</td><td><code>status = PAID</code></td><td>No</td><td>No</td><td>No</td></tr>
+  <tr><td>CANCELLED</td><td><code>postingStatus = CANCELLED</code></td><td>No</td><td>No</td><td>No</td></tr>
+</table>
+<p>All of this lives in <code>soupfinance-web/src/features/bills/billStatus.ts</code>. Every page reads it, so
+the list, detail page, form, PDF and Pay Bills cannot disagree.</p>
+
+<h2>3. Frontend — done <span class="tag done">done</span></h2>
+<table>
+  <tr><th>Story</th><th>What changed</th></tr>
+  <tr><td>F1</td><td><code>billStatus.ts</code>; list, detail, PDF template and <code>listOpenBillsForVendor</code> use it. An unknown backend status is shown as sent, in a neutral style, never as DRAFT.</td></tr>
+  <tr><td>F2</td><td>New bill: <b>Save Draft</b> (<code>saveDraft.json</code>) and <b>Submit Bill</b> (<code>save.json</code>). Draft bill: Save Draft (<code>update</code>) and Submit Bill (<code>update</code>, then <code>submit</code>). Posted bill: Update Bill only. The form no longer sends <code>status</code>, <code>subtotal</code>, <code>taxAmount</code> or <code>totalAmount</code>.</td></tr>
+  <tr><td>F3</td><td>Void button and confirmation modal (<code>modal-delete-confirmation</code> design) with an optional reason. Disabled, with the reason in words, when the bill has payments.</td></tr>
+  <tr><td>F4</td><td>PAID and CANCELLED: no Edit link on the list or detail page, no Record Payment, and an edit URL opens a read-only form with a "View bill" link.</td></tr>
+  <tr><td>F5</td><td><code>BillActionUnavailableError</code>: an HTML 400/404/405 from a lifecycle action becomes "…not available on this server yet, so nothing was saved / the bill is unchanged".</td></tr>
+</table>
+<p>Tests: <code>billStatus.test.ts</code>, <code>bills-lifecycle.test.ts</code>, the three bill page test files and
+<code>paymentAllocations.test.ts</code> (unit); <code>e2e/soupfin-184-bill-lifecycle.spec.ts</code> (mock E2E, Firefox, 9 tests).</p>
+
+<h2>4. Backend — planned <span class="tag planned">planned</span></h2>
+<p>Owner: soupmarkets-web. Per the backend-changes rule, nothing here was changed from the soupfinance repo.</p>
+
+<h3>B1. Domain fields</h3>
+<pre>// soupbroker/finance/Bill.groovy
+BillPostingStatus postingStatus = BillPostingStatus.POSTED   // DRAFT | POSTED | CANCELLED
+Date   cancelledDate
+String cancelReason   // maxSize 255
+
+static constraints = {
+    postingStatus nullable: true, bindable: false   // changed only by the actions below
+    cancelledDate nullable: true, bindable: false
+    cancelReason  nullable: true, maxSize: 255, bindable: false
+}</pre>
+<p>Migration: add the three columns; existing rows get <code>POSTED</code> (a null is also read as POSTED by the frontend).
+Add <code>postingStatus</code>, <code>cancelledDate</code> and <code>cancelReason</code> to <code>_bill.gson</code> and to the
+<code>archived</code> field list.</p>
+
+<h3>B2. <code>POST /rest/bill/saveDraft.json</code></h3>
+<ul>
+  <li>Same body and the same <code>withForm</code> CSRF token as <code>save.json</code> (token from <code>create.json</code>).</li>
+  <li>Sets <code>postingStatus = DRAFT</code> before <code>billService.saveWithItems(...)</code>.</li>
+  <li>The two ledger listeners must skip any BillItem / TaxEntryBillItem whose bill is a DRAFT.</li>
+  <li>Responds <code>201</code> with the bill. It is a separate action on purpose: today's backend ignores unknown JSON
+    properties, so a <code>draft: true</code> flag on save.json would silently post the "draft".</li>
+</ul>
+
+<h3>B3. <code>POST /rest/bill/submit/{id}.json</code></h3>
+<ul>
+  <li>No CSRF, like <code>update</code>. Empty JSON body.</li>
+  <li>Only from DRAFT, else <code>422 {"message": "Only a draft bill can be submitted."}</code>.</li>
+  <li>Sets <code>postingStatus = POSTED</code> and creates the ledger entries the listeners would have made on save,
+    dated the bill date. Respects the SOUPFIN-158 lock date (<code>422 PERIOD_LOCKED</code>).</li>
+  <li>Responds <code>200</code> with the bill (<code>status</code> then reads PENDING).</li>
+</ul>
+
+<h3>B4. <code>POST /rest/bill/cancel/{id}.json</code></h3>
+<ul>
+  <li>No CSRF. Body <code>{"cancelReason": "optional text"}</code>. The action is not called <code>void</code> because
+    that is a reserved word for a Groovy method name.</li>
+  <li>Refuse with a JSON <code>422 {"message": …}</code> when the bill is a DRAFT, already CANCELLED, PAID, or has any
+    BillPayment. The frontend shows that message as is.</li>
+  <li>Reverse every LedgerTransaction for the bill's items and tax entries (contra entries dated today, or the
+    first open date after the lock date). Do not delete them.</li>
+  <li>Set <code>postingStatus = CANCELLED</code>, <code>cancelledDate = now</code>, <code>cancelReason</code>.
+    Respond <code>200</code> with the bill.</li>
+</ul>
+
+<h3>B5. Reporting and pickers</h3>
+<ul>
+  <li>AP balance, aged payables and the dashboard "bills due" figures leave out DRAFT and CANCELLED bills.</li>
+  <li><code>Bill.searchList</code> keeps drafts (the list shows them), but the bill payment pickers must not offer
+    them. The frontend already filters them out of Pay Bills.</li>
+</ul>
+
+<h2>5. Screens</h2>
+<figure><img src="../soupfinance-web/e2e/playwright/screenshots/soupfin-184/01-list-lifecycle-statuses.png" alt="Bills list showing PENDING, OVERDUE, PARTIAL, PAID, DRAFT and CANCELLED, with View instead of Edit on the paid and cancelled rows"><figcaption>S1 — every lifecycle status on the list; closed bills offer View.</figcaption></figure>
+<figure><img src="../soupfinance-web/e2e/playwright/screenshots/soupfin-184/02-new-bill-filled.png" alt="New bill form with Save Draft and Submit Bill buttons"><figcaption>S2 — a new bill offers Save Draft and Submit Bill.</figcaption></figure>
+<figure><img src="../soupfinance-web/e2e/playwright/screenshots/soupfin-184/09-void-confirmation.png" alt="Void confirmation dialog with amount, vendor and an optional reason"><figcaption>S3 — Void asks first; Keep bill has focus.</figcaption></figure>
+<figure><img src="../soupfinance-web/e2e/playwright/screenshots/soupfin-184/10-detail-after-void.png" alt="Voided bill showing CANCELLED, the void date and reason, with no Edit, Void or Record Payment"><figcaption>S4 — a voided bill stays on record, closed.</figcaption></figure>
+<figure><img src="../soupfinance-web/e2e/playwright/screenshots/soupfin-184/14-paid-bill-edit-locked.png" alt="Edit form for a paid bill with a notice and disabled fields"><figcaption>S5 — a paid bill's edit URL opens read-only.</figcaption></figure>
+
+<h2>6. Related</h2>
+<ul>
+  <li>SOUPFIN-139 (approval workflow) builds on this: approval sits between DRAFT and Submit.</li>
+  <li>PRD: <code>prd/features/bills.md</code>.</li>
+</ul>
+</main>
+</body>
+</html>

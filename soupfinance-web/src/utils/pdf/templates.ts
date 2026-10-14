@@ -7,6 +7,8 @@
 import type { Invoice, Bill } from '../../types';
 import type { TrialBalance, ProfitLoss, BalanceSheet, AgingReport } from '../../types';
 import type { CompanyInfo } from './index';
+// Added (SOUPFIN-184): one source for a bill's lifecycle status
+import { getBillDisplayStatus } from '../../features/bills/billStatus';
 
 // =============================================================================
 // Shared Styles
@@ -414,7 +416,9 @@ export function generateBillHtml(
   company: CompanyInfo,
   formatCurrency: (amount: number | null | undefined) => string
 ): string {
-  const statusClass = getStatusClass(bill.status);
+  // Changed (SOUPFIN-184): print the same lifecycle status the bill pages show
+  const billStatus = getBillDisplayStatus(bill);
+  const statusClass = getStatusClass(billStatus);
 
   return `
     <!DOCTYPE html>
@@ -438,7 +442,7 @@ export function generateBillHtml(
             <div class="document-title">BILL</div>
             <div class="document-number">${escapeHtml(bill.billNumber)}</div>
             <div class="document-date">Date: ${escapeHtml(bill.billDate)}</div>
-            <div class="status-badge ${statusClass}">${escapeHtml(bill.status)}</div>
+            <div class="status-badge ${statusClass}">${escapeHtml(billStatus)}</div>
           </div>
         </div>
 

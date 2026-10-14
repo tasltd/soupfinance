@@ -19,6 +19,10 @@ vi.mock('../../../api/endpoints/bills', async () => {
     getBill: vi.fn(),
     createBill: vi.fn(),
     updateBill: vi.fn(),
+    // Added (SOUPFIN-184): lifecycle actions; the error class stays real
+    saveBillDraft: vi.fn(),
+    submitBill: vi.fn(),
+    BillActionUnavailableError: actual.BillActionUnavailableError,
     // SOUPFIN-38: pure helper, no network — keep the real implementation so the
     // edit-mode hydration exercises real FK-reference resolution.
     resolveBillItemTaxEntryId: actual.resolveBillItemTaxEntryId,
@@ -50,7 +54,7 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
-import { getBill, createBill, updateBill } from '../../../api/endpoints/bills';
+import { getBill, createBill, updateBill, saveBillDraft, submitBill, BillActionUnavailableError } from '../../../api/endpoints/bills';
 import { listVendors } from '../../../api/endpoints/vendors';
 // Fix: Import domainData mocks — component needs tax rates for dropdown options
 import { listTaxRates, listBillServices } from '../../../api/endpoints/domainData';
@@ -82,7 +86,9 @@ function createMockBill(overrides: Partial<Bill> = {}): Bill {
     vendor: { id: 'vendor-1', name: 'Acme Supplies' },
     billDate: '2024-01-15',
     paymentDate: '2024-02-15',
-    status: 'DRAFT' as BillStatus,
+    // Changed (SOUPFIN-184): a posted bill, as the backend sends it. Draft-ness
+    // comes from `postingStatus`; `status` is a derived PaymentStatus.
+    status: 'PENDING' as BillStatus,
     subtotal: 1000,
     taxAmount: 100,
     totalAmount: 1100,
@@ -1268,5 +1274,178 @@ describe('BillFormPage module-aware errors (SOUPFIN-160)', () => {
       await userEvent.setup().click(screen.getByTestId('bill-form-back-button'));
       expect(mockNavigate).toHaveBeenCalledWith('/bills');
     });
+  });
+});
+
+// ============================================================================
+// Added (SOUPFIN-184): Save draft vs Submit, and closed bills
+// ============================================================================
+
+describe('BillFormPage lifecycle (SOUPFIN-184)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockNavigate.mockClear();
+    vi.mocked(listTaxRates).mockResolvedValue([]);
+    vi.mocked(listBillServices).mockResolvedValue([]);
+    vi.mocked(listVendors).mockResolvedValue([createMockVendor({ id: 'vendor-1', name: 'Acme Supplies' })]);
+  });
+
+  async function fillNewBill(user: ReturnType<typeof userEvent.setup>) {
+    await waitFor(() => expect(screen.getByTestId('bill-vendor-select')).toHaveTextContent('Acme Supplies'));
+    await user.selectOptions(screen.getByTestId('bill-vendor-select'), 'vendor-1');
+    await user.clear(screen.getByTestId('bill-due-date-input'));
+    await user.type(screen.getByTestId('bill-due-date-input'), '2026-11-30');
+    await user.type(screen.getByTestId('bill-item-description-0'), 'Paper');
+    await user.clear(screen.getByTestId('bill-item-quantity-0'));
+    await user.type(screen.getByTestId('bill-item-quantity-0'), '2');
+    await user.clear(screen.getByTestId('bill-item-unitPrice-0'));
+    await user.type(screen.getByTestId('bill-item-unitPrice-0'), '50');
+  }
+
+  it('offers Save Draft and Submit Bill on a new bill', async () => {
+    renderBillFormPage();
+    await screen.findByTestId('bill-form-page');
+
+    expect(screen.getByTestId('bill-form-save-draft-button')).toHaveTextContent('Save Draft');
+    expect(screen.getByTestId('bill-form-save-button')).toHaveTextContent('Submit Bill');
+  });
+
+  it('Save Draft stores the bill through saveBillDraft and returns to the list', async () => {
+    const user = userEvent.setup();
+    vi.mocked(saveBillDraft).mockResolvedValue(createMockBill({ id: 'draft-1', postingStatus: 'DRAFT', status: null }));
+
+    renderBillFormPage();
+    await fillNewBill(user);
+    await user.click(screen.getByTestId('bill-form-save-draft-button'));
+
+    await waitFor(() => expect(saveBillDraft).toHaveBeenCalledTimes(1));
+    expect(createBill).not.toHaveBeenCalled();
+    const body = vi.mocked(saveBillDraft).mock.calls[0][0] as Record<string, unknown>;
+    expect(body.vendor).toEqual({ id: 'vendor-1' });
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/bills'));
+  });
+
+  it('Submit posts the bill through createBill (save.json)', async () => {
+    const user = userEvent.setup();
+    vi.mocked(createBill).mockResolvedValue(createMockBill({ id: 'posted-1' }));
+
+    renderBillFormPage();
+    await fillNewBill(user);
+    await user.click(screen.getByTestId('bill-form-save-button'));
+
+    await waitFor(() => expect(createBill).toHaveBeenCalledTimes(1));
+    expect(saveBillDraft).not.toHaveBeenCalled();
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/bills'));
+  });
+
+  it('never sends status or the derived header totals', async () => {
+    const user = userEvent.setup();
+    vi.mocked(createBill).mockResolvedValue(createMockBill());
+
+    renderBillFormPage();
+    await fillNewBill(user);
+    await user.click(screen.getByTestId('bill-form-save-button'));
+
+    await waitFor(() => expect(createBill).toHaveBeenCalled());
+    const body = vi.mocked(createBill).mock.calls[0][0] as Record<string, unknown>;
+    for (const key of ['status', 'subtotal', 'taxAmount', 'totalAmount', 'subTotal', 'total', 'totalTaxAmount']) {
+      expect(body).not.toHaveProperty(key);
+    }
+    expect(body).toMatchObject({
+      'billItemList[0].description': 'Paper',
+      'billItemList[0].quantity': 2,
+      'billItemList[0].unitPrice': 50,
+    });
+  });
+
+  it('says plainly when the server cannot store drafts yet, and stays on the form', async () => {
+    const user = userEvent.setup();
+    vi.mocked(saveBillDraft).mockRejectedValue(new BillActionUnavailableError('saveDraft'));
+
+    renderBillFormPage();
+    await fillNewBill(user);
+    await user.click(screen.getByTestId('bill-form-save-draft-button'));
+
+    const message = await screen.findByTestId('bill-form-error-message');
+    expect(message).toHaveTextContent(/nothing was saved/i);
+    expect(message).not.toHaveTextContent(/status code/i);
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it('edits a posted bill with Update Bill only: a posted bill cannot go back to draft', async () => {
+    vi.mocked(getBill).mockResolvedValue(createMockBill({ vendor: { id: 'vendor-1', name: 'Acme Supplies' } }));
+
+    renderBillFormPage('bill-123');
+    await waitFor(() => expect(screen.getByTestId('bill-form-save-button')).toHaveTextContent('Update Bill'));
+    expect(screen.queryByTestId('bill-form-save-draft-button')).not.toBeInTheDocument();
+  });
+
+  it('Submit on a draft saves the edits first, then submits it', async () => {
+    const user = userEvent.setup();
+    const draft = createMockBill({ id: 'draft-9', status: null, postingStatus: 'DRAFT', vendor: { id: 'vendor-1', name: 'Acme Supplies' } });
+    vi.mocked(getBill).mockResolvedValue(draft);
+    vi.mocked(updateBill).mockResolvedValue(draft);
+    vi.mocked(submitBill).mockResolvedValue({ ...draft, postingStatus: 'POSTED', status: 'PENDING' });
+
+    renderBillFormPage('draft-9');
+    await waitFor(() => expect(screen.getByTestId('bill-form-save-button')).toHaveTextContent('Submit Bill'));
+    expect(screen.getByTestId('bill-form-save-draft-button')).toBeInTheDocument();
+
+    await user.click(screen.getByTestId('bill-form-save-button'));
+
+    await waitFor(() => expect(submitBill).toHaveBeenCalledWith('draft-9'));
+    expect(vi.mocked(updateBill).mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(submitBill).mock.invocationCallOrder[0]
+    );
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/bills/draft-9'));
+  });
+
+  it('Save Draft on a draft updates it without submitting', async () => {
+    const user = userEvent.setup();
+    const draft = createMockBill({ id: 'draft-9', status: null, postingStatus: 'DRAFT', vendor: { id: 'vendor-1', name: 'Acme Supplies' } });
+    vi.mocked(getBill).mockResolvedValue(draft);
+    vi.mocked(updateBill).mockResolvedValue(draft);
+
+    renderBillFormPage('draft-9');
+    await user.click(await screen.findByTestId('bill-form-save-draft-button'));
+
+    await waitFor(() => expect(updateBill).toHaveBeenCalledWith('draft-9', expect.any(Object)));
+    expect(submitBill).not.toHaveBeenCalled();
+  });
+
+  it('keeps the edits and explains why when the submit step fails', async () => {
+    const user = userEvent.setup();
+    const draft = createMockBill({ id: 'draft-9', status: null, postingStatus: 'DRAFT', vendor: { id: 'vendor-1', name: 'Acme Supplies' } });
+    vi.mocked(getBill).mockResolvedValue(draft);
+    vi.mocked(updateBill).mockResolvedValue(draft);
+    vi.mocked(submitBill).mockRejectedValue(new BillActionUnavailableError('submit'));
+
+    renderBillFormPage('draft-9');
+    await user.click(await screen.findByTestId('bill-form-save-button'));
+
+    expect(await screen.findByTestId('bill-form-error-message')).toHaveTextContent(/submitting draft bills is not available/i);
+    expect(updateBill).toHaveBeenCalled();
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['PAID', { status: 'PAID', amountPaid: 1100, amountDue: 0 }, /paid/i],
+    ['CANCELLED', { postingStatus: 'CANCELLED' }, /voided/i],
+  ] as const)('locks a %s bill: fields and buttons disabled, nothing saved', async (_label, overrides, reason) => {
+    const user = userEvent.setup();
+    vi.mocked(getBill).mockResolvedValue(createMockBill({ vendor: { id: 'vendor-1', name: 'Acme Supplies' }, ...(overrides as Partial<Bill>) }));
+
+    renderBillFormPage('bill-123');
+
+    expect(await screen.findByTestId('bill-form-locked')).toHaveTextContent(reason);
+    expect(screen.getByTestId('bill-form-fields')).toBeDisabled();
+    expect(screen.getByTestId('bill-form-save-button')).toBeDisabled();
+    expect(screen.queryByTestId('bill-form-save-draft-button')).not.toBeInTheDocument();
+
+    // Enter in the form must not bypass the disabled button either
+    fireEvent.submit(screen.getByTestId('bill-form-fields').closest('form')!);
+    await user.click(screen.getByTestId('bill-form-locked-back'));
+    expect(updateBill).not.toHaveBeenCalled();
+    expect(mockNavigate).toHaveBeenCalledWith('/bills/bill-123');
   });
 });

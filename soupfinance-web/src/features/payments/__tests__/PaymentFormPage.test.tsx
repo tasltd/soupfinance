@@ -40,7 +40,7 @@ vi.mock('../../../hooks/usePaymentMethods', () => ({
 
 import { listInvoices, recordInvoicePayment } from '../../../api/endpoints/invoices';
 import { listBills } from '../../../api/endpoints/bills';
-import type { Invoice } from '../../../types';
+import type { Bill, Invoice } from '../../../types';
 
 const FINANCE_GATE = { error: 'Finance module is not enabled for this tenant' };
 
@@ -114,6 +114,33 @@ describe('PaymentFormPage', () => {
       expect(recordInvoicePayment).toHaveBeenCalledWith(
         expect.objectContaining({ 'invoice.id': 'inv-1', amount: 100 })
       );
+    });
+  });
+
+  // Added (SOUPFIN-184): only posted bills with a balance can be paid
+  describe('bill choices follow the lifecycle', () => {
+    it('offers pending and overdue bills, never draft, voided or paid ones', async () => {
+      vi.mocked(listInvoices).mockResolvedValue([]);
+      const bill = (id: string, number: number, extra: Record<string, unknown>) =>
+        ({ id, billNumber: `BILL-${number}`, amountDue: 300, paymentDate: '2099-12-31', status: 'PENDING', ...extra }) as unknown as Bill;
+      vi.mocked(listBills).mockResolvedValue([
+        bill('b-pending', 1, {}),
+        bill('b-overdue', 2, { paymentDate: '2020-01-01' }),
+        bill('b-draft', 3, { status: null, postingStatus: 'DRAFT' }),
+        bill('b-void', 4, { postingStatus: 'CANCELLED' }),
+        bill('b-paid', 5, { status: 'PAID', amountDue: 0 }),
+      ]);
+      const user = userEvent.setup();
+
+      renderPage();
+      await user.click(await screen.findByTestId('type-bill'));
+
+      await waitFor(() => expect(screen.getByRole('option', { name: /BILL-1/ })).toBeInTheDocument());
+      const values = Array.from(
+        (screen.getByTestId('select-document') as HTMLSelectElement).options,
+        (o) => o.value
+      ).filter(Boolean);
+      expect(values).toEqual(['b-pending', 'b-overdue']);
     });
   });
 

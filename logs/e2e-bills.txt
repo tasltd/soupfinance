@@ -1,0 +1,221 @@
+
+Running 107 tests using 3 workers
+
+[1A[2K[1/107] [firefox] › e2e/bills.spec.ts:565:5 › Bill Management › Bill List Page › shows loading state while fetching bills
+[1A[2K[2/107] [firefox] › e2e/bills.spec.ts:534:5 › Bill Management › Bill List Page › bill list page loads correctly
+[1A[2K[3/107] [firefox] › e2e/bills.spec.ts:546:5 › Bill Management › Bill List Page › displays bills data in table
+[1A[2K[4/107] [firefox] › e2e/bills.spec.ts:596:5 › Bill Management › Bill List Page › shows empty state when no bills exist
+[1A[2K[5/107] [firefox] › e2e/bills.spec.ts:621:5 › Bill Management › Bill List Page › displays correct bill status badges
+[1A[2K[6/107] [firefox] › e2e/bills.spec.ts:639:5 › Bill Management › Bill List Page › clicking row navigates to bill detail page
+[1A[2K[7/107] [firefox] › e2e/bills.spec.ts:659:5 › Bill Management › Bill List Page › new bill button navigates to form
+[1A[2K[8/107] [firefox] › e2e/bills.spec.ts:677:5 › Bill Management › Bill List Page › bills table shows vendor names
+[1A[2K[9/107] [firefox] › e2e/bills.spec.ts:691:5 › Bill Management › Bill List Page › bills table shows amounts correctly
+[1A[2K[10/107] [firefox] › e2e/bills.spec.ts:710:5 › Bill Management › Create New Bill › new bill form loads with empty fields
+[1A[2K[11/107] [firefox] › e2e/bills.spec.ts:727:5 › Bill Management › Create New Bill › vendor selection dropdown populates with vendors
+[1A[2K  1) [firefox] › e2e/bills.spec.ts:621:5 › Bill Management › Bill List Page › displays correct bill status badges 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveText[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  getByTestId('bill-status-bill-001')
+    Expected: [32m"PENDING"[39m
+    Received: [31m"OVERDUE"[39m
+    Timeout:  5000ms
+
+    Call log:
+    [2m  - Expect "toHaveText" with timeout 5000ms[22m
+    [2m  - waiting for getByTestId('bill-status-bill-001')[22m
+    [2m    9 × locator resolved to <span data-testid="bill-status-bill-001" class="px-2.5 py-0.5 text-xs font-medium rounded-full bg-danger/10 text-danger">OVERDUE</span>[22m
+    [2m      - unexpected value "OVERDUE"[22m
+
+
+      628 |
+      629 |       // Check status badges for different statuses
+    > 630 |       await expect(page.getByTestId('bill-status-bill-001')).toHaveText('PENDING');
+          |                                                              ^
+      631 |       await expect(page.getByTestId('bill-status-bill-002')).toHaveText('PAID');
+      632 |       await expect(page.getByTestId('bill-status-bill-003')).toHaveText('OVERDUE');
+      633 |       await expect(page.getByTestId('bill-status-bill-004')).toHaveText('DRAFT');
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-184-060544-slfr/soupfinance-web/e2e/bills.spec.ts:630:62
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/bills-Bill-Management-Bill-1f71c--correct-bill-status-badges-firefox/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/bills-Bill-Management-Bill-1f71c--correct-bill-status-badges-firefox/error-context.md
+
+
+[1A[2K[12/107] [firefox] › e2e/bills.spec.ts:742:5 › Bill Management › Create New Bill › can add line items to bill
+[1A[2K[13/107] [firefox] › e2e/bills.spec.ts:763:5 › Bill Management › Create New Bill › can remove line items from bill
+[1A[2K[14/107] [firefox] › e2e/bills.spec.ts:789:5 › Bill Management › Create New Bill › calculates subtotal, tax, and total automatically
+[1A[2K[15/107] [firefox] › e2e/bills.spec.ts:814:5 › Bill Management › Create New Bill › save bill creates bill with DRAFT status
+[1A[2K[16/107] [firefox] › e2e/bills.spec.ts:856:5 › Bill Management › Create New Bill › shows validation errors for empty vendor
+[1A[2K[17/107] [firefox] › e2e/bills.spec.ts:876:5 › Bill Management › Create New Bill › shows validation errors for empty line items
+[1A[2K[18/107] [firefox] › e2e/bills.spec.ts:900:5 › Bill Management › Create New Bill › cancel button navigates back to bill list
+[1A[2K[19/107] [firefox] › e2e/bills.spec.ts:917:5 › Bill Management › Create New Bill › empty state create button opens new bill form
+[1A[2K[20/107] [firefox] › e2e/bills.spec.ts:952:5 › Bill Management › Edit Bill › edit form loads with existing bill data
+[1A[2K[21/107] [firefox] › e2e/bills.spec.ts:971:5 › Bill Management › Edit Bill › edit form shows existing line items
+[1A[2K[22/107] [firefox] › e2e/bills.spec.ts:987:5 › Bill Management › Edit Bill › can modify fields and save
+[1A[2K[23/107] [firefox] › e2e/bills.spec.ts:1015:5 › Bill Management › Edit Bill › clicking edit from list navigates to edit form
+[1A[2K[24/107] [firefox] › e2e/bills.spec.ts:1042:5 › Bill Management › Bill Detail Page › displays bill header info correctly
+[1A[2K[25/107] [firefox] › e2e/bills.spec.ts:1061:5 › Bill Management › Bill Detail Page › displays line items table
+[1A[2K[26/107] [firefox] › e2e/bills.spec.ts:1075:5 › Bill Management › Bill Detail Page › displays payment history
+[1A[2K[27/107] [firefox] › e2e/bills.spec.ts:1090:5 › Bill Management › Bill Detail Page › shows record payment button
+[1A[2K[28/107] [firefox] › e2e/bills.spec.ts:1102:5 › Bill Management › Bill Detail Page › shows edit button
+[1A[2K[29/107] [firefox] › e2e/bills.spec.ts:1119:5 › Bill Management › Bill Detail Page › can delete bill with browser confirmation
+[1A[2K  2) [firefox] › e2e/bills.spec.ts:1042:5 › Bill Management › Bill Detail Page › displays bill header info correctly 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveText[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  getByTestId('bill-detail-status')
+    Expected: [32m"PENDING"[39m
+    Received: [31m"OVERDUE"[39m
+    Timeout:  5000ms
+
+    Call log:
+    [2m  - Expect "toHaveText" with timeout 5000ms[22m
+    [2m  - waiting for getByTestId('bill-detail-status')[22m
+    [2m    9 × locator resolved to <span data-testid="bill-detail-status" class="px-2.5 py-0.5 text-xs font-medium rounded-full bg-danger/10 text-danger">OVERDUE</span>[22m
+    [2m      - unexpected value "OVERDUE"[22m
+
+
+      1054 |       await expect(page.getByTestId('bill-info-card')).toContainText('2026-01-15');
+      1055 |       await expect(page.getByTestId('bill-info-card')).toContainText('2026-02-14');
+    > 1056 |       await expect(page.getByTestId('bill-detail-status')).toHaveText('PENDING');
+           |                                                            ^
+      1057 |
+      1058 |       await takeScreenshot(page, 'bills-detail-header');
+      1059 |     });
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-184-060544-slfr/soupfinance-web/e2e/bills.spec.ts:1056:60
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/bills-Bill-Management-Bill-bc564--bill-header-info-correctly-firefox/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/bills-Bill-Management-Bill-bc564--bill-header-info-correctly-firefox/error-context.md
+
+
+[1A[2K[30/107] [firefox] › e2e/bills.spec.ts:1162:5 › Bill Management › Bill Payments › record payment button navigates to payment form
+[1A[2K[31/107] [firefox] › e2e/bills.spec.ts:1139:5 › Bill Management › Bill Detail Page › displays amount due correctly
+[1A[2K[32/107] [firefox] › e2e/bills.spec.ts:1179:5 › Bill Management › Bill Payments › payment history displays recorded payments
+[1A[2K[33/107] [firefox] › e2e/bills.spec.ts:1214:5 › Bill Management › Bill Payments › shows empty payments state when no payments
+[1A[2K[34/107] [firefox] › e2e/bills.spec.ts:1227:5 › Bill Management › Bill Payments › record payment button hidden for fully paid bills
+[1A[2K[35/107] [firefox] › e2e/bills.spec.ts:1246:5 › Bill Management › Bill API Error Handling › handles API error gracefully on list page
+[1A[2K[36/107] [firefox] › e2e/bills.spec.ts:1274:5 › Bill Management › Bill API Error Handling › handles network timeout gracefully
+[1A[2K[37/107] [firefox] › e2e/bills.spec.ts:1296:5 › Bill Management › Bill API Error Handling › handles 404 for non-existent bill
+[1A[2K[38/107] [firefox] › e2e/bills.spec.ts:1341:5 › Bill Management › Bill Page Responsiveness › bill list is usable on mobile
+[1A[2K[39/107] [firefox] › e2e/bills.spec.ts:1354:5 › Bill Management › Bill Page Responsiveness › bill table scrolls horizontally on small screens
+[1A[2K[40/107] [firefox] › e2e/bills.spec.ts:1370:5 › Bill Management › Bill Page Responsiveness › bill form is usable on mobile
+[1A[2K[41/107] [firefox] › e2e/bills.spec.ts:1383:5 › Bill Management › Bill Page Responsiveness › bill detail page is usable on mobile
+[1A[2K[42/107] [firefox] › e2e/bills.spec.ts:1403:5 › Bill Management › Navigation from Bills › can navigate to dashboard from bills
+[1A[2K[43/107] [firefox] › e2e/bills.spec.ts:1416:5 › Bill Management › Navigation from Bills › protected route requires authentication
+[1A[2K[44/107] [firefox] › e2e/bills.spec.ts:1434:5 › Bill Management › Navigation from Bills › back link from detail returns to list
+[1A[2K[45/107] [firefox] › e2e/payments.spec.ts:319:5 › Payment Management › Payment List Page › displays payment list with tabs
+[1A[2K[46/107] [firefox] › e2e/payments.spec.ts:334:5 › Payment Management › Payment List Page › shows incoming payments in table
+[1A[2K[47/107] [firefox] › e2e/payments.spec.ts:357:5 › Payment Management › Payment List Page › switches to outgoing payments tab
+[1A[2K[48/107] [firefox] › e2e/payments.spec.ts:376:5 › Payment Management › Payment List Page › shows loading state while fetching
+[1A[2K[49/107] [firefox] › e2e/payments.spec.ts:409:5 › Payment Management › Payment List Page › shows empty state when no incoming payments
+[1A[2K[50/107] [firefox] › e2e/payments.spec.ts:421:5 › Payment Management › Payment List Page › shows empty state when no outgoing payments
+[1A[2K[51/107] [firefox] › e2e/payments.spec.ts:436:5 › Payment Management › Payment List Page › shows error state on API failure
+[1A[2K[52/107] [firefox] › e2e/payments.spec.ts:467:5 › Payment Management › Payment List Page › can navigate to record payment
+[1A[2K[53/107] [firefox] › e2e/payments.spec.ts:476:5 › Payment Management › Payment List Page › shows payment count badges on tabs
+[1A[2K[54/107] [firefox] › e2e/payments.spec.ts:497:5 › Payment Management › Payment Form Page › displays form with payment type toggle
+[1A[2K[55/107] [firefox] › e2e/payments.spec.ts:514:5 › Payment Management › Payment Form Page › shows invoice dropdown for incoming payment
+[1A[2K[56/107] [firefox] › e2e/payments.spec.ts:533:5 › Payment Management › Payment Form Page › switches to bill payment and shows bill dropdown
+[1A[2K[firefox] › e2e/payments.spec.ts:497:5 › Payment Management › Payment Form Page › displays form with payment type toggle
+[RESPONSE VALIDATION] http://localhost:5194/rest/ledgerAccount/index.json: Response.ledgerAccount[0]: missing required field 'ledgerGroup'
+
+[1A[2K[firefox] › e2e/payments.spec.ts:514:5 › Payment Management › Payment Form Page › shows invoice dropdown for incoming payment
+[RESPONSE VALIDATION] http://localhost:5194/rest/ledgerAccount/index.json: Response.ledgerAccount[0]: missing required field 'ledgerGroup'
+
+[1A[2K[57/107] [firefox] › e2e/payments.spec.ts:555:5 › Payment Management › Payment Form Page › submit button is disabled without document selection
+[1A[2K[58/107] [firefox] › e2e/payments.spec.ts:569:5 › Payment Management › Payment Form Page › shows balance due when invoice selected
+[1A[2K[firefox] › e2e/payments.spec.ts:533:5 › Payment Management › Payment Form Page › switches to bill payment and shows bill dropdown
+[RESPONSE VALIDATION] http://localhost:5194/rest/ledgerAccount/index.json: Response.ledgerAccount[0]: missing required field 'ledgerGroup'
+
+[1A[2K[RESPONSE VALIDATION] http://localhost:5194/rest/bill/index.json?max=100: Response.bill[0]: missing required field 'billDate'
+
+[1A[2K[59/107] [firefox] › e2e/payments.spec.ts:589:5 › Payment Management › Payment Form Page › pay full balance button fills amount
+[1A[2K[firefox] › e2e/payments.spec.ts:555:5 › Payment Management › Payment Form Page › submit button is disabled without document selection
+[RESPONSE VALIDATION] http://localhost:5194/rest/ledgerAccount/index.json: Response.ledgerAccount[0]: missing required field 'ledgerGroup'
+
+[1A[2K[firefox] › e2e/payments.spec.ts:569:5 › Payment Management › Payment Form Page › shows balance due when invoice selected
+[RESPONSE VALIDATION] http://localhost:5194/rest/ledgerAccount/index.json: Response.ledgerAccount[0]: missing required field 'ledgerGroup'
+
+[1A[2K[60/107] [firefox] › e2e/payments.spec.ts:604:5 › Payment Management › Payment Form Page › prevents submission when amount exceeds balance due
+[1A[2K[61/107] [firefox] › e2e/payments.spec.ts:629:5 › Payment Management › Payment Form Page › can fill all form fields
+[1A[2K[firefox] › e2e/payments.spec.ts:589:5 › Payment Management › Payment Form Page › pay full balance button fills amount
+[RESPONSE VALIDATION] http://localhost:5194/rest/ledgerAccount/index.json: Response.ledgerAccount[0]: missing required field 'ledgerGroup'
+
+[1A[2K[62/107] [firefox] › e2e/payments.spec.ts:650:5 › Payment Management › Payment Form Page › can submit invoice payment successfully
+[1A[2K[firefox] › e2e/payments.spec.ts:604:5 › Payment Management › Payment Form Page › prevents submission when amount exceeds balance due
+[RESPONSE VALIDATION] http://localhost:5194/rest/ledgerAccount/index.json: Response.ledgerAccount[0]: missing required field 'ledgerGroup'
+
+[1A[2K[firefox] › e2e/payments.spec.ts:629:5 › Payment Management › Payment Form Page › can fill all form fields
+[RESPONSE VALIDATION] http://localhost:5194/rest/ledgerAccount/index.json: Response.ledgerAccount[0]: missing required field 'ledgerGroup'
+
+[1A[2K[63/107] [firefox] › e2e/payments.spec.ts:666:5 › Payment Management › Payment Form Page › can submit bill payment successfully
+[1A[2K[firefox] › e2e/payments.spec.ts:650:5 › Payment Management › Payment Form Page › can submit invoice payment successfully
+[RESPONSE VALIDATION] http://localhost:5194/rest/ledgerAccount/index.json: Response.ledgerAccount[0]: missing required field 'ledgerGroup'
+
+[1A[2K[64/107] [firefox] › e2e/payments.spec.ts:685:5 › Payment Management › Payment Form Page › cancel button returns to payment list
+[1A[2K[65/107] [firefox] › e2e/payments.spec.ts:697:5 › Payment Management › Payment Form Page › shows all payment methods in dropdown
+[1A[2K[firefox] › e2e/payments.spec.ts:666:5 › Payment Management › Payment Form Page › can submit bill payment successfully
+[RESPONSE VALIDATION] http://localhost:5194/rest/ledgerAccount/index.json: Response.ledgerAccount[0]: missing required field 'ledgerGroup'
+
+[1A[2K[RESPONSE VALIDATION] http://localhost:5194/rest/bill/index.json?max=100: Response.bill[0]: missing required field 'billDate'
+
+[1A[2K[firefox] › e2e/payments.spec.ts:685:5 › Payment Management › Payment Form Page › cancel button returns to payment list
+[RESPONSE VALIDATION] http://localhost:5194/rest/ledgerAccount/index.json: Response.ledgerAccount[0]: missing required field 'ledgerGroup'
+
+[1A[2K[firefox] › e2e/payments.spec.ts:697:5 › Payment Management › Payment Form Page › shows all payment methods in dropdown
+[RESPONSE VALIDATION] http://localhost:5194/rest/ledgerAccount/index.json: Response.ledgerAccount[0]: missing required field 'ledgerGroup'
+
+[1A[2K[66/107] [firefox] › e2e/payments.spec.ts:711:5 › Payment Management › Payment Form Page › shows loading state while fetching invoices
+[1A[2K[67/107] [firefox] › e2e/payments.spec.ts:749:5 › Payment Management › Responsiveness › payment list is usable on mobile viewport
+[1A[2K[68/107] [firefox] › e2e/payments.spec.ts:765:5 › Payment Management › Responsiveness › payment form is usable on mobile viewport
+[1A[2K[69/107] [firefox] › e2e/payments.spec.ts:951:3 › SOUPFIN-177: payment history, detail and void › pages through payments on the server
+[1A[2K[70/107] [firefox] › e2e/payments.spec.ts:975:3 › SOUPFIN-177: payment history, detail and void › filters by recorded date and by payment method
+[1A[2K[firefox] › e2e/payments.spec.ts:765:5 › Payment Management › Responsiveness › payment form is usable on mobile viewport
+[RESPONSE VALIDATION] http://localhost:5194/rest/ledgerAccount/index.json: Response.ledgerAccount[0]: missing required field 'ledgerGroup'
+
+[1A[2K[71/107] [firefox] › e2e/payments.spec.ts:1014:3 › SOUPFIN-177: payment history, detail and void › opens a payment and voids it
+[1A[2K[72/107] [firefox] › e2e/payments.spec.ts:1054:3 › SOUPFIN-177: payment history, detail and void › a refused void leaves the payment in place and says why
+[1A[2K[73/107] [firefox] › e2e/payments.spec.ts:1074:3 › SOUPFIN-177: payment history, detail and void › voids a bill payment and returns to the outgoing tab
+[1A[2K[74/107] [firefox] › e2e/payments.spec.ts:1099:3 › SOUPFIN-177: payment history, detail and void › reads the payment and voids it in German
+[1A[2K[75/107] [firefox] › e2e/soupfin-160-bills-vendors-errors.spec.ts:73:5 › SOUPFIN-160: bills and vendors explain failed requests › Bills list › a disabled Finance module names the module and offers no retry
+[1A[2K[76/107] [firefox] › e2e/soupfin-160-bills-vendors-errors.spec.ts:86:5 › SOUPFIN-160: bills and vendors explain failed requests › Bills list › a missing role says "no permission"
+[1A[2K[77/107] [firefox] › e2e/soupfin-160-bills-vendors-errors.spec.ts:100:5 › SOUPFIN-160: bills and vendors explain failed requests › Bills list › a server fault offers Retry, and Retry loads the bills
+[1A[2K[78/107] [firefox] › e2e/soupfin-160-bills-vendors-errors.spec.ts:129:3 › SOUPFIN-160: bills and vendors explain failed requests › Bill detail: a missing role on the bill load is explained
+[1A[2K[79/107] [firefox] › e2e/soupfin-160-bills-vendors-errors.spec.ts:149:3 › SOUPFIN-160: bills and vendors explain failed requests › Bill form: a module-gated vendor lookup shows the banner and blocks saving
+[1A[2K[80/107] [firefox] › e2e/soupfin-160-bills-vendors-errors.spec.ts:182:5 › SOUPFIN-160: bills and vendors explain failed requests › Vendors › list: a disabled Trading module names the module
+[1A[2K[81/107] [firefox] › e2e/soupfin-160-bills-vendors-errors.spec.ts:195:5 › SOUPFIN-160: bills and vendors explain failed requests › Vendors › detail: a server fault on the vendor load is explained
+[1A[2K[82/107] [firefox] › e2e/soupfin-160-bills-vendors-errors.spec.ts:209:5 › SOUPFIN-160: bills and vendors explain failed requests › Vendors › form: a 403 on save reads as the module message, not "status code 403"
+[1A[2K[83/107] [firefox] › e2e/soupfin-178-payment-allocation.spec.ts:133:3 › SOUPFIN-178: one payment across many invoices or bills › receive a payment from the client page: FIFO, manual override, over-allocation, save
+[1A[2K[84/107] [firefox] › e2e/soupfin-178-payment-allocation.spec.ts:230:3 › SOUPFIN-178: one payment across many invoices or bills › pay a vendor's bills from the Payments page
+[1A[2K[85/107] [firefox] › e2e/soupfin-178-payment-allocation.spec.ts:275:3 › SOUPFIN-178: one payment across many invoices or bills › vendor page leads to Pay bills with the vendor chosen
+[1A[2K[86/107] [firefox] › e2e/soupfin-178-payment-allocation.spec.ts:285:3 › SOUPFIN-178: one payment across many invoices or bills › a client who owes nothing gets a plain message
+[1A[2K[87/107] [firefox] › e2e/soupfin-178-payment-allocation.spec.ts:294:3 › SOUPFIN-178: one payment across many invoices or bills › the backend refusing the save keeps the user on the form with its reason
+[1A[2K[88/107] [firefox] › e2e/soupfin-178-payment-allocation.spec.ts:319:5 › SOUPFIN-178: allocation screen fits narrower screens › laptop (1280px): no page-wide horizontal scroll, invoice numbers visible
+[1A[2K[89/107] [firefox] › e2e/soupfin-178-payment-allocation.spec.ts:319:5 › SOUPFIN-178: allocation screen fits narrower screens › phone (390px): no page-wide horizontal scroll, invoice numbers visible
+[1A[2K[90/107] [firefox] › e2e/soupfin-184-bill-lifecycle.spec.ts:220:3 › SOUPFIN-184: bill lifecycle › the list shows each lifecycle status, and closed bills offer View, not Edit
+[1A[2K[91/107] [firefox] › e2e/soupfin-184-bill-lifecycle.spec.ts:242:3 › SOUPFIN-184: bill lifecycle › Save Draft stores a new bill without posting it
+[1A[2K[92/107] [firefox] › e2e/soupfin-184-bill-lifecycle.spec.ts:264:3 › SOUPFIN-184: bill lifecycle › Save Draft on a server without drafts says nothing was saved and keeps the form
+[1A[2K[93/107] [firefox] › e2e/soupfin-184-bill-lifecycle.spec.ts:280:3 › SOUPFIN-184: bill lifecycle › Submit posts a new bill through save.json; it then awaits payment
+[1A[2K[94/107] [firefox] › e2e/soupfin-184-bill-lifecycle.spec.ts:294:3 › SOUPFIN-184: bill lifecycle › Submit on a draft saves the edits, then submits it
+[1A[2K[95/107] [firefox] › e2e/soupfin-184-bill-lifecycle.spec.ts:315:3 › SOUPFIN-184: bill lifecycle › Void asks for confirmation, then the bill reads as voided and closed
+[1A[2K[96/107] [firefox] › e2e/soupfin-184-bill-lifecycle.spec.ts:348:3 › SOUPFIN-184: bill lifecycle › Void on a server that cannot void yet leaves the bill unchanged and says so
+[1A[2K[97/107] [firefox] › e2e/soupfin-184-bill-lifecycle.spec.ts:365:3 › SOUPFIN-184: bill lifecycle › a bill with payments cannot be voided, and says why
+[1A[2K[98/107] [firefox] › e2e/soupfin-184-bill-lifecycle.spec.ts:374:3 › SOUPFIN-184: bill lifecycle › a paid bill offers neither Edit nor Void, and its edit URL opens locked
+[1A[2K[99/107] [firefox] › e2e/soupfin-43-bill-detail-totals.spec.ts:210:3 › SOUPFIN-43 — bill detail Amount Summary › #1 Subtotal / Tax / Total come from the bill header, not zero
+[1A[2K[100/107] [firefox] › e2e/soupfin-43-bill-detail-totals.spec.ts:232:3 › SOUPFIN-43 — bill detail Amount Summary › #2 Total and Balance Due agree on the same page
+[1A[2K[101/107] [firefox] › e2e/soupfin-43-bill-detail-totals.spec.ts:245:3 › SOUPFIN-43 — bill detail Amount Summary › #3 the Bills list Total column shows the taxed total
+[1A[2K[102/107] [firefox] › e2e/soupfin-43-bill-detail-totals.spec.ts:259:3 › SOUPFIN-43 — bill detail Amount Summary › #4 a partially paid bill separates Total, Paid and Balance Due
+[1A[2K[103/107] [firefox] › e2e/soupfin-43-bill-detail-totals.spec.ts:272:3 › SOUPFIN-43 — bill detail Amount Summary › #5 falls back to the line items when the header degrades to zero
+[1A[2K[104/107] [firefox] › e2e/soupfin-43-bill-detail-totals.spec.ts:296:3 › SOUPFIN-43 — bill detail Amount Summary › #6 a genuinely zero bill still renders 0.00, not blank or NaN
+[1A[2K[105/107] [firefox] › e2e/soupfin-44-line-item-tax-rate.spec.ts:241:3 › SOUPFIN-44 — bill line item Tax Rate column › #1/#2/#3 tells apart unknown, untaxed and resolved tax
+[1A[2K[106/107] [firefox] › e2e/soupfin-44-line-item-tax-rate.spec.ts:264:3 › SOUPFIN-44 — bill line item Tax Rate column › #4 renders unknown, not 0%, when the tax catalogue is unavailable
+[1A[2K[107/107] [firefox] › e2e/soupfin-44-line-item-tax-rate.spec.ts:278:3 › SOUPFIN-44 — bill line item Tax Rate column › #5 holds up on an over-populated bill without any line claiming a false 0%
+[1A[2K  2 failed
+    [firefox] › e2e/bills.spec.ts:621:5 › Bill Management › Bill List Page › displays correct bill status badges 
+    [firefox] › e2e/bills.spec.ts:1042:5 › Bill Management › Bill Detail Page › displays bill header info correctly 
+  105 passed (3.3m)

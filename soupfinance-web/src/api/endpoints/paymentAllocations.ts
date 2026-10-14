@@ -19,6 +19,8 @@ import { listInvoices } from './invoices';
 import { listBills } from './bills';
 import { getClientPortfolio } from './clients';
 import { isOpen } from '../../features/payments/allocation';
+// Added (SOUPFIN-184): judge a bill by its lifecycle status, not the raw payment status
+import { getBillDisplayStatus, isDraftBill } from '../../features/bills/billStatus';
 import type {
   Bill,
   Client,
@@ -92,7 +94,13 @@ export async function listOpenBillsForVendor(vendorId: string): Promise<OpenDocu
   });
   const total = (rows[0] as Bill & { totalCount?: number })?.totalCount ?? rows.length;
   return {
-    documents: rows.filter((bill) => bill.vendor?.id === vendorId && isOpen(bill)),
+    documents: rows.filter(
+      (bill) =>
+        bill.vendor?.id === vendorId &&
+        // A draft bill is not posted yet, so nothing is owed on it.
+        !isDraftBill(getBillDisplayStatus(bill)) &&
+        isOpen({ amountDue: bill.amountDue, status: getBillDisplayStatus(bill) })
+    ),
     truncated: total > rows.length,
   };
 }

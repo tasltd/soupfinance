@@ -23,6 +23,8 @@ import { parseApiError, getApiErrorMessage } from '../../api/errors';
 import { ModuleDisabledBanner } from '../../components/feedback/ModuleDisabledBanner';
 import type { Invoice, Bill, InvoicePayment, BillPayment } from '../../types';
 import { getTodayIsoDate } from '../../utils/date';
+// Added (SOUPFIN-184): one lifecycle status for every bill page
+import { getBillDisplayStatus } from '../bills/billStatus';
 // Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
 import { HelpLink } from '../../components/help';
 
@@ -89,9 +91,12 @@ export function PaymentFormPage() {
   });
 
   // Added: Filter to bills with balance due
-  const unpaidBills = bills?.filter(
-    (bill) => bill.status !== 'PAID' && (bill.amountDue || 0) > 0
-  );
+  // Changed (SOUPFIN-184): read the lifecycle status — a draft is not owed yet
+  // and a voided bill is closed, so neither can be paid despite its balance.
+  const unpaidBills = bills?.filter((bill) => {
+    const status = getBillDisplayStatus(bill);
+    return status !== 'PAID' && status !== 'DRAFT' && status !== 'CANCELLED' && (bill.amountDue || 0) > 0;
+  });
 
   // Added: Fetch bank/cash accounts for payInAccount/payOutAccount selection
   const { data: ledgerAccounts } = useLedgerAccounts();

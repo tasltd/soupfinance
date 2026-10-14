@@ -1,0 +1,127 @@
+
+Running 44 tests using 3 workers
+
+[1A[2K[1/44] [firefox] › e2e/bills.spec.ts:572:5 › Bill Management › Bill List Page › shows loading state while fetching bills
+[1A[2K[2/44] [firefox] › e2e/bills.spec.ts:553:5 › Bill Management › Bill List Page › displays bills data in table
+[1A[2K[3/44] [firefox] › e2e/bills.spec.ts:541:5 › Bill Management › Bill List Page › bill list page loads correctly
+[1A[2K[firefox] › e2e/bills.spec.ts:541:5 › Bill Management › Bill List Page › bill list page loads correctly
+[RESPONSE VALIDATION] http://localhost:5194/rest/bill/index.json?max=20&sort=dateCreated&order=desc: Response.bill[3]: 'status' must be string, got object
+
+[1A[2K[4/44] [firefox] › e2e/bills.spec.ts:603:5 › Bill Management › Bill List Page › shows empty state when no bills exist
+[1A[2K[firefox] › e2e/bills.spec.ts:553:5 › Bill Management › Bill List Page › displays bills data in table
+[RESPONSE VALIDATION] http://localhost:5194/rest/bill/index.json?max=20&sort=dateCreated&order=desc: Response.bill[3]: 'status' must be string, got object
+
+[1A[2K[5/44] [firefox] › e2e/bills.spec.ts:628:5 › Bill Management › Bill List Page › displays correct bill status badges
+[1A[2K[6/44] [firefox] › e2e/bills.spec.ts:649:5 › Bill Management › Bill List Page › clicking row navigates to bill detail page
+[1A[2K[firefox] › e2e/bills.spec.ts:572:5 › Bill Management › Bill List Page › shows loading state while fetching bills
+[RESPONSE VALIDATION] http://localhost:5194/rest/bill/index.json?max=20&sort=dateCreated&order=desc: Response.bill[3]: 'status' must be string, got object
+
+[1A[2K[firefox] › e2e/bills.spec.ts:628:5 › Bill Management › Bill List Page › displays correct bill status badges
+[RESPONSE VALIDATION] http://localhost:5194/rest/bill/index.json?max=20&sort=dateCreated&order=desc: Response.bill[3]: 'status' must be string, got object
+
+[1A[2K[7/44] [firefox] › e2e/bills.spec.ts:669:5 › Bill Management › Bill List Page › new bill button navigates to form
+[1A[2K[firefox] › e2e/bills.spec.ts:649:5 › Bill Management › Bill List Page › clicking row navigates to bill detail page
+[RESPONSE VALIDATION] http://localhost:5194/rest/bill/index.json?max=20&sort=dateCreated&order=desc: Response.bill[3]: 'status' must be string, got object
+
+[1A[2K  1) [firefox] › e2e/bills.spec.ts:572:5 › Bill Management › Bill List Page › shows loading state while fetching bills 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByTestId('bill-list-table')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 5000ms[22m
+    [2m  - waiting for getByTestId('bill-list-table')[22m
+
+
+      598 |
+      599 |       // Wait for table to appear after delay
+    > 600 |       await expect(page.getByTestId('bill-list-table')).toBeVisible({ timeout: 5000 });
+          |                                                         ^
+      601 |     });
+      602 |
+      603 |     test('shows empty state when no bills exist', async ({ page }) => {
+        at /home/ddr/Documents/code/soupmarkets/soupfinance/.worktrees/fix-soupfin-184-060544-slfr/soupfinance-web/e2e/bills.spec.ts:600:57
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/bills-Bill-Management-Bill-d7e9e--state-while-fetching-bills-firefox/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/bills-Bill-Management-Bill-d7e9e--state-while-fetching-bills-firefox/error-context.md
+
+
+[1A[2K[8/44] [firefox] › e2e/bills.spec.ts:701:5 › Bill Management › Bill List Page › bills table shows amounts correctly
+[1A[2K[9/44] [firefox] › e2e/bills.spec.ts:687:5 › Bill Management › Bill List Page › bills table shows vendor names
+[1A[2K[firefox] › e2e/bills.spec.ts:669:5 › Bill Management › Bill List Page › new bill button navigates to form
+[RESPONSE VALIDATION] http://localhost:5194/rest/bill/index.json?max=20&sort=dateCreated&order=desc: Response.bill[3]: 'status' must be string, got object
+
+[1A[2K[10/44] [firefox] › e2e/bills.spec.ts:720:5 › Bill Management › Create New Bill › new bill form loads with empty fields
+[1A[2K[firefox] › e2e/bills.spec.ts:701:5 › Bill Management › Bill List Page › bills table shows amounts correctly
+[RESPONSE VALIDATION] http://localhost:5194/rest/bill/index.json?max=20&sort=dateCreated&order=desc: Response.bill[3]: 'status' must be string, got object
+
+[1A[2K[11/44] [firefox] › e2e/bills.spec.ts:737:5 › Bill Management › Create New Bill › vendor selection dropdown populates with vendors
+[1A[2K[12/44] [firefox] › e2e/bills.spec.ts:752:5 › Bill Management › Create New Bill › can add line items to bill
+[1A[2K[firefox] › e2e/bills.spec.ts:687:5 › Bill Management › Bill List Page › bills table shows vendor names
+[RESPONSE VALIDATION] http://localhost:5194/rest/bill/index.json?max=20&sort=dateCreated&order=desc: Response.bill[3]: 'status' must be string, got object
+
+[1A[2K[13/44] [firefox] › e2e/bills.spec.ts:773:5 › Bill Management › Create New Bill › can remove line items from bill
+[1A[2K[14/44] [firefox] › e2e/bills.spec.ts:799:5 › Bill Management › Create New Bill › calculates subtotal, tax, and total automatically
+[1A[2K[15/44] [firefox] › e2e/bills.spec.ts:824:5 › Bill Management › Create New Bill › save bill creates bill with DRAFT status
+[1A[2K[16/44] [firefox] › e2e/bills.spec.ts:867:5 › Bill Management › Create New Bill › shows validation errors for empty vendor
+[1A[2K[17/44] [firefox] › e2e/bills.spec.ts:887:5 › Bill Management › Create New Bill › shows validation errors for empty line items
+[1A[2K[18/44] [firefox] › e2e/bills.spec.ts:911:5 › Bill Management › Create New Bill › cancel button navigates back to bill list
+[1A[2K[19/44] [firefox] › e2e/bills.spec.ts:928:5 › Bill Management › Create New Bill › empty state create button opens new bill form
+[1A[2K[20/44] [firefox] › e2e/bills.spec.ts:963:5 › Bill Management › Edit Bill › edit form loads with existing bill data
+[1A[2K[21/44] [firefox] › e2e/bills.spec.ts:982:5 › Bill Management › Edit Bill › edit form shows existing line items
+[1A[2K[firefox] › e2e/bills.spec.ts:911:5 › Bill Management › Create New Bill › cancel button navigates back to bill list
+[RESPONSE VALIDATION] http://localhost:5194/rest/bill/index.json?max=20&sort=dateCreated&order=desc: Response.bill[3]: 'status' must be string, got object
+
+[1A[2K[22/44] [firefox] › e2e/bills.spec.ts:998:5 › Bill Management › Edit Bill › can modify fields and save
+[1A[2K[23/44] [firefox] › e2e/bills.spec.ts:1026:5 › Bill Management › Edit Bill › clicking edit from list navigates to edit form
+[1A[2K[24/44] [firefox] › e2e/bills.spec.ts:1053:5 › Bill Management › Bill Detail Page › displays bill header info correctly
+[1A[2K[25/44] [firefox] › e2e/bills.spec.ts:1074:5 › Bill Management › Bill Detail Page › displays line items table
+[1A[2K[firefox] › e2e/bills.spec.ts:1026:5 › Bill Management › Edit Bill › clicking edit from list navigates to edit form
+[RESPONSE VALIDATION] http://localhost:5194/rest/bill/index.json?max=20&sort=dateCreated&order=desc: Response.bill[3]: 'status' must be string, got object
+
+[1A[2K[26/44] [firefox] › e2e/bills.spec.ts:1088:5 › Bill Management › Bill Detail Page › displays payment history
+[1A[2K[27/44] [firefox] › e2e/bills.spec.ts:1103:5 › Bill Management › Bill Detail Page › shows record payment button
+[1A[2K[28/44] [firefox] › e2e/bills.spec.ts:1115:5 › Bill Management › Bill Detail Page › shows edit button
+[1A[2K[29/44] [firefox] › e2e/bills.spec.ts:1132:5 › Bill Management › Bill Detail Page › can delete bill with browser confirmation
+[1A[2K[30/44] [firefox] › e2e/bills.spec.ts:1152:5 › Bill Management › Bill Detail Page › displays amount due correctly
+[1A[2K[31/44] [firefox] › e2e/bills.spec.ts:1175:5 › Bill Management › Bill Payments › record payment button navigates to payment form
+[1A[2K[firefox] › e2e/bills.spec.ts:1132:5 › Bill Management › Bill Detail Page › can delete bill with browser confirmation
+[RESPONSE VALIDATION] http://localhost:5194/rest/bill/show/bill-004.json: Response.bill: 'status' must be string, got object
+
+[1A[2K[RESPONSE VALIDATION] http://localhost:5194/rest/bill/index.json?max=20&sort=dateCreated&order=desc: Response.bill[3]: 'status' must be string, got object
+
+[1A[2K[32/44] [firefox] › e2e/bills.spec.ts:1192:5 › Bill Management › Bill Payments › payment history displays recorded payments
+[1A[2K[33/44] [firefox] › e2e/bills.spec.ts:1227:5 › Bill Management › Bill Payments › shows empty payments state when no payments
+[1A[2K[firefox] › e2e/bills.spec.ts:1175:5 › Bill Management › Bill Payments › record payment button navigates to payment form
+[RESPONSE VALIDATION] http://localhost:5194/rest/bill/index.json?max=100: Response.bill[3]: 'status' must be string, got object
+
+[1A[2K[34/44] [firefox] › e2e/bills.spec.ts:1240:5 › Bill Management › Bill Payments › record payment button hidden for fully paid bills
+[1A[2K[35/44] [firefox] › e2e/bills.spec.ts:1259:5 › Bill Management › Bill API Error Handling › handles API error gracefully on list page
+[1A[2K[36/44] [firefox] › e2e/bills.spec.ts:1287:5 › Bill Management › Bill API Error Handling › handles network timeout gracefully
+[1A[2K[37/44] [firefox] › e2e/bills.spec.ts:1309:5 › Bill Management › Bill API Error Handling › handles 404 for non-existent bill
+[1A[2K[38/44] [firefox] › e2e/bills.spec.ts:1354:5 › Bill Management › Bill Page Responsiveness › bill list is usable on mobile
+[1A[2K[39/44] [firefox] › e2e/bills.spec.ts:1367:5 › Bill Management › Bill Page Responsiveness › bill table scrolls horizontally on small screens
+[1A[2K[40/44] [firefox] › e2e/bills.spec.ts:1383:5 › Bill Management › Bill Page Responsiveness › bill form is usable on mobile
+[1A[2K[firefox] › e2e/bills.spec.ts:1367:5 › Bill Management › Bill Page Responsiveness › bill table scrolls horizontally on small screens
+[RESPONSE VALIDATION] http://localhost:5194/rest/bill/index.json?max=20&sort=dateCreated&order=desc: Response.bill[3]: 'status' must be string, got object
+
+[1A[2K[firefox] › e2e/bills.spec.ts:1354:5 › Bill Management › Bill Page Responsiveness › bill list is usable on mobile
+[RESPONSE VALIDATION] http://localhost:5194/rest/bill/index.json?max=20&sort=dateCreated&order=desc: Response.bill[3]: 'status' must be string, got object
+
+[1A[2K[41/44] [firefox] › e2e/bills.spec.ts:1396:5 › Bill Management › Bill Page Responsiveness › bill detail page is usable on mobile
+[1A[2K[42/44] [firefox] › e2e/bills.spec.ts:1416:5 › Bill Management › Navigation from Bills › can navigate to dashboard from bills
+[1A[2K[43/44] [firefox] › e2e/bills.spec.ts:1429:5 › Bill Management › Navigation from Bills › protected route requires authentication
+[1A[2K[44/44] [firefox] › e2e/bills.spec.ts:1447:5 › Bill Management › Navigation from Bills › back link from detail returns to list
+[1A[2K[firefox] › e2e/bills.spec.ts:1447:5 › Bill Management › Navigation from Bills › back link from detail returns to list
+[RESPONSE VALIDATION] http://localhost:5194/rest/bill/index.json?max=20&sort=dateCreated&order=desc: Response.bill[3]: 'status' must be string, got object
+
+[1A[2K  1 failed
+    [firefox] › e2e/bills.spec.ts:572:5 › Bill Management › Bill List Page › shows loading state while fetching bills 
+  43 passed (1.6m)

@@ -10,6 +10,8 @@
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { listBills } from '../../api/endpoints/bills';
+// Added (SOUPFIN-184): shared lifecycle status for the badge and the row action
+import { canEditBill, getBillDisplayStatus, getBillStatusStyle } from './billStatus';
 import { useFormatCurrency } from '../../stores';
 // Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
 import { HelpLink } from '../../components/help';
@@ -72,7 +74,9 @@ export function BillListPage() {
                 </tr>
               </thead>
               <tbody>
-                {bills.map((bill) => (
+                {bills.map((bill) => {
+                  const status = getBillDisplayStatus(bill);
+                  return (
                   <tr key={bill.id} className="border-b border-border-light dark:border-border-dark hover:bg-primary/5" data-testid={`bill-row-${bill.id}`}>
                     <td className="px-4 sm:px-6 py-4">
                       <Link to={`/bills/${bill.id}`} className="font-medium text-primary hover:underline" data-testid={`bill-link-${bill.id}`}>
@@ -89,17 +93,26 @@ export function BillListPage() {
                       {formatCurrency(bill.amountDue)}
                     </td>
                     <td className="px-4 sm:px-6 py-4 text-center">
-                      <span className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${getStatusStyle(bill.status)}`} data-testid={`bill-status-${bill.id}`}>
-                        {bill.status}
+                      {/* Changed (SOUPFIN-184): the lifecycle status, not the raw backend field */}
+                      <span className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${getBillStatusStyle(status)}`} data-testid={`bill-status-${bill.id}`}>
+                        {status}
                       </span>
                     </td>
                     <td className="px-4 sm:px-6 py-4 text-center">
-                      <Link to={`/bills/${bill.id}/edit`} className="text-primary hover:underline text-sm" data-testid={`bill-edit-${bill.id}`}>
-                        Edit
-                      </Link>
+                      {/* Changed (SOUPFIN-184): a paid or voided bill is closed, so it offers View, not Edit */}
+                      {canEditBill(status) ? (
+                        <Link to={`/bills/${bill.id}/edit`} className="text-primary hover:underline text-sm" data-testid={`bill-edit-${bill.id}`}>
+                          Edit
+                        </Link>
+                      ) : (
+                        <Link to={`/bills/${bill.id}`} className="text-primary hover:underline text-sm" data-testid={`bill-view-${bill.id}`}>
+                          View
+                        </Link>
+                      )}
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -118,17 +131,4 @@ export function BillListPage() {
       </div>
     </div>
   );
-}
-
-// Added: Status badge styling helper
-function getStatusStyle(status: string): string {
-  const styles: Record<string, string> = {
-    PAID: 'bg-success/10 text-success',
-    PARTIAL: 'bg-info/10 text-info',
-    PENDING: 'bg-warning/10 text-warning',
-    OVERDUE: 'bg-danger/10 text-danger',
-    DRAFT: 'bg-subtle-text/10 text-subtle-text',
-    CANCELLED: 'bg-subtle-text/10 text-subtle-text',
-  };
-  return styles[status] || styles.DRAFT;
 }

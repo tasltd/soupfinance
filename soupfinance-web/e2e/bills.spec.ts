@@ -20,6 +20,7 @@
  *   - GET /rest/vendor/index.json - list vendors for dropdown
  */
 import { test, expect } from '@playwright/test';
+
 import {
   takeScreenshot,
   mockTokenValidationApi,
@@ -31,6 +32,10 @@ import {
   mockAmbientApi,
   type UnmockedApiGuard,
 } from './fixtures';
+
+// Added (SOUPFIN-184): the day these fixtures were written. OVERDUE is derived
+// from the due date, so tests that assert a PENDING badge pin the clock here.
+const FIXTURE_TODAY = new Date('2026-01-20T10:00:00');
 
 // =============================================================================
 // Mock Data
@@ -137,7 +142,10 @@ const mockBills = [
     vendor: { id: 'vendor-001', name: 'Acme Corp' },
     billDate: '2026-01-18',
     paymentDate: '2026-02-17',
-    status: 'DRAFT',
+    // Changed (SOUPFIN-184): the backend's status is a derived PaymentStatus and
+    // never holds DRAFT; a draft is marked by the planned postingStatus.
+    status: null,
+    postingStatus: 'DRAFT',
     subtotal: 300.0,
     taxAmount: 30.0,
     totalAmount: 330.0,
@@ -619,6 +627,9 @@ test.describe('Bill Management', () => {
     });
 
     test('displays correct bill status badges', async ({ page }) => {
+      // Added (SOUPFIN-184): OVERDUE is derived from the due date, so pin "today"
+      // to when these fixtures were written; otherwise every PENDING bill ages out.
+      await page.clock.setFixedTime(FIXTURE_TODAY);
       await mockBillsApi(page, mockBills);
 
       await page.goto('/bills');
@@ -842,7 +853,8 @@ test.describe('Bill Management', () => {
       await page.getByTestId('bill-item-quantity-0').fill('1');
       await page.getByTestId('bill-item-unitPrice-0').fill('100');
 
-      // Click save (no separate draft button - new bills are saved as DRAFT by default)
+      // Changed (SOUPFIN-184): the primary button is Submit (save.json); Save Draft is
+      // covered by soupfin-184-bill-lifecycle.spec.ts
       await page.getByTestId('bill-form-save-button').click();
 
       // Should redirect to bills list
@@ -1040,6 +1052,8 @@ test.describe('Bill Management', () => {
 
   test.describe('Bill Detail Page', () => {
     test('displays bill header info correctly', async ({ page }) => {
+      // Added (SOUPFIN-184): see FIXTURE_TODAY
+      await page.clock.setFixedTime(FIXTURE_TODAY);
       await mockBillDetailApi(page, mockBills[0]);
       await mockBillPaymentsApi(page, 'bill-001', []);
 
