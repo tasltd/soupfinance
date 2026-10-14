@@ -182,10 +182,15 @@ describe('ClientFormPage (SOUPFIN-14 fixes)', () => {
     await waitFor(() =>
       expect(screen.getByTestId('client-form-personal-section')).toBeInTheDocument()
     );
-    const firstNameInput = screen.getByTestId('client-form-first-name') as HTMLInputElement;
-    const lastNameInput = screen.getByTestId('client-form-last-name') as HTMLInputElement;
-    expect(firstNameInput.value).toBe('Alice');
-    expect(lastNameInput.value).toBe('Smith');
+    // Fix: wait on the VALUES, not just the section. The section mounts before
+    // react-hook-form's async reset() populates it, so asserting straight after
+    // the section appears read '' instead of 'Alice' under full-suite load.
+    await waitFor(() => {
+      const firstNameInput = screen.getByTestId('client-form-first-name') as HTMLInputElement;
+      const lastNameInput = screen.getByTestId('client-form-last-name') as HTMLInputElement;
+      expect(firstNameInput.value).toBe('Alice');
+      expect(lastNameInput.value).toBe('Smith');
+    });
   });
 });
 

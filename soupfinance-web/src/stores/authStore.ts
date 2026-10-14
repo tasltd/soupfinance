@@ -8,7 +8,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { login as apiLogin, logout as apiLogout, getCurrentUser, type AuthUser } from '../api/auth';
-import apiClient from '../api/client';
+import apiClient, { clearAuthSession, setAuthStateResetter } from '../api/client';
 // Fix (SOUPFIN-58): logout must clear the previous tenant's cached account
 // settings, otherwise `account-storage` rehydrates and the next tenant briefly
 // sees the previous tenant's currency symbol against its own figures.
@@ -27,12 +27,8 @@ import { getLoginErrorMessage } from '../api/errors';
  * would recreate the key.
  */
 function clearSessionState(): void {
-  localStorage.removeItem('access_token');
-  localStorage.removeItem('user');
-  localStorage.removeItem('auth-storage');
-  localStorage.removeItem('auth_storage_type');
-  sessionStorage.removeItem('access_token');
-  sessionStorage.removeItem('user');
+  // Changed (SOUPFIN-49): shared key list with the 401 handler (client.ts).
+  clearAuthSession();
 
   // Reset in-memory account state, then drop the persisted copy.
   // Resetting also clears `isInitialized`, which is what lets App.tsx refetch
@@ -207,6 +203,33 @@ export const useAuthStore = create<AuthState>()(
     }
   )
 );
+
+// Fix (SOUPFIN-49): let the 401 interceptor reset this store without importing it.
+// client.ts cannot import authStore (authStore already imports client.ts, which would
+// close an import cycle), so authStore pushes the resetter down instead.
+//
+// This runs on the SAME set() path as initialize()'s invalid-token branch, so it
+// re-persists auth-storage as { isAuthenticated: false } rather than leaving the key
+// absent — a later set() therefore cannot resurrect a stale `true`.
+//
+// The error message matches initialize()'s wording, but note it is only USER-VISIBLE
+// when no reload follows (a 401 arriving while already on /login). On the redirect
+// path, handleUnauthorized navigates with window.location.href — a full document load
+// — and persist's partialize keeps only { user, isAuthenticated }, so `error` is
+// dropped. Changed (SOUPFIN-188): that separate flag now exists — handleUnauthorized
+// writes sessionStorage `session_expired`, and LoginPage shows the notice from it.
+setAuthStateResetter(() => {
+  // Changed (SOUPFIN-188): an expired session also drops the tenant's cached
+  // account settings, matching initialize()'s invalid-token branch (SOUPFIN-58).
+  clearSessionState();
+  useAuthStore.setState({
+    user: null,
+    isAuthenticated: false,
+    isLoading: false,
+    isInitialized: true,
+    error: 'Session expired. Please log in again.',
+  });
+});
 
 // Helper hook for checking roles
 export function useHasRole(role: string): boolean {
