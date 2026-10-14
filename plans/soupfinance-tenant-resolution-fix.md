@@ -1,5 +1,10 @@
 # SoupFinance Tenant Resolution Fix — Backend Plan
 
+> **Status 2026-10-14 (SOUPFIN-187):** §1 is half done. `agent.tenant_id` is set at registration and the
+> tenant resolver now reads the Agent, never `sb_user.tenant_id`, so new tenants work end to end.
+> `sb_user.tenant_id` and `sb_user_sb_role.tenant_id` are still NULL. Current plan:
+> `plans/soupfin-187-registration-tenant-id-backend.md`.
+
 ## Context
 
 SoupFinance users registered through the `/account/register.json` endpoint experience `TenantNotFoundException` on ALL API calls after login. The root cause is that `sb_user.tenant_id` and `agent.tenant_id` are not set during registration.

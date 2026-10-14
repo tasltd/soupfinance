@@ -90,9 +90,9 @@ After completing any fix or code change, immediately re-read this CLAUDE.md befo
 
 ### Tenant Resolution (CRITICAL)
 
-The `Account` domain IS the tenant — `account.id` = `tenant_id`. Registration creates Account + Agent + SbUser, and `tenant_id` MUST be set on both Agent and SbUser to `account.id`. If `sb_user.tenant_id` is NULL, login works but ALL data queries fail with `TenantNotFoundException` (500 errors).
+The `Account` domain IS the tenant — `account.id` = `tenant_id`. Registration creates Account + Agent + SbUser. `agent.tenant_id` MUST equal `account.id`: the resolver reads the Agent, and a NULL there means login works but ALL data queries fail with `TenantNotFoundException`. Registration sets it today (verified SOUPFIN-187, 2026-10-14). `sb_user.tenant_id` is still left NULL; nothing in tenant resolution reads it, and the backend fix is in `plans/soupfin-187-registration-tenant-id-backend.md`.
 
-The `SoupDiscriminatorTenantResolver` resolves tenants via: session → `sb_user.tenant_id` → hostname match. The `AccountController` needs `@WithoutTenant` annotation since Account is the root tenant entity. See `plans/soupfinance-tenant-resolution-fix.md` for the full backend fix plan.
+The `SoupDiscriminatorTenantResolver` resolves tenants via: session `tenantId` → session ApiConsumer → selected Agent → `agentService.findByUserAccess(currentUser)` → hostname match. The `AccountController` needs `@WithoutTenant` annotation since Account is the root tenant entity. See `plans/soupfinance-tenant-resolution-fix.md` for the full backend fix plan.
 
 ### User Profile Architecture (SbUser + Agent)
 

@@ -617,7 +617,7 @@ This prevents the proxy from intercepting frontend routes like `/accounting/tran
 | Report queries crash backend (socket hang up) | Income statement on 3145+ accounts exhausts memory (~60s query) | Restart backend; use `safeApiGet` in tests; avoid concurrent heavy reports |
 | Tests fail with ECONNREFUSED 127.0.0.1:9090 | Grails returns 302 redirect to `https://localhost:9090` | Use `maxRedirects: 0` on all direct API calls |
 | Backend takes ~100-145s to start | Grails cold start with large seed DB | Wait for full startup: `curl -sf http://localhost:9090/rest/api/login` returns 405 when ready |
-| Login works but ALL data queries return 500 | `sb_user.tenant_id` is NULL (TenantNotFoundException) | Set tenant_id to the user's Account ID in DB; see `plans/soupfinance-tenant-resolution-fix.md` |
+| Login works but ALL data queries return 500 | `agent.tenant_id` is NULL (TenantNotFoundException); the resolver reads the Agent, not `sb_user.tenant_id` | Set `agent.tenant_id` to the Account ID in DB; registration sets it since SOUPFIN-187 was verified. See `plans/soupfin-187-registration-tenant-id-backend.md` |
 | Login fails after DB password reset | Hibernate caches password hashes from startup | Restart backend: `lxc exec soupfinance-backend -- systemctl restart soupmarkets.service` |
 
 **Password hash format:** Spring Security DelegatingPasswordEncoder requires `{bcrypt}$2a$10$...` prefix (68 chars total). Raw `$2b$10$...` without prefix causes login failure. After DB password changes, restart backend to clear Hibernate's cached hashes.
