@@ -26,6 +26,9 @@ const FINANCE_REPORT_TYPES = [
   'trialBalance',
   'balanceSheet',
   'incomeStatement',
+  // Added (SOUPFIN-190): specified in plans/soupfin-190-cash-flow-statement-backend.md.
+  // Not on the backend yet; soupfin-190-cash-flow.integration.spec.ts fails until it is.
+  'cashFlowStatement',
   'agedReceivables',
   'agedPayables',
   'accountBalances',

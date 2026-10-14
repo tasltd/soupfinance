@@ -81,12 +81,40 @@ const mockBalanceSheetResponse = {
 };
 
 // Cash Flow mock data - built from account transactions
-const mockAccountTransactionsResponse = [
-  { id: 'tx-1', transactionDate: '2026-01-15', description: 'Customer Payment', debitAmount: 5000, creditAmount: 0, balance: 5000, ledgerAccountId: 'acc-1', ledgerAccountName: 'Cash', reference: 'INV-001' },
-  { id: 'tx-2', transactionDate: '2026-01-16', description: 'Vendor Payment', debitAmount: 0, creditAmount: 2000, balance: 3000, ledgerAccountId: 'acc-1', ledgerAccountName: 'Cash', reference: 'BILL-001' },
-  { id: 'tx-3', transactionDate: '2026-01-17', description: 'Equipment Purchase', debitAmount: 0, creditAmount: 10000, balance: -7000, ledgerAccountId: 'fixed-asset-1', ledgerAccountName: 'Fixed Asset - Equipment', reference: 'PO-001' },
-  { id: 'tx-4', transactionDate: '2026-01-18', description: 'Loan Proceeds', debitAmount: 15000, creditAmount: 0, balance: 8000, ledgerAccountId: 'loan-1', ledgerAccountName: 'Bank Loan', reference: 'LOAN-001' },
-];
+// Changed (SOUPFIN-190): Cash Flow reads the backend cashFlowStatement
+// endpoint (contract: plans/soupfin-190-cash-flow-statement-backend.md), not
+// accountTransactions. Opening cash is real, so ending - opening = net change.
+const mockCashFlowStatementResponse = {
+  periodStart: '2026-01-01',
+  periodEnd: '2026-01-31',
+  beginningCashBalance: 20000,
+  operatingActivities: [
+    { description: 'Customer Payment', amount: 5000, ledgerGroup: 'ASSET', ledgerAccountName: 'Accounts Receivable' },
+    { description: 'Vendor Payment', amount: -2000, ledgerGroup: 'LIABILITY', ledgerAccountName: 'Accounts Payable' },
+  ],
+  totalOperatingCashFlow: 3000,
+  investingActivities: [{ description: 'Equipment Purchase', amount: -10000, ledgerGroup: 'ASSET', ledgerAccountName: 'Office Equipment' }],
+  totalInvestingCashFlow: -10000,
+  financingActivities: [{ description: 'Loan Proceeds', amount: 15000, ledgerGroup: 'LIABILITY', ledgerAccountName: 'Bank Loan' }],
+  totalFinancingCashFlow: 15000,
+  netCashFlow: 8000,
+  endingCashBalance: 28000,
+};
+
+/** A period with no cash movement: opening cash carries straight through. */
+const mockEmptyCashFlowStatementResponse = {
+  periodStart: '2026-01-01',
+  periodEnd: '2026-01-31',
+  beginningCashBalance: 20000,
+  operatingActivities: [],
+  totalOperatingCashFlow: 0,
+  investingActivities: [],
+  totalInvestingCashFlow: 0,
+  financingActivities: [],
+  totalFinancingCashFlow: 0,
+  netCashFlow: 0,
+  endingCashBalance: 20000,
+};
 
 // A/R Aging mock data
 const mockAgedReceivablesResponse = {
@@ -676,11 +704,11 @@ test.describe('Cash Flow Statement Report', () => {
   });
 
   test('navigates to cash flow page', async ({ page }) => {
-    await page.route('**/rest/financeReports/accountTransactions*', (route) => {
+    await page.route('**/rest/financeReports/cashFlowStatement*', (route) => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify(mockAccountTransactionsResponse),
+        body: JSON.stringify(mockCashFlowStatementResponse),
       });
     });
 
@@ -692,11 +720,11 @@ test.describe('Cash Flow Statement Report', () => {
   });
 
   test('displays date range filters', async ({ page }) => {
-    await page.route('**/rest/financeReports/accountTransactions*', (route) => {
+    await page.route('**/rest/financeReports/cashFlowStatement*', (route) => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify(mockAccountTransactionsResponse),
+        body: JSON.stringify(mockCashFlowStatementResponse),
       });
     });
 
@@ -709,12 +737,12 @@ test.describe('Cash Flow Statement Report', () => {
 
   test('date filter interaction works', async ({ page }) => {
     let capturedUrl = '';
-    await page.route('**/rest/financeReports/accountTransactions*', (route) => {
+    await page.route('**/rest/financeReports/cashFlowStatement*', (route) => {
       capturedUrl = route.request().url();
       route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify(mockAccountTransactionsResponse),
+        body: JSON.stringify(mockCashFlowStatementResponse),
       });
     });
 
@@ -735,11 +763,11 @@ test.describe('Cash Flow Statement Report', () => {
   });
 
   test('renders cash flow sections and summary', async ({ page }) => {
-    await page.route('**/rest/financeReports/accountTransactions*', (route) => {
+    await page.route('**/rest/financeReports/cashFlowStatement*', (route) => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify(mockAccountTransactionsResponse),
+        body: JSON.stringify(mockCashFlowStatementResponse),
       });
     });
 
@@ -764,11 +792,11 @@ test.describe('Cash Flow Statement Report', () => {
   });
 
   test('shows empty state when no activities', async ({ page }) => {
-    await page.route('**/rest/financeReports/accountTransactions*', (route) => {
+    await page.route('**/rest/financeReports/cashFlowStatement*', (route) => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify([]),
+        body: JSON.stringify(mockEmptyCashFlowStatementResponse),
       });
     });
 
@@ -781,7 +809,7 @@ test.describe('Cash Flow Statement Report', () => {
   });
 
   test('shows error state on API failure', async ({ page }) => {
-    await page.route('**/rest/financeReports/accountTransactions*', (route) => {
+    await page.route('**/rest/financeReports/cashFlowStatement*', (route) => {
       route.fulfill({
         status: 500,
         contentType: 'application/json',
@@ -797,11 +825,11 @@ test.describe('Cash Flow Statement Report', () => {
   });
 
   test('export buttons render with correct enabled/disabled state (SOUPFIN-11)', async ({ page }) => {
-    await page.route('**/rest/financeReports/accountTransactions*', (route) => {
+    await page.route('**/rest/financeReports/cashFlowStatement*', (route) => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify(mockAccountTransactionsResponse),
+        body: JSON.stringify(mockCashFlowStatementResponse),
       });
     });
 
@@ -812,22 +840,21 @@ test.describe('Cash Flow Statement Report', () => {
     await expect(page.getByTestId('cash-flow-export-excel')).toBeVisible();
     await expect(page.getByTestId('cash-flow-export-csv')).toBeVisible();
 
-    // PDF and Excel still need backend support — they stay disabled.
-    await expect(page.getByTestId('cash-flow-export-pdf')).toBeDisabled();
-    await expect(page.getByTestId('cash-flow-export-excel')).toBeDisabled();
-
-    // Fix(SOUPFIN-11): CSV is now functional client-side once data has loaded.
-    // Wait for the data to appear before asserting the button is enabled.
+    // Changed (SOUPFIN-190): PDF and Excel export through the backend
+    // cashFlowStatement endpoint, so all three enable once the data loads.
     await expect(page.getByTestId('cash-flow-stats')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId('cash-flow-export-pdf')).toBeEnabled();
+    await expect(page.getByTestId('cash-flow-export-excel')).toBeEnabled();
+    // Fix(SOUPFIN-11): CSV is built client-side from the statement on screen.
     await expect(page.getByTestId('cash-flow-export-csv')).toBeEnabled();
   });
 
   test('CSV export downloads a file with cash flow data (SOUPFIN-11)', async ({ page }) => {
-    await page.route('**/rest/financeReports/accountTransactions*', (route) => {
+    await page.route('**/rest/financeReports/cashFlowStatement*', (route) => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify(mockAccountTransactionsResponse),
+        body: JSON.stringify(mockCashFlowStatementResponse),
       });
     });
 
@@ -841,11 +868,13 @@ test.describe('Cash Flow Statement Report', () => {
     expect(download.suggestedFilename()).toMatch(/cash-flow-.*\.csv$/);
   });
 
-  test('does not crash when backend returns wrapped non-array response (SOUPFIN-11)', async ({ page }) => {
+  test('does not crash when backend returns an error payload with a 200 (SOUPFIN-11)', async ({ page }) => {
     // Reproduces the production "t is not iterable" crash by returning the
-    // exact 200-with-error-payload that triggered it. Page must stay rendered
-    // and show an empty / loading state instead of blanking out.
-    await page.route('**/rest/financeReports/accountTransactions*', (route) => {
+    // exact 200-with-error-payload that triggered it. The page must stay
+    // rendered. Changed (SOUPFIN-190): it now shows the error state with the
+    // backend's message instead of "No cash flow activities", because the
+    // payload is a failure, not an empty period (SOUPFIN-30).
+    await page.route('**/rest/financeReports/cashFlowStatement*', (route) => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -860,16 +889,19 @@ test.describe('Cash Flow Statement Report', () => {
     await expect(page.getByTestId('cash-flow-heading')).toBeVisible();
     await expect(page.getByTestId('cash-flow-toolbar')).toBeVisible();
 
-    // Empty state appears instead of a JS crash.
-    await expect(page.getByTestId('cash-flow-empty')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId('cash-flow-error')).toContainText(
+      'Finance module is not enabled for this tenant',
+      { timeout: 10000 }
+    );
+    await expect(page.getByTestId('cash-flow-empty')).toHaveCount(0);
   });
 
   test('responsive layout on mobile viewport', async ({ page }) => {
-    await page.route('**/rest/financeReports/accountTransactions*', (route) => {
+    await page.route('**/rest/financeReports/cashFlowStatement*', (route) => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify(mockAccountTransactionsResponse),
+        body: JSON.stringify(mockCashFlowStatementResponse),
       });
     });
 
@@ -1374,12 +1406,12 @@ test.describe('Report Loading States', () => {
 
   // Fix: Increased mock delay and assertion timeout to eliminate race condition flakiness
   test('shows loading state for cash flow', async ({ page }) => {
-    await page.route('**/rest/financeReports/accountTransactions*', async (route) => {
+    await page.route('**/rest/financeReports/cashFlowStatement*', async (route) => {
       await new Promise((resolve) => setTimeout(resolve, 5000));
       route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify(mockAccountTransactionsResponse),
+        body: JSON.stringify(mockCashFlowStatementResponse),
       });
     });
 

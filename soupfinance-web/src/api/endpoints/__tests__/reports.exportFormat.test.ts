@@ -52,6 +52,8 @@ const FINANCE_REPORTS = [
   'trialBalance',
   'balanceSheet',
   'incomeStatement',
+  // Added (SOUPFIN-190): Cash Flow PDF/Excel now export through the backend.
+  'cashFlowStatement',
   'agedReceivables',
   'agedPayables',
   'accountBalances',
@@ -143,6 +145,14 @@ describe('SOUPFIN-60: report export format', () => {
       expect((apiClient.get as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(
         FINANCE_REPORTS.length
       );
+    });
+
+    it('exports the cash flow statement from its own endpoint with the range (SOUPFIN-190)', async () => {
+      await exportFinanceReport('cashFlowStatement', FILTERS, 'xlsx');
+      expect(lastCallUrl()).toBe('/financeReports/cashFlowStatement.json?from=2026-01-01&to=2026-12-31&f=excel');
+
+      await exportFinanceReport('cashFlowStatement', FILTERS, 'pdf');
+      expect(lastCallUrl()).toBe('/financeReports/cashFlowStatement.json?from=2026-01-01&to=2026-12-31&f=pdf');
     });
 
     it('preserves the date range alongside the translated format', async () => {

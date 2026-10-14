@@ -9,8 +9,12 @@
  * - Beginning/Ending cash balance summary
  *
  * Changed (SOUPFIN-103): renders inside the shared <ReportShell>. Amounts were
- * hardcoded to USD; they now follow the tenant's currency. The backend has no
- * cash flow export yet, so PDF and Excel stay disabled and CSV is built here.
+ * hardcoded to USD; they now follow the tenant's currency.
+ *
+ * Changed (SOUPFIN-190): the statement comes from the backend
+ * cashFlowStatement endpoint, and PDF and Excel export through it (the registry
+ * entry carries backendType). CSV is still built here from the statement on
+ * screen.
  */
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';

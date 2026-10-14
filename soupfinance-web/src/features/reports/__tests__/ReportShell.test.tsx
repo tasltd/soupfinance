@@ -268,20 +268,53 @@ describe('Cash Flow in the shell', () => {
     endingCashBalance: 2_400_000,
   };
 
-  it('uses the tenant currency, keeps PDF/Excel off, and builds the CSV in the browser', async () => {
+  // Changed (SOUPFIN-190): PDF and Excel now export through the backend
+  // cashFlowStatement endpoint; only CSV is still built in the browser.
+  it('uses the tenant currency and builds the CSV in the browser', async () => {
     vi.mocked(getCashFlowStatement).mockResolvedValue(statement);
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     renderPage(<CashFlowPage />);
 
     expect(await screen.findByTestId('cash-flow-net')).toHaveTextContent('GH₵2,400,000.00');
     expect(screen.getByTestId('cash-flow-page').textContent).not.toContain('$');
-    expect(screen.getByTestId('cash-flow-export-pdf')).toBeDisabled();
-    expect(screen.getByTestId('cash-flow-export-excel')).toBeDisabled();
 
     await user.click(screen.getByTestId('cash-flow-export-csv'));
 
     await waitFor(() => expect(downloads).toEqual(['cash-flow-2026-08-01-to-2026-08-15.csv']));
     expect(exportFinanceReport).not.toHaveBeenCalled();
+  });
+
+  it('exports PDF and Excel from the backend cashFlowStatement report, named .pdf and .xls', async () => {
+    vi.mocked(getCashFlowStatement).mockResolvedValue(statement);
+    vi.mocked(exportFinanceReport).mockResolvedValue(new Blob(['%PDF']));
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderPage(<CashFlowPage />);
+
+    await screen.findByTestId('cash-flow-net');
+    const pdf = screen.getByTestId('cash-flow-export-pdf');
+    const excel = screen.getByTestId('cash-flow-export-excel');
+    expect(pdf).toBeEnabled();
+    expect(excel).toBeEnabled();
+
+    await user.click(pdf);
+    await waitFor(() => expect(downloads).toEqual(['cash-flow-2026-08-01-to-2026-08-15.pdf']));
+    await user.click(excel);
+    await waitFor(() =>
+      expect(downloads).toEqual(['cash-flow-2026-08-01-to-2026-08-15.pdf', 'cash-flow-2026-08-01-to-2026-08-15.xls'])
+    );
+
+    // The query range is the page range, which the statement echoes back.
+    const range = vi.mocked(getCashFlowStatement).mock.calls[0][0];
+    expect(exportFinanceReport).toHaveBeenNthCalledWith(1, 'cashFlowStatement', range, 'pdf');
+    expect(exportFinanceReport).toHaveBeenNthCalledWith(2, 'cashFlowStatement', range, 'xlsx');
+  });
+
+  it('keeps PDF and Excel off until the statement has loaded', async () => {
+    vi.mocked(getCashFlowStatement).mockReturnValue(new Promise(() => {}));
+    renderPage(<CashFlowPage />);
+
+    expect(await screen.findByTestId('cash-flow-export-pdf')).toBeDisabled();
+    expect(screen.getByTestId('cash-flow-export-excel')).toBeDisabled();
   });
 });
 

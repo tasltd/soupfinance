@@ -14,6 +14,9 @@ import {
   buildProfitLoss,
   normalizeTransactions,
   getCashFlowStatement,
+  normalizeCashFlowStatement,
+  CASH_FLOW_UNAVAILABLE_MESSAGE,
+  CASH_FLOW_UNREADABLE_MESSAGE,
   type AccountBalanceEntry,
   type ReportFilters,
 } from '../reports';
@@ -727,90 +730,255 @@ describe('Reports API', () => {
     });
   });
 
-  describe('getCashFlowStatement guard (SOUPFIN-11)', () => {
-    it('does not throw "t is not iterable" when backend returns a non-array', async () => {
-      // Simulate the production crash: backend returns a wrapper object instead
-      // of the array the type promised. Pre-fix, the for...of in getCashFlowStatement
-      // would crash with TypeError. Post-fix, it should return an empty statement.
-      (apiClient.get as ReturnType<typeof vi.fn>).mockResolvedValue({
-        data: { error: 'Finance module is not enabled for this tenant' },
-      });
+  // Changed (SOUPFIN-190): the statement comes from
+  // /financeReports/cashFlowStatement.json. These replace the SOUPFIN-11 tests
+  // of the old client-side build, which sorted rows by account NAME and always
+  // reported an opening cash balance of 0.
+  describe('getCashFlowStatement (SOUPFIN-190)', () => {
+    const FILTERS = { from: '2026-08-01', to: '2026-08-31' };
+    const get = () => apiClient.get as ReturnType<typeof vi.fn>;
 
-      await expect(
-        getCashFlowStatement({ from: '2026-05-01', to: '2026-05-25' })
-      ).resolves.toMatchObject({
-        periodStart: '2026-05-01',
-        periodEnd: '2026-05-25',
-        operatingActivities: [],
-        investingActivities: [],
-        financingActivities: [],
-        totalOperatingCashFlow: 0,
-        totalInvestingCashFlow: 0,
-        totalFinancingCashFlow: 0,
-        netCashFlow: 0,
-      });
+    const fullResponse = {
+      periodStart: '2026-08-01',
+      periodEnd: '2026-08-31',
+      beginningCashBalance: 120000,
+      operatingActivities: [
+        { description: 'Customer receipt INV-0042', amount: 2400, ledgerGroup: 'ASSET', ledgerAccountName: 'Accounts Receivable' },
+        { description: 'Rent August', amount: -1500, ledgerGroup: 'EXPENSE', ledgerAccountName: 'Rent' },
+      ],
+      totalOperatingCashFlow: 900,
+      investingActivities: [{ description: 'Laptop purchase', amount: -3000, ledgerGroup: 'ASSET' }],
+      totalInvestingCashFlow: -3000,
+      financingActivities: [{ description: 'Owner capital', amount: 10000, ledgerGroup: 'EQUITY' }],
+      totalFinancingCashFlow: 10000,
+      netCashFlow: 7900,
+      endingCashBalance: 127900,
+    };
+
+    it('calls the backend cashFlowStatement endpoint with the date range, not accountTransactions', async () => {
+      get().mockResolvedValue({ data: fullResponse });
+
+      await getCashFlowStatement(FILTERS);
+
+      expect(apiClient.get).toHaveBeenCalledTimes(1);
+      expect(apiClient.get).toHaveBeenCalledWith(
+        '/financeReports/cashFlowStatement.json?from=2026-08-01&to=2026-08-31'
+      );
     });
 
-    // Fix(SOUPFIN-30): this test previously asserted the OPPOSITE — that a
-    // rejected request resolves to an empty statement. That encoded a silent
-    // failure as intended behaviour: React Query never saw a rejection, so
-    // `isError` stayed false and the Cash Flow page rendered
-    // "No cash flow activities" for a 500. A failed request was
-    // indistinguishable from a genuinely empty period, and it contradicted the
-    // E2E spec "Cash Flow Statement Report > shows error state on API failure".
-    // Request failures must now propagate so the page can show its error state.
-    it('propagates backend rejections so the page can render its error state', async () => {
-      (apiClient.get as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('boom'));
+    it('maps every section and keeps the real opening and closing cash', async () => {
+      get().mockResolvedValue({ data: fullResponse });
 
-      await expect(
-        getCashFlowStatement({ from: '2026-05-01', to: '2026-05-25' })
-      ).rejects.toThrow('boom');
+      const cashFlow = await getCashFlowStatement(FILTERS);
+
+      expect(cashFlow).toEqual({
+        periodStart: '2026-08-01',
+        periodEnd: '2026-08-31',
+        operatingActivities: [
+          { description: 'Customer receipt INV-0042', amount: 2400 },
+          { description: 'Rent August', amount: -1500 },
+        ],
+        totalOperatingCashFlow: 900,
+        investingActivities: [{ description: 'Laptop purchase', amount: -3000 }],
+        totalInvestingCashFlow: -3000,
+        financingActivities: [{ description: 'Owner capital', amount: 10000 }],
+        totalFinancingCashFlow: 10000,
+        netCashFlow: 7900,
+        beginningCashBalance: 120000,
+        endingCashBalance: 127900,
+      });
+      // The acceptance invariants, stated outright.
+      expect(cashFlow.netCashFlow).toBe(
+        cashFlow.totalOperatingCashFlow + cashFlow.totalInvestingCashFlow + cashFlow.totalFinancingCashFlow
+      );
+      expect(cashFlow.endingCashBalance - cashFlow.beginningCashBalance).toBe(cashFlow.netCashFlow);
     });
 
+    it('classifies by what the backend says, never by account name', async () => {
+      // The old heuristic put anything named "loan" under financing.
+      get().mockResolvedValue({
+        data: {
+          beginningCashBalance: 0,
+          operatingActivities: [{ description: 'Interest on Bank Loan', amount: -50, ledgerAccountName: 'Bank Loan interest' }],
+        },
+      });
+
+      const cashFlow = await getCashFlowStatement(FILTERS);
+
+      expect(cashFlow.operatingActivities).toEqual([{ description: 'Interest on Bank Loan', amount: -50 }]);
+      expect(cashFlow.financingActivities).toEqual([]);
+    });
+
+    it('reads BigDecimal money sent as numeric strings', async () => {
+      get().mockResolvedValue({
+        data: {
+          beginningCashBalance: '1000.50',
+          operatingActivities: [{ description: 'Sale', amount: '250.25' }],
+          totalOperatingCashFlow: '250.25',
+          endingCashBalance: '1250.75',
+        },
+      });
+
+      const cashFlow = await getCashFlowStatement(FILTERS);
+
+      expect(cashFlow.beginningCashBalance).toBe(1000.5);
+      expect(cashFlow.operatingActivities[0].amount).toBe(250.25);
+      expect(cashFlow.netCashFlow).toBe(250.25);
+      expect(cashFlow.endingCashBalance).toBe(1250.75);
+    });
+
+    it('fills missing lists, totals, net and closing cash from what is there', async () => {
+      get().mockResolvedValue({
+        data: {
+          beginningCashBalance: 500,
+          operatingActivities: [{ description: 'Sale', amount: 100 }, { description: 'Fees', amount: -40 }],
+          investingActivities: null,
+          // financingActivities omitted entirely
+        },
+      });
+
+      const cashFlow = await getCashFlowStatement(FILTERS);
+
+      expect(cashFlow.periodStart).toBe('2026-08-01');
+      expect(cashFlow.periodEnd).toBe('2026-08-31');
+      expect(cashFlow.totalOperatingCashFlow).toBe(60);
+      expect(cashFlow.investingActivities).toEqual([]);
+      expect(cashFlow.financingActivities).toEqual([]);
+      expect(cashFlow.totalInvestingCashFlow).toBe(0);
+      expect(cashFlow.totalFinancingCashFlow).toBe(0);
+      expect(cashFlow.netCashFlow).toBe(60);
+      expect(cashFlow.endingCashBalance).toBe(560);
+    });
+
+    it('labels a row with no description by its account, then as a cash movement', async () => {
+      get().mockResolvedValue({
+        data: {
+          beginningCashBalance: 0,
+          operatingActivities: [
+            { amount: 10, ledgerAccountName: 'Sales' },
+            { description: '', amount: 5 },
+          ],
+        },
+      });
+
+      const cashFlow = await getCashFlowStatement(FILTERS);
+
+      expect(cashFlow.operatingActivities.map((a) => a.description)).toEqual(['Sales', 'Cash movement']);
+    });
+
+    it('shows net change as the sum of the sections even when the backend total disagrees', async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      get().mockResolvedValue({ data: { ...fullResponse, netCashFlow: 999999 } });
+
+      const cashFlow = await getCashFlowStatement(FILTERS);
+
+      expect(cashFlow.netCashFlow).toBe(7900);
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('not the sum of its sections'));
+    });
+
+    it('zero end: an empty period keeps the opening cash and nets to zero', async () => {
+      get().mockResolvedValue({
+        data: {
+          periodStart: '2026-08-01',
+          periodEnd: '2026-08-31',
+          beginningCashBalance: 5000,
+          operatingActivities: [],
+          investingActivities: [],
+          financingActivities: [],
+          totalOperatingCashFlow: 0,
+          totalInvestingCashFlow: 0,
+          totalFinancingCashFlow: 0,
+          netCashFlow: 0,
+          endingCashBalance: 5000,
+        },
+      });
+
+      const cashFlow = await getCashFlowStatement(FILTERS);
+
+      expect(cashFlow.operatingActivities).toEqual([]);
+      expect(cashFlow.netCashFlow).toBe(0);
+      expect(cashFlow.beginningCashBalance).toBe(5000);
+      expect(cashFlow.endingCashBalance).toBe(5000);
+    });
+
+    it('overflow end: 10,000 rows in the millions still total to the cent', async () => {
+      // 10,000 receipts of 1,234,567.89 each = 12,345,678,900.00 exactly.
+      const rows = Array.from({ length: 10_000 }, (_, i) => ({ description: `Receipt ${i}`, amount: 1_234_567.89 }));
+      get().mockResolvedValue({
+        data: { beginningCashBalance: 98_765_432.1, operatingActivities: rows, financingActivities: [{ description: 'Loan repaid', amount: -0.01 }] },
+      });
+
+      const cashFlow = await getCashFlowStatement(FILTERS);
+
+      expect(cashFlow.operatingActivities).toHaveLength(10_000);
+      expect(cashFlow.totalOperatingCashFlow).toBe(12_345_678_900);
+      expect(cashFlow.totalFinancingCashFlow).toBe(-0.01);
+      expect(cashFlow.netCashFlow).toBe(12_345_678_899.99);
+      expect(cashFlow.endingCashBalance).toBe(12_444_444_332.09);
+    });
+
+    it('refuses a response with no opening cash rather than show 0 again', async () => {
+      const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+      get().mockResolvedValue({ data: { operatingActivities: [], endingCashBalance: 100 } });
+
+      await expect(getCashFlowStatement(FILTERS)).rejects.toThrow(CASH_FLOW_UNREADABLE_MESSAGE);
+      expect(error).toHaveBeenCalled();
+    });
+
+    it('refuses an amount that is not a number', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      get().mockResolvedValue({
+        data: { beginningCashBalance: 0, operatingActivities: [{ description: 'Sale', amount: 'twelve' }] },
+      });
+
+      await expect(getCashFlowStatement(FILTERS)).rejects.toThrow(CASH_FLOW_UNREADABLE_MESSAGE);
+    });
+
+    it('treats a 200 that carries an error message as an error, not an empty period (SOUPFIN-11)', async () => {
+      // This payload used to crash the page ("t is not iterable"), then render
+      // as "no activity". It is a failure and must reach the error state.
+      get().mockResolvedValue({ data: { error: 'Finance module is not enabled for this tenant' } });
+
+      await expect(getCashFlowStatement(FILTERS)).rejects.toThrow(
+        'Finance module is not enabled for this tenant'
+      );
+    });
+
+    it('explains a 404: the backend predates the endpoint', async () => {
+      get().mockRejectedValue(
+        Object.assign(new Error('Request failed with status code 404'), { response: { status: 404 } })
+      );
+
+      await expect(getCashFlowStatement(FILTERS)).rejects.toThrow(CASH_FLOW_UNAVAILABLE_MESSAGE);
+    });
+
+    // Fix(SOUPFIN-30), kept: request failures propagate so the page shows its
+    // error state instead of "No cash flow activities".
     it('propagates a 500 HTTP error rather than reporting an empty period', async () => {
       const httpError = Object.assign(new Error('Request failed with status code 500'), {
         response: { status: 500, data: { error: 'Server error' } },
       });
-      (apiClient.get as ReturnType<typeof vi.fn>).mockRejectedValue(httpError);
+      get().mockRejectedValue(httpError);
 
-      await expect(
-        getCashFlowStatement({ from: '2026-05-01', to: '2026-05-25' })
-      ).rejects.toMatchObject({ response: { status: 500 } });
+      await expect(getCashFlowStatement(FILTERS)).rejects.toMatchObject({ response: { status: 500 } });
     });
 
-    it('still resolves to an empty statement for a SUCCESSFUL but empty response', async () => {
-      // The distinction that matters: empty !== failed. A 200 with no rows is a
-      // legitimately empty period and must NOT surface as an error.
-      (apiClient.get as ReturnType<typeof vi.fn>).mockResolvedValue({ data: [] });
+    it('propagates a network failure', async () => {
+      get().mockRejectedValue(new Error('boom'));
 
-      await expect(
-        getCashFlowStatement({ from: '2026-05-01', to: '2026-05-25' })
-      ).resolves.toMatchObject({
-        operatingActivities: [],
-        investingActivities: [],
-        financingActivities: [],
-        netCashFlow: 0,
-      });
+      await expect(getCashFlowStatement(FILTERS)).rejects.toThrow('boom');
     });
+  });
 
-    it('still categorises transactions correctly when backend returns a valid array', async () => {
-      (apiClient.get as ReturnType<typeof vi.fn>).mockResolvedValue({
-        data: [
-          { id: 't1', transactionDate: '2026-05-15', description: 'Customer Payment', debitAmount: 5000, creditAmount: 0, balance: 5000, ledgerAccountId: 'acc-1', ledgerAccountName: 'Cash' },
-          { id: 't2', transactionDate: '2026-05-16', description: 'Equipment Buy', debitAmount: 0, creditAmount: 10000, balance: -5000, ledgerAccountId: 'fixed-asset-1', ledgerAccountName: 'Fixed Asset - Equipment' },
-          { id: 't3', transactionDate: '2026-05-17', description: 'Loan Proceeds', debitAmount: 15000, creditAmount: 0, balance: 10000, ledgerAccountId: 'loan-1', ledgerAccountName: 'Bank Loan' },
-        ],
-      });
-
-      const cashFlow = await getCashFlowStatement({ from: '2026-05-01', to: '2026-05-31' });
-
-      expect(cashFlow.operatingActivities).toHaveLength(1);
-      expect(cashFlow.investingActivities).toHaveLength(1);
-      expect(cashFlow.financingActivities).toHaveLength(1);
-      expect(cashFlow.totalOperatingCashFlow).toBe(5000);
-      expect(cashFlow.totalInvestingCashFlow).toBe(-10000);
-      expect(cashFlow.totalFinancingCashFlow).toBe(15000);
-      expect(cashFlow.netCashFlow).toBe(10000);
+  describe('normalizeCashFlowStatement', () => {
+    it('takes the period from the filters when the backend leaves it out', () => {
+      const cashFlow = normalizeCashFlowStatement(
+        { beginningCashBalance: 0 },
+        { from: '2026-01-01', to: '2026-01-31' }
+      );
+      expect(cashFlow.periodStart).toBe('2026-01-01');
+      expect(cashFlow.periodEnd).toBe('2026-01-31');
+      expect(cashFlow.endingCashBalance).toBe(0);
     });
   });
 });
