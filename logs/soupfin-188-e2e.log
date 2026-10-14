@@ -1,0 +1,10 @@
+
+Running 6 tests using 6 workers
+
+[1A[2K[1/6] [firefox] › e2e/soupfin-188-session-expired-notice.spec.ts:74:3 › SOUPFIN-188 — session expired notice on /login › a 401 lands on /login with the info notice, shown once
+[1A[2K[2/6] [firefox] › e2e/soupfin-49-session-expiry-lands-on-login.spec.ts:99:3 › SOUPFIN-49 — session expiry lands on the login form › a 401 while opening Invoices settles on /login with the form visible
+[1A[2K[3/6] [firefox] › e2e/soupfin-188-session-expired-notice.spec.ts:102:3 › SOUPFIN-188 — session expired notice on /login › the notice can be dismissed, and signing back in works
+[1A[2K[4/6] [firefox] › e2e/soupfin-49-session-expiry-lands-on-login.spec.ts:210:3 › SOUPFIN-49 — session expiry lands on the login form › a healthy session still navigates normally (guards over-clearing)
+[1A[2K[5/6] [firefox] › e2e/soupfin-188-session-expired-notice.spec.ts:124:3 › SOUPFIN-188 — session expired notice on /login › a wrong password is not reported as an expired session
+[1A[2K[6/6] [firefox] › e2e/soupfin-49-session-expiry-lands-on-login.spec.ts:155:3 › SOUPFIN-49 — session expiry lands on the login form › no authenticated chrome survives, and the user can sign in again
+[1A[2K  6 passed (34.4s)
