@@ -163,9 +163,20 @@ const mockBalanceSheetResponse = {
   ],
 };
 
-const mockCashFlowTransactions = [
-  { id: 'tx-1', transactionDate: '2026-01-15', description: 'Customer Payment', debitAmount: 5000, creditAmount: 0 },
-];
+// Changed (SOUPFIN-190): Cash Flow reads the backend cashFlowStatement endpoint.
+const mockCashFlowStatement = {
+  periodStart: '2026-01-01',
+  periodEnd: '2026-01-31',
+  beginningCashBalance: 70000,
+  operatingActivities: [{ description: 'Customer Payment', amount: 5000 }],
+  totalOperatingCashFlow: 5000,
+  investingActivities: [],
+  totalInvestingCashFlow: 0,
+  financingActivities: [],
+  totalFinancingCashFlow: 0,
+  netCashFlow: 5000,
+  endingCashBalance: 75000,
+};
 
 const mockAgedReceivablesResponse = {
   agedReceivablesList: [
@@ -235,11 +246,11 @@ async function mockAllReportsApi(page: any) {
     });
   });
 
-  await page.route('**/rest/financeReports/accountTransactions*', (route: any) => {
+  await page.route('**/rest/financeReports/cashFlowStatement*', (route: any) => {
     route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify(mockCashFlowTransactions),
+      body: JSON.stringify(mockCashFlowStatement),
     });
   });
 

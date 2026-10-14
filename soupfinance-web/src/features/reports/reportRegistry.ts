@@ -223,8 +223,10 @@ export const REPORTS: ReportDefinition[] = [
       comparison: false,
       classLocation: true,
     },
-    // No backend export yet; the page builds its CSV in the browser.
-    export: { fileStem: 'cash-flow' },
+    // Changed (SOUPFIN-190): PDF and Excel come from the backend
+    // cashFlowStatement export. CSV is still built in the browser from the
+    // statement on screen (CashFlowPage passes it as a client export).
+    export: { backendType: 'cashFlowStatement', fileStem: 'cash-flow' },
   },
   // Changed (SOUPFIN-105): A/R and A/P each have a Summary (one row per
   // customer/vendor) and a Detail (one row per document, grouped by aging

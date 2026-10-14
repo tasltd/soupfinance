@@ -398,6 +398,9 @@ test.describe('user guide: reports', () => {
 
     await navigate(page, '/reports/cash-flow', '/reports/cash-flow');
     await expect(page.getByTestId('cash-flow-page')).toBeVisible();
+    // Changed (SOUPFIN-190): wait for the statement, not just the page shell,
+    // so the figure shows opening cash and the sections instead of a spinner.
+    await expect(page.getByTestId('cash-flow-stats')).toBeVisible();
     await shoot(page, 'report-cash-flow');
 
     await navigate(page, '/reports/aging', '/reports/aging');
