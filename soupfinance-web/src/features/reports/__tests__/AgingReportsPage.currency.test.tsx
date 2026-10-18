@@ -21,50 +21,42 @@ import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { useAccountStore, CURRENCIES } from '../../../stores/accountStore';
-import type { AgingReport } from '../../../types';
 
-vi.mock('../../../api/endpoints/reports', async () => {
+// Changed (SOUPFIN-281): the page reads open documents through api/endpoints/aging (SOUPFIN-105),
+// not the backend aging report, so the tests give it bills and invoices instead of a report.
+vi.mock('../../../api/endpoints/aging', async () => {
   const actual =
-    await vi.importActual<typeof import('../../../api/endpoints/reports')>(
-      '../../../api/endpoints/reports'
+    await vi.importActual<typeof import('../../../api/endpoints/aging')>(
+      '../../../api/endpoints/aging'
     );
   return {
     ...actual,
-    getARAgingReport: vi.fn(),
-    getAPAgingReport: vi.fn(),
-    exportFinanceReport: vi.fn(),
+    fetchReceivablesSource: vi.fn(),
+    fetchPayablesSource: vi.fn(),
+    fetchClientIdsByAccountServices: vi.fn(),
+    fetchControlAccountSource: vi.fn(),
   };
 });
 
-import { getARAgingReport, getAPAgingReport } from '../../../api/endpoints/reports';
+import {
+  fetchReceivablesSource,
+  fetchPayablesSource,
+  fetchClientIdsByAccountServices,
+  fetchControlAccountSource,
+} from '../../../api/endpoints/aging';
 import { AgingReportsPage } from '../AgingReportsPage';
+import { NO_CONTROL_ACCOUNTS, openBill, openInvoice, payables, receivables } from './agingTestSource';
 
-const ZERO_TOTALS = { current: 0, days30: 0, days60: 0, days90: 0, over90: 0, total: 0 };
+/** One vendor: 1,234.50 not yet due and 500 more than 90 days overdue, 1,734.50 in all. */
+const apOwing = () => payables([openBill('Acme Supplies', 1234.5, 10), openBill('Acme Supplies', 500, -120)]);
+const arOwing = () => receivables([openInvoice('Acme Corp', 1234.5, 10), openInvoice('Acme Corp', 500, -120)]);
 
-/** An A/P report with a single all-zero vendor row — the exact reported scenario. */
-const AP_ZERO_REPORT: AgingReport = {
-  asOf: '2026-08-03',
-  items: [{ entity: { id: 'v1', name: 'V19 Test Vendor' }, ...ZERO_TOTALS }],
-  totals: { ...ZERO_TOTALS },
-};
-
-const AP_NONZERO_REPORT: AgingReport = {
-  asOf: '2026-08-03',
-  items: [
-    {
-      entity: { id: 'v2', name: 'Acme Supplies' },
-      current: 1234.5,
-      days30: 0,
-      days60: 0,
-      days90: 0,
-      over90: 500,
-      total: 1734.5,
-    },
-  ],
-  totals: { current: 1234.5, days30: 0, days60: 0, days90: 0, over90: 500, total: 1734.5 },
-};
-
-const EMPTY_REPORT: AgingReport = { asOf: '2026-08-03', items: [], totals: { ...ZERO_TOTALS } };
+function mockSources(ar = receivables(), ap = apOwing()) {
+  vi.mocked(fetchReceivablesSource).mockResolvedValue(ar);
+  vi.mocked(fetchPayablesSource).mockResolvedValue(ap);
+  vi.mocked(fetchClientIdsByAccountServices).mockResolvedValue({});
+  vi.mocked(fetchControlAccountSource).mockResolvedValue(NO_CONTROL_ACCOUNTS as never);
+}
 
 function setCurrency(code: keyof typeof CURRENCIES) {
   useAccountStore.setState({ currencyConfig: CURRENCIES[code] });
@@ -84,15 +76,16 @@ function renderPage() {
 describe('AgingReportsPage — A/P amounts use the account currency (SOUPFIN-33 #4)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(getARAgingReport).mockResolvedValue(EMPTY_REPORT);
-    vi.mocked(getAPAgingReport).mockResolvedValue(AP_ZERO_REPORT);
+    mockSources();
   });
 
   afterEach(() => {
     useAccountStore.setState({ currencyConfig: CURRENCIES.DEFAULT });
   });
 
-  it('renders GH₵ (not $) for an all-zero A/P row when the account currency is GHS', async () => {
+  // Changed (SOUPFIN-281): a document with nothing owed is no longer listed (SOUPFIN-105), so the
+  // zero cells of a row with a balance carry the original '$0.00' check.
+  it('renders GH₵ (not $) for the zero cells of an A/P row when the account currency is GHS', async () => {
     setCurrency('GHS');
     renderPage();
 
@@ -116,7 +109,6 @@ describe('AgingReportsPage — A/P amounts use the account currency (SOUPFIN-33 
 
   it('formats NON-zero A/P amounts with the account symbol and thousands separators', async () => {
     setCurrency('GHS');
-    vi.mocked(getAPAgingReport).mockResolvedValue(AP_NONZERO_REPORT);
     renderPage();
 
     const table = await screen.findByTestId('ap-aging-table');
@@ -129,7 +121,7 @@ describe('AgingReportsPage — A/P amounts use the account currency (SOUPFIN-33 
 
   it('applies the same currency to the A/R table (both sides stay consistent)', async () => {
     setCurrency('GHS');
-    vi.mocked(getARAgingReport).mockResolvedValue(AP_NONZERO_REPORT);
+    mockSources(arOwing());
     renderPage();
 
     const table = await screen.findByTestId('ar-aging-table');
@@ -139,7 +131,6 @@ describe('AgingReportsPage — A/P amounts use the account currency (SOUPFIN-33 
 
   it('uses the account currency in the summary cards above the tables', async () => {
     setCurrency('GHS');
-    vi.mocked(getAPAgingReport).mockResolvedValue(AP_NONZERO_REPORT);
     renderPage();
 
     await screen.findByTestId('ap-aging-table');
@@ -150,7 +141,6 @@ describe('AgingReportsPage — A/P amounts use the account currency (SOUPFIN-33 
 
   it('still renders $ when the account currency IS USD (no over-correction)', async () => {
     setCurrency('USD');
-    vi.mocked(getAPAgingReport).mockResolvedValue(AP_NONZERO_REPORT);
     renderPage();
 
     const table = await screen.findByTestId('ap-aging-table');
@@ -164,7 +154,6 @@ describe('AgingReportsPage — A/P amounts use the account currency (SOUPFIN-33 
     ['GBP', '£'],
   ])('follows the configured symbol for %s', async (code, symbol) => {
     setCurrency(code as keyof typeof CURRENCIES);
-    vi.mocked(getAPAgingReport).mockResolvedValue(AP_NONZERO_REPORT);
     renderPage();
 
     const table = await screen.findByTestId('ap-aging-table');
@@ -175,8 +164,7 @@ describe('AgingReportsPage — A/P amounts use the account currency (SOUPFIN-33 
 describe('AgingReportsPage — as-of date picker a11y (SOUPFIN-33 #6)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(getARAgingReport).mockResolvedValue(EMPTY_REPORT);
-    vi.mocked(getAPAgingReport).mockResolvedValue(EMPTY_REPORT);
+    mockSources(receivables(), payables());
   });
 
   it('binds the "As of:" label to the date input and exposes id/name', async () => {

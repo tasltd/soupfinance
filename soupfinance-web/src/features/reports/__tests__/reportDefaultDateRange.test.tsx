@@ -16,11 +16,10 @@
  * why a UTC-only run could not catch this bug.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactElement } from 'react';
-import type { AgingReport } from '../../../types';
 
 vi.mock('../../../api/endpoints/reports', async () => {
   const actual =
@@ -33,9 +32,23 @@ vi.mock('../../../api/endpoints/reports', async () => {
     getIncomeStatement: vi.fn(),
     getBalanceSheetDirect: vi.fn(),
     getCashFlowStatement: vi.fn(),
-    getARAgingReport: vi.fn(),
-    getAPAgingReport: vi.fn(),
     exportFinanceReport: vi.fn(),
+  };
+});
+
+// Changed (SOUPFIN-281): the aging page reads open documents through api/endpoints/aging
+// (SOUPFIN-105), which takes no date: the page buckets them on its own as-of day.
+vi.mock('../../../api/endpoints/aging', async () => {
+  const actual =
+    await vi.importActual<typeof import('../../../api/endpoints/aging')>(
+      '../../../api/endpoints/aging'
+    );
+  return {
+    ...actual,
+    fetchReceivablesSource: vi.fn(),
+    fetchPayablesSource: vi.fn(),
+    fetchClientIdsByAccountServices: vi.fn(),
+    fetchControlAccountSource: vi.fn(),
   };
 });
 
@@ -44,9 +57,14 @@ import {
   getIncomeStatement,
   getBalanceSheetDirect,
   getCashFlowStatement,
-  getARAgingReport,
-  getAPAgingReport,
 } from '../../../api/endpoints/reports';
+import {
+  fetchReceivablesSource,
+  fetchPayablesSource,
+  fetchClientIdsByAccountServices,
+  fetchControlAccountSource,
+} from '../../../api/endpoints/aging';
+import { NO_CONTROL_ACCOUNTS, payables, receivables } from './agingTestSource';
 import { TrialBalancePage } from '../TrialBalancePage';
 import { ProfitLossPage } from '../ProfitLossPage';
 import { BalanceSheetPage } from '../BalanceSheetPage';
@@ -125,13 +143,10 @@ beforeEach(() => {
     beginningCashBalance: 0,
     endingCashBalance: 0,
   });
-  const emptyAging: AgingReport = {
-    asOf: EXPECTED_MONTH.to,
-    items: [],
-    totals: { current: 0, days30: 0, days60: 0, days90: 0, over90: 0, total: 0 },
-  };
-  vi.mocked(getARAgingReport).mockResolvedValue(emptyAging);
-  vi.mocked(getAPAgingReport).mockResolvedValue(emptyAging);
+  vi.mocked(fetchReceivablesSource).mockResolvedValue(receivables());
+  vi.mocked(fetchPayablesSource).mockResolvedValue(payables());
+  vi.mocked(fetchClientIdsByAccountServices).mockResolvedValue({});
+  vi.mocked(fetchControlAccountSource).mockResolvedValue(NO_CONTROL_ACCOUNTS as never);
 });
 
 afterEach(() => {
@@ -176,8 +191,10 @@ describe('SOUPFIN-64: report pages default to the local date range', () => {
   it.each(ALL_ZONES)('Aging reports are "as of" the local day in %s', async (tz) => {
     process.env.TZ = tz;
     renderPage(<AgingReportsPage />);
-    await waitFor(() => expect(getARAgingReport).toHaveBeenCalled());
-    expect(vi.mocked(getARAgingReport).mock.calls[0][0]).toBe(expectedToday(tz));
+    // The overview buckets open documents in the browser and sends no date (SOUPFIN-105), so the
+    // as-of day is the one the page offers and applies.
+    const input = (await screen.findByTestId('aging-reports-date-picker')) as HTMLInputElement;
+    expect(input.value).toBe(expectedToday(tz));
   });
 
   it.each(POSITIVE_OFFSET)(

@@ -26,28 +26,31 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-import type { AgingReport } from '../../../types';
 
-const emptyReport: AgingReport = {
-  asOf: '2026-07-21',
-  items: [],
-  totals: { current: 0, days30: 0, days60: 0, days90: 0, over90: 0, total: 0 },
-};
 
-vi.mock('../../../api/endpoints/reports', async () => {
+// Changed (SOUPFIN-281): the page reads open documents through api/endpoints/aging (SOUPFIN-105),
+// not the backend aging report.
+vi.mock('../../../api/endpoints/aging', async () => {
   const actual =
-    await vi.importActual<typeof import('../../../api/endpoints/reports')>(
-      '../../../api/endpoints/reports'
+    await vi.importActual<typeof import('../../../api/endpoints/aging')>(
+      '../../../api/endpoints/aging'
     );
   return {
     ...actual,
-    getARAgingReport: vi.fn(),
-    getAPAgingReport: vi.fn(),
-    exportFinanceReport: vi.fn(),
+    fetchReceivablesSource: vi.fn(),
+    fetchPayablesSource: vi.fn(),
+    fetchClientIdsByAccountServices: vi.fn(),
+    fetchControlAccountSource: vi.fn(),
   };
 });
 
-import { getARAgingReport, getAPAgingReport } from '../../../api/endpoints/reports';
+import {
+  fetchReceivablesSource,
+  fetchPayablesSource,
+  fetchClientIdsByAccountServices,
+  fetchControlAccountSource,
+} from '../../../api/endpoints/aging';
+import { NO_CONTROL_ACCOUNTS, openInvoice, payables, receivables } from './agingTestSource';
 import { AgingReportsPage } from '../AgingReportsPage';
 
 function renderPage() {
@@ -73,8 +76,10 @@ function joinTextNodesWithSpace(el: Element): string {
 
 describe('AgingReportsPage — empty-state acronym casing (SOUPFIN-35)', () => {
   beforeEach(() => {
-    vi.mocked(getARAgingReport).mockResolvedValue(emptyReport);
-    vi.mocked(getAPAgingReport).mockResolvedValue(emptyReport);
+    vi.mocked(fetchReceivablesSource).mockResolvedValue(receivables());
+    vi.mocked(fetchPayablesSource).mockResolvedValue(payables());
+    vi.mocked(fetchClientIdsByAccountServices).mockResolvedValue({});
+    vi.mocked(fetchControlAccountSource).mockResolvedValue(NO_CONTROL_ACCOUNTS as never);
   });
 
   it('renders the A/R heading with the acronym cased, not lowercased', async () => {
@@ -137,21 +142,7 @@ describe('AgingReportsPage — empty-state acronym casing (SOUPFIN-35)', () => {
   });
 
   it('shows no empty heading for a panel that has data', async () => {
-    vi.mocked(getARAgingReport).mockResolvedValue({
-      ...emptyReport,
-      items: [
-        {
-          entity: { id: 'c-1', name: 'Acme Corp' },
-          current: 100,
-          days30: 0,
-          days60: 0,
-          days90: 0,
-          over90: 0,
-          total: 100,
-        },
-      ],
-      totals: { current: 100, days30: 0, days60: 0, days90: 0, over90: 0, total: 100 },
-    });
+    vi.mocked(fetchReceivablesSource).mockResolvedValue(receivables([openInvoice('Acme Corp', 100)]));
 
     renderPage();
 

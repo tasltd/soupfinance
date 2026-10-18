@@ -36,13 +36,19 @@ const FINANCE_REPORT_TYPES = [
 ];
 
 describe('registry integrity', () => {
-  it('lists the six migrated reports plus the registry-only Account Balances', () => {
+  // Changed (SOUPFIN-281): SOUPFIN-105 split A/R and A/P into a Summary and a Detail, and added the
+  // Open Invoices and Unpaid Bills lists.
+  it('lists the migrated reports, the aging details and lists, and the registry-only Account Balances', () => {
     expect(REPORTS.map((r) => r.id)).toEqual([
       'profit-loss',
       'balance-sheet',
       'cash-flow',
       'ar-aging',
+      'ar-aging-detail',
+      'open-invoices',
       'ap-aging',
+      'ap-aging-detail',
+      'unpaid-bills',
       'trial-balance',
       'account-balances',
     ]);
@@ -87,8 +93,14 @@ describe('registry integrity', () => {
     expect(findReportDefinition(undefined)).toBeUndefined();
   });
 
-  it('shares one page config between A/R and A/P aging', () => {
-    expect(getReportDefinition('ar-aging').page).toBe(getReportDefinition('ap-aging').page);
+  // Changed (SOUPFIN-281): each aging page now has its own title and test id (SOUPFIN-105); the
+  // controls must still behave the same on all four.
+  it('gives the four aging pages the same controls, each with its own title and test id', () => {
+    const pages = ['ar-aging', 'ar-aging-detail', 'ap-aging', 'ap-aging-detail'].map((id) => getReportDefinition(id).page);
+    const controls = pages.map(({ title: _t, testIdPrefix: _p, ...rest }) => rest);
+    for (const c of controls) expect(c).toEqual(controls[0]);
+    expect(new Set(pages.map((p) => p.testIdPrefix)).size).toBe(4);
+    expect(new Set(pages.map((p) => p.title)).size).toBe(4);
   });
 });
 
@@ -101,13 +113,13 @@ describe('searchReports', () => {
   it('matches title, keywords and category, ignoring case', () => {
     expect(searchReports('PROFIT').map((r) => r.id)).toEqual(['profit-loss']);
     expect(searchReports('income statement').map((r) => r.id)).toEqual(['profit-loss']);
-    expect(searchReports('receivable').map((r) => r.id)).toEqual(['ar-aging']);
-    expect(searchReports('what you owe').map((r) => r.id)).toEqual(['ap-aging']);
+    expect(searchReports('receivable').map((r) => r.id)).toEqual(['ar-aging', 'ar-aging-detail', 'open-invoices']);
+    expect(searchReports('what you owe').map((r) => r.id)).toEqual(['ap-aging', 'ap-aging-detail', 'unpaid-bills']);
   });
 
   it('requires every word to match', () => {
     expect(searchReports('aging vendors').map((r) => r.id)).toEqual(['ap-aging']);
-    expect(searchReports('aging').map((r) => r.id)).toEqual(['ar-aging', 'ap-aging']);
+    expect(searchReports('aging').map((r) => r.id)).toEqual(['ar-aging', 'ar-aging-detail', 'ap-aging', 'ap-aging-detail']);
   });
 
   it('returns nothing for a query nothing matches', () => {

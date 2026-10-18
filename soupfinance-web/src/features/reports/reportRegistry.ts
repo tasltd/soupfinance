@@ -237,7 +237,9 @@ export const REPORTS: ReportDefinition[] = [
   {
     id: 'ar-aging',
     title: 'A/R Aging Summary',
-    description: 'What each customer owes, by how overdue it is',
+    // Changed (SOUPFIN-281): "What each customer owes" made a search for "what you owe" offer
+    // the receivables report, which is the opposite of what the person asked for.
+    description: 'How much each customer owes, by how overdue it is',
     icon: 'receipt_long',
     category: 'who-owes-you',
     path: '/reports/aging/receivables',

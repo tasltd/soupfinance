@@ -63,6 +63,22 @@ vi.mock('../../../api/endpoints/reports', async () => {
 import { BalanceSheetPage } from '../BalanceSheetPage';
 import { ProfitLossPage } from '../ProfitLossPage';
 import { TrialBalancePage } from '../TrialBalancePage';
+// Added (SOUPFIN-281): the aging overview reads open documents through api/endpoints/aging
+// (SOUPFIN-105); without them it never finishes loading and its exports stay disabled.
+vi.mock('../../../api/endpoints/aging', async () => {
+  const actual =
+    await vi.importActual<typeof import('../../../api/endpoints/aging')>(
+      '../../../api/endpoints/aging'
+    );
+  const empty = { invoices: [], bills: [], payments: [], truncated: false };
+  return {
+    ...actual,
+    fetchReceivablesSource: vi.fn().mockResolvedValue(empty),
+    fetchPayablesSource: vi.fn().mockResolvedValue(empty),
+    fetchClientIdsByAccountServices: vi.fn().mockResolvedValue({}),
+    fetchControlAccountSource: vi.fn().mockResolvedValue({ account: {}, ledgerAccounts: [] }),
+  };
+});
 import { AgingReportsPage } from '../AgingReportsPage';
 
 function renderWithProviders(ui: React.ReactNode) {
@@ -203,28 +219,38 @@ describe('Report exports — file extension fix (SOUPFIN-16)', () => {
     expect(tracker.filenames.every(f => !f.endsWith('.null'))).toBe(true);
   });
 
-  it('A/R aging PDF export uses a .pdf extension', async () => {
+  // Changed (SOUPFIN-281): SOUPFIN-105 builds the aging exports in the browser as CSV, because the
+  // backend agedReceivables/agedPayables export uses the backend's broken buckets. PDF is not
+  // offered there, so the extension check moves to the CSV file.
+  it('A/R aging CSV export uses a .csv extension, and PDF is not offered', async () => {
     const user = userEvent.setup();
     renderWithProviders(<AgingReportsPage />);
 
-    const exportBtn = await screen.findByTestId('ar-aging-export-pdf');
-    await user.click(exportBtn);
+    await screen.findByTestId('ar-aging-empty');
+    expect(await screen.findByTestId('ar-aging-export-pdf')).toBeDisabled();
+    await user.click(await screen.findByTestId('ar-aging-export-csv'));
 
     await waitFor(() =>
-      expect(tracker.filenames.some(f => f.endsWith('.pdf'))).toBe(true)
+      expect(tracker.filenames.some(f => f.endsWith('.csv'))).toBe(true)
     );
+    expect(tracker.filenames.some(f => f.endsWith('.pdf'))).toBe(false);
   });
 
-  it('A/P aging PDF export uses a .pdf extension', async () => {
+  // Changed (SOUPFIN-281): SOUPFIN-105 builds the aging exports in the browser as CSV, because the
+  // backend agedReceivables/agedPayables export uses the backend's broken buckets. PDF is not
+  // offered there, so the extension check moves to the CSV file.
+  it('A/P aging CSV export uses a .csv extension, and PDF is not offered', async () => {
     const user = userEvent.setup();
     renderWithProviders(<AgingReportsPage />);
 
-    const exportBtn = await screen.findByTestId('ap-aging-export-pdf');
-    await user.click(exportBtn);
+    await screen.findByTestId('ap-aging-empty');
+    expect(await screen.findByTestId('ap-aging-export-pdf')).toBeDisabled();
+    await user.click(await screen.findByTestId('ap-aging-export-csv'));
 
     await waitFor(() =>
-      expect(tracker.filenames.some(f => f.endsWith('.pdf'))).toBe(true)
+      expect(tracker.filenames.some(f => f.endsWith('.csv'))).toBe(true)
     );
+    expect(tracker.filenames.some(f => f.endsWith('.pdf'))).toBe(false);
   });
 });
 
