@@ -132,7 +132,8 @@ export interface RegistrationResponse {
    */
   requiresConfirmation?: boolean;
   error?: string;
-  errors?: Record<string, string>;
+  // Changed (SOUP-4208): Grails and Go send a list of messages; older replies sent a field map.
+  errors?: Record<string, string> | string[];
 }
 
 /**
@@ -142,7 +143,8 @@ export interface ConfirmationResponse {
   success: boolean;
   message: string;
   error?: string;
-  errors?: Record<string, string>;
+  // Changed (SOUP-4208): Grails and Go send a list of messages; older replies sent a field map.
+  errors?: Record<string, string> | string[];
 }
 
 // =============================================================================

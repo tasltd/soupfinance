@@ -35,6 +35,7 @@ import {
   listCountries,
 } from '../../api/endpoints/domainData';
 import type { Country } from '../../api/endpoints/domainData';
+import { registrationErrorsToFields } from './registrationErrors';
 import { Logo } from '../../components/Logo';
 
 export function RegistrationPage() {
@@ -92,18 +93,23 @@ export function RegistrationPage() {
         }
       } else {
         // Handle backend validation errors
-        if (response.errors) {
-          setValidationErrors(response.errors);
+        // Changed (SOUP-4208): the backend sends `errors` as a list; map it to a visible message.
+        const fieldErrors = registrationErrorsToFields(response.errors);
+        if (fieldErrors) {
+          setValidationErrors(fieldErrors);
         } else {
           setValidationErrors({ form: response.error || response.message || 'Registration failed' });
         }
       }
     },
-    onError: (error: Error & { response?: { data?: { message?: string; error?: string; errors?: Record<string, string> } } }) => {
+    onError: (error: Error & { response?: { data?: { message?: string; error?: string; errors?: unknown } } }) => {
       // Parse backend error message
       const backendData = error.response?.data;
-      if (backendData?.errors) {
-        setValidationErrors(backendData.errors);
+      // Changed (SOUP-4208): `errors` arrives as a list of unfilled Grails templates; a list used
+      // to leave every field key unset, so the person saw no message at all.
+      const fieldErrors = registrationErrorsToFields(backendData?.errors);
+      if (fieldErrors) {
+        setValidationErrors(fieldErrors);
       } else {
         // Changed (SOUPFIN-29): prefer explicit backend message/error, then fall back to
         // getApiErrorMessage (never the raw "Request failed with status code 400"), and

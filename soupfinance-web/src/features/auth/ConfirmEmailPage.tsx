@@ -16,6 +16,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { confirmEmail } from '../../api/endpoints/registration';
+import { registrationErrorsToFields } from '../corporate/registrationErrors';
 import { Logo } from '../../components/Logo';
 
 // Password requirements
@@ -59,17 +60,20 @@ export function ConfirmEmailPage() {
       if (response.success) {
         setConfirmationSuccess(true);
       } else {
-        if (response.errors) {
-          setValidationErrors(response.errors);
+        // Changed (SOUP-4208): `errors` may be a list of messages, not a field map.
+        const fieldErrors = registrationErrorsToFields(response.errors);
+        if (fieldErrors) {
+          setValidationErrors(fieldErrors);
         } else {
           setValidationErrors({ form: response.error || response.message || 'Confirmation failed' });
         }
       }
     },
-    onError: (error: Error & { response?: { data?: { message?: string; error?: string; errors?: Record<string, string> } } }) => {
+    onError: (error: Error & { response?: { data?: { message?: string; error?: string; errors?: unknown } } }) => {
       const backendData = error.response?.data;
-      if (backendData?.errors) {
-        setValidationErrors(backendData.errors);
+      const fieldErrors = registrationErrorsToFields(backendData?.errors);
+      if (fieldErrors) {
+        setValidationErrors(fieldErrors);
       } else {
         const errorMessage = backendData?.message || backendData?.error || error.message || 'Confirmation failed. Please try again.';
         setValidationErrors({ form: errorMessage });
@@ -190,6 +194,14 @@ export function ConfirmEmailPage() {
           data-testid="confirm-email-form-error"
         >
           {validationErrors.form}
+          {/* Added (SOUP-4208): a dead link tells the person how to get a working one. */}
+          {/invalid|expired/i.test(validationErrors.form) && (
+            <p className="mt-2">
+              <a href="/resend-confirmation" className="font-medium underline" data-testid="confirm-email-request-new-link">
+                Send me a new confirmation link
+              </a>
+            </p>
+          )}
         </div>
       )}
 
