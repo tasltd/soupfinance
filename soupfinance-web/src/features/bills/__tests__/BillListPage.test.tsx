@@ -3,7 +3,7 @@
  * Tests rendering, loading/error/empty states, data display, and navigation
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, within, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BillListPage } from '../BillListPage';
@@ -23,6 +23,8 @@ vi.mock('../../../stores', () => ({
 }));
 
 import { listBills } from '../../../api/endpoints/bills';
+// Added (SOUPFIN-160): Axios-shaped 403/500 errors
+import { moduleDisabled403, roleDenied403, serverError500 } from '../../../test/apiErrorFixtures';
 
 // ============================================================================
 // Test Helpers
@@ -133,8 +135,9 @@ describe('BillListPage', () => {
 
       renderBillListPage();
 
+      // Changed (SOUPFIN-160): ApiErrorState shows the error's own message
       expect(await screen.findByTestId('bill-list-error')).toBeInTheDocument();
-      expect(screen.getByText('Failed to load bills')).toBeInTheDocument();
+      expect(screen.getByText('Something went wrong')).toBeInTheDocument();
     });
 
     it('displays retry button in error state', async () => {
@@ -151,7 +154,7 @@ describe('BillListPage', () => {
 
       renderBillListPage();
 
-      expect(await screen.findByText(/There was an error loading your bills/i)).toBeInTheDocument();
+      expect(await screen.findByTestId('bill-list-error-message')).toHaveTextContent('Network error');
     });
   });
 
@@ -408,6 +411,47 @@ describe('BillListPage', () => {
 
       const row = await screen.findByTestId('bill-row-bill-whole');
       expect(within(row).getByText('$500.00')).toBeInTheDocument();
+    });
+  });
+
+  // Added (SOUPFIN-160): the error card names the cause and never shows HTTP text
+  describe('module-aware errors (SOUPFIN-160)', () => {
+    it.each([
+      ['a disabled Finance module', () => moduleDisabled403('Finance', '/bill/index.json'), 'module_disabled', 'Finance module is not available'],
+      ['a missing role', () => roleDenied403('/bill/index.json'), 'forbidden', 'You do not have permission'],
+      ['a server fault', () => serverError500('/bill/index.json'), 'server_error', 'Server error'],
+    ])('explains %s', async (_cause, makeError, kind, title) => {
+      vi.mocked(listBills).mockRejectedValue(makeError());
+
+      renderBillListPage();
+
+      const card = await screen.findByTestId('bill-list-error');
+      expect(card).toHaveAttribute('data-error-kind', kind);
+      expect(within(card).getByText(title)).toBeInTheDocument();
+      expect(document.body.textContent).not.toMatch(/status code/i);
+    });
+
+    it('offers no Retry when the module is disabled', async () => {
+      vi.mocked(listBills).mockRejectedValue(moduleDisabled403('Finance', '/bill/index.json'));
+
+      renderBillListPage();
+
+      const card = await screen.findByTestId('bill-list-error');
+      expect(within(card).queryByRole('button', { name: /retry/i })).not.toBeInTheDocument();
+      expect(within(card).getByText(/contact your administrator to enable this module/i)).toBeInTheDocument();
+    });
+
+    it('Retry after a server fault refetches and shows the data', async () => {
+      vi.mocked(listBills).mockRejectedValueOnce(serverError500('/bill/index.json'));
+
+      renderBillListPage();
+
+      const card = await screen.findByTestId('bill-list-error');
+      vi.mocked(listBills).mockResolvedValue([]);
+      within(card).getByRole('button', { name: /retry/i }).click();
+
+      await waitFor(() => expect(screen.queryByTestId('bill-list-error')).not.toBeInTheDocument());
+      expect(vi.mocked(listBills)).toHaveBeenCalledTimes(2);
     });
   });
 });

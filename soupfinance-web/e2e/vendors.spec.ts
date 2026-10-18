@@ -3,7 +3,7 @@
  * Tests vendor listing, creation, editing, and deletion flows
  */
 import { test, expect } from '@playwright/test';
-import { mockTokenValidationApi, takeScreenshot, setupResponseValidation } from './fixtures';
+import { mockTokenValidationApi, takeScreenshot, setupResponseValidation, mockAmbientApi } from './fixtures';
 
 // ===========================================================================
 // Mock Data
@@ -51,6 +51,9 @@ const mockVendors = [
 
 test.describe('Vendor Management', () => {
   test.beforeEach(async ({ page }) => {
+    // Added (SOUPFIN-182): the vendor form now loads ledger accounts. Ambient
+    // defaults first, so each test's own routes (registered later) still win.
+    await mockAmbientApi(page);
     // Set up authenticated state
     await page.addInitScript(() => {
       const mockUser = {
@@ -187,10 +190,14 @@ test.describe('Vendor Management', () => {
     test('shows loading state while fetching', async ({ page }) => {
       await mockTokenValidationApi(page, true);
 
-      // Delay vendor response
+      // Changed (SOUPFIN-182): hold the vendor response until the loading state
+      // has been asserted. A fixed 3 s delay raced page boot (fonts alone take
+      // about 5 s from the dev box), so the response sometimes won.
+      let release!: () => void;
+      const gate = new Promise<void>((resolve) => (release = resolve));
       await page.route('**/vendor/index.json*', async (route) => {
-        await new Promise((resolve) => setTimeout(resolve, 3000));
-        route.fulfill({
+        await gate;
+        await route.fulfill({
           status: 200,
           contentType: 'application/json',
           body: JSON.stringify(mockVendors),
@@ -198,11 +205,12 @@ test.describe('Vendor Management', () => {
       });
 
       await page.goto('/vendors', { waitUntil: 'commit' });
-      await page.waitForSelector('[data-testid="vendor-list-page"]', { timeout: 5000 });
+      await page.waitForSelector('[data-testid="vendor-list-page"]', { timeout: 20000 });
 
       // Should show loading state
-      await expect(page.getByTestId('vendor-list-loading')).toBeVisible({ timeout: 2000 });
+      await expect(page.getByTestId('vendor-list-loading')).toBeVisible({ timeout: 10000 });
       await takeScreenshot(page, 'vendor-list-loading');
+      release();
 
       // Wait for data to load
       await expect(page.getByTestId('vendor-list-table')).toBeVisible({ timeout: 10000 });
@@ -245,7 +253,9 @@ test.describe('Vendor Management', () => {
 
       // Should show error state
       await expect(page.getByTestId('vendor-list-error')).toBeVisible();
-      await expect(page.locator('text=Failed to load vendors')).toBeVisible();
+      // Changed (SOUPFIN-160): ApiErrorState names a server fault
+      await expect(page.getByTestId('vendor-list-error')).toHaveAttribute('data-error-kind', 'server_error');
+      await expect(page.getByTestId('vendor-list-error-title')).toHaveText('Server error');
 
       await takeScreenshot(page, 'vendor-list-error');
     });

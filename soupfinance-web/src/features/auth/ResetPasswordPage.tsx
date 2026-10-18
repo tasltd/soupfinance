@@ -8,13 +8,16 @@
  * 3. POST /account/resetPassword.json { token, password, confirmPassword }
  * 4. Success → show success message with link to login
  *
- * NOTE: Backend endpoint may not yet exist. The frontend is ready; backend needs
- * POST /account/resetPassword.json to validate token and update password.
+ * 5. Expired or already-used link → "request a new link" screen (SOUPFIN-186)
+ *
+ * NOTE: Backend endpoint specified in plans/soupfin-186-password-reset-backend.md
+ * (not deployed yet). It answers 400 with code TOKEN_EXPIRED / TOKEN_INVALID for
+ * an unusable link, which getResetPasswordError() turns into that screen.
  */
 import { useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
-import { resetPassword } from '../../api/endpoints/registration';
+import { resetPassword, getResetPasswordError } from '../../api/endpoints/registration';
 import { Logo } from '../../components/Logo';
 
 export function ResetPasswordPage() {
@@ -38,11 +41,17 @@ export function ResetPasswordPage() {
     resetMutation.mutate();
   };
 
+  // Added (SOUPFIN-186): an expired or used link cannot be retried with a new password
+  const resetError = resetMutation.isError ? getResetPasswordError(resetMutation.error) : null;
+  const linkUnusable = !token || (resetError !== null && resetError.kind !== 'form');
+
   const passwordsMatch = password === confirmPassword || confirmPassword === '';
   const passwordLongEnough = password.length >= 8 || password === '';
 
-  // No token in URL — show error
-  if (!token) {
+  // No token in URL, or the backend refused the link — show error
+  // Changed (SOUPFIN-186): also covers expired and already-used links
+  if (linkUnusable) {
+    const expired = resetError?.kind === 'link_expired';
     return (
       <div className="flex flex-col gap-8" data-testid="reset-password-page">
         <div className="lg:hidden flex items-center gap-3 justify-center mb-4">
@@ -56,17 +65,27 @@ export function ResetPasswordPage() {
         </div>
 
         <div className="text-center">
-          <h2 className="text-3xl font-black tracking-tight text-text-light dark:text-text-dark">
-            Invalid Reset Link
+          <h2
+            className="text-3xl font-black tracking-tight text-text-light dark:text-text-dark"
+            data-testid="reset-password-link-error-heading"
+          >
+            {expired ? 'Reset Link Expired' : 'Invalid Reset Link'}
           </h2>
+          <p className="mt-2 text-subtle-text" data-testid="reset-password-link-error-message">
+            {resetError?.message ?? 'This password reset link is invalid or has expired.'}
+          </p>
           <p className="mt-2 text-subtle-text">
-            This password reset link is invalid or has expired.
+            Each reset link works once and expires after a short time. Request a new one to continue.
           </p>
         </div>
 
         <div className="flex flex-col gap-2 text-center text-sm text-subtle-text">
           <p>
-            <Link to="/forgot-password" className="text-primary hover:underline font-medium">
+            <Link
+              to="/forgot-password"
+              className="text-primary hover:underline font-medium"
+              data-testid="reset-password-request-new-link"
+            >
               Request a new reset link
             </Link>
           </p>
@@ -153,10 +172,9 @@ export function ResetPasswordPage() {
           <span className="material-symbols-outlined text-lg flex-shrink-0 mt-0.5">error</span>
           <div>
             <p className="font-medium">Reset failed</p>
-            <p className="mt-1 text-danger/80">
-              {resetMutation.error instanceof Error
-                ? resetMutation.error.message
-                : 'The reset link may have expired. Please request a new one.'}
+            <p className="mt-1 text-danger/80" data-testid="reset-password-error-message">
+              {/* Changed (SOUPFIN-186): plain-language message, never "Request failed with status code 400" */}
+              {resetError?.message ?? 'Something went wrong. Please try again.'}
             </p>
           </div>
         </div>

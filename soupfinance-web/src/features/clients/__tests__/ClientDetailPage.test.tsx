@@ -8,12 +8,14 @@
  *  - A failed delete keeps the modal open and surfaces an error.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ClientDetailPage } from '../ClientDetailPage';
 import type { Client } from '../../../types';
+// Added (SOUPFIN-166): Axios-shaped 403/404/500 errors
+import { axiosError, moduleDisabled403, roleDenied403, serverError500 } from '../../../test/apiErrorFixtures';
 
 const navigateMock = vi.fn();
 
@@ -61,6 +63,18 @@ function renderPage(id = 'client-123') {
   );
 }
 
+// Added (SOUPFIN-178): entry point to receive one payment against several invoices
+describe('ClientDetailPage receive payment (SOUPFIN-178)', () => {
+  it('links to the allocation screen with this client preselected', async () => {
+    vi.mocked(getClient).mockResolvedValue(createMockClient({ id: 'client-123', name: 'Acme' }));
+    renderPage();
+
+    const link = await screen.findByTestId('client-receive-payment');
+    expect(link).toHaveTextContent('Receive Payment');
+    expect(link).toHaveAttribute('href', '/payments/receive?clientId=client-123');
+  });
+});
+
 describe('ClientDetailPage delete flow (SOUP-1929)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -104,5 +118,91 @@ describe('ClientDetailPage delete flow (SOUP-1929)', () => {
     expect(await screen.findByTestId('client-delete-error')).toBeInTheDocument();
     expect(screen.getByTestId('delete-confirmation-modal')).toBeInTheDocument();
     expect(navigateMock).not.toHaveBeenCalled();
+  });
+
+  // Added (SOUPFIN-169): a delete the backend refused (200 + relatedList) must
+  // not navigate away as if the client were gone.
+  it('stays on the client and says it was kept when the delete is blocked by linked records', async () => {
+    const user = userEvent.setup();
+    vi.mocked(getClient).mockResolvedValue(createMockClient({ id: 'client-123', name: 'Alice Smith' }));
+    vi.mocked(deleteClient).mockRejectedValue(
+      Object.assign(new Error('blocked'), { name: 'ClientDeleteBlockedError' }),
+    );
+    renderPage();
+
+    await user.click(await screen.findByTestId('client-detail-delete'));
+    await user.click(await screen.findByTestId('delete-confirm-button'));
+
+    expect(await screen.findByTestId('client-delete-error')).toHaveTextContent(
+      'This client was not deleted',
+    );
+    expect(screen.getByTestId('delete-confirmation-modal')).toBeInTheDocument();
+    expect(navigateMock).not.toHaveBeenCalled();
+  });
+});
+
+// Added (SOUPFIN-166): the load error says why; a 404 or empty answer says "not found"
+describe('ClientDetailPage load errors (SOUPFIN-166)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it.each([
+    ['a disabled module', () => moduleDisabled403('Kyc', '/client/show/client-123.json'), 'module_disabled', 'Kyc module is not available'],
+    ['a missing role', () => roleDenied403('/client/show/client-123.json'), 'forbidden', 'You do not have permission'],
+    ['a server fault', () => serverError500('/client/show/client-123.json'), 'server_error', 'Server error'],
+  ])('explains %s', async (_cause, makeError, kind, title) => {
+    vi.mocked(getClient).mockRejectedValue(makeError());
+
+    renderPage();
+
+    const card = await screen.findByTestId('client-detail-error');
+    expect(card).toHaveAttribute('data-error-kind', kind);
+    expect(within(card).getByText(title)).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/status code/i);
+  });
+
+  it('offers no Retry when the module is disabled', async () => {
+    vi.mocked(getClient).mockRejectedValue(moduleDisabled403('Kyc', '/client/show/client-123.json'));
+
+    renderPage();
+
+    const card = await screen.findByTestId('client-detail-error');
+    expect(within(card).queryByRole('button', { name: /retry/i })).not.toBeInTheDocument();
+  });
+
+  it('shows "Client not found" for a 404 id, with no Retry', async () => {
+    vi.mocked(getClient).mockRejectedValue(axiosError(404, {}, '/client/show/missing.json'));
+
+    renderPage('missing');
+
+    const card = await screen.findByTestId('client-detail-error');
+    expect(card).toHaveAttribute('data-error-kind', 'not_found');
+    expect(within(card).getByText('Client not found')).toBeInTheDocument();
+    expect(within(card).queryByRole('button', { name: /retry/i })).not.toBeInTheDocument();
+    expect(within(card).getByRole('link', { name: 'Back to Clients' })).toHaveAttribute('href', '/clients');
+  });
+
+  it('shows "Client not found" when the load returns nothing', async () => {
+    vi.mocked(getClient).mockResolvedValue(null as unknown as Client);
+
+    renderPage();
+
+    const card = await screen.findByTestId('client-detail-error');
+    expect(card).toHaveAttribute('data-error-kind', 'not_found');
+  });
+
+  it('Retry after a server fault refetches and shows the client', async () => {
+    vi.mocked(getClient).mockRejectedValueOnce(serverError500('/client/show/client-123.json'));
+
+    renderPage();
+
+    const card = await screen.findByTestId('client-detail-error');
+    vi.mocked(getClient).mockResolvedValue(createMockClient({ name: 'Alice Smith' }));
+    within(card).getByRole('button', { name: /retry/i }).click();
+
+    expect(await screen.findByTestId('client-detail-delete')).toBeInTheDocument();
+    expect(screen.queryByTestId('client-detail-error')).not.toBeInTheDocument();
+    expect(vi.mocked(getClient)).toHaveBeenCalledTimes(2);
   });
 });

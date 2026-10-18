@@ -18,6 +18,7 @@
  * PUT (update) and DELETE operations do NOT require CSRF tokens.
  */
 import apiClient, { toQueryString, getCsrfToken, csrfQueryString } from '../client';
+import { assertDeleteApplied } from './deleteOutcome';
 import type { Invoice, InvoiceStatus, InvoiceItem, InvoicePayment, ListParams } from '../../types';
 import {
   parseJoinRowTaxAmount,
@@ -547,9 +548,24 @@ export async function recordInvoicePayment(data: Partial<InvoicePayment>): Promi
 }
 
 /**
- * Delete invoice payment
+ * Get a single invoice payment
+ * GET /rest/invoicePayment/show/:id.json
+ * Added (SOUPFIN-177): backs the payment detail page
+ */
+export async function getInvoicePayment(id: string): Promise<InvoicePayment> {
+  const response = await apiClient.get<InvoicePayment>(`/invoicePayment/show/${id}.json`);
+  return transformPayment(response.data);
+}
+
+/**
+ * Delete (void) invoice payment
  * DELETE /rest/invoicePayment/delete/:id.json
+ *
+ * Fix (SOUPFIN-177): resolves only when the backend really deleted the row.
+ * A 200 carrying `relatedList` or `deleteRequestId` deleted nothing, so it
+ * rejects with DeleteBlockedError / DeletePendingApprovalError instead.
  */
 export async function deleteInvoicePayment(id: string): Promise<void> {
-  await apiClient.delete(`/invoicePayment/delete/${id}.json`);
+  const response = await apiClient.delete(`/invoicePayment/delete/${id}.json`);
+  assertDeleteApplied(response?.data);
 }

@@ -27,6 +27,13 @@ const settingsNavItems: SettingsNavItem[] = [
     icon: 'account_balance',
     description: 'Company bank account details',
   },
+  // Added (SOUPFIN-158): financial years, year-end close, lock date, opening balances
+  {
+    label: 'Financial Years',
+    path: '/settings/financial-years',
+    icon: 'calendar_month',
+    description: 'Year-end close, lock date and opening balances',
+  },
   {
     label: 'Account Settings',
     path: '/settings/account',

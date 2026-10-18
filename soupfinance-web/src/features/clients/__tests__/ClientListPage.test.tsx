@@ -7,12 +7,14 @@
  *    the backend response omits `name` (the reported bug).
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ClientListPage } from '../ClientListPage';
 import type { Client } from '../../../types';
+// Added (SOUPFIN-166): Axios-shaped 403/500 errors
+import { moduleDisabled403, roleDenied403, serverError500 } from '../../../test/apiErrorFixtures';
 
 vi.mock('../../../api', () => ({
   listClients: vi.fn(),
@@ -218,6 +220,44 @@ describe('ClientListPage delete flow (SOUP-1929)', () => {
     // Modal stays open so the user can retry rather than silently stalling.
     expect(screen.getByTestId('delete-confirmation-modal')).toBeInTheDocument();
   });
+
+  // Added (SOUPFIN-169): the backend can answer 200 + relatedList and delete
+  // nothing. The list must keep the client, and the message must not say "try again".
+  it('says the client was kept, and leaves the list alone, when the delete is blocked by linked records', async () => {
+    const user = userEvent.setup();
+    vi.mocked(listClients).mockResolvedValue([
+      createMockClient({ id: 'c1', name: 'Alice Smith' }),
+    ]);
+    vi.mocked(deleteClient).mockRejectedValue(
+      Object.assign(new Error('blocked'), { name: 'ClientDeleteBlockedError' }),
+    );
+    renderPage();
+
+    await user.click(await screen.findByTestId('client-delete-c1'));
+    await user.click(await screen.findByTestId('delete-confirm-button'));
+
+    const message = await screen.findByTestId('client-delete-error');
+    expect(message).toHaveTextContent('This client was not deleted');
+    expect(message).not.toHaveTextContent('try again');
+    expect(screen.getByTestId('delete-confirmation-modal')).toBeInTheDocument();
+    expect(screen.getByTestId('client-delete-c1')).toBeInTheDocument();
+  });
+
+  it('keeps the generic retry message for an ordinary failure', async () => {
+    const user = userEvent.setup();
+    vi.mocked(listClients).mockResolvedValue([
+      createMockClient({ id: 'c1', name: 'Alice Smith' }),
+    ]);
+    vi.mocked(deleteClient).mockRejectedValue(new Error('500'));
+    renderPage();
+
+    await user.click(await screen.findByTestId('client-delete-c1'));
+    await user.click(await screen.findByTestId('delete-confirm-button'));
+
+    expect(await screen.findByTestId('client-delete-error')).toHaveTextContent(
+      'Could not delete this client. Please try again.',
+    );
+  });
 });
 
 describe('ClientListPage filter/search empty states (SOUPFIN-16)', () => {
@@ -301,5 +341,59 @@ describe('ClientListPage filter/search empty states (SOUPFIN-16)', () => {
     // font-semibold so the user can see the filter is being applied.
     expect(filter.className).toMatch(/ring-primary\/20/);
     expect(filter.className).toMatch(/font-semibold/);
+  });
+});
+
+// Added (SOUPFIN-166): the load error says why, and Retry refetches instead of reloading
+describe('ClientListPage load errors (SOUPFIN-166)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it.each([
+    ['a disabled module', () => moduleDisabled403('Kyc', '/client/index.json'), 'module_disabled', 'Kyc module is not available'],
+    ['a missing role', () => roleDenied403('/client/index.json'), 'forbidden', 'You do not have permission'],
+    ['a server fault', () => serverError500('/client/index.json'), 'server_error', 'Server error'],
+  ])('explains %s', async (_cause, makeError, kind, title) => {
+    vi.mocked(listClients).mockRejectedValue(makeError());
+
+    renderPage();
+
+    const card = await screen.findByTestId('client-list-error');
+    expect(card).toHaveAttribute('data-error-kind', kind);
+    expect(within(card).getByText(title)).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/status code/i);
+  });
+
+  it('offers no Retry when the module is disabled', async () => {
+    vi.mocked(listClients).mockRejectedValue(moduleDisabled403('Kyc', '/client/index.json'));
+
+    renderPage();
+
+    const card = await screen.findByTestId('client-list-error');
+    expect(within(card).queryByRole('button', { name: /retry/i })).not.toBeInTheDocument();
+    expect(within(card).getByText(/contact your administrator to enable this module/i)).toBeInTheDocument();
+  });
+
+  it('Retry after a server fault refetches without reloading the page', async () => {
+    const reload = vi.fn();
+    const original = window.location;
+    Object.defineProperty(window, 'location', { configurable: true, value: { ...original, reload } });
+    try {
+      vi.mocked(listClients).mockRejectedValueOnce(serverError500('/client/index.json'));
+
+      renderPage();
+
+      const card = await screen.findByTestId('client-list-error');
+      vi.mocked(listClients).mockResolvedValue([createMockClient({ id: 'client-after-retry', name: 'Alice Smith' })]);
+      within(card).getByRole('button', { name: /retry/i }).click();
+
+      expect(await screen.findByTestId('client-row-client-after-retry')).toBeInTheDocument();
+      expect(screen.queryByTestId('client-list-error')).not.toBeInTheDocument();
+      expect(vi.mocked(listClients)).toHaveBeenCalledTimes(2);
+      expect(reload).not.toHaveBeenCalled();
+    } finally {
+      Object.defineProperty(window, 'location', { configurable: true, value: original });
+    }
   });
 });

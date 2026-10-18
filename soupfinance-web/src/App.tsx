@@ -61,6 +61,9 @@ import { ClientListPage, ClientFormPage, ClientDetailPage } from './features/cli
 // Payments
 import { PaymentListPage } from './features/payments/PaymentListPage';
 import { PaymentFormPage } from './features/payments/PaymentFormPage';
+import { PaymentDetailPage } from './features/payments/PaymentDetailPage';
+// Added (SOUPFIN-178): one payment applied across many invoices or bills
+import { ReceivePaymentPage, PayBillsPage } from './features/payments/PaymentAllocationPage';
 
 // Ledger
 import { ChartOfAccountsPage } from './features/ledger/ChartOfAccountsPage';
@@ -77,10 +80,14 @@ import { ProfitLossPage } from './features/reports/ProfitLossPage';
 import { BalanceSheetPage } from './features/reports/BalanceSheetPage';
 import { CashFlowPage } from './features/reports/CashFlowPage';
 import { AgingReportsPage } from './features/reports/AgingReportsPage';
+// Added (SOUPFIN-105): A/R and A/P aging Summary/Detail, Open Invoices, Unpaid Bills
+import { AgingReportPage } from './features/reports/aging/AgingReportPage';
 // Added: Trial Balance report page
 import { TrialBalancePage } from './features/reports/TrialBalancePage';
 // Added: Scheduled Reports page for automated report delivery
 import { ScheduledReportsPage } from './features/reports/ScheduledReportsPage';
+// Added (SOUPFIN-103): registry-only reports render through one generic page
+import { RegistryReportPage } from './features/reports/RegistryReportPage';
 
 // Added: Corporate KYC Onboarding
 import {
@@ -99,6 +106,8 @@ import {
   BankAccountListPage,
   BankAccountFormPage,
   AccountSettingsPage,
+  FinancialYearsPage,
+  OpeningBalancesPage,
 } from './features/settings';
 
 // Added (SOUPFIN-75): In-app user guide
@@ -290,6 +299,10 @@ export default function App() {
             {/* Payments */}
             <Route path="/payments" element={<PaymentListPage />} />
             <Route path="/payments/new" element={<PaymentFormPage />} />
+            <Route path="/payments/receive" element={<ReceivePaymentPage />} />
+            <Route path="/payments/make" element={<PayBillsPage />} />
+            {/* Added (SOUPFIN-177): one payment; :type is "invoice" or "bill" */}
+            <Route path="/payments/:type/:id" element={<PaymentDetailPage />} />
 
             {/* Ledger */}
             <Route path="/ledger/accounts" element={<ChartOfAccountsPage />} />
@@ -301,12 +314,19 @@ export default function App() {
             <Route path="/accounting/journal-entry" element={<JournalEntryPage />} />
             <Route path="/accounting/journal-entry/new" element={<JournalEntryPage />} />
             <Route path="/accounting/journal-entry/:id" element={<JournalEntryPage />} />
+            {/* Added (SOUPFIN-154): the register's Edit action links here */}
+            <Route path="/accounting/journal-entry/:id/edit" element={<JournalEntryPage />} />
             {/* Changed: Added routes for voucher type URLs to match navigation handlers */}
             <Route path="/accounting/voucher/payment" element={<VoucherFormPage />} />
             <Route path="/accounting/voucher/receipt" element={<VoucherFormPage />} />
-            <Route path="/accounting/vouchers" element={<VoucherFormPage />} />
+            {/* Fix (SOUPFIN-154): there is no voucher list page; vouchers are
+                listed in the Transaction Register, so send the list URL there
+                instead of rendering a blank create form */}
+            <Route path="/accounting/vouchers" element={<Navigate to="/accounting/transactions" replace />} />
             <Route path="/accounting/vouchers/new" element={<VoucherFormPage />} />
+            {/* Changed (SOUPFIN-154): :id is a read-only view, :id/edit the edit form */}
             <Route path="/accounting/vouchers/:id" element={<VoucherFormPage />} />
+            <Route path="/accounting/vouchers/:id/edit" element={<VoucherFormPage />} />
 
             {/* Reports */}
             <Route path="/reports" element={<ReportsPage />} />
@@ -314,10 +334,20 @@ export default function App() {
             <Route path="/reports/balance-sheet" element={<BalanceSheetPage />} />
             <Route path="/reports/cash-flow" element={<CashFlowPage />} />
             <Route path="/reports/aging" element={<AgingReportsPage />} />
+            {/* Added (SOUPFIN-105): keyed by side, so the customer/vendor filter
+                is kept between Summary and Detail but never carried across sides */}
+            <Route path="/reports/aging/receivables" element={<AgingReportPage key="receivables" side="receivables" view="summary" />} />
+            <Route path="/reports/aging/receivables/detail" element={<AgingReportPage key="receivables" side="receivables" view="detail" />} />
+            <Route path="/reports/open-invoices" element={<AgingReportPage key="receivables" side="receivables" view="open" />} />
+            <Route path="/reports/aging/payables" element={<AgingReportPage key="payables" side="payables" view="summary" />} />
+            <Route path="/reports/aging/payables/detail" element={<AgingReportPage key="payables" side="payables" view="detail" />} />
+            <Route path="/reports/unpaid-bills" element={<AgingReportPage key="payables" side="payables" view="open" />} />
             {/* Added: Trial Balance report */}
             <Route path="/reports/trial-balance" element={<TrialBalancePage />} />
             {/* Added: Scheduled Reports for automated report delivery */}
             <Route path="/reports/scheduled" element={<ScheduledReportsPage />} />
+            {/* Added (SOUPFIN-103): any registry entry with a source and columns */}
+            <Route path="/reports/view/:reportId" element={<RegistryReportPage />} />
 
             {/* Added: Corporate KYC Onboarding (protected) */}
             <Route path="/onboarding/company" element={<CompanyInfoPage />} />
@@ -338,6 +368,9 @@ export default function App() {
               <Route path="bank-accounts/:id" element={<BankAccountFormPage />} />
               {/* Account Settings */}
               <Route path="account" element={<AccountSettingsPage />} />
+              {/* Added (SOUPFIN-158): Financial years and opening balances */}
+              <Route path="financial-years" element={<FinancialYearsPage />} />
+              <Route path="financial-years/opening-balances" element={<OpeningBalancesPage />} />
             </Route>
 
             {/* Added (SOUPFIN-75): User guide, reached from the sidebar Help link */}

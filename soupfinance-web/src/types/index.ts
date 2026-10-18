@@ -238,14 +238,19 @@ export interface InvoiceItem extends BaseEntity {
 }
 
 export interface InvoicePayment extends BaseEntity {
-  invoice: { id: string };
+  // Changed (SOUPFIN-177): FK refs carry serialised/class like every Grails FK
+  invoice: { id: string; serialised?: string; class?: string };
   amount: number;
   paymentDate: string;
-  // Changed: PaymentMethod is a domain class FK, not a string enum
+  // Changed: PaymentMethod is a domain class FK, not a string enum.
+  // The REST index/show only send { id, class, serialised } — no `name`.
   paymentMethod?: { id: string; name?: string; serialised?: string; class?: string };
-  payInAccount?: { id: string; name?: string; code?: string }; // Added: Bank/cash account for deposit
+  payInAccount?: { id: string; name?: string; code?: string; serialised?: string; class?: string }; // Added: Bank/cash account for deposit
   currency?: string; // Added: Payment currency
-  reference?: string;
+  exchangeRate?: number; // Added (SOUPFIN-177): backend field
+  quickReference?: string; // Added (SOUPFIN-177): SbDomain short id, e.g. "03E4211FE7"
+  totalCount?: number; // Added (SOUPFIN-177): list-only — Grails repeats the filtered total on every index row
+  reference?: string; // NOTE: not a backend InvoicePayment field; kept for older callers
   notes?: string;
 }
 
@@ -253,7 +258,31 @@ export interface InvoicePayment extends BaseEntity {
 // Finance Types - Bill (Expenses)
 // =============================================================================
 
+/**
+ * Mirrors `soupbroker.finance.PaymentStatus` — the only values `Bill.status`
+ * carries on the wire. The backend DERIVES it from payments
+ * (`Bill.getCheckStatus()` in `beforeUpdate`) and marks it `bindable:false`, so
+ * a client can never set it. A bill that has not been updated since it was
+ * created reads `null`.
+ */
+export type PaymentStatus = 'PENDING' | 'PROCESSING' | 'PARTIAL' | 'PAID' | 'FAILED' | 'EXPIRED';
+
+/**
+ * The lifecycle shown to users (PRD `prd/features/bills.md`):
+ * DRAFT -> PENDING -> PARTIAL/PAID -> OVERDUE, with PENDING -> CANCELLED.
+ *
+ * Changed (SOUPFIN-184): this is a DISPLAY value computed by
+ * `getBillDisplayStatus()`, never a field the backend sends — read that helper,
+ * not `bill.status`, to decide what to show or allow.
+ */
 export type BillStatus = 'DRAFT' | 'PENDING' | 'PARTIAL' | 'PAID' | 'OVERDUE' | 'CANCELLED';
+
+/**
+ * Added (SOUPFIN-184): whether the bill is posted to the ledger. PLANNED backend
+ * field `Bill.postingStatus` — see `plans/soupfin-184-bill-lifecycle.html`.
+ * Absent on today's backend, where every saved bill is posted; `null` means POSTED.
+ */
+export type BillPostingStatus = 'DRAFT' | 'POSTED' | 'CANCELLED';
 
 export interface Bill extends BaseEntity {
   number?: number; // Added: Bill number (backend field)
@@ -266,7 +295,17 @@ export interface Bill extends BaseEntity {
   exchangeRate?: number; // Added: Exchange rate when currency != account default
   purchaseOrderNumber?: string; // Added: PO number reference
   salesOrderNumber?: string; // Added: SO number reference
-  status: BillStatus;
+  /**
+   * Changed (SOUPFIN-184): the raw backend value (a `PaymentStatus`, or null).
+   * `BillStatus` stays in the union only so older fixtures that carry a display
+   * value still type-check. Never render it directly: use `getBillDisplayStatus()`.
+   */
+  status?: PaymentStatus | BillStatus | null;
+  /** Added (SOUPFIN-184): planned backend field, see `BillPostingStatus`. */
+  postingStatus?: BillPostingStatus | null;
+  /** Added (SOUPFIN-184): planned backend fields, set when a bill is voided. */
+  cancelledDate?: string | null;
+  cancelReason?: string | null;
   /**
    * Changed (SOUPFIN-43): these five are NORMALISED names produced by
    * `transformBill()`. The backend spells four of them differently — see the
@@ -322,16 +361,82 @@ export interface BillItem extends BaseEntity {
 }
 
 export interface BillPayment extends BaseEntity {
-  bill: { id: string };
+  // Changed (SOUPFIN-177): FK refs carry serialised/class like every Grails FK
+  bill: { id: string; serialised?: string; class?: string };
   amount: number;
   paymentDate: string;
-  // Changed: PaymentMethod is a domain class FK, not a string enum
+  // Changed: PaymentMethod is a domain class FK, not a string enum.
+  // The REST index/show only send { id, class, serialised } — no `name`.
   paymentMethod?: { id: string; name?: string; serialised?: string; class?: string };
-  payOutAccount?: { id: string; name?: string; code?: string }; // Added: Bank/cash account for payment
+  payOutAccount?: { id: string; name?: string; code?: string; serialised?: string; class?: string }; // Added: Bank/cash account for payment
   paymentReceipt?: string; // Added: File upload reference for payment receipt
   currency?: string; // Added: Payment currency
+  exchangeRate?: number; // Added (SOUPFIN-177): backend field
+  quickReference?: string; // Added (SOUPFIN-177): SbDomain short id, e.g. "08FF1C9C7D"
+  totalCount?: number; // Added (SOUPFIN-177): list-only — Grails repeats the filtered total on every index row
+  reference?: string; // NOTE: not a backend BillPayment field; kept for older callers
+  notes?: string;
+}
+
+// =============================================================================
+// Finance Types - Payment Allocation (one payment across many invoices/bills)
+// Mirrors: soupbroker.finance.PaymentAllocationGroup, PaymentAllocation,
+//          AllocationDirection, AllocationStrategy, AllocationGroupStatus
+// Added (SOUPFIN-178)
+// =============================================================================
+
+/** RECEIPT = money in from a client; PAYMENT = money out to a vendor. */
+export type AllocationDirection = 'RECEIPT' | 'PAYMENT';
+export type AllocationStrategy = 'FIFO' | 'PRO_RATA' | 'MANUAL';
+export type AllocationGroupStatus = 'DRAFT' | 'POSTED' | 'REVERSED';
+
+type GrailsRef = { id: string; serialised?: string; class?: string };
+
+export interface PaymentAllocation extends BaseEntity {
+  allocationGroup?: GrailsRef;
+  invoice?: GrailsRef | null;
+  bill?: GrailsRef | null;
+  amount: number;
+  allocatedDate?: string;
+  notes?: string;
+  invoicePayment?: GrailsRef | null;
+  billPayment?: GrailsRef | null;
+}
+
+export interface PaymentAllocationGroup extends BaseEntity {
+  voucher?: GrailsRef | null;
+  direction: AllocationDirection;
+  strategy: AllocationStrategy;
+  totalAmount: number;
+  allocatedAmount?: number;
+  paymentDate: string;
+  paymentMethod?: GrailsRef | null;
   reference?: string;
   notes?: string;
+  accountServices?: GrailsRef | null;
+  vendor?: GrailsRef | null;
+  cashAccount?: GrailsRef;
+  status?: AllocationGroupStatus;
+  paymentAllocationList?: PaymentAllocation[];
+}
+
+/**
+ * Request body for POST /rest/paymentAllocationGroup/save.json.
+ * Mirrors soupbroker.finance.CreateAllocationCommand / AllocationLineCommand
+ * (the command object PaymentAllocationService.createAllocation takes).
+ */
+export interface CreatePaymentAllocationRequest {
+  direction: AllocationDirection;
+  strategy: AllocationStrategy;
+  totalAmount: number;
+  paymentDate: string;
+  paymentMethod?: { id: string };
+  reference?: string;
+  notes?: string;
+  accountServicesId?: string;
+  vendorId?: string;
+  cashAccountId: string;
+  allocations: Array<{ invoiceId?: string; billId?: string; amount: number; notes?: string }>;
 }
 
 // =============================================================================
@@ -379,11 +484,12 @@ export interface LedgerAccount extends BaseEntity {
   number?: string; // Added: account number for reporting
   description?: string;
   ledgerGroup: LedgerGroup;
-  ledgerAccountCategory?: { id: string; name?: string; class?: string }; // Added: category reference
+  ledgerAccountCategory?: { id: string; name?: string; serialised?: string; class?: string }; // Added: category reference (Changed SOUPFIN-182: + serialised, "Short-term Liabilities < LIABILITY")
   parentAccount?: { id: string; name?: string; class?: string }; // Added: class field for Grails FK
   currency?: string; // Added: Account currency
   cashFlow?: string; // Added: Cash flow classification
   hiddenAccount?: boolean; // Added: Hide from account lists
+  systemAccount?: boolean; // Added (SOUPFIN-182): generated by the backend (client fund, vendor, payable accounts)
   editable?: boolean; // Added: Can be edited
   deletable?: boolean; // Added: Can be deleted
   isActive: boolean;
@@ -533,9 +639,19 @@ export interface CreateJournalEntryRequest {
 // Finance Types - Vendor
 // =============================================================================
 
+// Added (SOUPFIN-182): mirrors the soupbroker.VendorType enum in soupmarkets-web
+// (SUPPLIER..OTHER were added there for general-purpose, non-brokerage vendors)
+export const VENDOR_TYPES = [
+  'BANK', 'BROKER', 'FUND_MANAGER', 'CUSTODIAN', 'TRADER', 'PROVIDER', 'FINANCE_HOUSE',
+  'SAVINGS_AND_LOANS', 'FINANCE_HOUSES', 'MICROFINANCE_INSTITUTION', 'MICROCREDIT_INSTITUTION',
+  'RURAL_AND_COMMUNITY_BANK', 'FINANCE_AND_LEASING_COMPANY', 'MORTGAGE_FINANCE',
+  'SUPPLIER', 'CONTRACTOR', 'SERVICE_PROVIDER', 'CONSULTANT', 'OTHER',
+] as const;
+export type VendorType = (typeof VENDOR_TYPES)[number];
+
 export interface Vendor extends BaseEntity {
   name: string;
-  symbol?: string; // Added: Unique short code/symbol
+  symbol?: string; // Added: Unique short code/symbol (unique per tenant)
   email?: string;
   phoneNumber?: string;
   address?: string; // Residential address
@@ -543,8 +659,10 @@ export interface Vendor extends BaseEntity {
   taxIdentificationNumber?: string;
   paymentTerms?: number; // days
   notes?: string;
-  ledgerAccount?: { id: string; name?: string; code?: string }; // Added: Linked ledger account
-  vendorType?: string; // Added: Vendor type classification
+  // Changed (SOUPFIN-182): Grails FK shape — show.json returns id + serialised + class
+  ledgerAccount?: { id: string; name?: string; code?: string; serialised?: string; class?: string } | null;
+  vendorType?: VendorType | null; // Changed (SOUPFIN-182): typed to the backend enum
+  totalCount?: number; // Added (SOUPFIN-182): list rows carry the unpaged total (Grails transformer)
 }
 
 // =============================================================================

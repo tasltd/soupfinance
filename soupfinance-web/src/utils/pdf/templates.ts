@@ -414,7 +414,7 @@ export function generateBillHtml(
   company: CompanyInfo,
   formatCurrency: (amount: number | null | undefined) => string
 ): string {
-  const statusClass = getStatusClass(bill.status);
+  const statusClass = getStatusClass(bill.status ?? '');
 
   return `
     <!DOCTYPE html>

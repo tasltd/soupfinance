@@ -2,8 +2,10 @@
  * Payment Management E2E Tests
  * Tests payment listing, recording, and tab switching flows
  */
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
+import { installGuideMocks, seedAuthenticatedSession } from './user-guide/guide-mocks';
 import {
+  isLxcMode,
   mockTokenValidationApi,
   takeScreenshot,
   setupResponseValidation,
@@ -341,7 +343,9 @@ test.describe('Payment Management', () => {
       await expect(page.getByTestId('payment-row-ip-003')).toBeVisible();
 
       // Verify payment data
-      await expect(page.locator('text=Bank Transfer').first()).toBeVisible();
+      // Fix (SOUPFIN-180): scoped to the row badge; a bare text match hit the hidden
+      // <option> in the SOUPFIN-177 method filter first
+      await expect(page.getByTestId('payment-method-badge-ip-001')).toHaveText('Bank Transfer');
       await expect(page.locator('text=+$2,500.00')).toBeVisible();
 
       // Verify summary is visible
@@ -453,7 +457,9 @@ test.describe('Payment Management', () => {
 
       // Should show error state
       await expect(page.getByTestId('payment-list-error')).toBeVisible();
-      await expect(page.locator('text=Failed to load payments')).toBeVisible();
+      // Changed (SOUPFIN-180): ApiErrorState names the cause instead of a generic card
+      await expect(page.getByTestId('payment-list-error')).toHaveAttribute('data-error-kind', 'server_error');
+      await expect(page.getByTestId('payment-list-error-retry')).toBeVisible();
 
       await takeScreenshot(page, 'payment-list-error');
     });
@@ -772,5 +778,351 @@ test.describe('Payment Management', () => {
 
       await takeScreenshot(page, 'payment-form-mobile');
     });
+  });
+});
+
+// ===========================================================================
+// SOUPFIN-177: pagination, filters, payment detail and void
+// ===========================================================================
+//
+// Driven from the dashboard by clicks only (sidebar → row → detail → void).
+// A small in-memory "server" stands in for the backend: it pages by
+// max/offset, filters by from/to on dateCreated, ignores paymentMethod.id
+// (as the real InvoicePaymentController does), and deletes on DELETE. Each
+// test reads that server state before and after the UI action, so a passing
+// UI with no real request behind it fails.
+//
+// Row shapes mirror the LXC backend (2026-10-13): FKs carry only
+// { id, class, serialised } and every index row repeats `totalCount`.
+
+const SOUPFIN_177_SHOTS = 'e2e/playwright/screenshots/soupfin-177';
+
+async function shot177(page: Page, name: string) {
+  await page.evaluate(() => document.fonts.ready.then(() => true));
+  await page.screenshot({ path: `${SOUPFIN_177_SHOTS}/${name}.png`, fullPage: true });
+}
+
+interface ServerPayment {
+  id: string;
+  invoice?: { id: string; class: string; serialised: string };
+  bill?: { id: string; class: string; serialised: string };
+  paymentMethod?: { id: string; class: string; serialised: string };
+  payInAccount?: { id: string; class: string; serialised: string };
+  payOutAccount?: { id: string; class: string; serialised: string };
+  amount: number;
+  paymentDate: string;
+  dateCreated: string;
+  quickReference: string;
+  currency: string;
+  notes?: string;
+}
+
+const PM = (id: string, name: string) => ({ id, class: 'soupbroker.finance.PaymentMethod', serialised: name });
+const BANK_TRANSFER = PM('pm-001', 'Bank Transfer');
+const MOBILE_MONEY = PM('pm-003', 'Mobile Money');
+
+function seedInvoicePayments(count: number): ServerPayment[] {
+  // Newest first, as the backend sorts by paymentDate desc. Every third
+  // payment is Mobile Money; dateCreated spans September and October.
+  return Array.from({ length: count }, (_, i) => {
+    const day = 30 - (i % 28);
+    const month = i < 20 ? '10' : '09';
+    return {
+      id: `ip-e2e-${i}`,
+      invoice: {
+        id: `inv-e2e-${i % 5}`,
+        class: 'soupbroker.finance.Invoice',
+        serialised: `Invoice(number:${2026100 + (i % 5)}, accountServices:Direct Account : Corporate(Client ${i % 5} Ltd), currency:GHS, total:5000.00)`,
+      },
+      paymentMethod: i % 3 === 0 ? MOBILE_MONEY : BANK_TRANSFER,
+      payInAccount: { id: 'la-1', class: 'soupbroker.finance.LedgerAccount', serialised: 'Main Bank Account - GHS' },
+      amount: 100 + i * 10,
+      paymentDate: `2026-${month}-${String(day).padStart(2, '0')}T00:00:00Z`,
+      dateCreated: `2026-${month}-${String(day).padStart(2, '0')}T09:00:00Z`,
+      quickReference: `QR${String(i).padStart(4, '0')}`,
+      currency: 'GHS',
+      notes: i === 0 ? 'Deposit for October retainer' : undefined,
+    };
+  });
+}
+
+function seedBillPayments(): ServerPayment[] {
+  return [
+    {
+      id: 'bp-e2e-1',
+      bill: { id: 'bill-e2e-1', class: 'soupbroker.finance.Bill', serialised: 'Bill((Volta Power Services)[SUPPLIER], 77)' },
+      paymentMethod: PM('pm-004', 'Cheque'),
+      payOutAccount: { id: 'la-2', class: 'soupbroker.finance.LedgerAccount', serialised: 'Cash on Hand - GHS' },
+      amount: 3565,
+      paymentDate: '2026-10-09T00:00:00Z',
+      dateCreated: '2026-10-09T10:00:00Z',
+      quickReference: 'QRB0001',
+      currency: 'GHS',
+    },
+  ];
+}
+
+/** Install the stateful payment "server". Registered after the guide mocks, so it wins. */
+async function installPaymentServer(
+  page: Page,
+  options: { deleteReply?: (id: string) => { status: number; body?: unknown } } = {}
+) {
+  const state = {
+    invoicePayments: seedInvoicePayments(45),
+    billPayments: seedBillPayments(),
+    indexRequests: [] as Array<{ kind: 'invoice' | 'bill'; params: Record<string, string> }>,
+    deletes: [] as string[],
+  };
+
+  const register = async (kind: 'invoice' | 'bill') => {
+    const controller = kind === 'invoice' ? 'invoicePayment' : 'billPayment';
+    const rows = () => (kind === 'invoice' ? state.invoicePayments : state.billPayments);
+
+    await page.route(`**/rest/${controller}/index.json*`, (route) => {
+      const params = Object.fromEntries(new URL(route.request().url()).searchParams);
+      state.indexRequests.push({ kind, params });
+      let list = rows();
+      // The invoice detail page asks for one invoice's payments.
+      if (params['invoice.id']) list = list.filter((p) => p.invoice?.id === params['invoice.id']);
+      if (params['bill.id']) list = list.filter((p) => p.bill?.id === params['bill.id']);
+      // Like the backend: from/to compare dateCreated; paymentMethod.id is ignored.
+      if (params.from) list = list.filter((p) => p.dateCreated.slice(0, 10) >= params.from);
+      if (params.to) list = list.filter((p) => p.dateCreated.slice(0, 10) <= params.to);
+      const offset = Number(params.offset || 0);
+      const max = Number(params.max || 10);
+      const pageRows = list.slice(offset, offset + max).map((p) => ({ ...p, totalCount: list.length }));
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(pageRows) });
+    });
+
+    await page.route(`**/rest/${controller}/show/*.json*`, (route) => {
+      const id = route.request().url().match(/show\/([^./?]+)\.json/)?.[1];
+      const row = rows().find((p) => p.id === id);
+      return row
+        ? route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(row) })
+        : route.fulfill({ status: 404, contentType: 'application/json', body: '{}' });
+    });
+
+    await page.route(`**/rest/${controller}/delete/*.json*`, (route) => {
+      if (route.request().method() !== 'DELETE') return route.fallback();
+      const id = route.request().url().match(/delete\/([^./?]+)\.json/)?.[1] ?? '';
+      const reply = options.deleteReply?.(id);
+      if (reply) {
+        return route.fulfill({ status: reply.status, contentType: 'application/json', body: JSON.stringify(reply.body ?? '') });
+      }
+      state.deletes.push(`${controller}:${id}`);
+      if (kind === 'invoice') state.invoicePayments = state.invoicePayments.filter((p) => p.id !== id);
+      else state.billPayments = state.billPayments.filter((p) => p.id !== id);
+      return route.fulfill({ status: 204, body: '' });
+    });
+  };
+
+  await register('invoice');
+  await register('bill');
+  return state;
+}
+
+test.describe('SOUPFIN-177: payment history, detail and void', () => {
+  test.skip(isLxcMode(), 'Mock-only spec: the payment server is in-memory');
+  test.use({ viewport: { width: 1440, height: 900 } });
+
+  let apiGuard177: UnmockedApiGuard;
+
+  test.beforeEach(async ({ page }) => {
+    apiGuard177 = await installUnmockedApiGuard(page);
+    await mockAmbientApi(page);
+  });
+
+  test.afterEach(() => {
+    apiGuard177?.assertNone();
+  });
+
+  async function openPaymentsFromSidebar(page: Page, server?: Parameters<typeof installPaymentServer>[1]) {
+    await installGuideMocks(page);
+    const state = await installPaymentServer(page, server);
+    await seedAuthenticatedSession(page);
+    await page.goto('/dashboard');
+    await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 20_000 });
+    await page.locator('aside').locator('a[href="/payments"]').first().click();
+    await expect(page).toHaveURL(/\/payments$/);
+    await expect(page.getByTestId('payment-table')).toBeVisible();
+    return state;
+  }
+
+  test('pages through payments on the server', async ({ page }) => {
+    const state = await openPaymentsFromSidebar(page);
+
+    await expect(page.getByTestId('pagination-range')).toHaveText('Showing 1–20 of 45 incoming payments');
+    const first = state.indexRequests.filter((r) => r.kind === 'invoice').at(-1)!;
+    expect(first.params).toMatchObject({ max: '20', offset: '0', sort: 'paymentDate', order: 'desc' });
+    // Method badge comes from the PaymentMethod record, not an enum map
+    await expect(page.getByTestId('payment-method-badge-ip-e2e-0')).toHaveText('Mobile Money');
+    await expect(page.getByTestId('payment-method-badge-ip-e2e-1')).toHaveText('Bank Transfer');
+    await expect(page.getByTestId('tab-incoming')).toContainText('45');
+    await shot177(page, 'payments-list-page-1');
+
+    await page.getByTestId('pagination-next').click();
+    await expect(page.getByTestId('payment-row-ip-e2e-20')).toBeVisible();
+    await expect(page.getByTestId('payment-row-ip-e2e-0')).toHaveCount(0);
+    await expect(page.getByTestId('pagination-range')).toHaveText('Showing 21–40 of 45 incoming payments');
+    expect(state.indexRequests.filter((r) => r.kind === 'invoice').at(-1)!.params.offset).toBe('20');
+
+    await page.getByTestId('pagination-page-3').click();
+    await expect(page.getByTestId('pagination-range')).toHaveText('Showing 41–45 of 45 incoming payments');
+    await expect(page.getByTestId('pagination-next')).toBeDisabled();
+    await shot177(page, 'payments-list-page-3');
+  });
+
+  test('filters by recorded date and by payment method', async ({ page }) => {
+    const state = await openPaymentsFromSidebar(page);
+
+    await page.getByTestId('filter-from').fill('2026-10-01');
+    await page.getByTestId('filter-to').fill('2026-10-31');
+    await expect(page.getByTestId('pagination-range')).toHaveText('Showing 1–20 of 20 incoming payments');
+    expect(state.indexRequests.filter((r) => r.kind === 'invoice').at(-1)!.params).toMatchObject({
+      from: '2026-10-01',
+      to: '2026-10-31',
+      offset: '0',
+    });
+    await shot177(page, 'payments-filter-dates');
+
+    // Method options come from /rest/paymentMethod (the tenant's own records)
+    await expect(page.getByTestId('filter-method').locator('option')).toHaveText([
+      'All methods',
+      'Bank Transfer',
+      'Cash',
+      'Mobile Money',
+      'Cheque',
+    ]);
+    await page.getByTestId('filter-method').selectOption({ label: 'Mobile Money' });
+    // October rows are ip-e2e-0..19; every third is Mobile Money → 0,3,…,18 = 7
+    await expect(page.getByTestId('pagination-range')).toHaveText('Showing 1–7 of 7 incoming payments');
+    const badges = page.locator('[data-testid^="payment-method-badge-"]');
+    await expect(badges).toHaveCount(7);
+    for (const text of await badges.allTextContents()) expect(text).toBe('Mobile Money');
+    expect(state.indexRequests.filter((r) => r.kind === 'invoice').at(-1)!.params['paymentMethod.id']).toBe('pm-003');
+    await shot177(page, 'payments-filter-method');
+
+    await page.getByTestId('filter-from').fill('2031-01-01');
+    await page.getByTestId('filter-to').fill('2031-01-31');
+    await expect(page.getByTestId('payment-list-no-matches')).toBeVisible();
+    await shot177(page, 'payments-filter-no-matches');
+
+    await page.getByTestId('filter-clear').click();
+    await expect(page.getByTestId('pagination-range')).toHaveText('Showing 1–20 of 45 incoming payments');
+  });
+
+  test('opens a payment and voids it', async ({ page }) => {
+    const state = await openPaymentsFromSidebar(page);
+    expect(state.invoicePayments).toHaveLength(45);
+
+    await page.getByTestId('payment-view-ip-e2e-0').click();
+    await expect(page).toHaveURL(/\/payments\/invoice\/ip-e2e-0$/);
+    await expect(page.getByTestId('payment-detail-amount')).toHaveText('+GH₵100.00');
+    await expect(page.getByTestId('payment-detail-document-link')).toHaveText('Invoice #2026100');
+    await expect(page.getByTestId('payment-detail-party')).toHaveText('Client 0 Ltd');
+    await expect(page.getByTestId('payment-detail-method')).toHaveText('Mobile Money');
+    await expect(page.getByTestId('payment-detail-account')).toHaveText('Main Bank Account - GHS');
+    await expect(page.getByTestId('payment-detail-reference')).toHaveText('QR0000');
+    await expect(page.getByTestId('payment-detail-date')).toHaveText('2026-10-30');
+    await expect(page.getByTestId('payment-detail-notes')).toHaveText('Deposit for October retainer');
+    await shot177(page, 'payment-detail');
+
+    await page.getByTestId('payment-void-button').click();
+    await expect(page.getByTestId('payment-void-dialog')).toBeVisible();
+    await shot177(page, 'payment-void-confirm');
+
+    // "Keep payment" changes nothing on the server
+    await page.getByTestId('payment-void-cancel').click();
+    await expect(page.getByTestId('payment-void-dialog')).toHaveCount(0);
+    expect(state.deletes).toEqual([]);
+
+    const indexCallsBefore = state.indexRequests.length;
+    await page.getByTestId('payment-void-button').click();
+    await page.getByTestId('payment-void-confirm').click();
+
+    await expect(page).toHaveURL(/\/payments$/);
+    await expect(page.getByText('Payment voided.')).toBeVisible();
+    // Server state after: one DELETE, one fewer payment, and the list re-fetched
+    expect(state.deletes).toEqual(['invoicePayment:ip-e2e-0']);
+    expect(state.invoicePayments).toHaveLength(44);
+    await expect(page.getByTestId('pagination-range')).toHaveText('Showing 1–20 of 44 incoming payments');
+    await expect(page.getByTestId('payment-row-ip-e2e-0')).toHaveCount(0);
+    expect(state.indexRequests.length).toBeGreaterThan(indexCallsBefore);
+    await shot177(page, 'payments-list-after-void');
+  });
+
+  test('a refused void leaves the payment in place and says why', async ({ page }) => {
+    const state = await openPaymentsFromSidebar(page, {
+      deleteReply: (id) => ({
+        status: 200,
+        body: { relatedList: [{ relatedModule: 'finance', relatedToClassSimpleName: 'paymentAllocation' }], targetId: id },
+      }),
+    });
+
+    await page.getByTestId('payment-view-ip-e2e-1').click();
+    await page.getByTestId('payment-void-button').click();
+    await page.getByTestId('payment-void-confirm').click();
+
+    await expect(page.getByTestId('payment-void-error')).toHaveText(
+      'This payment was not voided because other records still use it (finance).'
+    );
+    await expect(page).toHaveURL(/\/payments\/invoice\/ip-e2e-1$/);
+    expect(state.invoicePayments.some((p) => p.id === 'ip-e2e-1')).toBe(true);
+    await shot177(page, 'payment-void-refused');
+  });
+
+  test('voids a bill payment and returns to the outgoing tab', async ({ page }) => {
+    const state = await openPaymentsFromSidebar(page);
+
+    await page.getByTestId('tab-outgoing').click();
+    await expect(page).toHaveURL(/\/payments\?tab=outgoing$/);
+    await expect(page.getByTestId('payment-row-bp-e2e-1')).toContainText('Bill #77');
+    await expect(page.getByTestId('payment-method-badge-bp-e2e-1')).toHaveText('Cheque');
+
+    await page.getByTestId('payment-view-bp-e2e-1').click();
+    await expect(page).toHaveURL(/\/payments\/bill\/bp-e2e-1$/);
+    await expect(page.getByTestId('payment-detail-heading')).toHaveText('Payment made');
+    await expect(page.getByTestId('payment-detail-account')).toHaveText('Cash on Hand - GHS');
+    await shot177(page, 'payment-detail-bill');
+
+    await page.getByTestId('payment-void-button').click();
+    await page.getByTestId('payment-void-confirm').click();
+
+    await expect(page).toHaveURL(/\/payments\?tab=outgoing$/);
+    expect(state.deletes).toEqual(['billPayment:bp-e2e-1']);
+    expect(state.billPayments).toHaveLength(0);
+    await expect(page.getByTestId('payment-list-empty')).toContainText('No outgoing payments');
+    await shot177(page, 'payments-outgoing-after-void');
+  });
+
+  // Added (SOUPFIN-177): the detail page and void dialog follow the app language
+  test('reads the payment and voids it in German', async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem('soupfinance_language', 'de'));
+    const state = await openPaymentsFromSidebar(page);
+
+    await page.getByTestId('payment-view-ip-e2e-0').click();
+    await expect(page).toHaveURL(/\/payments\/invoice\/ip-e2e-0$/);
+    await expect(page.getByTestId('payment-detail-heading')).toHaveText('Zahlung erhalten');
+    await expect(page.getByTestId('payment-detail-back')).toHaveText(/Zurück zu eingehenden Zahlungen/);
+    const card = page.getByTestId('payment-detail-card');
+    for (const label of ['Betrag', 'Zahlungsdatum', 'Zahlungsart', 'Eingezahlt auf', 'Referenz', 'Notizen']) {
+      await expect(card).toContainText(label);
+    }
+    await expect(page.getByTestId('payment-detail-page')).not.toContainText(/Payment date|Deposited to|Void payment/);
+    await shot177(page, 'payment-detail-german');
+
+    await page.getByTestId('payment-void-button').click();
+    const dialog = page.getByTestId('payment-void-dialog');
+    await expect(dialog).toContainText('Diese Zahlung stornieren?');
+    await expect(dialog).toContainText('Invoice #2026100');
+    await expect(page.getByTestId('payment-void-cancel')).toHaveText('Zahlung behalten');
+    await shot177(page, 'payment-void-confirm-german');
+
+    await page.getByTestId('payment-void-confirm').click();
+    await expect(page).toHaveURL(/\/payments$/);
+    await expect(page.getByText('Zahlung storniert.')).toBeVisible();
+    expect(state.deletes).toEqual(['invoicePayment:ip-e2e-0']);
+    expect(state.invoicePayments).toHaveLength(44);
+    await expect(page.getByTestId('payment-row-ip-e2e-0')).toHaveCount(0);
   });
 });

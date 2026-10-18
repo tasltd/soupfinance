@@ -23,6 +23,9 @@ import { useFormatCurrency } from '../../stores';
 import { usePdf, useEmailSend } from '../../hooks';
 // Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
 import { HelpLink } from '../../components/help';
+// Added (SOUPFIN-166): say why the invoice could not be loaded
+import { ApiErrorState } from '../../components/feedback';
+import { parseApiError } from '../../api/errors';
 
 export function InvoiceDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -38,7 +41,7 @@ export function InvoiceDetailPage() {
   const [recipientName, setRecipientName] = useState('');
 
   // Added: Fetch invoice details from API
-  const { data: invoice, isLoading, error } = useQuery({
+  const { data: invoice, isLoading, error, refetch } = useQuery({
     queryKey: ['invoice', id],
     queryFn: () => getInvoice(id!),
     enabled: !!id,
@@ -122,14 +125,20 @@ export function InvoiceDetailPage() {
             Back to Invoices
           </Link>
         </div>
-        <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-12 text-center" data-testid="invoice-detail-error">
-          <span className="material-symbols-outlined text-6xl text-danger/50 mb-4">error</span>
-          <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">Failed to load invoice</h3>
-          <p className="text-subtle-text mb-4">The invoice could not be found or there was an error loading it.</p>
-          <Link to="/invoices" className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm">
-            Back to Invoices
-          </Link>
-        </div>
+        {/* Changed (SOUPFIN-166): a 404 or an empty answer is "not found"; any
+            other failure says why (module disabled, no permission, server fault). */}
+        {error && parseApiError(error).kind !== 'not_found' ? (
+          <ApiErrorState error={error} onRetry={() => refetch()} testId="invoice-detail-error" />
+        ) : (
+          <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-12 text-center" data-testid="invoice-detail-error" data-error-kind="not_found">
+            <span className="material-symbols-outlined text-6xl text-danger/50 mb-4 block">search_off</span>
+            <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">Invoice not found</h3>
+            <p className="text-subtle-text mb-4">This invoice does not exist or has been deleted.</p>
+            <Link to="/invoices" className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm">
+              Back to Invoices
+            </Link>
+          </div>
+        )}
       </div>
     );
   }

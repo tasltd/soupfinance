@@ -1,0 +1,15 @@
+{
+  "key": "professional-services",
+  "name": "Professional services",
+  "appliesTo": ["SERVICES"],
+  "description": "Law, accounting, engineering and consulting firms that bill retainers and hold client money.",
+  "remove": [],
+  "add": [
+    { "number": "4030", "name": "Retainer Fees", "ledgerAccountCategory": "INCOME" },
+    { "number": "4040", "name": "Success and Contingency Fees", "ledgerAccountCategory": "INCOME" },
+    { "number": "1335", "name": "Client Disbursements Recoverable", "ledgerAccountCategory": "OTHER ASSETS" },
+    { "number": "2126", "name": "Client Retainers Held", "ledgerAccountCategory": "SHORT -TERM LIABILITIES" },
+    { "number": "6165", "name": "Professional Indemnity Insurance", "ledgerAccountCategory": "ADMINISTRATION EXPENSES" },
+    { "number": "6175", "name": "Continuing Professional Development", "ledgerAccountCategory": "ADMINISTRATION EXPENSES" }
+  ]
+}

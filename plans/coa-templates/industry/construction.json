@@ -1,0 +1,17 @@
+{
+  "key": "construction",
+  "name": "Construction",
+  "appliesTo": ["SERVICES", "TRADING"],
+  "description": "Contractors that bill by stage, hold retentions and hire plant.",
+  "remove": [],
+  "add": [
+    { "number": "1215", "name": "Retentions Receivable", "ledgerAccountCategory": "ACCOUNT RECEIVABLE" },
+    { "number": "1340", "name": "Contract Assets (Costs in Excess of Billings)", "ledgerAccountCategory": "OTHER ASSETS" },
+    { "number": "1550", "name": "Plant and Machinery", "ledgerAccountCategory": "FIXED ASSETS", "parentAccount": "1500" },
+    { "number": "2140", "name": "Retentions Payable", "ledgerAccountCategory": "SHORT -TERM LIABILITIES" },
+    { "number": "2145", "name": "Contract Liabilities (Billings in Excess of Costs)", "ledgerAccountCategory": "SHORT -TERM LIABILITIES" },
+    { "number": "5050", "name": "Construction Materials", "ledgerAccountCategory": "DIRECT EXPENSES" },
+    { "number": "5060", "name": "Plant and Equipment Hire", "ledgerAccountCategory": "DIRECT EXPENSES" },
+    { "number": "5070", "name": "Site Labour", "ledgerAccountCategory": "DIRECT EXPENSES" }
+  ]
+}

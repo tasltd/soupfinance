@@ -39,6 +39,10 @@ import { useFormatCurrency } from '../../stores';
 import { DEFAULT_CURRENCIES } from '../../api/endpoints/domainData';
 import type { InvoiceItem, ClientType } from '../../types';
 import { getTodayIsoDate } from '../../utils/date';
+// Added (SOUPFIN-158): recognise a save rejected for a closed period
+// Changed (SOUPFIN-166): parseApiError tells a disabled module from other failures
+import { getPeriodLockError, parseApiError } from '../../api/errors';
+import { ApiErrorState, ModuleDisabledBanner } from '../../components/feedback';
 // Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
 import { HelpLink } from '../../components/help';
 
@@ -89,6 +93,8 @@ export function InvoiceFormPage() {
   // Fix (SOUPFIN-64): local calendar day, not UTC today — `new Date().toISOString()`
   // defaults the field to yesterday for part of every day east of UTC.
   const [invoiceDate, setInvoiceDate] = useState(getTodayIsoDate());
+  // Added (SOUPFIN-158): the backend's locked-period rejection, shown under the date
+  const [invoiceDateError, setInvoiceDateError] = useState<string | null>(null);
   const [paymentDate, setPaymentDate] = useState('');
   const [notes, setNotes] = useState('');
   const [purchaseOrderNumber, setPurchaseOrderNumber] = useState('');
@@ -112,7 +118,7 @@ export function InvoiceFormPage() {
   const [newClientError, setNewClientError] = useState<string | null>(null);
 
   // Changed: Fetch clients from /rest/client/index.json for the dropdown
-  const { data: clients } = useQuery({
+  const { data: clients, error: clientsError } = useQuery({
     queryKey: ['clients-for-invoice'],
     queryFn: () => listClients({ max: 100 }),
   });
@@ -144,19 +150,26 @@ export function InvoiceFormPage() {
   const accountServicesResolving = !!selectedPortfolioId && portfolioLoading && !resolvedAccountServicesId;
 
   // Fetch tax rates for dropdown
-  const { data: taxRates } = useQuery({
+  const { data: taxRates, error: taxRatesError } = useQuery({
     queryKey: ['tax-rates'],
     queryFn: () => listTaxRates(),
   });
 
   // Fetch service descriptions for autocomplete
-  const { data: serviceDescriptions } = useQuery({
+  const { data: serviceDescriptions, error: serviceDescriptionsError } = useQuery({
     queryKey: ['invoice-services'],
     queryFn: () => listInvoiceServices({ max: 100 }),
   });
 
+  // Added (SOUPFIN-166): a lookup the form depends on came back "module not
+  // enabled". The form stays visible, and the banner explains why the client,
+  // tax or service lists are empty instead of leaving silent blank dropdowns.
+  const moduleDisabledError = [clientsError, taxRatesError, serviceDescriptionsError].find(
+    (err) => err && parseApiError(err).kind === 'module_disabled',
+  );
+
   // Fetch invoice data when editing
-  const { data: invoice, isLoading: invoiceLoading, error: invoiceError } = useQuery({
+  const { data: invoice, isLoading: invoiceLoading, error: invoiceError, refetch: refetchInvoice } = useQuery({
     queryKey: ['invoice', id],
     queryFn: () => getInvoice(id!),
     enabled: isEdit,
@@ -250,6 +263,12 @@ export function InvoiceFormPage() {
       navigate('/invoices');
     },
     onError: (error: Error) => {
+      // Added (SOUPFIN-158): a date in a closed period belongs on the date field
+      const lock = getPeriodLockError(error);
+      if (lock) {
+        setInvoiceDateError(lock.message);
+        return;
+      }
       setFormError(error.message || 'Failed to create invoice');
     },
   });
@@ -269,6 +288,12 @@ export function InvoiceFormPage() {
       navigate(`/invoices/${id}`);
     },
     onError: (error: Error) => {
+      // Added (SOUPFIN-158): a date in a closed period belongs on the date field
+      const lock = getPeriodLockError(error);
+      if (lock) {
+        setInvoiceDateError(lock.message);
+        return;
+      }
       setFormError(error.message || 'Failed to update invoice');
     },
   });
@@ -293,6 +318,12 @@ export function InvoiceFormPage() {
       navigate(`/invoices/${sentInvoice.id}`);
     },
     onError: (error: Error) => {
+      // Added (SOUPFIN-158): a date in a closed period belongs on the date field
+      const lock = getPeriodLockError(error);
+      if (lock) {
+        setInvoiceDateError(lock.message);
+        return;
+      }
       setFormError(error.message || 'Failed to send invoice');
     },
   });
@@ -567,14 +598,11 @@ export function InvoiceFormPage() {
   if (isEdit && invoiceError) {
     return (
       <div className="flex flex-col gap-6" data-testid="invoice-form-page">
-        <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-12 text-center" data-testid="invoice-form-error">
-          <span className="material-symbols-outlined text-6xl text-danger/50 mb-4">error</span>
-          <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">Failed to load invoice</h3>
-          <p className="text-subtle-text mb-4">The invoice could not be found or there was an error loading it.</p>
-          <button onClick={() => navigate('/invoices')} className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm">
-            Back to Invoices
-          </button>
-        </div>
+        {/* Changed (SOUPFIN-166): ApiErrorState says why the invoice could not be loaded */}
+        <ApiErrorState error={invoiceError} onRetry={() => refetchInvoice()} testId="invoice-form-error" />
+        <button onClick={() => navigate('/invoices')} className="self-center inline-flex items-center gap-2 h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-text-light dark:text-text-dark font-medium text-sm">
+          Back to Invoices
+        </button>
       </div>
     );
   }
@@ -623,6 +651,15 @@ export function InvoiceFormPage() {
           </button>
         </div>
       </div>
+
+      {/* Added (SOUPFIN-166): explain why the client, tax or service lists are empty */}
+      {moduleDisabledError && (
+        <ModuleDisabledBanner
+          error={moduleDisabledError}
+          context="Client, tax or service lists may be empty until the module is enabled."
+          testId="invoice-form-module-disabled"
+        />
+      )}
 
       {/* Form Error */}
       {formError && (
@@ -822,10 +859,17 @@ export function InvoiceFormPage() {
               <input
                 type="date"
                 value={invoiceDate}
-                onChange={(e) => setInvoiceDate(e.target.value)}
-                className="w-full h-12 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-3 text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/50"
+                onChange={(e) => {
+                  setInvoiceDate(e.target.value);
+                  setInvoiceDateError(null);
+                }}
+                aria-invalid={!!invoiceDateError}
+                className={`w-full h-12 rounded-lg border ${invoiceDateError ? 'border-danger' : 'border-border-light dark:border-border-dark'} bg-white dark:bg-background-dark px-3 text-text-light dark:text-text-dark focus:border-primary focus:ring-2 focus:ring-primary/50`}
                 data-testid="invoice-date-input"
               />
+              {invoiceDateError && (
+                <p className="mt-1 text-sm text-danger" role="alert" data-testid="invoice-date-error">{invoiceDateError}</p>
+              )}
             </div>
 
             {/* Payment Date (Due Date) */}

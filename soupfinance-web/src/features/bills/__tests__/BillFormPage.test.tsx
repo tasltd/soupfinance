@@ -3,7 +3,7 @@
  * Tests rendering, create/edit modes, form validation, line items, totals, and submission
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, within, waitFor } from '@testing-library/react';
+import { render, screen, within, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -19,6 +19,10 @@ vi.mock('../../../api/endpoints/bills', async () => {
     getBill: vi.fn(),
     createBill: vi.fn(),
     updateBill: vi.fn(),
+    // Changed: SOUPFIN-184 made "Submit" on a draft save then post it (submitBill), and
+    // "Save draft" on a new bill call saveBillDraft. Unmocked, both rejected and no save navigated.
+    submitBill: vi.fn(),
+    saveBillDraft: vi.fn(),
     // SOUPFIN-38: pure helper, no network — keep the real implementation so the
     // edit-mode hydration exercises real FK-reference resolution.
     resolveBillItemTaxEntryId: actual.resolveBillItemTaxEntryId,
@@ -50,10 +54,12 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
-import { getBill, createBill, updateBill } from '../../../api/endpoints/bills';
+import { getBill, createBill, updateBill, submitBill } from '../../../api/endpoints/bills';
 import { listVendors } from '../../../api/endpoints/vendors';
 // Fix: Import domainData mocks — component needs tax rates for dropdown options
 import { listTaxRates, listBillServices } from '../../../api/endpoints/domainData';
+// Added (SOUPFIN-160): Axios-shaped 403/500 errors
+import { moduleDisabled403, roleDenied403, serverError500 } from '../../../test/apiErrorFixtures';
 
 // ============================================================================
 // Test Helpers
@@ -722,6 +728,7 @@ describe('BillFormPage', () => {
       vi.mocked(listVendors).mockResolvedValue(mockVendors);
       vi.mocked(getBill).mockResolvedValue(mockBill);
       vi.mocked(updateBill).mockResolvedValue(mockBill);
+      vi.mocked(submitBill).mockResolvedValue(mockBill);
 
       renderBillFormPage('bill-123');
 
@@ -738,6 +745,9 @@ describe('BillFormPage', () => {
         // Component navigates to bill detail page after update
         expect(mockNavigate).toHaveBeenCalledWith('/bills/bill-123');
       });
+      // The mock bill is a draft, so Submit saves the edits and then posts it.
+      expect(updateBill).toHaveBeenCalledWith('bill-123', expect.any(Object));
+      expect(submitBill).toHaveBeenCalledWith('bill-123');
     });
   });
 
@@ -1112,6 +1122,159 @@ describe('BillFormPage', () => {
       renderBillFormPage();
 
       expect(await screen.findByTestId('bill-vendor-add-button')).toBeInTheDocument();
+    });
+  });
+});
+
+// Added (SOUPFIN-158): a bill dated in a closed period is refused by the
+// backend with PERIOD_LOCKED; the reason belongs under the Bill Date field.
+describe('BillFormPage locked period (SOUPFIN-158)', () => {
+  it('shows the lock message under the bill date and stays on the form', async () => {
+    const user = userEvent.setup();
+    mockNavigate.mockClear();
+    vi.mocked(listTaxRates).mockResolvedValue([]);
+    vi.mocked(listBillServices).mockResolvedValue([]);
+    vi.mocked(listVendors).mockResolvedValue([createMockVendor({ id: 'vendor-1', name: 'Acme' })]);
+    vi.mocked(createBill).mockRejectedValue(
+      Object.assign(new Error('Request failed with status code 422'), {
+        isAxiosError: true,
+        config: { url: '/bill/save.json' },
+        response: { status: 422, data: { code: 'PERIOD_LOCKED', lockDate: '2025-12-31', field: 'billDate' } },
+      })
+    );
+
+    renderBillFormPage();
+    await waitFor(() => expect(screen.getByTestId('bill-vendor-select')).toHaveTextContent('Acme'));
+    await user.selectOptions(screen.getByTestId('bill-vendor-select'), 'vendor-1');
+    const billDate = screen.getByTestId('bill-date-input');
+    await user.clear(billDate);
+    await user.type(billDate, '2025-11-15');
+    const dueDate = screen.getByTestId('bill-due-date-input');
+    await user.clear(dueDate);
+    await user.type(dueDate, '2025-12-15');
+    await user.type(screen.getByTestId('bill-item-description-0'), 'Rent');
+    await user.clear(screen.getByTestId('bill-item-unitPrice-0'));
+    await user.type(screen.getByTestId('bill-item-unitPrice-0'), '100');
+    await user.click(screen.getByTestId('bill-form-save-button'));
+
+    expect(await screen.findByTestId('bill-date-error')).toHaveTextContent(
+      'The books are closed up to December 31, 2025. Choose a date after that day.'
+    );
+    expect(billDate).toHaveAttribute('aria-invalid', 'true');
+    expect(mockNavigate).not.toHaveBeenCalled();
+
+    // Changing the date clears the message
+    await user.clear(billDate);
+    await user.type(billDate, '2026-01-05');
+    expect(screen.queryByTestId('bill-date-error')).not.toBeInTheDocument();
+  });
+});
+
+// Added (SOUPFIN-160): lookups and saves that fail explain why, and a disabled
+// module blocks saving up front instead of failing with "Please select a vendor".
+describe('BillFormPage module-aware errors (SOUPFIN-160)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockNavigate.mockClear();
+    vi.mocked(listTaxRates).mockResolvedValue([]);
+    vi.mocked(listBillServices).mockResolvedValue([]);
+  });
+
+  async function fillValidBill(user: ReturnType<typeof userEvent.setup>) {
+    await waitFor(() => expect(screen.getByTestId('bill-vendor-select')).toHaveTextContent('Acme'));
+    await user.selectOptions(screen.getByTestId('bill-vendor-select'), 'vendor-1');
+    await user.type(screen.getByTestId('bill-due-date-input'), '2026-12-15');
+    await user.type(screen.getByTestId('bill-item-description-0'), 'Rent');
+    await user.clear(screen.getByTestId('bill-item-unitPrice-0'));
+    await user.type(screen.getByTestId('bill-item-unitPrice-0'), '100');
+  }
+
+  describe('lookups', () => {
+    it('shows the module banner and blocks saving when the vendor lookup is module-gated', async () => {
+      vi.mocked(listVendors).mockRejectedValue(moduleDisabled403('Trading', '/vendor/index.json'));
+
+      renderBillFormPage();
+
+      const banner = await screen.findByTestId('bill-form-module-disabled');
+      expect(banner).toHaveTextContent('Trading module is not available');
+      expect(banner).toHaveTextContent('Bills cannot be saved until the module is enabled.');
+      const save = screen.getByTestId('bill-form-save-button');
+      expect(save).toBeDisabled();
+
+      // Pressing Enter in a field submits the form element; it must not reach the API either
+      fireEvent.submit(screen.getByTestId('bill-details-card').closest('form')!);
+      expect(createBill).not.toHaveBeenCalled();
+      expect(screen.queryByText('Please select a vendor')).not.toBeInTheDocument();
+      expect(document.body.textContent).not.toMatch(/status code/i);
+    });
+
+    it('shows the module banner and blocks saving when the tax lookup is module-gated', async () => {
+      vi.mocked(listVendors).mockResolvedValue([createMockVendor({ id: 'vendor-1', name: 'Acme' })]);
+      vi.mocked(listTaxRates).mockRejectedValue(moduleDisabled403('Finance', '/taxEntry/index.json'));
+
+      renderBillFormPage();
+
+      expect(await screen.findByTestId('bill-form-module-disabled')).toHaveTextContent(
+        'Finance module is not available'
+      );
+      expect(screen.getByTestId('bill-form-save-button')).toBeDisabled();
+    });
+
+    it.each([
+      ['a missing role', () => roleDenied403('/vendor/index.json'), 'Your account does not have permission to perform this action.'],
+      ['a server fault', () => serverError500('/vendor/index.json'), 'Something went wrong on our side. Please try again in a moment.'],
+    ])('names %s under the vendor field without blocking the form', async (_cause, makeError, message) => {
+      vi.mocked(listVendors).mockRejectedValue(makeError());
+
+      renderBillFormPage();
+
+      expect(await screen.findByTestId('bill-vendor-load-error')).toHaveTextContent(message);
+      expect(screen.queryByTestId('bill-form-module-disabled')).not.toBeInTheDocument();
+      expect(screen.getByTestId('bill-form-save-button')).toBeEnabled();
+      expect(document.body.textContent).not.toMatch(/status code/i);
+    });
+  });
+
+  describe('save', () => {
+    it.each([
+      ['a disabled module', () => moduleDisabled403('Finance', '/bill/save.json'), /Finance module/],
+      ['a missing role', () => roleDenied403('/bill/save.json'), /does not have permission to perform this action/],
+      ['a server fault', () => serverError500('/bill/save.json'), /Something went wrong on our side/],
+    ])('explains %s instead of the HTTP status', async (_cause, makeError, message) => {
+      const user = userEvent.setup();
+      vi.mocked(listVendors).mockResolvedValue([createMockVendor({ id: 'vendor-1', name: 'Acme' })]);
+      vi.mocked(createBill).mockRejectedValue(makeError());
+
+      renderBillFormPage();
+      await fillValidBill(user);
+      await user.click(screen.getByTestId('bill-form-save-button'));
+
+      const banner = await screen.findByTestId('bill-form-error-message');
+      expect(banner).toHaveTextContent(message);
+      expect(banner).not.toHaveTextContent(/status code/i);
+      expect(createBill).toHaveBeenCalledTimes(1);
+      expect(mockNavigate).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('edit-mode load', () => {
+    it.each([
+      ['a disabled module', () => moduleDisabled403('Finance', '/bill/show/bill-123.json'), 'module_disabled', 'Finance module is not available'],
+      ['a missing role', () => roleDenied403('/bill/show/bill-123.json'), 'forbidden', 'You do not have permission'],
+      ['a server fault', () => serverError500('/bill/show/bill-123.json'), 'server_error', 'Server error'],
+    ])('explains %s', async (_cause, makeError, kind, title) => {
+      vi.mocked(listVendors).mockResolvedValue([]);
+      vi.mocked(getBill).mockRejectedValue(makeError());
+
+      renderBillFormPage('bill-123');
+
+      const card = await screen.findByTestId('bill-form-error');
+      expect(card).toHaveAttribute('data-error-kind', kind);
+      expect(within(card).getByText(title)).toBeInTheDocument();
+      expect(document.body.textContent).not.toMatch(/status code/i);
+
+      await userEvent.setup().click(screen.getByTestId('bill-form-back-button'));
+      expect(mockNavigate).toHaveBeenCalledWith('/bills');
     });
   });
 });

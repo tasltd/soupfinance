@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SOUPFIN-145 — applyTemplate and coaTemplate/index endpoints (backend plan)</title>
+<script type="application/json" id="plan-index">
+{
+  "title": "SOUPFIN-145 — applyTemplate and coaTemplate/index endpoints",
+  "revision": "2",
+  "goal": "An admin or finance user can list the chart-of-accounts templates and apply one (with optional country and industry overlays) to their own tenant, as a dry-run preview or for real, and applying the same selection twice creates nothing the second time.",
+  "stories": [
+    {"id": "P1", "title": "Endpoint contract, request validation and response shapes fixed in a runnable reference (plans/coa-templates/apply.mjs)", "status": "done"},
+    {"id": "P2", "title": "Acceptance checks: idempotency, dry run, tenant scope, roles, archived/name matches, rollback, zero and overflow (apply.test.mjs, 24 checks)", "status": "done"},
+    {"id": "P3", "title": "Backend: CoaTemplateService.apply(account, selection, dryRun) and listTemplates(account) on top of SOUPFIN-143 compose()", "status": "todo"},
+    {"id": "P4", "title": "Backend: CoaTemplateController.index and LedgerAccountController.applyTemplate, ROLE_ADMIN/ROLE_FINANCE, withForm CSRF, 409 on bad token", "status": "todo"},
+    {"id": "P5", "title": "Backend: add coaTemplate to FinanceModuleInterceptor; pessimistic lock on the tenant Account row during apply", "status": "todo"},
+    {"id": "P6", "title": "Backend: CoaTemplateApplyServiceSpec (ports apply.test.mjs) + CoaTemplateFunctionalSpec over HTTP", "status": "todo"}
+  ],
+  "screens": [],
+  "dependsOn": ["SOUPFIN-143 P3 (LedgerAccountType, LedgerAccount.accountType)", "SOUPFIN-143 P4 (CoaTemplateService.compose)"],
+  "unblocks": ["SOUPFIN-146", "SOUPFIN-147"]
+}
+</script>
+<style>
+  :root { --primary:#f24a0d; --text:#181311; --sub:#8a6b60; --border:#e6dedb; --bg:#f8f6f5; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:15px/1.55 Manrope, "Noto Sans", system-ui, sans-serif; color:var(--text); background:var(--bg); }
+  main { max-width: 980px; margin: 0 auto; padding: 32px 24px 64px; }
+  h1 { font-size: 30px; font-weight: 800; letter-spacing:-0.02em; margin: 0 0 6px; }
+  h2 { font-size: 21px; margin: 36px 0 10px; padding-top: 8px; border-top: 1px solid var(--border); }
+  h3 { font-size: 16px; margin: 22px 0 6px; }
+  p.lead { color: var(--sub); margin: 0 0 18px; }
+  .card { background:#fff; border:1px solid var(--border); border-radius:12px; padding:16px 20px; margin: 14px 0; }
+  .goal { border-left: 4px solid var(--primary); }
+  table { width:100%; border-collapse: collapse; background:#fff; border:1px solid var(--border); border-radius:12px; overflow:hidden; margin: 10px 0; font-size: 14px; }
+  th { text-align:left; background:#f5f1f0; color:var(--sub); font-size:12px; text-transform:uppercase; letter-spacing:.04em; padding:8px 12px; }
+  td { padding:8px 12px; border-top:1px solid var(--border); vertical-align: top; overflow-wrap: anywhere; }
+  code { font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; background:#f5f1f0; padding:1px 5px; border-radius:4px; }
+  pre { background:#1f1715; color:#f3ebe8; padding:14px 16px; border-radius:10px; overflow:auto; font: 12.5px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; }
+  pre code { background:none; padding:0; color:inherit; }
+  .pill { display:inline-block; padding:1px 9px; border-radius:999px; font-size:12px; font-weight:700; }
+  .done { background:#dcfce7; color:#166534; } .todo { background:#fef3c7; color:#92400e; }
+  .get { background:#dbeafe; color:#1e40af; } .post { background:#fde9e1; color:#9a2f08; }
+  ol li, ul li { margin: 4px 0; }
+  figure { margin: 16px 0; } figcaption { color: var(--sub); font-size: 13px; margin-top: 6px; }
+</style>
+</head>
+<body>
+<main>
+<h1>SOUPFIN-145 — <code>applyTemplate</code> and <code>coaTemplate/index</code></h1>
+<p class="lead">Backend plan for soupmarkets-web, branch <code>authentication-base-on-multi-tenancy-descriminator</code>. Written 2026-10-12 from the SoupFinance repository, which may not change backend code (<code>.claude/rules/backend-changes-workflow.md</code>, SOUPFIN-13 directive). Builds on SOUPFIN-143.</p>
+
+<div class="card goal"><b>Goal.</b> An admin or finance user can list the chart-of-accounts templates, and apply one to their own tenant with optional country and industry overlays. They can preview first with a dry run, which writes nothing. Applying the same selection twice creates nothing the second time.</div>
+
+<h2>1. Parts</h2>
+<table>
+<tr><th>Part</th><th>What</th><th>Status</th></tr>
+<tr><td>P1</td><td>Endpoint contract, validation and response shapes, as runnable code: <code>plans/coa-templates/apply.mjs</code></td><td><span class="pill done">done</span></td></tr>
+<tr><td>P2</td><td>Acceptance checks in <code>plans/coa-templates/apply.test.mjs</code> (24 checks; with SOUPFIN-143's 50, <code>node --test plans/coa-templates/*.test.mjs</code> runs 74, all passing). Five deliberate bugs were planted one at a time; each turned at least one check red.</td><td><span class="pill done">done</span></td></tr>
+<tr><td>P3</td><td><code>CoaTemplateService.apply</code> and <code>listTemplates</code></td><td><span class="pill todo">todo</span></td></tr>
+<tr><td>P4</td><td>The two controller actions, security and CSRF</td><td><span class="pill todo">todo</span></td></tr>
+<tr><td>P5</td><td>Module gating and the apply lock</td><td><span class="pill todo">todo</span></td></tr>
+<tr><td>P6</td><td>Spock unit and functional specs</td><td><span class="pill todo">todo</span></td></tr>
+</table>
+<p><b>Order.</b> SOUPFIN-143 P3 and P4 land first: this plan needs <code>LedgerAccountType</code>, <code>LedgerAccount.accountType</code> and <code>CoaTemplateService.compose()</code>. SOUPFIN-147 (template picker) and SOUPFIN-146 (backfill) then build on these endpoints. The backfill should call <code>CoaTemplateService.apply</code> directly, so both share one idempotent path.</p>
+
+<h2>2. What the backend has today (checked 2026-10-12, commit <code>e0b818d716</code>)</h2>
+<table>
+<tr><th>#</th><th>Finding</th><th>Where</th><th>Consequence for this plan</th></tr>
+<tr><td>1</td><td>No <code>coaTemplate</code> controller and no <code>applyTemplate</code> action exist.</td><td><code>git grep -i "coaTemplate\|applyTemplate"</code> finds nothing</td><td>Both are new.</td></tr>
+<tr><td>2</td><td>There is no accountant role. <code>SbRole</code> documents <code>ROLE_FINANCE</code> as "Financial operations access", and <code>AgentController</code> already gates vouchers on <code>ROLE_ADMIN,ROLE_FINANCE</code>.</td><td><code>SbRole.groovy:35</code>, <code>AgentController.groovy:49</code></td><td>"The accountant role" is <code>ROLE_FINANCE</code>. No new role.</td></tr>
+<tr><td>3</td><td><code>LedgerAccountController</code> is class-level <code>@Secured(["ROLE_ADMIN","ROLE_USER"])</code>. Its <code>save</code> uses <code>withForm</code>, and <code>invalidToken</code> redirects to <code>create</code>.</td><td><code>LedgerAccountController.groovy:55,243-272</code></td><td>The new action needs its own action-level <code>@Secured</code>; a JSON caller must get a 409, not a redirect.</td></tr>
+<tr><td>4</td><td><code>TokenWithFormInterceptor</code> issues a token on any <code>create.json</code>, keyed to that URI, and returns it as <code>ledgerAccount.SYNCHRONIZER_TOKEN</code> / <code>SYNCHRONIZER_URI</code>.</td><td><code>TokenWithFormInterceptor.groovy</code></td><td>The frontend's existing <code>getCsrfToken('ledgerAccount')</code> already gets a usable token. Tokens are single use, so each POST needs a fresh one.</td></tr>
+<tr><td>5</td><td><code>LedgerAccount.name</code> and <code>number</code> are unique per <code>tenantId</code>. The constraint has no <code>archived</code> filter.</td><td><code>LedgerAccount.groovy:135-138</code></td><td>Matching must include archived accounts, or re-creating an archived number fails the unique index.</td></tr>
+<tr><td>6</td><td><code>FinanceModuleInterceptor</code> matches <code>ledgerAccount</code> and every finance controller by name.</td><td><code>FinanceModuleInterceptor.groovy:25</code></td><td><code>applyTemplate</code> is gated already; <code>coaTemplate</code> must be added to the list, so a tenant without the module gets the same module-disabled 403 the UI already explains.</td></tr>
+<tr><td>7</td><td><code>Account</code> (the tenant root) is not <code>MultiTenant</code>; it carries <code>businessLicenceCategory</code> and <code>countryOfOrigin</code>.</td><td><code>Account.groovy:59,85,265</code></td><td>Load it with <code>Account.get(Tenants.currentId())</code> for the lock and for <code>recommended</code>.</td></tr>
+</table>
+
+<h2>3. Endpoint contract</h2>
+<p>The response shapes below were produced by running <code>apply.mjs</code>, then trimmed to two rows per list. The Groovy port must return the same keys.</p>
+
+<h3><span class="pill get">GET</span> <code>/rest/coaTemplate/index.json</code></h3>
+<p>Lists every base template and every overlay, with counts and a preview. Templates are global JSON shipped with the WAR (SOUPFIN-143), so nothing here reads tenant data except <code>recommended</code>, which comes from the caller's <code>Account</code>.</p>
+<pre><code>{
+  "templates": [
+    { "key": "services", "name": "Services business", "businessLicenceCategory": "SERVICES",
+      "description": "Consultancies, agencies, clinics, schools and any business that sells time or expertise rather than stock.",
+      "accountCount": 69, "categoryCount": 21, "systemAccountCount": 18,
+      "preview": [
+        { "number": "1000", "name": "Cash on Hand", "ledgerAccountCategory": "CASH ON HAND", "ledgerGroup": "ASSET",
+          "parentAccount": null, "accountType": "CASH", "systemAccount": true },
+        { "number": "1010", "name": "Petty Cash", "ledgerAccountCategory": "CASH ON HAND", "ledgerGroup": "ASSET",
+          "parentAccount": null, "accountType": null, "systemAccount": false }
+      ],
+      "previewTruncated": false },
+    { "key": "trading", "name": "Trading business", "businessLicenceCategory": "TRADING",
+      "accountCount": 73, "categoryCount": 23, "systemAccountCount": 21, "preview": [], "previewTruncated": false }
+  ],
+  "overlays": [
+    { "key": "construction", "kind": "industry", "name": "Construction", "appliesTo": ["SERVICES", "TRADING"],
+      "addCount": 8, "removeCount": 0, "preview": [ { "number": "1215", "name": "Retentions Receivable" } ], "removes": [] },
+    { "key": "GH", "kind": "country", "name": "Ghana tax and payroll accounts", "appliesTo": ["SERVICES", "TRADING"],
+      "addCount": 12, "removeCount": 2, "preview": [ { "number": "1020", "name": "Mobile Money Wallets" } ],
+      "removes": ["2210", "2240"] }
+  ],
+  "recommended": { "template": "services", "overlays": ["GH"] }
+}</code></pre>
+<ul>
+<li><code>preview</code> holds up to 100 accounts (<code>PREVIEW_LIMIT</code>). Every template today has 69 to 73, so it is the whole list and <code>previewTruncated</code> is false.</li>
+<li>Overlay keys are unique across countries and industries, so the request can use bare keys. A spec asserts this, so adding a clashing key fails the build.</li>
+<li><code>recommended</code> is null when the tenant's licence category has no template (a brokerage tenant).</li>
+<li><code>ledgerGroup</code> (revision 2, added for the SOUPFIN-147 picker) is the statement section: <code>ASSET</code>, <code>LIABILITY</code>, <code>EQUITY</code>, <code>INCOME</code> or <code>EXPENSE</code>. Income and expense categories are stored as group EQUITY with sub-group INCOME/EXPENSE, so the sub-group wins there (<code>effectiveLedgerGroup</code> in apply.mjs). It is on every <code>preview</code> row and every <code>created</code> row. The picker falls back to the number's first digit when it is missing.</li>
+</ul>
+
+<h3><span class="pill post">POST</span> <code>/rest/ledgerAccount/applyTemplate.json?SYNCHRONIZER_TOKEN={token}&amp;SYNCHRONIZER_URI={uri}</code></h3>
+<p>Request body (JSON):</p>
+<pre><code>{ "template": "services", "overlays": ["GH", "saas"], "dryRun": true }</code></pre>
+<p>Response, 200 for both a dry run and a real run (example: a tenant that already has "Cash" as 1000 and "Petty Cash" as 7001):</p>
+<pre><code>{
+  "dryRun": true, "template": "services", "overlays": ["GH"], "composedKey": "services+GH",
+  "created": [
+    { "number": "1020", "name": "Mobile Money Wallets", "ledgerAccountCategory": "CASH ON HAND", "ledgerGroup": "ASSET",
+      "parentAccount": null, "accountType": "BANK" },
+    { "number": "1050", "name": "Undeposited Funds", "ledgerAccountCategory": "CASH ON HAND", "ledgerGroup": "ASSET",
+      "parentAccount": null, "accountType": "UNDEPOSITED_FUNDS" }
+  ],
+  "skipped": [
+    { "number": "1000", "name": "Cash on Hand", "reason": "number-exists", "existingName": "Cash", "archived": false },
+    { "number": "1010", "name": "Petty Cash", "reason": "name-exists", "existingNumber": "7001", "archived": false }
+  ],
+  "categoriesCreated": ["DEPOSITS AND BALANCES WITH BANKS/DISCOUNT HOUSES", "ACCOUNT RECEIVABLE"],
+  "problems": [],
+  "summary": { "templateAccounts": 78, "created": 76, "skipped": 2, "categoriesCreated": 20 }
+}</code></pre>
+<p>A dry run returns exactly what the real run then creates (a check asserts the two <code>created</code> lists are equal). <code>problems</code> carries non-fatal notes, such as a singleton role that another account already holds.</p>
+
+<h3>Errors</h3>
+<table>
+<tr><th>Status</th><th><code>code</code></th><th>When</th></tr>
+<tr><td>422</td><td><code>template-required</code>, <code>unknown-template</code></td><td><code>template</code> missing, blank or not a known key</td></tr>
+<tr><td>422</td><td><code>invalid-overlays</code>, <code>unknown-overlay</code>, <code>duplicate-overlay</code></td><td><code>overlays</code> not a list, a key that does not exist, a key listed twice</td></tr>
+<tr><td>422</td><td><code>too-many-overlays</code>, <code>overlay-conflict</code>, <code>overlay-not-applicable</code></td><td>More than 2 overlays; two countries or two industries; an industry that does not apply to the template (retail on services)</td></tr>
+<tr><td>422</td><td><code>invalid-dry-run</code></td><td><code>dryRun</code> is not <code>true</code>/<code>false</code> (the strings <code>"true"</code>/<code>"false"</code> are accepted, as Grails params arrive as strings)</td></tr>
+<tr><td>409</td><td><code>invalid-token</code></td><td>Missing or reused CSRF token. Not a redirect: a JSON caller cannot follow one.</td></tr>
+<tr><td>409</td><td><code>apply-conflict</code></td><td>A unique-constraint violation slipped past the lock (section 5). Nothing was saved; retrying is safe.</td></tr>
+<tr><td>403</td><td>(Spring Security / module interceptor)</td><td>Caller has neither <code>ROLE_ADMIN</code> nor <code>ROLE_FINANCE</code>, or the tenant's finance module is off</td></tr>
+<tr><td>500</td><td><code>template-invalid</code></td><td>The shipped template data fails SOUPFIN-143's <code>validate()</code>. A release defect; nothing is written.</td></tr>
+</table>
+<p>Error body: <code>{ "status": 422, "code": "unknown-overlay", "message": "No overlay XX" }</code>. Every 4xx is raised before the first write.</p>
+
+<h2>4. Rules the endpoint enforces</h2>
+<ol>
+<li><b>Match on number, then on name.</b> An existing account (archived or not) with the template number is skipped with <code>number-exists</code>. Otherwise one with the same name, compared case-insensitively, is skipped with <code>name-exists</code>. Number comparison is on the string form, because <code>ledger_account.number</code> is <code>bigint</code> on the seed database.</li>
+<li><b>Categories match by name, case-insensitively.</b> The old registration seed wrote "Other Assets" in mixed case; it is reused, not duplicated.</li>
+<li><b>Parent links resolve to whatever holds the parent number.</b> If the tenant already has 5000, a new 5085 hangs under that account, not under a missing one.</li>
+<li><b>Singleton roles are never stamped twice.</b> If another account already carries <code>ACCOUNTS_RECEIVABLE</code>, the template's 1200 is created without the role and a line goes into <code>problems</code>.</li>
+<li><b>Tenant scope comes from the session only.</b> The tenant is <code>Tenants.currentId()</code> as resolved by <code>SoupDiscriminatorTenantResolver</code>. Any <code>tenantId</code> or <code>account</code> in the body is ignored, and the bind must not pick it up (use a command object with only <code>template</code>, <code>overlays</code>, <code>dryRun</code>). No method on this path is <code>@WithoutTenant</code>.</li>
+<li><b>All or nothing.</b> A real run is one transaction. If any insert fails, every row from that apply rolls back.</li>
+<li><b>A dry run writes nothing.</b> It runs the same planning code inside a read-only transaction.</li>
+</ol>
+
+<h2>5. Files to change in soupmarkets-web</h2>
+<table>
+<tr><th>File</th><th>Change</th></tr>
+<tr><td><code>grails-app/services/soupbroker/finance/CoaTemplateService.groovy</code></td><td>(Created by SOUPFIN-143 P4.) Add <code>CoaApplyResult apply(Account account, CoaApplyCommand cmd)</code>, which ports <code>resolveSelection</code>, <code>planApply</code> and the write loop from <code>apply.mjs</code>. Add <code>Map listTemplates(Account account)</code>, which ports <code>listTemplates</code>. 143's <code>seed(account, selection, dryRun)</code> becomes a thin call to <code>apply</code>, so registration, the endpoint and the SOUPFIN-146 backfill share one code path.</td></tr>
+<tr><td><code>src/main/groovy/soupbroker/finance/CoaApplyCommand.groovy</code></td><td>New <code>grails.validation.Validateable</code> with exactly <code>String template</code>, <code>List&lt;String&gt; overlays</code>, <code>Boolean dryRun</code>. Binding into this stops a <code>tenantId</code> field in the body from reaching anything.</td></tr>
+<tr><td><code>grails-app/controllers/soupbroker/finance/LedgerAccountController.groovy</code></td><td>Add <code>applyTemplate</code> (sketch below). Add <code>applyTemplate: "POST"</code> to <code>allowedMethods</code>.</td></tr>
+<tr><td><code>grails-app/controllers/soupbroker/finance/CoaTemplateController.groovy</code></td><td>New. <code>@Secured(["ROLE_ADMIN","ROLE_FINANCE"])</code>, <code>index()</code> only: <code>render coaTemplateService.listTemplates(Account.get(Tenants.currentId())) as JSON</code>. The <code>/rest/$controller/$action</code> catch-all in <code>UrlMappings</code> routes it; no mapping change.</td></tr>
+<tr><td><code>grails-app/controllers/soupbroker/FinanceModuleInterceptor.groovy</code></td><td>Add <code>coaTemplate</code> to the controller regex on line 25.</td></tr>
+</table>
+
+<pre><code>// LedgerAccountController
+@Secured(["ROLE_ADMIN", "ROLE_FINANCE"])   // overrides the class-level ROLE_USER grant
+def applyTemplate(CoaApplyCommand cmd) {
+    withForm {
+        Account account = Account.get(Tenants.currentId())
+        try {
+            CoaApplyResult result = coaTemplateService.apply(account, cmd)
+            render(status: 200, contentType: 'application/json', text: (result.toMap() as JSON).toString())
+        } catch (CoaApplyException e) {          // 422 and 500 cases from section 3
+            render(status: e.status, contentType: 'application/json',
+                   text: ([status: e.status, code: e.code, message: e.message] as JSON).toString())
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            render(status: 409, contentType: 'application/json',
+                   text: ([status: 409, code: 'apply-conflict',
+                          message: 'Another apply ran at the same time. Nothing was saved; try again.'] as JSON).toString())
+        }
+    }.invalidToken {
+        render(status: 409, contentType: 'application/json',
+               text: ([status: 409, code: 'invalid-token',
+                      message: 'The form token is missing or was already used. Fetch /rest/ledgerAccount/create.json and retry.'] as JSON).toString())
+    }
+}
+
+// CoaTemplateService.apply, real run
+@Transactional
+CoaApplyResult apply(Account account, CoaApplyCommand cmd) {
+    Selection sel = resolveSelection(cmd)                  // throws CoaApplyException(422)
+    ComposedTemplate composed = compose(sel)
+    List&lt;String&gt; invalid = validate(composed)
+    if (invalid) throw new CoaApplyException(500, 'template-invalid', invalid.join('; '))
+    if (!cmd.dryRun) Account.lock(account.id)              // serialise concurrent applies per tenant
+    Plan plan = planApply(composed)                        // reads LedgerAccount/Category, archived included
+    if (!cmd.dryRun) writePlan(plan)                       // categories first, then accounts in number order
+    return CoaApplyResult.from(cmd, composed, plan)
+}</code></pre>
+<p><b>Why lock the Account row.</b> Two applies in parallel would both plan the same inserts, and the second would fail on the unique index. <code>Account.lock(id)</code> is a <code>SELECT FOR UPDATE</code> on the tenant root, so the second apply waits, then plans against the first one's rows and creates nothing. The 409 branch stays as a backstop.</p>
+<p><b>Why both actions take <code>ROLE_FINANCE</code> but not <code>ROLE_USER</code>.</b> Applying a template creates up to 90 accounts in one go; that is a set-up decision, not a day-to-day entry. Listing is harmless, but the picker is only useful to someone who can apply, so the two match.</p>
+
+<h2>6. Tests to write in soupmarkets-web</h2>
+<table>
+<tr><th>Spec</th><th>Kind</th><th>Ports / covers</th></tr>
+<tr><td><code>CoaTemplateApplyServiceSpec</code></td><td>Integration (Spock, real DB, two tenants)</td><td>Every case in <code>apply.test.mjs</code>: twice creates nothing; dry run writes nothing and previews exactly the real run; tenant A apply leaves tenant B unchanged and a body <code>tenantId</code> is ignored; number match, numeric-number match, archived match, case-insensitive name match; old mixed-case categories reused; singleton role kept; an insert failure rolls back everything; 900 existing accounts get only the missing ones; every 422 case writes nothing; every composition applies to an empty tenant with zero skips.</td></tr>
+<tr><td><code>CoaTemplateFunctionalSpec</code></td><td>Functional (HTTP, <code>BaseDomainFunctionalSpec</code>)</td><td><code>loginAsAdmin()</code>: GET index 200 with both templates; POST without a token → 409 <code>invalid-token</code>; token from <code>create.json</code> + dry run → 200 and <code>ledgerAccount/index.json?max=1000</code> count unchanged; fresh token + real run → <code>created</code> count equals the index growth; third call with a fresh token → <code>created</code> empty. <code>loginAsUser()</code> (ROLE_USER only) → 403 on both. A user with only <code>ROLE_FINANCE</code> → 200.</td></tr>
+<tr><td>Same spec, module off</td><td>Functional</td><td>A tenant without the finance module gets the interceptor's 403 on both endpoints.</td></tr>
+<tr><td>Same spec, concurrency</td><td>Integration</td><td>Two threads apply the same selection to one empty tenant: total accounts equal the template count, and one result created everything while the other created nothing (or got 409).</td></tr>
+</table>
+<p>Use <code>?max=1000</code> when counting through <code>index.json</code>: it returns 10 rows without it.</p>
+
+<h2>7. Decisions taken without asking</h2>
+<table>
+<tr><th>Decision</th><th>Why</th><th>Easy to reverse?</th></tr>
+<tr><td>"Accountant role" = <code>ROLE_FINANCE</code></td><td>No accountant role exists; this is the documented finance role.</td><td>Yes: one annotation.</td></tr>
+<tr><td>A dry run also needs the CSRF token</td><td>The ticket says the POST needs it, and one rule for one action is simpler for the UI. The cost is one <code>create.json</code> call before each POST.</td><td>Yes.</td></tr>
+<tr><td>Any template may be applied to any tenant (a SERVICES tenant may apply <code>trading</code>)</td><td>It only adds accounts; the index's <code>recommended</code> steers the UI to the matching one.</td><td>Yes: add a 422 check.</td></tr>
+<tr><td>A name clash skips the account rather than renaming it</td><td>Renaming would invent names a user did not choose. The skip is reported with the clashing number, so the UI can show it.</td><td>Yes.</td></tr>
+</table>
+
+<h2>8. Sources</h2>
+<ul>
+<li>soupmarkets-web <code>e0b818d716</code> (2026-10-09): <code>LedgerAccountController</code>, <code>TokenWithFormInterceptor</code>, <code>FinanceModuleInterceptor</code>, <code>LedgerAccount</code>, <code>Account</code>, <code>SbRole</code>, <code>AgentController</code>.</li>
+<li><code>plans/soupfin-143-coa-template-seed-data.html</code> (template data, <code>compose()</code>, seeding algorithm) and <code>plans/coa-template-seeding.md</code> (parent plan, task 3).</li>
+<li>Reference and checks: <code>plans/coa-templates/apply.mjs</code>, <code>plans/coa-templates/apply.test.mjs</code>. Run <code>node --test plans/coa-templates/*.test.mjs</code>.</li>
+</ul>
+</main>
+</body>
+</html>

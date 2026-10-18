@@ -1,0 +1,16 @@
+{
+  "key": "saas",
+  "name": "Software and SaaS",
+  "appliesTo": ["SERVICES"],
+  "description": "Software companies billing subscriptions and onboarding fees.",
+  "remove": [],
+  "add": [
+    { "number": "4005", "name": "Subscription Revenue", "ledgerAccountCategory": "INCOME" },
+    { "number": "4015", "name": "Implementation and Onboarding Fees", "ledgerAccountCategory": "INCOME" },
+    { "number": "2125", "name": "Deferred Subscription Revenue", "ledgerAccountCategory": "SHORT -TERM LIABILITIES" },
+    { "number": "5085", "name": "Hosting and Infrastructure", "ledgerAccountCategory": "DIRECT EXPENSES", "parentAccount": "5000" },
+    { "number": "5086", "name": "Third-party Software and APIs", "ledgerAccountCategory": "DIRECT EXPENSES", "parentAccount": "5000" },
+    { "number": "6520", "name": "Payment Gateway Fees", "ledgerAccountCategory": "FINANCE CHARGES" },
+    { "number": "1560", "name": "Capitalised Software Development", "ledgerAccountCategory": "FIXED ASSETS", "parentAccount": "1500" }
+  ]
+}

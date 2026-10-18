@@ -39,9 +39,9 @@ import { SideNav } from '../SideNav';
 import { TopNav } from '../TopNav';
 import { useUIStore } from '../../../stores';
 
-/** The SideNav's top-level items, in render order. Vendors is hidden for
- *  SERVICES tenants (SOUPFIN-25); these tests pin the category to TRADING so
- *  every item renders. */
+/** The SideNav's top-level items, in render order. Every business category
+ *  renders all of them since SOUPFIN-173; the category is still pinned to
+ *  TRADING so these tests do not depend on that. */
 const TOP_LEVEL_LABELS = [
   'Dashboard',
   'Invoices',

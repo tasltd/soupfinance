@@ -13,6 +13,11 @@
  * Added: Direct backend endpoint mappings for all report types
  */
 import apiClient, { toQueryString } from '../client';
+import {
+  cashFlowStatementResponseSchema,
+  type CashFlowActivityResponse,
+  type CashFlowStatementResponse,
+} from '../../schemas/reports';
 import type {
   BalanceSheet,
   ProfitLoss,
@@ -21,6 +26,7 @@ import type {
   TrialBalance,
   TrialBalanceItem,
   CashFlowStatement,
+  CashFlowActivity,
   BackendAgingItem,
 } from '../../types';
 
@@ -46,8 +52,47 @@ export interface ReportFilters {
 
 /**
  * Export format options
+ *
+ * These are the values the UI uses. They are NOT what goes on the wire — see
+ * toBackendExportFormat() below.
  */
 export type ExportFormat = 'pdf' | 'xlsx' | 'csv';
+
+/**
+ * Fix (SOUPFIN-60): translate the UI's export format to the value the backend
+ * actually understands.
+ *
+ * FinanceReportsController hands `params.f` straight to the Grails export
+ * plugin (org.grails.plugins:export:2.0.0), which registers exactly six
+ * exporters: excel, csv, xml, pdf, ods and rtf. There is no "xlsx". Sending
+ * `f=xlsx` threw
+ *
+ *   grails.plugins.export.exporter.ExporterNotFoundException:
+ *     No exporter found for type: xlsx
+ *
+ * so every Excel download on Trial Balance, Balance Sheet, Profit & Loss and
+ * the two aging reports came back as an HTTP 500, not a spreadsheet.
+ */
+export function toBackendExportFormat(format: ExportFormat): string {
+  return format === 'xlsx' ? 'excel' : format;
+}
+
+/**
+ * Fix (SOUPFIN-60): file extension for a downloaded report.
+ *
+ * The backend's "excel" exporter is POI HSSF — the bytes start d0cf11e0 (OLE2
+ * compound file), which is a legacy .xls, not a .xlsx ZIP. Naming the download
+ * .xlsx makes Excel open it with a "format and extension don't match" warning,
+ * so the extension follows the bytes.
+ *
+ * Previously duplicated verbatim in four report pages; kept here next to
+ * ExportFormat so the mapping can never drift between them.
+ */
+export function getReportExtension(format: ExportFormat | null | undefined): string {
+  if (format === 'xlsx') return 'xls';
+  if (format === 'csv') return 'csv';
+  return 'pdf';
+}
 
 /**
  * Account balance response from /financeReports/accountBalances
@@ -191,7 +236,7 @@ export async function exportReport(
   filters: ReportFilters,
   format: ExportFormat
 ): Promise<Blob> {
-  const query = toQueryString({ ...filters, f: format });
+  const query = toQueryString({ ...filters, f: toBackendExportFormat(format) });
   const response = await apiClient.get(
     `/financeReports/${reportType}.json?${query}`,
     { responseType: 'blob' }
@@ -586,80 +631,131 @@ export async function getAPAgingReport(asOf: string): Promise<AgingReport> {
 // =============================================================================
 
 /**
+ * Changed (SOUPFIN-190): the cash flow statement now comes from the backend.
+ *
+ * It used to be built here from /financeReports/accountTransactions.json by
+ * matching words in the account NAME ("loan", "equipment") and it always showed
+ * an opening cash balance of 0, so the figures were not a cash flow statement.
+ * The backend classifies by ledger group and computes opening and closing cash
+ * from the cash accounts (plans/soupfin-190-cash-flow-statement-backend.md).
+ */
+export const CASH_FLOW_UNAVAILABLE_MESSAGE =
+  'Cash flow statements are not available on this server yet. Ask your administrator to update the finance service.';
+
+export const CASH_FLOW_UNREADABLE_MESSAGE =
+  'The server sent a cash flow statement this page cannot read.';
+
+/**
+ * HTTP status of a failed request. Duck-typed like api/errors.ts so it also
+ * works where axios is mocked.
+ */
+function httpStatusOf(err: unknown): number | undefined {
+  if (!err || typeof err !== 'object') return undefined;
+  const status = (err as { response?: { status?: unknown } }).response?.status;
+  return typeof status === 'number' ? status : undefined;
+}
+
+/** Sums a list of amounts, rounded to the cent so float noise never shows. */
+function sumAmounts(amounts: number[]): number {
+  return roundCents(amounts.reduce((sum, amount) => sum + amount, 0));
+}
+
+function roundCents(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+function toActivities(list: CashFlowActivityResponse[] | null | undefined): CashFlowActivity[] {
+  return (list ?? []).map((item) => ({
+    description: item.description || item.ledgerAccountName || 'Cash movement',
+    amount: item.amount,
+  }));
+}
+
+/**
+ * Turn a validated backend response into the page's CashFlowStatement.
+ *
+ * - Missing lists become [].
+ * - A missing section total is the sum of its rows.
+ * - Net cash flow is ALWAYS the sum of the three sections, so the summary can
+ *   never disagree with the sections above it.
+ * - Ending cash is the backend's figure (the real ledger balance). If it is
+ *   absent it is opening + net.
+ */
+export function normalizeCashFlowStatement(
+  data: CashFlowStatementResponse,
+  filters: Pick<ReportFilters, 'from' | 'to'>
+): CashFlowStatement {
+  const operatingActivities = toActivities(data.operatingActivities);
+  const investingActivities = toActivities(data.investingActivities);
+  const financingActivities = toActivities(data.financingActivities);
+
+  const total = (backendTotal: number | null | undefined, rows: CashFlowActivity[]) =>
+    backendTotal ?? sumAmounts(rows.map((row) => row.amount));
+
+  const totalOperatingCashFlow = total(data.totalOperatingCashFlow, operatingActivities);
+  const totalInvestingCashFlow = total(data.totalInvestingCashFlow, investingActivities);
+  const totalFinancingCashFlow = total(data.totalFinancingCashFlow, financingActivities);
+  const netCashFlow = sumAmounts([totalOperatingCashFlow, totalInvestingCashFlow, totalFinancingCashFlow]);
+
+  if (data.netCashFlow != null && Math.abs(data.netCashFlow - netCashFlow) >= 0.005) {
+    console.warn(
+      `[cashFlowStatement] backend netCashFlow ${data.netCashFlow} is not the sum of its sections (${netCashFlow}); showing the sum.`
+    );
+  }
+
+  const beginningCashBalance = data.beginningCashBalance;
+  const endingCashBalance = data.endingCashBalance ?? roundCents(beginningCashBalance + netCashFlow);
+
+  return {
+    periodStart: data.periodStart || filters.from,
+    periodEnd: data.periodEnd || filters.to,
+    operatingActivities,
+    totalOperatingCashFlow,
+    investingActivities,
+    totalInvestingCashFlow,
+    financingActivities,
+    totalFinancingCashFlow,
+    netCashFlow,
+    beginningCashBalance,
+    endingCashBalance,
+  };
+}
+
+/**
  * Get Cash Flow Statement
+ * GET /rest/financeReports/cashFlowStatement.json?from=YYYY-MM-DD&to=YYYY-MM-DD
  *
- * NOTE: The Soupmarkets backend has a generateCashFlowStatement service method
- * but it's not exposed via a REST endpoint. This function builds a basic
- * cash flow from account transactions as a fallback.
- *
- * For full cash flow, a backend endpoint would need to be created.
+ * Errors propagate (SOUPFIN-30) so the page shows its error state, never an
+ * empty statement. A 404 means the backend predates the endpoint; it gets a
+ * message a person can act on instead of "Request failed with status code 404".
  *
  * @param filters - Date range filters (from, to)
  * @returns Cash Flow Statement
  */
 export async function getCashFlowStatement(filters: ReportFilters): Promise<CashFlowStatement> {
-  // Added: Build cash flow from account transactions
-  // This is a simplified version - ideally backend would expose the full endpoint
-  // Fix(SOUPFIN-11): Normalize backend response — production has occasionally returned a
-  // non-array (e.g., a wrapper object or null) which crashed the page with
-  // "t is not iterable" when the for...of loop ran. We now coerce to an array
-  // and accept several shapes: AccountTransactionEntry[] | { resultList: [...] } |
-  // { ledgerTransactionList: [...] } | { accountTransactionList: [...] } | null.
-  // Fix(SOUPFIN-30): do NOT swallow request failures here. This used to be
-  // `.catch(() => null)`, which turned a 500/network error into an empty
-  // statement — React Query never saw a rejection, `isError` stayed false, and
-  // the page rendered "No cash flow activities" instead of the error state.
-  // A failed request became indistinguishable from a genuinely empty period.
-  // The SOUPFIN-11 protection this catch was added for ("t is not iterable" on
-  // a non-array payload) is fully handled by normalizeTransactions below, which
-  // coerces null/objects/unknown shapes to []. So we let real errors propagate
-  // and keep the shape-normalisation.
-  const rawTransactions: unknown = await getAccountTransactions(filters);
-  const transactions: AccountTransactionEntry[] = normalizeTransactions(rawTransactions);
-
-  // Group transactions by type (simplified categorization)
-  const operatingActivities: { description: string; amount: number }[] = [];
-  const investingActivities: { description: string; amount: number }[] = [];
-  const financingActivities: { description: string; amount: number }[] = [];
-
-  // Added: Simple categorization based on transaction descriptions
-  // In production, this would use account types from backend
-  for (const tx of transactions) {
-    const netAmount = tx.debitAmount - tx.creditAmount;
-    const activity = {
-      description: tx.description || tx.ledgerAccountName,
-      amount: netAmount,
-    };
-
-    // Simple heuristic - real implementation would use ledgerGroup
-    if (tx.ledgerAccountName.toLowerCase().includes('fixed asset') ||
-        tx.ledgerAccountName.toLowerCase().includes('equipment')) {
-      investingActivities.push(activity);
-    } else if (tx.ledgerAccountName.toLowerCase().includes('loan') ||
-               tx.ledgerAccountName.toLowerCase().includes('capital')) {
-      financingActivities.push(activity);
-    } else {
-      operatingActivities.push(activity);
+  const query = toQueryString(filters);
+  let data: unknown;
+  try {
+    const response = await apiClient.get<unknown>(`/financeReports/cashFlowStatement.json?${query}`);
+    data = response.data;
+  } catch (err) {
+    if (httpStatusOf(err) === 404) {
+      throw new Error(CASH_FLOW_UNAVAILABLE_MESSAGE);
     }
+    throw err;
   }
 
-  const totalOperating = operatingActivities.reduce((sum, a) => sum + a.amount, 0);
-  const totalInvesting = investingActivities.reduce((sum, a) => sum + a.amount, 0);
-  const totalFinancing = financingActivities.reduce((sum, a) => sum + a.amount, 0);
+  // A 200 that carries an error message is still an error.
+  if (data && typeof data === 'object' && typeof (data as { error?: unknown }).error === 'string') {
+    throw new Error((data as { error: string }).error);
+  }
 
-  return {
-    periodStart: filters.from,
-    periodEnd: filters.to,
-    operatingActivities,
-    totalOperatingCashFlow: totalOperating,
-    investingActivities,
-    totalInvestingCashFlow: totalInvesting,
-    financingActivities,
-    totalFinancingCashFlow: totalFinancing,
-    netCashFlow: totalOperating + totalInvesting + totalFinancing,
-    beginningCashBalance: 0, // Would need opening balance from backend
-    endingCashBalance: totalOperating + totalInvesting + totalFinancing,
-  };
+  const parsed = cashFlowStatementResponseSchema.safeParse(data);
+  if (!parsed.success) {
+    console.error('[cashFlowStatement] unexpected response', parsed.error.issues, data);
+    throw new Error(CASH_FLOW_UNREADABLE_MESSAGE);
+  }
+  return normalizeCashFlowStatement(parsed.data, filters);
 }
 
 // =============================================================================
@@ -676,14 +772,91 @@ export async function getCashFlowStatement(filters: ReportFilters): Promise<Cash
  * @returns Blob data for download
  */
 export async function exportFinanceReport(
-  reportType: 'trialBalance' | 'balanceSheet' | 'incomeStatement' | 'agedReceivables' | 'agedPayables' | 'accountBalances' | 'accountTransactions',
+  reportType:
+    | 'trialBalance'
+    | 'balanceSheet'
+    | 'incomeStatement'
+    | 'cashFlowStatement'
+    | 'agedReceivables'
+    | 'agedPayables'
+    | 'accountBalances'
+    | 'accountTransactions',
   filters: ReportFilters,
   format: ExportFormat
 ): Promise<Blob> {
-  const query = toQueryString({ ...filters, f: format });
+  const query = toQueryString({ ...filters, f: toBackendExportFormat(format) });
   const response = await apiClient.get(
     `/financeReports/${reportType}.json?${query}`,
     { responseType: 'blob' }
   );
   return response.data;
 }
+
+// =============================================================================
+// Added (SOUPFIN-103): Rows for registry-only reports
+// =============================================================================
+
+/**
+ * The response shapes a registry-only report can read rows from.
+ *
+ * - `array`: the body is the row list (or a wrapper normalizeTransactions knows).
+ * - `groupedAccountList`: the FinanceOtherReportsService.accountBalances shape
+ *   that trialBalance and accountBalances both return:
+ *   `{ resultList: { ASSET: { accountList: [...] }, ... } }`. Each row gets a
+ *   readable `ledgerGroup` label added so a column can show it.
+ */
+export type ReportRowSource = 'array' | 'groupedAccountList';
+
+export type ReportRow = Record<string, unknown>;
+
+const LEDGER_GROUP_LABELS: Record<string, string> = {
+  ASSET: 'Assets',
+  LIABILITY: 'Liabilities',
+  EQUITY: 'Equity',
+  REVENUE: 'Revenue',
+  INCOME: 'Revenue',
+  EXPENSE: 'Expenses',
+};
+
+/** Pull the row list out of a report response. Unknown shapes become []. */
+export function extractReportRows(data: unknown, source: ReportRowSource): ReportRow[] {
+  if (source === 'array') {
+    return normalizeTransactions(data) as unknown as ReportRow[];
+  }
+
+  if (!data || typeof data !== 'object') return [];
+  const resultList = (data as { resultList?: unknown }).resultList;
+  if (!resultList || typeof resultList !== 'object') return [];
+
+  const rows: ReportRow[] = [];
+  for (const [group, value] of Object.entries(resultList as Record<string, unknown>)) {
+    const accountList = (value as { accountList?: unknown } | null)?.accountList;
+    if (!Array.isArray(accountList)) continue;
+    for (const account of accountList) {
+      if (account && typeof account === 'object') {
+        rows.push({ ...(account as ReportRow), ledgerGroup: LEDGER_GROUP_LABELS[group] ?? group });
+      }
+    }
+  }
+  return rows;
+}
+
+/**
+ * Fetch the rows of a registry-only report.
+ * GET /rest{endpoint}?from=...&to=...
+ *
+ * Errors propagate (SOUPFIN-30): a failed request must reach React Query as an
+ * error, not render as an empty report.
+ */
+export async function fetchReportRows(
+  endpoint: string,
+  filters: ReportFilters,
+  source: ReportRowSource
+): Promise<ReportRow[]> {
+  const query = toQueryString(filters);
+  const response = await apiClient.get<unknown>(`${endpoint}?${query}`);
+  return extractReportRows(response.data, source);
+}
+
+/** The backend report types the export endpoint accepts. */
+export type FinanceReportType = Parameters<typeof exportFinanceReport>[0];

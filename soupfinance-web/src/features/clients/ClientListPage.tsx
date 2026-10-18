@@ -17,6 +17,8 @@ import type { Client, ClientType } from '../../api/endpoints/clients';
 import { getClientDisplayName } from './getClientDisplayName';
 // Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
 import { HelpLink } from '../../components/help';
+// Added (SOUPFIN-166): error card that says why the load failed
+import { ApiErrorState } from '../../components/feedback';
 
 // Delete confirmation state interface
 interface DeleteState {
@@ -44,7 +46,7 @@ export function ClientListPage() {
   // while the API re-runs after a filter change. Provides visual feedback that
   // "Individual"/"Corporate" filters are actually being applied (the issue called
   // out that the filter gave no indication it was working).
-  const { data: clients, isLoading, isFetching, error } = useQuery({
+  const { data: clients, isLoading, isFetching, error, refetch } = useQuery({
     queryKey: ['clients', searchTerm, typeFilter],
     queryFn: () => listClients({
       max: 50,
@@ -67,9 +69,12 @@ export function ClientListPage() {
   // Fix (SOUP-1929): the soft-delete (archive) always proceeds via a direct
   // DELETE /rest/client/delete/{id}.json — the backend (SOUP-1928,
   // ClientService.doDelete) flips archived+deleted and excludes the client from
-  // searchList even when invoices/account-services reference it, so there is NO
-  // relatedList pre-check to gate on. On failure we keep the modal open and
-  // surface the error instead of silently stalling ("Deleting…" → nothing).
+  // searchList even when invoices/account-services reference it. On failure we
+  // keep the modal open and surface the error instead of silently stalling
+  // ("Deleting…" → nothing).
+  // Fix (SOUPFIN-169): there IS a relatedList gate. The backend DeleteInterceptor
+  // answers 200 + relatedList and deletes nothing when the client has linked
+  // records; deleteClient now rejects with ClientDeleteBlockedError in that case.
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteClient(id),
     onSuccess: () => {
@@ -219,18 +224,9 @@ export function ClientListPage() {
             Loading clients...
           </div>
         ) : error ? (
-          <div className="p-12 text-center" data-testid="client-list-error">
-            <span className="material-symbols-outlined text-6xl text-danger/50 mb-4 block">error</span>
-            <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">Failed to load clients</h3>
-            <p className="text-subtle-text mb-4">There was an error loading your clients. Please try again.</p>
-            <button
-              onClick={() => window.location.reload()}
-              className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm"
-            >
-              <span className="material-symbols-outlined text-lg">refresh</span>
-              Retry
-            </button>
-          </div>
+          // Changed (SOUPFIN-166): ApiErrorState tells a disabled module from a
+          // server fault, and Retry refetches instead of reloading the page.
+          <ApiErrorState error={error} onRetry={() => refetch()} testId="client-list-error" />
         ) : clients?.length ? (
           <div className="overflow-x-auto">
             <table className="w-full text-sm" data-testid="client-list-table">
@@ -408,7 +404,10 @@ export function ClientListPage() {
                       role="alert"
                       data-testid="client-delete-error"
                     >
-                      Could not delete this client. Please try again.
+                      {/* Fix (SOUPFIN-169): a blocked delete is not a retryable failure. */}
+                      {deleteMutation.error?.name === 'ClientDeleteBlockedError'
+                        ? 'This client was not deleted. It still has linked contacts or accounts, so the server kept it.'
+                        : 'Could not delete this client. Please try again.'}
                     </p>
                   )}
                 </div>

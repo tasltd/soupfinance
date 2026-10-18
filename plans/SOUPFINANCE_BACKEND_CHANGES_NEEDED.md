@@ -1,7 +1,7 @@
 # SoupFinance Backend Issues
 
 **Date:** February 8, 2026 (updated)
-**Status:** Issues #1-#3 Investigated; Issues #4-#6 Pending; Issue #7 Root Cause Found; Issue #8 Partially Resolved; Issues #15-#21 NEW from E2E test run
+**Status:** Issues #1-#3 Investigated; Issues #4-#6 Pending; Issue #7 Agent half FIXED, SbUser half open (SOUPFIN-187, 2026-10-14); Issue #8 Partially Resolved; Issues #15-#21 NEW from E2E test run
 **Priority:** CRITICAL (Issues #7 + #8 block registrations; Issues #1, #15, #21 block CRUD operations)
 
 ## Context
@@ -340,6 +340,12 @@ export async function deleteVendor(id: string): Promise<void> {
 
 ## Issue 7: Registration Creates Agent with NULL tenantId (CRITICAL)
 
+> **Update 2026-10-14 (SOUPFIN-187):** re-verified on the LXC. `register()` now wraps Agent creation in
+> `Tenants.withId(account.id)`, so `agent.tenant_id = account.id`; login, `/rest/user/current.json`
+> (`tenantId` = account id) and `/rest/invoice/index.json` (200) all work for a fresh tenant.
+> Still open but non-blocking: `sb_user.tenant_id` and the `sb_user_sb_role.tenant_id` join rows stay NULL,
+> because neither domain implements `MultiTenant`. See `plans/soupfin-187-registration-tenant-id-backend.md`.
+
 **Priority:** CRITICAL — Blocks all new tenant registrations from working
 
 **File:** `grails-app/services/soupbroker/AccountRegistrationService.groovy`
@@ -503,6 +509,10 @@ Frontend pages exist for `/forgot-password` and `/reset-password` but the backen
 **Fix:** Implement `AccountController.forgotPassword()` and `AccountController.resetPassword()` actions following the same pattern as `register()`/`confirmEmail()`:
 - `forgotPassword`: Generate reset token, store with TTL, send email with link to `{applicationUrl}/reset-password?token=xxx`
 - `resetPassword`: Validate token, update password, invalidate token
+
+**Superseded (SOUPFIN-186, 2026-10-13):** the full spec, API contract and tests are in
+`plans/soupfin-186-password-reset-backend.md`. Do NOT reuse the confirmation token format
+(`base64(agentId:timestamp)`, unsigned) or the Origin-header URL fallback for reset links.
 
 ### Remaining Work
 

@@ -91,7 +91,14 @@ GET  /rest/ledgerTransaction/show/:id.json  - Get transaction details
 
 ## Default Chart of Accounts
 
-Created automatically based on business type:
+> **Status (2026-10-12, SOUPFIN-153): target, not current behaviour.** Registration on the backend's multi-tenancy branch seeds a hard-coded chart (SERVICES: 9 categories, 32 accounts). That chart does not use the codes below, its income and expense categories carry no ledger sub-group, and it sets no default A/R or A/P account. Template-based seeding, the `applyTemplate` endpoint and the backfill for existing tenants are planned in SOUPFIN-143 to SOUPFIN-146 and not yet built. Current status and plan: [`plans/coa-template-seeding.md`](../../plans/coa-template-seeding.md). The template data that will replace the lists below is in `plans/coa-templates/`.
+
+Planned starting chart by business type:
+
+> **Status (2026-10-10, SOUPFIN-153):** registration seeds this chart today, but the shipped lists differ from
+> the outline below: SERVICES has 32 accounts in 9 categories, TRADING 37 (source of truth:
+> `AccountRegistrationService.createServicesChartOfAccounts` / `createTradingChartOfAccounts` in soupmarkets-web).
+> System-account flags and the A/P default link are still open; see `plans/soupfin-142-coa-seeding-backend.md`.
 
 ### TRADING Business
 - 1000 Cash and Bank

@@ -10,6 +10,8 @@ import { useFormatCurrency } from '../../stores';
 import { usePageEntrance } from '../../hooks/useGsapAnimations';
 // Added (SOUPFIN-81): "Need Help?" link to this page's section of the user guide
 import { HelpLink } from '../../components/help';
+// Added (SOUPFIN-166): error card that says why the load failed
+import { ApiErrorState } from '../../components/feedback';
 
 export function InvoiceListPage() {
   const formatCurrency = useFormatCurrency();
@@ -17,7 +19,7 @@ export function InvoiceListPage() {
   const pageRef = usePageEntrance();
 
   // Changed: Added error state handling for API failures
-  const { data: invoices, isLoading, error } = useQuery({
+  const { data: invoices, isLoading, error, refetch } = useQuery({
     queryKey: ['invoices'],
     queryFn: () => listInvoices({ max: 20, sort: 'dateCreated', order: 'desc' }),
   });
@@ -49,19 +51,9 @@ export function InvoiceListPage() {
         {isLoading ? (
           <div className="p-8 text-center text-subtle-text" data-testid="invoice-list-loading">Loading invoices...</div>
         ) : error ? (
-          // Added: Error state when API fails
-          <div className="p-12 text-center" data-testid="invoice-list-error">
-            <span className="material-symbols-outlined text-6xl text-danger/50 mb-4">error</span>
-            <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">Failed to load invoices</h3>
-            <p className="text-subtle-text mb-4">There was an error loading your invoices. Please try again.</p>
-            <button
-              onClick={() => window.location.reload()}
-              className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm"
-            >
-              <span className="material-symbols-outlined text-lg">refresh</span>
-              Retry
-            </button>
-          </div>
+          // Changed (SOUPFIN-166): ApiErrorState tells a disabled module from a
+          // server fault, and Retry refetches instead of reloading the page.
+          <ApiErrorState error={error} onRetry={() => refetch()} testId="invoice-list-error" />
         ) : invoices?.length ? (
           <div className="overflow-x-auto">
             {/* Changed: Added min-w for proper horizontal scroll on mobile */}

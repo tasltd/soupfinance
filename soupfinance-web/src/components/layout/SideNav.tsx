@@ -4,8 +4,7 @@
  */
 import { useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { useAuthStore, useUIStore, useAccountStore } from '../../stores';
-import type { BusinessLicenceCategory } from '../../types/settings';
+import { useAuthStore, useUIStore } from '../../stores';
 import { Logo } from '../Logo';
 
 interface NavItem {
@@ -13,9 +12,6 @@ interface NavItem {
   icon: string;
   path: string;
   children?: { label: string; path: string }[];
-  // Added (SOUPFIN-25): business categories for which this item is hidden.
-  // e.g. SERVICES tenants don't use suppliers/inventory, so Vendors is hidden.
-  hideForCategories?: BusinessLicenceCategory[];
 }
 
 // Changed (2026-01-28): Added Vendors, Accounting section, Trial Balance to Reports
@@ -24,8 +20,11 @@ const navItems: NavItem[] = [
   { label: 'Invoices', icon: 'receipt_long', path: '/invoices' },
   { label: 'Bills', icon: 'receipt', path: '/bills' },
   // Added: Vendors navigation item
-  // Fix (SOUPFIN-25): hidden for SERVICES tenants (no suppliers/inventory)
-  { label: 'Vendors', icon: 'storefront', path: '/vendors', hideForCategories: ['SERVICES'] },
+  // Fix (SOUPFIN-173): shown for every business category. SOUPFIN-25 hid it for
+  // SERVICES tenants, but service businesses still pay rent, utilities and
+  // contractors: Bills requires a vendor, so hiding the list left vendor
+  // management reachable only from the bill form's "+" link.
+  { label: 'Vendors', icon: 'storefront', path: '/vendors' },
   // Added: Clients navigation item (gap analysis §4.5 - was only reachable via invoice form)
   { label: 'Clients', icon: 'people', path: '/clients' },
   { label: 'Payments', icon: 'payments', path: '/payments' },
@@ -75,6 +74,8 @@ const navItems: NavItem[] = [
       { label: 'Users', path: '/settings/users' },
       { label: 'Bank Accounts', path: '/settings/bank-accounts' },
       { label: 'Account Settings', path: '/settings/account' },
+      // Added (SOUPFIN-158)
+      { label: 'Financial Years', path: '/settings/financial-years' },
     ],
   },
 ];
@@ -83,8 +84,6 @@ export function SideNav() {
   const location = useLocation();
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
-  // Added (SOUPFIN-25): tenant business category drives category-specific nav visibility.
-  const businessCategory = useAccountStore((state) => state.settings?.businessLicenceCategory);
   const { sidebarCollapsed, setSidebarCollapsed, mobileSidebarOpen, setMobileSidebarOpen } =
     useUIStore();
 
@@ -97,12 +96,6 @@ export function SideNav() {
   useEffect(() => {
     if (useUIStore.getState().mobileSidebarOpen) setMobileSidebarOpen(false);
   }, [location.key, setMobileSidebarOpen]);
-
-  // Added (SOUPFIN-25): hide items flagged for the current tenant's business category.
-  // When the category is unknown (settings not yet loaded), items are shown by default.
-  const visibleNavItems = navItems.filter(
-    (item) => !(businessCategory && item.hideForCategories?.includes(businessCategory))
-  );
 
   const isActive = (path: string) => {
     if (path === '/dashboard') return location.pathname === path;
@@ -174,7 +167,7 @@ export function SideNav() {
 
             {/* Navigation */}
             <nav className="flex flex-col gap-1 mt-4">
-              {visibleNavItems.map((item) => (
+              {navItems.map((item) => (
                 <div key={item.path}>
                   <NavLink
                     to={item.children ? item.children[0].path : item.path}

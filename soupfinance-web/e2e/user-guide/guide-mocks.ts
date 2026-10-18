@@ -514,6 +514,25 @@ export const accountTransactions = [
   { id: 'cf-3', transactionDate: '2026-02-12', description: 'Receipt — Harbour Logistics Ltd', debitAmount: 10000, creditAmount: 0, amount: 10000, transactionState: 'DEBIT' },
 ];
 
+// Added (SOUPFIN-190): the Cash Flow page reads cashFlowStatement. Closing
+// cash matches Cash at Bank on the balance sheet above (86,425). No period
+// fields: the page then labels the statement with the range it asked for.
+export const cashFlowStatement = {
+  beginningCashBalance: 59290,
+  operatingActivities: [
+    { description: 'Receipt — Zenith Retail Ltd', amount: 20700, ledgerGroup: 'ASSET', ledgerAccountName: 'Accounts Receivable' },
+    { description: 'Payment — Volta Power Services', amount: -3565, ledgerGroup: 'LIABILITY', ledgerAccountName: 'Accounts Payable' },
+    { description: 'Receipt — Harbour Logistics Ltd', amount: 10000, ledgerGroup: 'ASSET', ledgerAccountName: 'Accounts Receivable' },
+  ],
+  totalOperatingCashFlow: 27135,
+  investingActivities: [],
+  totalInvestingCashFlow: 0,
+  financingActivities: [],
+  totalFinancingCashFlow: 0,
+  netCashFlow: 27135,
+  endingCashBalance: 86425,
+};
+
 export const agedReceivables = {
   agedReceivablesList: [
     { id: 'ar-1', name: 'Kofi Asante', notYetOverdue: 7475, thirtyOrLess: 0, thirtyOneToSixty: 0, sixtyOneToNinety: 0, ninetyPlus: 0, totalUnpaid: 7475 },
@@ -639,6 +658,7 @@ export async function installGuideMocks(page: Page) {
   await page.route('**/rest/financeReports/incomeStatement*', fulfil(incomeStatement));
   await page.route('**/rest/financeReports/balanceSheet*', fulfil(balanceSheet));
   await page.route('**/rest/financeReports/accountTransactions*', fulfil(accountTransactions));
+  await page.route('**/rest/financeReports/cashFlowStatement*', fulfil(cashFlowStatement));
   await page.route('**/rest/financeReports/accountBalances*', fulfil({ ledgerAccountList: ledgerAccounts }));
   await page.route('**/rest/financeReports/agedReceivables*', fulfil(agedReceivables));
   await page.route('**/rest/financeReports/agedPayables*', fulfil(agedPayables));

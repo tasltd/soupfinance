@@ -10,6 +10,8 @@
 import { useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+// Added (SOUPFIN-160): module-aware error card for a failed bill load
+import { ApiErrorState } from '../../components/feedback';
 import { getBill, deleteBill, listBillPayments, resolveBillItemTaxRate } from '../../api/endpoints/bills';
 import { listTaxRates } from '../../api/endpoints/domainData';
 import { useFormatCurrency } from '../../stores';
@@ -39,7 +41,7 @@ export function BillDetailPage() {
   const [recipientName, setRecipientName] = useState('');
 
   // Added: Fetch bill details from API
-  const { data: bill, isLoading, error } = useQuery({
+  const { data: bill, isLoading, error, refetch } = useQuery({
     queryKey: ['bill', id],
     queryFn: () => getBill(id!),
     enabled: !!id,
@@ -105,14 +107,20 @@ export function BillDetailPage() {
             Back to Bills
           </Link>
         </div>
-        <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-12 text-center" data-testid="bill-detail-error">
-          <span className="material-symbols-outlined text-6xl text-danger/50 mb-4">error</span>
-          <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">Failed to load bill</h3>
-          <p className="text-subtle-text mb-4">The bill could not be found or there was an error loading it.</p>
-          <Link to="/bills" className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm">
-            Back to Bills
-          </Link>
-        </div>
+        {/* Changed (SOUPFIN-160): a failed load says why (module disabled, no
+            permission, server fault); "not found" is kept for an empty answer. */}
+        {error ? (
+          <ApiErrorState error={error} onRetry={() => refetch()} testId="bill-detail-error" />
+        ) : (
+          <div className="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-12 text-center" data-testid="bill-detail-error">
+            <span className="material-symbols-outlined text-6xl text-danger/50 mb-4">error</span>
+            <h3 className="text-lg font-bold text-text-light dark:text-text-dark mb-2">Bill not found</h3>
+            <p className="text-subtle-text mb-4">The bill could not be found. It may have been deleted.</p>
+            <Link to="/bills" className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white font-bold text-sm">
+              Back to Bills
+            </Link>
+          </div>
+        )}
       </div>
     );
   }
@@ -126,7 +134,7 @@ export function BillDetailPage() {
             Bill {bill.billNumber}
           </h1>
           <p className="text-subtle-text">
-            <span className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${getStatusStyle(bill.status)}`} data-testid="bill-detail-status">
+            <span className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${getStatusStyle(bill.status ?? '')}`} data-testid="bill-detail-status">
               {bill.status}
             </span>
           </p>

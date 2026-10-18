@@ -9,14 +9,20 @@
  * 4. Success → show confirmation message (generic, doesn't reveal if email exists)
  * 5. User receives email with reset link → navigates to /reset-password?token=xxx
  *
- * NOTE: Backend endpoint may not yet exist. The frontend is ready; backend needs
- * POST /account/forgotPassword.json to send reset emails.
+ * Changed (SOUPFIN-186): the backend answers 200 for every well-formed email,
+ * so an error is a real failure (bad email, server down, endpoint missing) and is
+ * shown as one. It used to show "Reset link sent" on every error, which told
+ * users to wait for an email that was never sent.
+ *
+ * NOTE: Backend endpoint specified in plans/soupfin-186-password-reset-backend.md
+ * (not deployed yet).
  */
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { forgotPassword } from '../../api/endpoints/registration';
 import { Logo } from '../../components/Logo';
+import { getApiErrorMessage } from '../../api/errors';
 
 const RESEND_COOLDOWN_SECONDS = 60;
 
@@ -38,12 +44,15 @@ export function ForgotPasswordPage() {
       setSent(true);
       setCooldown(RESEND_COOLDOWN_SECONDS);
     },
-    onError: () => {
-      // Show generic success message even on error to prevent email enumeration
-      setSent(true);
-      setCooldown(RESEND_COOLDOWN_SECONDS);
-    },
+    // Changed (SOUPFIN-186): no onError success. Enumeration is prevented by the
+    // backend's uniform 200, so faking success here only hides real failures.
   });
+
+  // Added (SOUPFIN-186): a 400 carries a sentence ("Enter a valid email address");
+  // anything else gets the shared plain-language message.
+  const sendError = forgotMutation.isError
+    ? getForgotPasswordErrorMessage(forgotMutation.error)
+    : null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,8 +87,25 @@ export function ForgotPasswordPage() {
         </p>
       </div>
 
+      {/* Error banner — Added (SOUPFIN-186) */}
+      {sendError && (
+        <div
+          className="p-4 rounded-lg bg-danger/10 border border-danger/30 text-danger text-sm flex items-start gap-3"
+          data-testid="forgot-password-error"
+          role="alert"
+        >
+          <span className="material-symbols-outlined text-lg flex-shrink-0 mt-0.5">error</span>
+          <div>
+            <p className="font-medium">We could not send the reset link</p>
+            <p className="mt-1 text-danger/80" data-testid="forgot-password-error-message">
+              {sendError}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Success banner */}
-      {sent && (
+      {sent && !sendError && (
         <div
           className="p-4 rounded-lg bg-success/10 border border-success/30 text-success text-sm flex items-start gap-3"
           data-testid="forgot-password-success"
@@ -149,4 +175,14 @@ export function ForgotPasswordPage() {
       </div>
     </div>
   );
+}
+
+/** Added (SOUPFIN-186): user-facing text for a failed reset-link request. */
+function getForgotPasswordErrorMessage(error: unknown): string {
+  const response = (error as { response?: { status?: number; data?: unknown } } | null)?.response;
+  const data = response?.data as { message?: unknown } | undefined;
+  if (response?.status === 400 && data && typeof data.message === 'string' && data.message) {
+    return data.message;
+  }
+  return getApiErrorMessage(error);
 }

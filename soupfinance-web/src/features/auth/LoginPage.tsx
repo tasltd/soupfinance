@@ -3,10 +3,13 @@
  * Uses Spring Security REST with X-Auth-Token authentication
  * Reference: soupfinance-designs/login-authentication/
  */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../stores';
 import { Logo } from '../../components/Logo';
+import { AlertBanner } from '../../components/feedback/AlertBanner';
+import { isSessionExpiredFlagSet, clearSessionExpiredFlag } from '../../api/client';
 
 // Added (2026-05-22): State pushed by RegistrationPage when single-step register succeeds
 interface LoginLocationState {
@@ -30,6 +33,17 @@ export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { login, isLoading, error, clearError } = useAuthStore();
+  const { t } = useTranslation('auth');
+
+  // Added (SOUPFIN-188): explain why the user landed here after a 401. The flag
+  // is read in the initialiser and cleared in the effect, so it shows once.
+  const [showSessionExpired, setShowSessionExpired] = useState(isSessionExpiredFlagSet);
+  useEffect(() => {
+    if (!isSessionExpiredFlagSet()) return;
+    clearSessionExpiredFlag();
+    // The store may hold the same news as a red error; the banner replaces it.
+    clearError();
+  }, [clearError]);
 
   // Added (2026-05-22): Banner shown after single-step registration redirects here
   const loginState = location.state as LoginLocationState | null;
@@ -72,6 +86,17 @@ export function LoginPage() {
           Sign in to access your corporate finance dashboard
         </p>
       </div>
+
+      {/* Added (SOUPFIN-188): one-shot notice after a 401 sent the user here */}
+      {showSessionExpired && !error && (
+        <div data-testid="login-session-expired">
+          <AlertBanner
+            variant="info"
+            message={t('login.error.sessionExpired')}
+            onDismiss={() => setShowSessionExpired(false)}
+          />
+        </div>
+      )}
 
       {/* Added (2026-05-22): Banner after single-step registration redirects here */}
       {showRegistrationBanner && !error && (

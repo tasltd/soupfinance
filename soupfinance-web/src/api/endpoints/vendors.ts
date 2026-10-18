@@ -21,11 +21,21 @@ const BASE_URL = '/trading/vendor';
 
 /**
  * List vendors with pagination
- * GET /rest/trading/vendor/index.json
+ * GET /rest/trading/vendor/index.json         (active, archived=false)
+ * GET /rest/trading/vendor/archived.json      (archived=true)
+ *
+ * Changed (SOUPFIN-182): `archived: true` switches to the archived action. The
+ * backend's index (Vendor.searchList) always filters archived=false, so an
+ * `archived` query param on index.json would be ignored. Each row carries the
+ * unpaged `totalCount`, which the list page reads for pagination.
  */
-export async function listVendors(params?: ListParams & { search?: string }): Promise<Vendor[]> {
-  const query = params ? `?${toQueryString(params)}` : '';
-  const response = await apiClient.get<Vendor[]>(`${BASE_URL}/index.json${query}`);
+export async function listVendors(
+  params?: ListParams & { search?: string; archived?: boolean }
+): Promise<Vendor[]> {
+  const { archived, ...rest } = params ?? {};
+  const query = Object.keys(rest).length ? `?${toQueryString(rest)}` : '';
+  const action = archived ? 'archived' : 'index';
+  const response = await apiClient.get<Vendor[]>(`${BASE_URL}/${action}.json${query}`);
   return response.data;
 }
 

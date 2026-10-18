@@ -1,13 +1,19 @@
 /**
  * Unit tests for PaymentListPage.
  *
- * Focus: graceful handling of the 403-on-all-endpoints scenario that occurs
- * when the Finance module is not enabled for the current tenant (SOUPFIN-8).
+ * Focus: error handling per tab. The Finance module gate answers 403 with
+ * `{"error": "Finance module is not enabled for this tenant"}` (SOUPFIN-8).
+ *
+ * Changed (SOUPFIN-180): each tab shows its own ApiErrorState, classified by
+ * api/errors. One tab's 403 no longer has to wait for the other tab to fail
+ * before the user is told the module is not enabled.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
+import { render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import i18n from '../../../i18n';
 import { PaymentListPage } from '../PaymentListPage';
 
 vi.mock('../../../api/endpoints/invoices', () => ({
@@ -15,6 +21,9 @@ vi.mock('../../../api/endpoints/invoices', () => ({
 }));
 vi.mock('../../../api/endpoints/bills', () => ({
   listAllBillPayments: vi.fn(),
+}));
+vi.mock('../../../hooks/usePaymentMethods', () => ({
+  usePaymentMethods: () => ({ data: [] }),
 }));
 vi.mock('../../../stores', () => ({
   useFormatCurrency: () => (amount: number | null | undefined) => {
@@ -26,13 +35,20 @@ vi.mock('../../../stores', () => ({
 import { listAllInvoicePayments } from '../../../api/endpoints/invoices';
 import { listAllBillPayments } from '../../../api/endpoints/bills';
 
-function buildAxiosError(status: number) {
-  return {
-    name: 'AxiosError',
-    message: `Request failed with status code ${status}`,
-    response: { status },
-  };
+const FINANCE_GATE = { error: 'Finance module is not enabled for this tenant' };
+// Spring Boot's envelope for a role denial (see memory: 403 body tells role from module)
+const ROLE_DENIAL = { timestamp: '2026-10-13T10:00:00Z', status: 403, error: 'Forbidden', path: '/rest/billPayment/index.json' };
+
+function axiosError(status: number, url: string, data: unknown = undefined) {
+  return Object.assign(new Error(`Request failed with status code ${status}`), {
+    isAxiosError: true,
+    config: { url },
+    response: { status, data },
+  });
 }
+
+const invoiceGate = () => axiosError(403, '/invoicePayment/index.json', FINANCE_GATE);
+const billGate = () => axiosError(403, '/billPayment/index.json', FINANCE_GATE);
 
 function renderPage() {
   const queryClient = new QueryClient({
@@ -48,12 +64,16 @@ function renderPage() {
 }
 
 describe('PaymentListPage', () => {
+  beforeAll(async () => {
+    await i18n.changeLanguage('en');
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   describe('happy path — module enabled', () => {
-    it('renders the table when both endpoints return data', async () => {
+    it('renders the tabs and the empty state when both endpoints return data', async () => {
       vi.mocked(listAllInvoicePayments).mockResolvedValue([]);
       vi.mocked(listAllBillPayments).mockResolvedValue([]);
 
@@ -61,89 +81,170 @@ describe('PaymentListPage', () => {
 
       expect(await screen.findByTestId('payment-list-page')).toBeInTheDocument();
       expect(screen.getByTestId('payment-tabs')).toBeInTheDocument();
-      // Empty state for the default (incoming) tab
-      await waitFor(() => expect(screen.getByTestId('payment-list-empty')).toBeInTheDocument());
-    });
-
-    it('shows the generic error state when only one endpoint fails with 403 (not full module-disabled)', async () => {
-      // Only ONE endpoint returns 403 — the module is enabled, this is a transient
-      // permission glitch on just the bills side. We should fall back to the
-      // generic error UI for the affected tab, NOT the module-disabled banner.
-      vi.mocked(listAllInvoicePayments).mockResolvedValue([]);
-      vi.mocked(listAllBillPayments).mockRejectedValue(buildAxiosError(403));
-
-      renderPage();
-
-      // Module-disabled banner is NOT shown — only one endpoint failed
-      await waitFor(() => expect(screen.getByTestId('payment-list-page')).toBeInTheDocument());
-      expect(screen.queryByTestId('payment-module-disabled')).not.toBeInTheDocument();
-      // Tabs still render so the user can pick the working tab
-      expect(screen.getByTestId('payment-tabs')).toBeInTheDocument();
-    });
-  });
-
-  describe('module disabled — 403 on both endpoints (SOUPFIN-8)', () => {
-    beforeEach(() => {
-      vi.mocked(listAllInvoicePayments).mockRejectedValue(buildAxiosError(403));
-      vi.mocked(listAllBillPayments).mockRejectedValue(buildAxiosError(403));
-    });
-
-    it('renders the module-disabled banner with a clear heading', async () => {
-      renderPage();
-      const banner = await screen.findByTestId('payment-module-disabled');
-      expect(banner).toBeInTheDocument();
-      expect(banner).toHaveTextContent(/Finance module not available/i);
-    });
-
-    it('explains the cause to the user', async () => {
-      renderPage();
-      const banner = await screen.findByTestId('payment-module-disabled');
-      expect(banner).toHaveTextContent(/not enabled for your account/i);
-      expect(banner).toHaveTextContent(/contact your administrator/i);
-    });
-
-    it('does NOT render the tabs or "Failed to load" generic error', async () => {
-      renderPage();
-      await screen.findByTestId('payment-module-disabled');
-      expect(screen.queryByTestId('payment-tabs')).not.toBeInTheDocument();
+      expect(await screen.findByTestId('payment-list-empty')).toHaveTextContent('No incoming payments');
       expect(screen.queryByTestId('payment-list-error')).not.toBeInTheDocument();
     });
 
-    it('disables the Record Payment header button so users cannot navigate to a broken form', async () => {
-      renderPage();
-      await screen.findByTestId('payment-module-disabled');
-      const recordButton = screen.getByTestId('record-payment-button');
-      expect(recordButton).toHaveAttribute('aria-disabled', 'true');
-      expect(recordButton.className).toMatch(/pointer-events-none/);
-    });
+    // Added (SOUPFIN-178): entry points to the multi-invoice / multi-bill allocation screen
+    it('offers Receive payment and Pay bills next to Record Payment', async () => {
+      vi.mocked(listAllInvoicePayments).mockResolvedValue([]);
+      vi.mocked(listAllBillPayments).mockResolvedValue([]);
 
-    it('offers a Back to Dashboard escape hatch', async () => {
       renderPage();
-      await screen.findByTestId('payment-module-disabled');
-      const backLink = screen.getByTestId('payment-module-disabled-dashboard');
-      expect(backLink).toBeInTheDocument();
-      expect(backLink).toHaveAttribute('href', '/dashboard');
-    });
 
-    it('offers a Contact Support mailto link', async () => {
-      renderPage();
-      await screen.findByTestId('payment-module-disabled');
-      const contactLink = screen.getByTestId('payment-module-disabled-contact');
-      expect(contactLink).toBeInTheDocument();
-      expect(contactLink.getAttribute('href')).toMatch(/^mailto:/);
+      expect(await screen.findByTestId('receive-payment-button')).toHaveAttribute('href', '/payments/receive');
+      expect(screen.getByTestId('pay-bills-button')).toHaveAttribute('href', '/payments/make');
+      expect(screen.getByTestId('receive-payment-button')).not.toHaveAttribute('aria-disabled', 'true');
     });
   });
 
-  describe('non-403 errors', () => {
-    it('shows the generic "Failed to load" state for 500 errors (not module-disabled)', async () => {
-      vi.mocked(listAllInvoicePayments).mockRejectedValue(buildAxiosError(500));
-      vi.mocked(listAllBillPayments).mockRejectedValue(buildAxiosError(500));
+  // Added (SOUPFIN-180): the case the old "both must 403" rule got wrong
+  describe('module disabled on ONE tab only', () => {
+    beforeEach(() => {
+      vi.mocked(listAllInvoicePayments).mockResolvedValue([]);
+      vi.mocked(listAllBillPayments).mockRejectedValue(billGate());
+    });
+
+    it('explains the gate on the failing tab and leaves the working tab alone', async () => {
+      const user = userEvent.setup();
+      renderPage();
+
+      // Incoming works: its empty state shows, no error
+      expect(await screen.findByTestId('payment-list-empty')).toBeInTheDocument();
+      expect(screen.queryByTestId('payment-list-error')).not.toBeInTheDocument();
+
+      await user.click(screen.getByTestId('tab-outgoing'));
+
+      const errorState = await screen.findByTestId('payment-list-error');
+      expect(errorState).toHaveAttribute('data-error-kind', 'module_disabled');
+      expect(screen.getByTestId('payment-list-error-title')).toHaveTextContent('Finance module is not available');
+      expect(screen.getByTestId('payment-list-error-hint')).toHaveTextContent(/contact your administrator/i);
+      // A retry cannot enable a module
+      expect(screen.queryByTestId('payment-list-error-retry')).not.toBeInTheDocument();
+      // Filters cannot help either
+      expect(screen.queryByTestId('payment-filters')).not.toBeInTheDocument();
+    });
+
+    it('disables only the action for the gated side', async () => {
+      renderPage();
+      await waitFor(() =>
+        expect(screen.getByTestId('pay-bills-button')).toHaveAttribute('aria-disabled', 'true')
+      );
+      expect(screen.getByTestId('pay-bills-button').className).toMatch(/pointer-events-none/);
+      expect(screen.getByTestId('receive-payment-button')).toHaveAttribute('aria-disabled', 'false');
+      // Record Payment can still take an invoice payment
+      expect(screen.getByTestId('record-payment-button')).toHaveAttribute('aria-disabled', 'false');
+    });
+  });
+
+  describe('module disabled on both tabs (SOUPFIN-8)', () => {
+    beforeEach(() => {
+      vi.mocked(listAllInvoicePayments).mockRejectedValue(invoiceGate());
+      vi.mocked(listAllBillPayments).mockRejectedValue(billGate());
+    });
+
+    it('shows the module-disabled state on the default tab with its cause', async () => {
+      renderPage();
+      const errorState = await screen.findByTestId('payment-list-error');
+      expect(errorState).toHaveAttribute('data-error-kind', 'module_disabled');
+      expect(errorState).toHaveTextContent(/Finance module is not available/i);
+      expect(errorState).toHaveTextContent(/requires the Finance module to be enabled/i);
+      // Tabs stay so the user can see both sides are affected
+      expect(screen.getByTestId('payment-tabs')).toBeInTheDocument();
+    });
+
+    it('disables all three header actions so users cannot reach a broken form', async () => {
+      renderPage();
+      await screen.findByTestId('payment-list-error');
+      for (const id of ['record-payment-button', 'receive-payment-button', 'pay-bills-button']) {
+        await waitFor(() => expect(screen.getByTestId(id)).toHaveAttribute('aria-disabled', 'true'));
+        expect(screen.getByTestId(id).className).toMatch(/pointer-events-none/);
+      }
+    });
+
+    it('links to the guide answer about enabling a module', async () => {
+      renderPage();
+      const errorState = await screen.findByTestId('payment-list-error');
+      const help = within(errorState).getByRole('link', { name: /need help/i });
+      expect(help.getAttribute('href')).toMatch(/module-not-enabled/);
+    });
+  });
+
+  describe('other errors, branched by kind', () => {
+    it('a role denial is "no permission", not "module disabled", and offers no retry', async () => {
+      vi.mocked(listAllInvoicePayments).mockRejectedValue(
+        axiosError(403, '/invoicePayment/index.json', ROLE_DENIAL)
+      );
+      vi.mocked(listAllBillPayments).mockResolvedValue([]);
 
       renderPage();
 
-      // Generic error UI per-tab — NOT the module-disabled banner
-      expect(await screen.findByTestId('payment-list-error')).toBeInTheDocument();
-      expect(screen.queryByTestId('payment-module-disabled')).not.toBeInTheDocument();
+      const errorState = await screen.findByTestId('payment-list-error');
+      expect(errorState).toHaveAttribute('data-error-kind', 'forbidden');
+      expect(errorState).toHaveTextContent('You do not have permission');
+      expect(errorState).not.toHaveTextContent(/Forbidden/);
+      expect(screen.queryByTestId('payment-list-error-retry')).not.toBeInTheDocument();
+      // A role denial is not a gate: the actions stay enabled
+      expect(screen.getByTestId('receive-payment-button')).toHaveAttribute('aria-disabled', 'false');
+    });
+
+    it('a 500 shows the server-error state with a retry that refetches only that tab', async () => {
+      vi.mocked(listAllInvoicePayments)
+        .mockRejectedValueOnce(axiosError(500, '/invoicePayment/index.json'))
+        .mockResolvedValueOnce([]);
+      vi.mocked(listAllBillPayments).mockResolvedValue([]);
+      const user = userEvent.setup();
+
+      renderPage();
+
+      const errorState = await screen.findByTestId('payment-list-error');
+      expect(errorState).toHaveAttribute('data-error-kind', 'server_error');
+      expect(errorState).not.toHaveTextContent(/status code/);
+      // Filters stay: the user may still want them after the retry
+      expect(screen.getByTestId('payment-filters')).toBeInTheDocument();
+      const billCalls = vi.mocked(listAllBillPayments).mock.calls.length;
+
+      await user.click(screen.getByTestId('payment-list-error-retry'));
+
+      expect(await screen.findByTestId('payment-list-empty')).toBeInTheDocument();
+      expect(screen.queryByTestId('payment-list-error')).not.toBeInTheDocument();
+      expect(listAllInvoicePayments).toHaveBeenCalledTimes(2);
+      expect(vi.mocked(listAllBillPayments).mock.calls.length).toBe(billCalls);
+    });
+
+    it('a network failure says so instead of "no payments"', async () => {
+      vi.mocked(listAllInvoicePayments).mockRejectedValue(
+        Object.assign(new Error('Network Error'), { isAxiosError: true, config: { url: '/invoicePayment/index.json' } })
+      );
+      vi.mocked(listAllBillPayments).mockResolvedValue([]);
+
+      renderPage();
+
+      const errorState = await screen.findByTestId('payment-list-error');
+      expect(errorState).toHaveAttribute('data-error-kind', 'network');
+      expect(screen.queryByTestId('payment-list-empty')).not.toBeInTheDocument();
+    });
+  });
+
+  // Added (SOUPFIN-180): every visible string comes from the payments namespace
+  describe('translations', () => {
+    it.each([
+      ['de', 'Zahlung erfassen', 'Keine eingehenden Zahlungen'],
+      ['fr', 'Enregistrer un paiement', 'Aucun paiement entrant'],
+      ['nl', 'Betaling registreren', 'Geen inkomende betalingen'],
+    ])('renders the page in %s', async (lang, recordLabel, emptyTitle) => {
+      vi.mocked(listAllInvoicePayments).mockResolvedValue([]);
+      vi.mocked(listAllBillPayments).mockResolvedValue([]);
+      await i18n.changeLanguage(lang);
+      try {
+        renderPage();
+        expect(await screen.findByTestId('payment-list-empty')).toHaveTextContent(emptyTitle);
+        expect(screen.getByTestId('record-payment-button')).toHaveTextContent(recordLabel);
+        // No raw key leaks through
+        expect(screen.getByTestId('payment-list-page')).not.toHaveTextContent(/list\.\w+/);
+      } finally {
+        await i18n.changeLanguage('en');
+      }
     });
   });
 });

@@ -135,7 +135,9 @@ describe('Report exports — file extension fix (SOUPFIN-16)', () => {
     expect(tracker.filenames.every(f => !f.endsWith('.undefined'))).toBe(true);
   });
 
-  it('Balance Sheet Excel export uses a .xlsx extension', async () => {
+  // Fix (SOUPFIN-60): the backend's "excel" exporter returns BIFF8 (.xls) bytes,
+  // so the download is named .xls, not .xlsx.
+  it('Balance Sheet Excel export uses a .xls extension', async () => {
     const user = userEvent.setup();
     renderWithProviders(<BalanceSheetPage />);
 
@@ -143,8 +145,9 @@ describe('Report exports — file extension fix (SOUPFIN-16)', () => {
     await user.click(exportBtn);
 
     await waitFor(() =>
-      expect(tracker.filenames.some(f => f.endsWith('.xlsx'))).toBe(true)
+      expect(tracker.filenames.some(f => f.endsWith('.xls'))).toBe(true)
     );
+    expect(tracker.filenames.every(f => !f.endsWith('.xlsx'))).toBe(true);
   });
 
   it('Balance Sheet CSV export uses a .csv extension', async () => {
