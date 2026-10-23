@@ -14,7 +14,7 @@ import type { TFunction } from 'i18next';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { getInvoicePayment, deleteInvoicePayment } from '../../api/endpoints/invoices';
-import { getBillPayment, deleteBillPayment } from '../../api/endpoints/bills';
+import { getBillPayment, deleteBillPayment, downloadPaymentReceipt } from '../../api/endpoints/bills';
 import type { PaymentType } from '../../api/endpoints/payments';
 import { DeleteBlockedError, DeletePendingApprovalError } from '../../api/endpoints/deleteOutcome';
 import { getApiErrorMessage } from '../../api/errors';
@@ -23,6 +23,7 @@ import { usePaymentMethods } from '../../hooks/usePaymentMethods';
 import { useToast } from '../../components/feedback/ToastProvider';
 import { HelpLink } from '../../components/help';
 import type { InvoicePayment, BillPayment } from '../../types';
+import { receiptExtension } from './receipt';
 import {
   getPaymentMethodName,
   getPaymentMethodBadgeStyle,
@@ -46,6 +47,55 @@ function voidErrorMessage(error: unknown, t: TFunction<'payments'>): string {
       : t('detail.voidBlocked');
   }
   return getApiErrorMessage(error);
+}
+
+/**
+ * Added (SOUPFIN-179): fetches the BillPayment.paymentReceipt file and saves
+ * it through a temporary object URL, so the auth headers on apiClient apply.
+ */
+function ReceiptDownload({ fileId, fileName }: { fileId: string; fileName: string }) {
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleDownload = async () => {
+    setError('');
+    setIsDownloading(true);
+    try {
+      const blob = await downloadPaymentReceipt(fileId);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${fileName}${receiptExtension(blob.type)}`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(getApiErrorMessage(err));
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  return (
+    <span className="flex flex-col gap-1">
+      <button
+        type="button"
+        onClick={handleDownload}
+        disabled={isDownloading}
+        className="inline-flex items-center gap-1 self-start text-primary hover:underline disabled:opacity-60"
+        data-testid="payment-detail-receipt-download"
+      >
+        <span className="material-symbols-outlined text-lg">download</span>
+        {isDownloading ? 'Downloading...' : 'Download receipt'}
+      </button>
+      {error && (
+        <span className="text-xs text-danger" role="alert" data-testid="payment-detail-receipt-error">
+          {error}
+        </span>
+      )}
+    </span>
+  );
 }
 
 export function PaymentDetailPage() {
@@ -201,6 +251,20 @@ export function PaymentDetailPage() {
       testId: 'payment-detail-recorded',
     },
   ];
+
+  // Added (SOUPFIN-179): only BillPayment has a receipt field in the Grails domain
+  if (!isIncoming) {
+    const receiptId = (payment as BillPayment).paymentReceipt?.id;
+    fields.push({
+      label: 'Receipt',
+      value: receiptId ? (
+        <ReceiptDownload fileId={receiptId} fileName={`payment-receipt-${payment.quickReference || receiptId}`} />
+      ) : (
+        'None attached'
+      ),
+      testId: 'payment-detail-receipt',
+    });
+  }
 
   return (
     <div className="flex flex-col gap-6 max-w-4xl" data-testid="payment-detail-page">

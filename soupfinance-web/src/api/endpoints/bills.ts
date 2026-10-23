@@ -516,6 +516,20 @@ export async function recordBillPayment(data: Partial<BillPayment>): Promise<Bil
 }
 
 /**
+ * Download a payment receipt (SoupBrokerFile)
+ * GET /rest/soupBrokerFile/link/:id
+ * Added (SOUPFIN-179): BillPayment.paymentReceipt is a SoupBrokerFile FK; the
+ * link action streams the stored bytes with their content type.
+ */
+export async function downloadPaymentReceipt(fileId: string): Promise<Blob> {
+  const response = await apiClient.get<Blob>(`/soupBrokerFile/link/${fileId}`, {
+    responseType: 'blob',
+    headers: { Accept: '*/*' },
+  });
+  return response.data;
+}
+
+/**
  * Get a single bill payment
  * GET /rest/billPayment/show/:id.json
  * Added (SOUPFIN-177): backs the payment detail page
