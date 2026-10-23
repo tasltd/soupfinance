@@ -5,6 +5,7 @@
  */
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { DatePicker } from './DatePicker';
+import { getTodayIsoDate, toLocalIsoDate } from '../../utils/date';
 
 // Added: Meta configuration for DatePicker stories
 const meta = {
@@ -18,11 +19,18 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-// Added: Helper to get today's date in YYYY-MM-DD format
-const today = new Date().toISOString().split('T')[0];
-const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
-const nextMonth = new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0];
-const lastMonth = new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0];
+// Fix (SOUPFIN-68): these four demo bounds were built with
+// `toISOString().split('T')[0]`, which converts to UTC before taking the date
+// part — so east of UTC (and after 19:00 in the Americas) the story rendered a
+// min/max a day off from the viewer's own calendar. Same defect class as the
+// report date ranges fixed under SOUPFIN-64. It matters more here than the
+// wrong demo date suggests: this is the component gallery's date-input example,
+// so the broken idiom gets copied out of it into real forms.
+const DAY_MS = 86400000;
+const today = getTodayIsoDate();
+const tomorrow = toLocalIsoDate(new Date(Date.now() + DAY_MS));
+const nextMonth = toLocalIsoDate(new Date(Date.now() + 30 * DAY_MS));
+const lastMonth = toLocalIsoDate(new Date(Date.now() - 30 * DAY_MS));
 
 // Added: Default date picker
 export const Default: Story = {
