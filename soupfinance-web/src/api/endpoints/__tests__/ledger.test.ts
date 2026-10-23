@@ -302,3 +302,92 @@ describe('updateVoucher FK binding (SOUPFIN-154)', () => {
     expect(mockPut.mock.calls[0][1]).toEqual({ id: 'v2', notes: 'Only the description changed' });
   });
 });
+
+// Added (SOUPFIN-156): VoucherController has no approve or cancel action.
+// Approval and rejection save a VoucherApproval, which needs a CSRF token and
+// an agent; posting is /voucher/post/:id.json.
+describe('voucher lifecycle endpoints (SOUPFIN-156)', () => {
+  let mockGet: ReturnType<typeof vi.fn>;
+  let mockPost: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGet = vi.fn();
+    mockPost = vi.fn().mockResolvedValue({ data: {} });
+    (axios.create as ReturnType<typeof vi.fn>).mockReturnValue({
+      interceptors: { request: { use: vi.fn() }, response: { use: vi.fn() } },
+      get: mockGet,
+      post: mockPost,
+      put: vi.fn(),
+      delete: vi.fn(),
+    });
+  });
+
+  it('approveVoucher saves an APPROVED VoucherApproval with the token and agent from create.json', async () => {
+    mockGet.mockResolvedValueOnce({
+      data: {
+        SYNCHRONIZER_TOKEN: 'tok-1',
+        SYNCHRONIZER_URI: '/voucherApproval/create',
+        agent: { id: 'agent-9', serialised: 'Ama Mensah' },
+      },
+    });
+    vi.resetModules();
+    const { approveVoucher } = await import('../ledger');
+    await approveVoucher('v1');
+
+    expect(mockGet).toHaveBeenCalledTimes(1);
+    expect(mockGet.mock.calls[0][0]).toBe('/voucherApproval/create.json?voucher.id=v1');
+    const [url, body] = mockPost.mock.calls[0];
+    expect(url).toMatch(/^\/voucherApproval\/save\.json\?/);
+    expect(url).toContain('SYNCHRONIZER_TOKEN=tok-1');
+    expect(body).toEqual({ voucher: { id: 'v1' }, approvalState: 'APPROVED', agent: { id: 'agent-9' } });
+    // The old endpoint never existed on the backend.
+    expect(mockPost.mock.calls.some(([u]) => String(u).startsWith('/voucher/approve'))).toBe(false);
+  });
+
+  it('falls back to /user/current.json for the agent when create.json has none', async () => {
+    mockGet
+      .mockResolvedValueOnce({ data: { voucherApproval: { SYNCHRONIZER_TOKEN: 'tok-2', SYNCHRONIZER_URI: '/u' } } })
+      .mockResolvedValueOnce({ data: { username: 'ama', agentId: 'agent-from-user' } });
+    vi.resetModules();
+    const { approveVoucher } = await import('../ledger');
+    await approveVoucher('v2');
+
+    expect(mockGet.mock.calls[1][0]).toBe('/user/current.json');
+    const [url, body] = mockPost.mock.calls[0];
+    expect(url).toContain('SYNCHRONIZER_TOKEN=tok-2');
+    expect(body.agent).toEqual({ id: 'agent-from-user' });
+  });
+
+  it('rejectVoucher saves a REJECTED VoucherApproval, never /voucher/cancel', async () => {
+    mockGet.mockResolvedValueOnce({ data: { SYNCHRONIZER_TOKEN: 't', SYNCHRONIZER_URI: '/u', agent: { id: 'a1' } } });
+    vi.resetModules();
+    const ledger = await import('../ledger');
+    await ledger.rejectVoucher('v3', 'Duplicate of PV-12');
+
+    expect(mockPost.mock.calls[0][1]).toEqual({
+      voucher: { id: 'v3' },
+      approvalState: 'REJECTED',
+      agent: { id: 'a1' },
+      comments: 'Duplicate of PV-12',
+    });
+    expect('cancelVoucher' in ledger).toBe(false);
+  });
+
+  it('postVoucher posts to /voucher/post/:id.json and returns the voucher', async () => {
+    mockPost.mockResolvedValueOnce({ data: { id: 'v4', status: 'APPROVED', ledgerTransaction: { verifiedTransaction: true } } });
+    vi.resetModules();
+    const { postVoucher } = await import('../ledger');
+    const result = await postVoucher('v4');
+    expect(mockPost.mock.calls[0][0]).toBe('/voucher/post/v4.json');
+    expect(result.id).toBe('v4');
+  });
+
+  it('propagates a backend refusal instead of swallowing it', async () => {
+    mockGet.mockResolvedValueOnce({ data: { SYNCHRONIZER_TOKEN: 't', SYNCHRONIZER_URI: '/u', agent: { id: 'a1' } } });
+    mockPost.mockRejectedValueOnce(new Error('Request failed with status code 422'));
+    vi.resetModules();
+    const { approveVoucher } = await import('../ledger');
+    await expect(approveVoucher('v5')).rejects.toThrow('422');
+  });
+});

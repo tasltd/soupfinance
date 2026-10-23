@@ -17,7 +17,6 @@ import {
   reverseTransactionGroup,
   deleteTransactionGroup,
   postVoucher,
-  cancelVoucher,
   deleteVoucher,
 } from '../../api/endpoints/ledger';
 import { useQueryClient } from '@tanstack/react-query';
@@ -283,13 +282,17 @@ export function TransactionRegisterPage() {
   }, [queryClient, showToast]);
 
   // Changed (SOUPFIN-9): Reverse transaction with toast feedback
+  // Fix (SOUPFIN-156): only journal entries can be reversed. The voucher branch
+  // called cancelVoucher, a /voucher/cancel action the backend never had, and
+  // labelled it "Reverse". A posted voucher has no reversal on the backend, so
+  // the menu no longer offers it (see plans/soupfin-156-voucher-reversal-backend.md).
   const handleReverse = useCallback(async (tx: UnifiedTransaction) => {
+    if (tx.type !== 'JOURNAL_ENTRY') {
+      setOpenActionDropdown(null);
+      return;
+    }
     try {
-      if (tx.type === 'JOURNAL_ENTRY') {
-        await reverseTransactionGroup(tx.sourceId);
-      } else {
-        await cancelVoucher(tx.sourceId);
-      }
+      await reverseTransactionGroup(tx.sourceId);
       await queryClient.invalidateQueries({ queryKey: ['transactions'] });
       showToast({ variant: 'success', message: `Transaction ${tx.transactionId} reversed.` });
     } catch (err) {
@@ -909,7 +912,8 @@ export function TransactionRegisterPage() {
                                       Post
                                     </button>
                                   )}
-                                  {tx.status === 'POSTED' && (
+                                  {/* Fix (SOUPFIN-156): Reverse is a journal-entry action only */}
+                                  {tx.status === 'POSTED' && tx.type === 'JOURNAL_ENTRY' && (
                                     <button
                                       type="button"
                                       onClick={() => handleReverse(tx)}
