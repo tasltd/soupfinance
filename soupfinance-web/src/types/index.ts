@@ -222,7 +222,8 @@ export interface InvoiceItem extends BaseEntity {
   taxEntryInvoiceItemList?: Array<{
     id?: string;
     taxAmount?: number;
-    taxEntry?: { id: string; name?: string; taxRate?: number; serialised?: string; class?: string };
+    // Added (SOUPFIN-92): isWithholdingTax mirrors TaxEntry.isWithholdingTax
+    taxEntry?: { id: string; name?: string; taxRate?: number; isWithholdingTax?: boolean | null; serialised?: string; class?: string };
     serialised?: string;
   }> | null;
   serialised?: string;

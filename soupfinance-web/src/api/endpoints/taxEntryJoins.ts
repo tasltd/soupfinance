@@ -33,10 +33,15 @@ const TRAILING_LABEL = /,\s*([^,()]+?),\s*-?[\d.]+(?:,\s*-?[\d.]+)?\s*\)\s*$/;
  * @returns the tax amount, or 0 when the string is absent or unparseable.
  */
 export function parseTaxAmountFromSerialised(serialised?: string): number {
+  return readTrailingTaxAmount(serialised) ?? 0;
+}
+
+/** The trailing tax amount of a serialised join row, or `null` when there is none. */
+function readTrailingTaxAmount(serialised?: string): number | null {
   const match = serialised?.match(TRAILING_AMOUNTS);
-  if (!match) return 0;
+  if (!match) return null;
   const value = parseFloat(match[1]);
-  return Number.isFinite(value) ? value : 0;
+  return Number.isFinite(value) ? value : null;
 }
 
 /**
@@ -45,10 +50,22 @@ export function parseTaxAmountFromSerialised(serialised?: string): number {
  * serialised form.
  */
 export function parseJoinRowTaxAmount(row: { taxAmount?: number; serialised?: string }): number {
+  return readJoinRowTaxAmount(row) ?? 0;
+}
+
+/**
+ * Added (SOUPFIN-92): the same read as `parseJoinRowTaxAmount`, but `null`
+ * when the row carries no amount at all instead of `0`.
+ *
+ * A total can treat an unreadable row as 0. A per-line figure printed on a
+ * document cannot: `0.00` next to a taxed line is a false claim that the line
+ * is untaxed. Callers that display a single line render a dash for `null`.
+ */
+export function readJoinRowTaxAmount(row: { taxAmount?: number; serialised?: string }): number | null {
   if (typeof row?.taxAmount === 'number') {
     return row.taxAmount;
   }
-  return parseTaxAmountFromSerialised(row?.serialised);
+  return readTrailingTaxAmount(row?.serialised);
 }
 
 /** A join row as it arrives from either domain. */
