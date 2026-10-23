@@ -208,3 +208,45 @@ stops making the second call — the unit test
 - `plans/soupfinance-agent-current-endpoint.md` — the same pattern for `AgentController.current()`
 - `plans/soupfin-13-backend-consolidation-directive.md` — why backend fixes land in soupmarkets-web
 - SOUPFIN-55 — added `resolveOnboardingCorporate` and the KYC onboarding entry point
+
+## 9. Removal gate for the frontend fallback (SOUPFIN-69)
+
+SOUPFIN-69 tracks the follow-up in the last checkbox of §7: deleting the
+`listCorporates({ max: 1 })` fallback from `resolveOnboardingCorporate()`. It
+stays **blocked** until §3.1 is merged into soupmarkets-web *and* deployed to
+the tenant the frontend talks to.
+
+**Re-verified 2026-09-22 — still blocked.**
+
+| Check | Result |
+|-------|--------|
+| `def current()` in `CorporateController.groovy` on `master` (→ tas.soupmarkets.com) | absent |
+| same on `authentication-base-on-multi-tenancy-descriminator` (→ demo / SoupFinance LXC) | absent |
+| same on `master_stable_last` (→ Fincap / Ashfield) | absent |
+| `git log --all -S"corporateService.current" -- grails-app` | no commit, on any of the 1332 refs |
+| `GET /rest/corporate/current.json` on LXC `10.115.213.183:9090`, authenticated as `soup.support` | **404**, `text/html` — the `notFound` view |
+| `GET /rest/corporate/index.json?max=1` same session | 200, one corporate row |
+| `GET /rest/user/current.json` same session (auth control) | 200 JSON |
+
+Removing the fallback while `current.json` 404s makes
+`resolveOnboardingCorporate()` return `null` for **every** user, so
+`useKycOnboarding().needsOnboarding` is always false and the dashboard KYC
+banner never renders. That reverts SOUPFIN-55 outright: before it, the four
+`/onboarding/*` routes were reachable only from an emailed link.
+
+**Unblock check** — run this before reopening SOUPFIN-69; it must print `200`:
+
+```bash
+curl -s -o /dev/null -w '%{http_code}\n' \
+  -H 'Accept: application/json' -H "X-Auth-Token: $TOKEN" \
+  https://tas.soupmarkets.com/rest/corporate/current.json
+```
+
+Then apply the SOUPFIN-69 definition of done: `resolveOnboardingCorporate`
+calls `current.json` only; the integration case
+`falls back to the corporate list when current.json 404s`
+(`src/api/__tests__/integration/corporate.integration.test.ts:332`) becomes an
+assertion that a 404 means no corporate; and
+`e2e/soupfin-62-corporate-current.spec.ts` keeps
+`once current.json answers, the index fallback is not called at all` and drops
+`a 500 from current.json still leaves the KYC entry point usable`.
