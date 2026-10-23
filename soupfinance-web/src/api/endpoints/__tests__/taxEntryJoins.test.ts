@@ -14,6 +14,7 @@ import { describe, it, expect } from 'vitest';
 import {
   parseTaxAmountFromSerialised,
   parseJoinRowTaxAmount,
+  readJoinRowTaxAmount,
   resolveTaxEntryIdFromRows,
   resolveTaxRateFromRows,
 } from '../taxEntryJoins';
@@ -79,6 +80,36 @@ describe('parseJoinRowTaxAmount', () => {
 
   it('returns 0 for an empty row', () => {
     expect(parseJoinRowTaxAmount({})).toBe(0);
+  });
+});
+
+// Added (SOUPFIN-92): the invoice PDF prints one line's tax, so it must tell
+// "this row is worth 0" from "this row has no amount I can read".
+describe('readJoinRowTaxAmount', () => {
+  it('reads a numeric taxAmount, including an expanded zero', () => {
+    expect(readJoinRowTaxAmount({ taxAmount: 42, serialised: BILL_ROW })).toBe(42);
+    expect(readJoinRowTaxAmount({ taxAmount: 0, serialised: INVOICE_ROW })).toBe(0);
+  });
+
+  it('reads the amount from both serialised shapes', () => {
+    expect(readJoinRowTaxAmount({ serialised: INVOICE_ROW })).toBe(150);
+    expect(readJoinRowTaxAmount({ serialised: BILL_ROW })).toBe(0);
+  });
+
+  it('keeps a negative withholding amount', () => {
+    expect(readJoinRowTaxAmount({ serialised: 'TaxEntryInvoiceItem(X, WHT-7.5%, -75.0, 925.0)' })).toBe(-75);
+  });
+
+  it('returns null, not 0, when the row carries no readable amount', () => {
+    expect(readJoinRowTaxAmount({})).toBeNull();
+    expect(readJoinRowTaxAmount({ serialised: '' })).toBeNull();
+    expect(readJoinRowTaxAmount({ serialised: 'not a serialised value' })).toBeNull();
+  });
+
+  it('agrees with parseJoinRowTaxAmount wherever an amount is readable', () => {
+    for (const row of [{ taxAmount: 12.5 }, { serialised: INVOICE_ROW }, { serialised: BILL_ROW }]) {
+      expect(readJoinRowTaxAmount(row)).toBe(parseJoinRowTaxAmount(row));
+    }
   });
 });
 
